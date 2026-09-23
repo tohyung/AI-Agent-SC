@@ -32,10 +32,13 @@ class OpenAIReasoner:
         api_key = os.getenv("LLM_API_KEY") or os.getenv("OPENROUTER_API_KEY") or os.getenv("OPENAI_API_KEY")
         self.base_url = os.getenv("LLM_BASE_URL")
         self.api_style = os.getenv("LLM_API_STYLE") or ("chat" if self.base_url else "responses")
-        self.timeout_seconds = float(os.getenv("LLM_TIMEOUT_SECONDS") or "90")
-        self.max_tokens = int(os.getenv("LLM_MAX_TOKENS") or "8000")
-        self.retry_attempts = int(os.getenv("LLM_RETRY_ATTEMPTS") or "3")
-        self.retry_base_delay = float(os.getenv("LLM_RETRY_BASE_DELAY") or "2")
+        try:
+            self.timeout_seconds = float(os.getenv("LLM_TIMEOUT_SECONDS") or "90")
+            self.max_tokens = int(os.getenv("LLM_MAX_TOKENS") or "8000")
+            self.retry_attempts = int(os.getenv("LLM_RETRY_ATTEMPTS") or "3")
+            self.retry_base_delay = float(os.getenv("LLM_RETRY_BASE_DELAY") or "2")
+        except ValueError as exc:
+            raise LLMError(f"Cấu hình số cho LLM không hợp lệ: {exc}") from exc
         self.max_llm_calls = 40
         self.llm_calls = 0
 
@@ -117,22 +120,7 @@ class OpenAIReasoner:
         except LLMError:
             raise
         except RuntimeError as exc:
-            return VerificationResult(
-                passed=False,
-                score=0.0,
-                findings=[
-                    "Node 2 khong nhan duoc JSON hop le tu LLM nen chua the xac nhan semantic.",
-                    f"Chi tiet ky thuat: {exc}",
-                ],
-                questions=[
-                    "Bạn hãy xác nhận lại ngắn gọn: các bên, số tiền, token, deadline và điều kiện giải ngân/phạt của hợp đồng là gì?"
-                ],
-                reasoning_summary="LLM semantic verification không trả JSON hợp lệ.",
-                reasoning_narrative=(
-                    "Node 2 cần JSON có cấu trúc để kiểm tra draft, nhưng provider/model trả về nội dung rỗng "
-                    "hoặc không đọc được. Pipeline sẽ hỏi lại thông tin nghiệp vụ cốt lõi thay vì dừng bằng traceback."
-                ),
-            )
+            raise LLMError(f"Semantic verification failed: {exc}") from exc
         questions = list(data.get("questions") or [])
         return VerificationResult(
             passed=bool(data.get("passed")) and not questions,

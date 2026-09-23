@@ -2,11 +2,11 @@ from __future__ import annotations
 
 import json
 import sys
-from types import SimpleNamespace
+from types import ModuleType, SimpleNamespace
 
 import pytest
 from conftest import make_draft
-from marlowe_agent import cli
+from marlowe_agent import cli, openai_reasoner
 from marlowe_agent.marlowe_ast import pay
 from marlowe_agent.models import LLMError, VerificationResult
 from marlowe_agent.nodes import AgentPipeline
@@ -74,11 +74,65 @@ def test_logic_fail_technical_error_regenerates_without_asking_user(monkeypatch)
     assert "Sinh escrow" in result.draft.original_prompt
 
 
-def test_llm_error_is_caught_and_reported() -> None:
+def test_draft_llm_error_is_caught_and_reported(capsys) -> None:
     result = AgentPipeline(FakeReasoner([LLMError("provider unavailable")])).run("escrow")
     assert result.status == "blocked"
     assert result.stop_reason == "llm_error"
+    assert result.semantic_verification.questions == []
     assert any(event.status == "error" for event in result.trace)
+    assert "Traceback" not in capsys.readouterr().err
+
+
+def test_semantic_llm_error_is_caught_and_reported(capsys) -> None:
+    reasoner = FakeReasoner([make_draft()], semantics=[LLMError("provider unavailable")])
+    result = AgentPipeline(reasoner).run("escrow")
+    assert result.status == "blocked"
+    assert result.stop_reason == "llm_error"
+    assert result.semantic_verification.questions == []
+    assert reasoner.calls == ["draft", "semantic"]
+    assert "Traceback" not in capsys.readouterr().err
+
+
+def test_semantic_runtime_failure_is_not_business_clarification(monkeypatch) -> None:
+    model = OpenAIReasoner.__new__(OpenAIReasoner)
+
+    def fail_response(system: str, user: str) -> dict:
+        raise RuntimeError("provider/parser failure")
+
+    monkeypatch.setattr(model, "_json_response", fail_response)
+    reasoner = FakeReasoner([make_draft()])
+    monkeypatch.setattr(reasoner, "semantic_verify", model.semantic_verify)
+    result = AgentPipeline(reasoner).run("escrow")
+    assert result.status == "blocked"
+    assert result.stop_reason == "llm_error"
+    assert result.semantic_verification.questions == []
+    assert all("xác nhận lại" not in str(event.data).lower() for event in result.trace)
+
+
+def test_invalid_numeric_llm_configuration_is_domain_error(monkeypatch) -> None:
+    fake_openai = ModuleType("openai")
+    fake_openai.OpenAI = lambda **kwargs: None
+    monkeypatch.setitem(sys.modules, "openai", fake_openai)
+    monkeypatch.setattr(openai_reasoner, "load_env_file", lambda: None)
+    monkeypatch.setenv("LLM_MODEL", "fake")
+    monkeypatch.setenv("LLM_API_KEY", "fake")
+    monkeypatch.setenv("LLM_MAX_TOKENS", "invalid")
+    with pytest.raises(LLMError, match="Cấu hình số cho LLM không hợp lệ"):
+        OpenAIReasoner()
+
+
+def test_logic_feedback_llm_error_is_caught_and_reported(monkeypatch, capsys) -> None:
+    reasoner = FakeReasoner(
+        [make_draft(pay("Alice", "Bob", 10))],
+        clarifications=[LLMError("provider unavailable")],
+    )
+    monkeypatch.setattr("builtins.input", lambda _: pytest.fail("No user question expected"))
+    result = AgentPipeline(reasoner, interactive=True).run("escrow")
+    assert result.status == "blocked"
+    assert result.stop_reason == "llm_error"
+    assert result.semantic_verification.questions == []
+    assert reasoner.calls == ["draft", "semantic", "clarification"]
+    assert "Traceback" not in capsys.readouterr().err
 
 
 def test_llm_call_cap() -> None:
@@ -136,6 +190,20 @@ def test_cli_exit_code_2_when_blocked(monkeypatch) -> None:
     monkeypatch.setattr(cli, "OpenAIReasoner", lambda model=None: FakeReasoner([make_draft(invalid_contract(1))]))
     monkeypatch.setattr(sys, "argv", ["main.py", "--prompt", "escrow", "--max-iterations", "1", "--trace-only"])
     assert cli.main() == 2
+
+
+@pytest.mark.parametrize("error", [RuntimeError("missing API key"), LLMError("invalid configuration")])
+def test_cli_reasoner_initialization_error_does_not_traceback(monkeypatch, capsys, error) -> None:
+    def fail_initialization(model=None):
+        raise error
+
+    monkeypatch.setattr(cli, "OpenAIReasoner", fail_initialization)
+    monkeypatch.setattr(sys, "argv", ["main.py", "--prompt", "escrow"])
+    assert cli.main() == 2
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert captured.err.strip() == f"Lỗi khởi tạo LLM: {error}"
+    assert "Traceback" not in captured.err
 
 
 def test_cli_out_file_written(monkeypatch, tmp_path) -> None:

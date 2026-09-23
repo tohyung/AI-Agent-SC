@@ -41,10 +41,22 @@ def test_nonpositive_pay_and_deposit_are_errors() -> None:
     assert any("Deposit phải > 0" in error for error in verify(contract).errors)
 
 
-def test_nested_timeout_not_increasing_is_error() -> None:
+def test_nested_timeout_not_increasing_is_warning_without_time_proof() -> None:
     contract = when([{"case": {"notify_if": True},
                      "then": when([], DEPOSIT_TIMEOUT)}], DEPOSIT_TIMEOUT)
-    assert any("không tăng" in error for error in verify(contract).errors)
+    result = verify(contract)
+    assert result.passed
+    assert result.errors == []
+    assert any("chưa mô hình hóa" in warning for warning in result.warnings)
+
+
+def test_nested_earlier_timeout_is_not_unconditionally_unreachable() -> None:
+    inner = when([{"case": {"notify_if": True}, "then": "close"}], DEPOSIT_TIMEOUT - 1_000)
+    contract = when([{"case": {"notify_if": True}, "then": inner}], DEPOSIT_TIMEOUT)
+    result = verify(contract)
+    assert result.passed
+    assert not result.errors
+    assert any("chưa mô hình hóa" in warning for warning in result.warnings)
 
 
 def test_empty_when_is_warning_only() -> None:

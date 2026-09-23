@@ -126,7 +126,13 @@ class LogicGraphVerifier:
             if "when" in node:
                 timeout = node["timeout"]
                 if state.deadline_stack and timeout <= state.deadline_stack[-1]:
-                    errors.append(f"{path}.timeout: timeout lồng nhau không tăng ({timeout} <= {state.deadline_stack[-1]}).")
+                    # TODO(spec): Track entry-time bounds separately for Case and timeout continuations.
+                    warnings.append(
+                        f"{path}.timeout: timeout bên trong {timeout} <= timeout scope ngoài "
+                        f"{state.deadline_stack[-1]}; chưa mô hình hóa riêng thời điểm vào nhánh Case "
+                        "và timeout continuation, "
+                        "không thể kết luận nhánh không thể thực thi."
+                    )
                 if not node["when"]:
                     warnings.append(f"{path}.when: When rỗng, chỉ chờ timeout.")
                 self._check_case_overlap(node["when"], path, errors)

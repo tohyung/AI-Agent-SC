@@ -1,5 +1,6 @@
 import argparse
 import json
+import sys
 from pathlib import Path
 
 from .models import TraceEvent
@@ -107,7 +108,11 @@ def main() -> int:
         if narrative:
             print(f"\nAudit {node_label or event.node}: {narrative}")
 
-    reasoner = OpenAIReasoner(model=args.model)
+    try:
+        reasoner = OpenAIReasoner(model=args.model)
+    except RuntimeError as exc:
+        print(f"Lỗi khởi tạo LLM: {' '.join(str(exc).split())}", file=sys.stderr)
+        return 2
     pipeline = AgentPipeline(
         reasoner=reasoner,
         interactive=interactive,

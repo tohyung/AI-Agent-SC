@@ -33,7 +33,7 @@ AST theo [Core V1 Types.hs](https://github.com/marlowe-lang/marlowe-cardano/blob
 
 Structural gate chỉ tự chuyển ba dạng dialect cũ xác định: `{"close":"close"}` thành `"close"`, `choice`/`bounds` thành `for_choice`/`choose_between`, và `{"constant": n}` thành `n`. Mỗi thay đổi có ghi trace. Không tự quy đổi giây sang mili giây hay ADA sang lovelace. Timeout nghi là giây bị từ chối.
 
-Node 3 kiểm trùng action và Choice chồng lấn trong cùng một When, số dư trên từng đường đi, deadline lồng nhau, biến Let và Choice chưa có, nhánh chết, tài khoản còn dư khi Close, cùng độ khớp giữa draft và AST. `warning` không làm fail. Phân tích tĩnh giới hạn 10.000 đường đi và có thể không xác định được số dư nếu Value phụ thuộc trạng thái runtime. Ngưỡng min-ADA phụ thuộc thông số giao thức/UTxO; hiện chưa phát cảnh báo cố định cho tiền nhỏ. Công cụ không thay thế trình phân tích Marlowe chính thức hay xác nhận khả năng triển khai on-chain.
+Node 3 kiểm trùng action và Choice chồng lấn trong cùng một When, số dư trên từng đường đi, deadline lồng nhau, biến Let và Choice chưa có, nhánh chết, tài khoản còn dư khi Close, cùng độ khớp giữa draft và AST. Node 3 chỉ tạo hard error khi có thể chứng minh vấn đề bằng phân tích tĩnh. Với timeout lồng nhau không tăng, bộ phân tích hiện chưa theo dõi riêng thời điểm đi vào nhánh Case và timeout continuation, nên chỉ ghi `warning`; riêng nhánh Case có thể được kích hoạt trước timeout bên ngoài. Phân tích tĩnh giới hạn 10.000 đường đi và có thể không xác định được số dư nếu Value phụ thuộc trạng thái runtime. Ngưỡng min-ADA phụ thuộc thông số giao thức/UTxO; hiện chưa phát cảnh báo cố định cho tiền nhỏ. Công cụ không thay thế trình phân tích Marlowe chính thức hay xác nhận khả năng triển khai on-chain.
 
 ## Test
 
