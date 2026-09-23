@@ -5,14 +5,13 @@ import sys
 from types import SimpleNamespace
 
 import pytest
-
+from conftest import make_draft
 from marlowe_agent import cli
 from marlowe_agent.marlowe_ast import pay
 from marlowe_agent.models import LLMError, VerificationResult
 from marlowe_agent.nodes import AgentPipeline
-from marlowe_agent.openai_reasoner import OpenAIReasoner
-
-from conftest import FakeReasoner, make_draft
+from marlowe_agent.openai_reasoner import OpenAIReasoner, parse_json_text
+from tools.fake_reasoner import FakeReasoner
 
 
 def invalid_contract(index: int) -> dict:
@@ -85,6 +84,18 @@ def test_llm_error_is_caught_and_reported() -> None:
 def test_llm_call_cap() -> None:
     result = AgentPipeline(FakeReasoner([make_draft()]), max_llm_calls=1).run("escrow")
     assert result.stop_reason == "llm_error"
+
+
+def test_final_iteration_does_not_request_logic_feedback() -> None:
+    reasoner = FakeReasoner([make_draft(pay("Alice", "Bob", 10))])
+    result = AgentPipeline(reasoner, max_iterations=1).run("escrow")
+    assert result.stop_reason == "max_iterations"
+    assert "clarification" not in reasoner.calls
+
+
+def test_json_array_is_rejected_as_model_response() -> None:
+    with pytest.raises(json.JSONDecodeError):
+        parse_json_text("[]")
 
 
 def test_reasoner_counts_repair_requests_in_call_cap() -> None:

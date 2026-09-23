@@ -1,10 +1,9 @@
 from __future__ import annotations
 
+from conftest import AMOUNT, DECISION_TIMEOUT, DEPOSIT_TIMEOUT, make_draft
 from marlowe_agent import logic_graph
 from marlowe_agent.logic_graph import LogicGraphVerifier
 from marlowe_agent.marlowe_ast import choice_action, deposit, escrow_contract, pay, when
-
-from conftest import AMOUNT, DECISION_TIMEOUT, DEPOSIT_TIMEOUT, make_draft
 
 
 def verify(contract, draft=None):

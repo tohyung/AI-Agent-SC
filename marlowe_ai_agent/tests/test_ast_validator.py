@@ -4,15 +4,22 @@ import json
 from pathlib import Path
 
 import pytest
-
+from conftest import AMOUNT, DECISION_TIMEOUT, DEPOSIT_TIMEOUT
 from marlowe_agent.logic_graph import LogicGraphVerifier
 from marlowe_agent.marlowe_ast import (
-    ada_to_lovelace, close, escrow_contract, is_close, normalize_marlowe_ast,
-    seconds_to_posix_ms, walk_contract,
+    ada_to_lovelace,
+    close,
+    escrow_contract,
+    is_close,
+    normalize_marlowe_ast,
+    seconds_to_posix_ms,
+    walk_contract,
 )
-from marlowe_agent.marlowe_validator import MarloweValidationError, assert_valid, validate_contract
-
-from conftest import AMOUNT, DECISION_TIMEOUT, DEPOSIT_TIMEOUT
+from marlowe_agent.marlowe_validator import (
+    MarloweValidationError,
+    assert_valid,
+    validate_contract,
+)
 
 
 def test_escrow_builder_matches_spec_golden() -> None:

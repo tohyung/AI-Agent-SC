@@ -8,7 +8,6 @@ from .marlowe_validator import validate_contract
 from .models import ContractDraft, LogicGraphResult
 from .utils import canonical_json, unique_strings
 
-
 MAX_PATHS = 10_000
 
 

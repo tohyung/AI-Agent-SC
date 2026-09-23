@@ -1,7 +1,85 @@
 {
   "iterations": 1,
+  "status": "done",
+  "stop_reason": "ok",
+  "trace": [
+    {
+      "node": "pipeline",
+      "status": "start",
+      "message": "Đã nhận prompt.",
+      "data": {
+        "max_iterations": 8
+      }
+    },
+    {
+      "node": "node_1_prompt_to_draft",
+      "status": "start",
+      "message": "Đang sinh draft.",
+      "data": {
+        "iteration": 1
+      }
+    },
+    {
+      "node": "node_1_prompt_to_draft",
+      "status": "done",
+      "message": "Đã sinh draft.",
+      "data": {
+        "reasoning_narrative": "Node 1 tạo escrow với số tiền theo lovelace và deadline theo POSIX ms.",
+        "intent": "escrow"
+      }
+    },
+    {
+      "node": "structural_gate",
+      "status": "pass",
+      "message": "AST hợp lệ.",
+      "data": {}
+    },
+    {
+      "node": "node_2_semantic_verification",
+      "status": "start",
+      "message": "Đang kiểm semantic.",
+      "data": {}
+    },
+    {
+      "node": "node_2_semantic_verification",
+      "status": "pass",
+      "message": "Đã kiểm semantic.",
+      "data": {
+        "findings": [
+          "Draft khớp với kịch bản ký quỹ."
+        ],
+        "reasoning_narrative": "Node 2 xác nhận các điều kiện nạp, duyệt, từ chối và hoàn tiền."
+      }
+    },
+    {
+      "node": "node_3_logic_graph_verification",
+      "status": "start",
+      "message": "Đang kiểm logic graph.",
+      "data": {}
+    },
+    {
+      "node": "node_3_logic_graph_verification",
+      "status": "pass",
+      "message": "Đã kiểm logic graph.",
+      "data": {
+        "findings": [
+          "Logic graph pass."
+        ],
+        "reasoning_narrative": "Node 3 đã kiểm tra 9 node, 4 đường đi; có 0 cảnh báo."
+      }
+    },
+    {
+      "node": "pipeline",
+      "status": "done",
+      "message": "Workflow đã hoàn tất.",
+      "data": {
+        "iterations": 1,
+        "stop_reason": "ok"
+      }
+    }
+  ],
   "draft": {
-    "original_prompt": "Buyer Alice escrow 250 ADA for seller Bob, approve pays Bob, reject refunds Alice",
+    "original_prompt": "Alice ký quỹ 250 ADA cho Bob. Trước hạn nạp tiền Alice gửi đủ tiền; sau đó Alice chọn approve để trả Bob hoặc reject để hoàn tiền. Nếu hết hạn quyết định thì hoàn tiền Alice.",
     "intent": "escrow",
     "parties": [
       {
@@ -13,24 +91,24 @@
         "name": "Bob"
       }
     ],
-    "amount": 250,
+    "amount": 250000000,
     "token": "ADA",
-    "deposit_timeout": 1700000000,
-    "decision_timeout": 1700003600,
+    "deposit_timeout": 1893456000000,
+    "decision_timeout": 1893542400000,
     "clauses": [
-      "Alice nap 250 ADA vao account escrow cua Alice.",
-      "Neu Alice approve, hop dong tra 250 ADA cho Bob.",
-      "Neu Alice reject hoac qua timeout quyet dinh, hop dong refund 250 ADA cho Alice.",
-      "Neu khong deposit truoc timeout ban dau, hop dong Close."
+      "Alice nạp 250 ADA trước hạn nạp tiền.",
+      "Approve trả Bob; reject hoặc hết hạn quyết định hoàn Alice."
     ],
     "assumptions": [],
+    "clarification_questions": [],
+    "reasoning_summary": "Hợp đồng ký quỹ hai bên.",
+    "reasoning_narrative": "Node 1 tạo escrow với số tiền theo lovelace và deadline theo POSIX ms.",
+    "contract_plan": {},
     "marlowe_contract": {
       "when": [
         {
           "case": {
-            "deposits": {
-              "constant": 250
-            },
+            "deposits": 250000000,
             "into_account": {
               "role_token": "Alice"
             },
@@ -46,13 +124,13 @@
             "when": [
               {
                 "case": {
-                  "choice": {
+                  "for_choice": {
                     "choice_name": "approve",
                     "choice_owner": {
                       "role_token": "Alice"
                     }
                   },
-                  "bounds": [
+                  "choose_between": [
                     {
                       "from": 1,
                       "to": 1
@@ -60,9 +138,7 @@
                   ]
                 },
                 "then": {
-                  "pay": {
-                    "constant": 250
-                  },
+                  "pay": 250000000,
                   "from_account": {
                     "role_token": "Alice"
                   },
@@ -75,20 +151,18 @@
                     "currency_symbol": "",
                     "token_name": ""
                   },
-                  "then": {
-                    "close": "close"
-                  }
+                  "then": "close"
                 }
               },
               {
                 "case": {
-                  "choice": {
+                  "for_choice": {
                     "choice_name": "reject",
                     "choice_owner": {
                       "role_token": "Alice"
                     }
                   },
-                  "bounds": [
+                  "choose_between": [
                     {
                       "from": 0,
                       "to": 0
@@ -96,9 +170,7 @@
                   ]
                 },
                 "then": {
-                  "pay": {
-                    "constant": 250
-                  },
+                  "pay": 250000000,
                   "from_account": {
                     "role_token": "Alice"
                   },
@@ -111,17 +183,13 @@
                     "currency_symbol": "",
                     "token_name": ""
                   },
-                  "then": {
-                    "close": "close"
-                  }
+                  "then": "close"
                 }
               }
             ],
-            "timeout": 1700003600,
+            "timeout": 1893542400000,
             "timeout_continuation": {
-              "pay": {
-                "constant": 250
-              },
+              "pay": 250000000,
               "from_account": {
                 "role_token": "Alice"
               },
@@ -134,26 +202,25 @@
                 "currency_symbol": "",
                 "token_name": ""
               },
-              "then": {
-                "close": "close"
-              }
+              "then": "close"
             }
           }
         }
       ],
-      "timeout": 1700000000,
-      "timeout_continuation": {
-        "close": "close"
-      }
-    }
+      "timeout": 1893456000000,
+      "timeout_continuation": "close"
+    },
+    "normalization_notes": []
   },
   "semantic_verification": {
     "passed": true,
     "score": 1.0,
     "findings": [
-      "Draft phu hop voi prompt o muc pipeline co the tiep tuc."
+      "Draft khớp với kịch bản ký quỹ."
     ],
-    "questions": []
+    "questions": [],
+    "reasoning_summary": "Các bên, số tiền và nhánh xử lý đã rõ.",
+    "reasoning_narrative": "Node 2 xác nhận các điều kiện nạp, duyệt, từ chối và hoàn tiền."
   },
   "logic_verification": {
     "passed": true,
@@ -167,89 +234,90 @@
           "type": "When"
         },
         {
-          "id": "root.case[0]",
+          "id": "root.when[0].then",
           "type": "When"
         },
         {
-          "id": "root.case[0].case[0]",
+          "id": "root.when[0].then.when[0].then",
           "type": "Pay"
         },
         {
-          "id": "root.case[0].case[0].then",
+          "id": "root.when[0].then.when[0].then.then",
           "type": "Close"
         },
         {
-          "id": "root.case[0].case[1]",
+          "id": "root.when[0].then.when[1].then",
           "type": "Pay"
         },
         {
-          "id": "root.case[0].case[1].then",
+          "id": "root.when[0].then.when[1].then.then",
           "type": "Close"
         },
         {
-          "id": "root.case[0].timeout",
+          "id": "root.when[0].then.timeout_continuation",
           "type": "Pay"
         },
         {
-          "id": "root.case[0].timeout.then",
+          "id": "root.when[0].then.timeout_continuation.then",
           "type": "Close"
         },
         {
-          "id": "root.timeout",
+          "id": "root.timeout_continuation",
           "type": "Close"
         }
       ],
       "edges": [
         {
           "from": "root",
-          "to": "root.case[0]",
-          "label": "Deposit(Alice,250)"
-        },
-        {
-          "from": "root.case[0]",
-          "to": "root.case[0].case[0]",
-          "label": "Choice(approve,Alice,1..1)"
-        },
-        {
-          "from": "root.case[0].case[0]",
-          "to": "root.case[0].case[0].then",
-          "label": "then"
-        },
-        {
-          "from": "root.case[0]",
-          "to": "root.case[0].case[1]",
-          "label": "Choice(reject,Alice,0..0)"
-        },
-        {
-          "from": "root.case[0].case[1]",
-          "to": "root.case[0].case[1].then",
-          "label": "then"
-        },
-        {
-          "from": "root.case[0]",
-          "to": "root.case[0].timeout",
-          "label": "timeout@1700003600"
-        },
-        {
-          "from": "root.case[0].timeout",
-          "to": "root.case[0].timeout.then",
-          "label": "then"
+          "to": "root.when[0].then",
+          "label": "{\"deposits\":250000000,\"into_account\":{\"role_token\":\"Alice\"},\"of_token\":{\"currenc..."
         },
         {
           "from": "root",
-          "to": "root.timeout",
-          "label": "timeout@1700000000"
+          "to": "root.timeout_continuation",
+          "label": "timeout@1893456000000"
+        },
+        {
+          "from": "root.when[0].then",
+          "to": "root.when[0].then.when[0].then",
+          "label": "{\"choose_between\":[{\"from\":1,\"to\":1}],\"for_choice\":{\"choice_name\":\"approve\",\"cho..."
+        },
+        {
+          "from": "root.when[0].then",
+          "to": "root.when[0].then.when[1].then",
+          "label": "{\"choose_between\":[{\"from\":0,\"to\":0}],\"for_choice\":{\"choice_name\":\"reject\",\"choi..."
+        },
+        {
+          "from": "root.when[0].then",
+          "to": "root.when[0].then.timeout_continuation",
+          "label": "timeout@1893542400000"
+        },
+        {
+          "from": "root.when[0].then.when[0].then",
+          "to": "root.when[0].then.when[0].then.then",
+          "label": "then"
+        },
+        {
+          "from": "root.when[0].then.when[1].then",
+          "to": "root.when[0].then.when[1].then.then",
+          "label": "then"
+        },
+        {
+          "from": "root.when[0].then.timeout_continuation",
+          "to": "root.when[0].then.timeout_continuation.then",
+          "label": "then"
         }
       ]
-    }
+    },
+    "errors": [],
+    "warnings": [],
+    "paths_explored": 4
   },
   "marlowe_contract": {
     "when": [
       {
         "case": {
-          "deposits": {
-            "constant": 250
-          },
+          "deposits": 250000000,
           "into_account": {
             "role_token": "Alice"
           },
@@ -265,13 +333,13 @@
           "when": [
             {
               "case": {
-                "choice": {
+                "for_choice": {
                   "choice_name": "approve",
                   "choice_owner": {
                     "role_token": "Alice"
                   }
                 },
-                "bounds": [
+                "choose_between": [
                   {
                     "from": 1,
                     "to": 1
@@ -279,9 +347,7 @@
                 ]
               },
               "then": {
-                "pay": {
-                  "constant": 250
-                },
+                "pay": 250000000,
                 "from_account": {
                   "role_token": "Alice"
                 },
@@ -294,20 +360,18 @@
                   "currency_symbol": "",
                   "token_name": ""
                 },
-                "then": {
-                  "close": "close"
-                }
+                "then": "close"
               }
             },
             {
               "case": {
-                "choice": {
+                "for_choice": {
                   "choice_name": "reject",
                   "choice_owner": {
                     "role_token": "Alice"
                   }
                 },
-                "bounds": [
+                "choose_between": [
                   {
                     "from": 0,
                     "to": 0
@@ -315,9 +379,7 @@
                 ]
               },
               "then": {
-                "pay": {
-                  "constant": 250
-                },
+                "pay": 250000000,
                 "from_account": {
                   "role_token": "Alice"
                 },
@@ -330,17 +392,13 @@
                   "currency_symbol": "",
                   "token_name": ""
                 },
-                "then": {
-                  "close": "close"
-                }
+                "then": "close"
               }
             }
           ],
-          "timeout": 1700003600,
+          "timeout": 1893542400000,
           "timeout_continuation": {
-            "pay": {
-              "constant": 250
-            },
+            "pay": 250000000,
             "from_account": {
               "role_token": "Alice"
             },
@@ -353,16 +411,12 @@
               "currency_symbol": "",
               "token_name": ""
             },
-            "then": {
-              "close": "close"
-            }
+            "then": "close"
           }
         }
       }
     ],
-    "timeout": 1700000000,
-    "timeout_continuation": {
-      "close": "close"
-    }
+    "timeout": 1893456000000,
+    "timeout_continuation": "close"
   }
 }

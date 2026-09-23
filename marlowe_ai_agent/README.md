@@ -43,3 +43,5 @@ python -m pytest -q
 ```
 
 Test dùng `FakeReasoner`, không gọi LLM hay mạng.
+
+Sinh lại sample bằng `python -m tools.regen_sample` từ thư mục project.

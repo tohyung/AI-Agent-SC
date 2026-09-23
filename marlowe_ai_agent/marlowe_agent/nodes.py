@@ -6,7 +6,14 @@ from typing import Any
 from .logic_graph import LogicGraphVerifier
 from .marlowe_ast import normalize_marlowe_ast
 from .marlowe_validator import validate_contract
-from .models import ContractDraft, LLMError, LogicGraphResult, PipelineResult, TraceEvent, VerificationResult
+from .models import (
+    ContractDraft,
+    LLMError,
+    LogicGraphResult,
+    PipelineResult,
+    TraceEvent,
+    VerificationResult,
+)
 from .utils import fingerprint, unique_strings
 
 
@@ -175,6 +182,8 @@ class AgentPipeline:
                 if not semantic.passed:
                     if self._stalled(seen, draft.marlowe_contract, semantic.findings + semantic.questions):
                         return self._result(draft, semantic, logic, iterations, "blocked", "stalled")
+                    if iterations >= self.max_iterations:
+                        return self._result(draft, semantic, logic, iterations, "blocked", "max_iterations")
                     next_prompt = self.node_1.clarify_prompt(current_prompt, semantic)
                     if next_prompt != current_prompt:
                         current_prompt = next_prompt
@@ -194,6 +203,8 @@ class AgentPipeline:
                     return self._result(draft, semantic, logic, iterations, status, reason)
                 if self._stalled(seen, draft.marlowe_contract, logic.findings):
                     return self._result(draft, semantic, logic, iterations, "blocked", "stalled")
+                if iterations >= self.max_iterations:
+                    return self._result(draft, semantic, logic, iterations, "blocked", "max_iterations")
                 next_prompt = self.node_1.clarify_logic_prompt(current_prompt, draft, logic)
                 if next_prompt == current_prompt:
                     return self._result(draft, semantic, logic, iterations, "blocked", "no_user_input")

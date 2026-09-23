@@ -8,7 +8,13 @@ from pathlib import Path
 from typing import Any
 
 from .marlowe_ast import escrow_contract, normalize_marlowe_ast
-from .models import ContractDraft, LLMError, LogicGraphResult, PartySpec, VerificationResult
+from .models import (
+    ContractDraft,
+    LLMError,
+    LogicGraphResult,
+    PartySpec,
+    VerificationResult,
+)
 from .utils import unique_strings
 
 
@@ -279,7 +285,7 @@ class OpenAIReasoner:
                         )
                     except LLMError:
                         raise
-                    except Exception:
+                    except Exception:  # noqa: BLE001 - providers may reject JSON mode with different errors
                         self._consume_call()
                         response = self.client.chat.completions.create(
                             model=self.model,
@@ -359,7 +365,7 @@ class OpenAIReasoner:
                 )
             except LLMError:
                 raise
-            except Exception:
+            except Exception:  # noqa: BLE001 - providers may reject JSON mode with different errors
                 self._consume_call()
                 response = self.client.chat.completions.create(
                     model=self.model,
@@ -378,8 +384,8 @@ def _safe_response_debug(response: Any) -> str:
     if hasattr(response, "model_dump_json"):
         try:
             return response.model_dump_json(indent=2)[:2000]
-        except Exception:
-            pass
+        except Exception:  # noqa: BLE001 - debug rendering must never hide the request error
+            return repr(response)[:2000]
     return repr(response)[:2000]
 
 
@@ -421,20 +427,24 @@ def parse_json_text(text: str) -> dict[str, Any]:
         cleaned = re.sub(r"^```(?:json)?\s*", "", cleaned, flags=re.IGNORECASE)
         cleaned = re.sub(r"\s*```$", "", cleaned)
     try:
-        return json.loads(cleaned)
+        parsed = json.loads(cleaned)
     except json.JSONDecodeError:
         match = re.search(r"\{.*\}", cleaned, flags=re.DOTALL)
         if match:
-            return json.loads(match.group(0))
-        raise
+            parsed = json.loads(match.group(0))
+        else:
+            raise
+    if not isinstance(parsed, dict):
+        raise json.JSONDecodeError("Expected a JSON object", cleaned, 0)
+    return parsed
 
 
 def _optional_int(value: Any) -> int | None:
     if value is None:
         return None
-    if isinstance(value, int):
+    if type(value) is int:
         return value
-    if isinstance(value, float):
+    if isinstance(value, float) and value.is_integer():
         return int(value)
     if isinstance(value, str) and value.strip().isdigit():
         return int(value.strip())
