@@ -35,9 +35,6 @@ class ContractDraft:
     marlowe_contract: Any = field(default_factory=dict)
     normalization_notes: list[str] = field(default_factory=list)
 
-    def party_by_role(self, role: str) -> PartySpec | None:
-        return next((party for party in self.parties if party.role == role), None)
-
     def to_dict(self) -> dict[str, Any]:
         return {
             "original_prompt": self.original_prompt,

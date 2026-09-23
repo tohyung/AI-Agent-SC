@@ -47,12 +47,12 @@ def choice_action(name: str, party_name: str, low: int, high: int) -> dict[str, 
 
 
 def deposit(account: str, party: str, amount: int) -> dict[str, Any]:
-    return {"deposits": amount, "into_account": role(account), "of_token": ada(), "party": role(party)}
+    return {"deposits": constant(amount), "into_account": role(account), "of_token": ada(), "party": role(party)}
 
 
 def pay(from_account: str, to_party: str, amount: int, then: Any = None) -> dict[str, Any]:
     return {
-        "pay": amount, "from_account": role(from_account), "to": {"party": role(to_party)},
+        "pay": constant(amount), "from_account": role(from_account), "to": {"party": role(to_party)},
         "token": ada(), "then": close() if then is None else then,
     }
 

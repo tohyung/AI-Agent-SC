@@ -1,85 +1,45 @@
 # Marlowe AI Agent CLI
 
-Chuong trinh terminal sinh smart contract Marlowe theo chu trinh 3 node:
+CLI sinh hợp đồng Marlowe Core V1 từ mô tả tiếng Việt. Node 1 sinh draft và hỏi bổ sung khi cần; Node 2 dùng LLM kiểm tra ngữ nghĩa; Node 3 phân tích graph theo quy tắc xác định. Trace và bản audit tiếng Việt được in khi chạy, không chứa suy luận thô của LLM.
 
-1. `PromptToDraftNode`: model doc prompt va sinh draft/contract plan/Marlowe AST.
-   Neu semantic chua dat, node nay hoi bo sung nguoi dung bang questions/findings tu semantic verification.
-   Neu logic graph chua dat, node nay chuyen findings ky thuat thanh cau hoi nghiep vu de nguoi dung tra loi; voi loi thuan AST/JSON, node nay tao phan hoi noi bo de sinh lai draft ma khong bat nguoi dung sua AST.
-2. `SemanticVerificationNode`: model tu kiem chung draft voi prompt ve ngu nghia va nghiep vu.
-3. `LogicGraphVerificationNode`: dung graph de kiem nhanh cac nhanh hop dong sau khi semantic da pass.
+## Cài đặt và chạy
 
-Node 1 va node 2 la LLM-only. Khong con che do offline/heuristic va khong fallback sang validator noi bo cho doc prompt hay semantic verification.
-
-## Cai dat
+Từ thư mục `D:\code\marlowe_ai_agent\marlowe_ai_agent`:
 
 ```powershell
-cd C:\Users\Admin\Documents\Codex\2026-08-07\to\outputs\marlowe_ai_agent
 python -m pip install -r .\requirements.txt
-Copy-Item .\.env.example .\.env
-notepad .\.env
-```
-
-Vi du `.env` cho OpenRouter:
-
-```text
-OPENROUTER_API_KEY=sk-or-v1-key-cua-ban
-LLM_BASE_URL=https://openrouter.ai/api/v1
-LLM_MODEL=nvidia/ten-model-tren-openrouter
-LLM_API_STYLE=responses
-LLM_TIMEOUT_SECONDS=90
-LLM_MAX_TOKENS=8000
-LLM_RETRY_ATTEMPTS=3
-LLM_RETRY_BASE_DELAY=2
-```
-
-## Chay
-
-```powershell
 python .\main.py
 ```
 
-Lenh tren tu dong chay day du:
-
-- tracking node dang chay;
-- audit dien giai bang tieng Viet, khong in suy luan tho;
-- JSON ket qua cuoi.
-
-Neu chi muon xem tracking/audit va tom tat, khong in JSON day du:
+CLI giữ nguyên cơ chế đọc `.env` và cấu hình model/provider trước đây. Có thể truyền prompt trực tiếp:
 
 ```powershell
-python .\main.py --trace-only
+python .\main.py --prompt "Alice ký quỹ 250 ADA cho Bob ..." --out .\result.json
 ```
 
-Flags cu `--trace`, `--audit`, `--narrative-trace` van duoc chap nhan de tuong thich nguoc, nhung tracking/audit da bat mac dinh.
+`--trace-only` chỉ in tracking, audit và Summary. Các flag `--trace`, `--audit`, `--narrative-trace` vẫn được nhận để tương thích.
 
-Neu muon tang so vong hoi bo sung:
+## Luồng và giới hạn
+
+Mỗi lượt gồm: Node 1 sinh draft, structural gate chuẩn hóa và kiểm AST, Node 2 kiểm semantic, rồi Node 3 phân tích logic graph. Nếu một cổng thất bại, Node 1 nhận finding, hỏi người dùng khi cần quyết định nghiệp vụ hoặc tự sửa lỗi kỹ thuật; draft mới luôn quay về structural gate và Node 2 trước Node 3.
+
+`--max-iterations N` giới hạn tổng số draft (mặc định 8). `--max-clarifications` là alias cũ. `--max-llm-calls N` giới hạn số request LLM thực tế, kể cả retry/repair (mặc định 40). Cả hai yêu cầu N >= 1. Hệ thống cũng dừng khi cùng AST và lỗi lặp lại. `--allow-unverified` cho chạy Node 3 dù semantic chưa đạt nhưng kết quả vẫn là `blocked` nếu semantic không pass.
+
+JSON đầu ra giữ các key cũ và thêm `status` (`done` hoặc `blocked`), `stop_reason`, cùng `logic_verification.errors`, `warnings`, `paths_explored`. `stop_reason` có thể là `ok`, `max_iterations`, `stalled`, `no_user_input`, `llm_error`, hoặc `semantic_not_passed`. Exit code là 0 khi done và 2 khi blocked. Khi có `--out`, kết quả JSON vẫn được ghi ngay cả khi blocked.
+
+## Marlowe JSON
+
+AST theo [Core V1 Types.hs](https://github.com/marlowe-lang/marlowe-cardano/blob/main/marlowe/src/Language/Marlowe/Core/V1/Semantics/Types.hs): `Close` là chuỗi `"close"`; `Choice` dùng `for_choice` và `choose_between`; hằng số Value là số nguyên trần. `timeout` là POSIX mili giây. Số tiền ADA trong AST và `ContractDraft.amount` dùng lovelace (1 ADA = 1_000_000 lovelace), nên 250 ADA là `250000000`. `role_token` dùng `PartySpec.name`, ví dụ `Alice`.
+
+Structural gate chỉ tự chuyển ba dạng dialect cũ xác định: `{"close":"close"}` thành `"close"`, `choice`/`bounds` thành `for_choice`/`choose_between`, và `{"constant": n}` thành `n`. Mỗi thay đổi có ghi trace. Không tự quy đổi giây sang mili giây hay ADA sang lovelace. Timeout nghi là giây bị từ chối.
+
+Node 3 kiểm trùng action và Choice chồng lấn trong cùng một When, số dư trên từng đường đi, deadline lồng nhau, biến Let và Choice chưa có, nhánh chết, tài khoản còn dư khi Close, cùng độ khớp giữa draft và AST. `warning` không làm fail. Phân tích tĩnh giới hạn 10.000 đường đi và có thể không xác định được số dư nếu Value phụ thuộc trạng thái runtime. Ngưỡng min-ADA phụ thuộc thông số giao thức/UTxO; hiện chưa phát cảnh báo cố định cho tiền nhỏ. Công cụ không thay thế trình phân tích Marlowe chính thức hay xác nhận khả năng triển khai on-chain.
+
+## Test
 
 ```powershell
-python .\main.py --max-clarifications 6
+python -m pip install -r .\requirements-dev.txt
+python -m pytest -q
 ```
 
-Mac dinh, semantic verification khong pass thi agent hoi bo sung truoc, khong chay xuong logic graph cho toi khi semantic pass.
-Neu logic graph khong pass, agent quay lai node 1 de xu ly findings cua logic graph. Node 1 chi hoi nguoi dung khi can them quyet dinh nghiep vu; neu la loi cau truc AST thuan ky thuat, node 1 tu bo sung instruction noi bo de sinh lai draft. Draft moi luon chay lai semantic verification truoc khi quay lai logic graph.
-
-Chi dung co sau khi muon debug:
-
-```powershell
-python .\main.py --allow-unverified
-```
-
-## Suy luan va ngon ngu
-
-Model duoc yeu cau giao tiep hoan toan bang tieng Viet. Cac truong `reasoning_summary`, `reasoning_narrative`, `findings`, `questions`, `clauses`, `assumptions` deu do model tra ve.
-
-`reasoning_summary` la tom tat ngan. `reasoning_narrative` la lop dien giai trung gian tu nhien hon, bien thien theo prompt va khong theo khuon mau cung. No khong phai chain-of-thought chi tiet.
-
-Ket qua JSON gom:
-
-- `trace`: cac buoc agent da chay.
-- `draft.reasoning_summary`: tom tat suy luan cua model o node doc prompt.
-- `draft.reasoning_narrative`: dien giai tu nhien cua model o node doc prompt.
-- `semantic_verification.reasoning_summary`: tom tat suy luan cua model o node semantic.
-- `semantic_verification.reasoning_narrative`: dien giai tu nhien cua model o node semantic.
-- `semantic_verification.questions`: cau hoi bo sung do model tu sinh.
-- `logic_verification`: ket qua kiem graph sau khi semantic pass.
-- `marlowe_contract`: AST Marlowe JSON.
+Test dùng `FakeReasoner`, không gọi LLM hay mạng.

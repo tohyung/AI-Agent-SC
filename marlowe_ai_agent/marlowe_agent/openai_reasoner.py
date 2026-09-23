@@ -223,6 +223,7 @@ class OpenAIReasoner:
         try:
             return parse_json_text(content)
         except json.JSONDecodeError as exc:
+            error_text = str(exc)
             if not content.strip():
                 retry_user = (
                     "The previous response was empty. Return only one valid JSON object for this task. "
@@ -233,7 +234,7 @@ class OpenAIReasoner:
                 try:
                     return parse_json_text(content)
                 except json.JSONDecodeError as retry_exc:
-                    exc = retry_exc
+                    error_text = str(retry_exc)
 
             repair_system = (
                 "You repair invalid JSON produced by a model. Return only valid minified JSON. "
@@ -241,7 +242,7 @@ class OpenAIReasoner:
                 "All user-facing text remains Vietnamese. Keep narrative fields short."
             )
             repair_user = (
-                f"The previous JSON was invalid with error: {exc}. "
+                f"The previous JSON was invalid with error: {error_text}. "
                 "Regenerate a complete valid JSON response for the original task. "
                 "Use shorter strings if needed to avoid truncation.\n\n"
                 f"Original system instruction:\n{system}\n\n"
@@ -255,7 +256,7 @@ class OpenAIReasoner:
                 raise LLMError(
                     "Model tra ve JSON khong hop le ngay ca sau khi yeu cau sua. "
                     "Hay tang LLM_MAX_TOKENS hoac doi model co JSON mode on dinh hon. "
-                    f"Loi ban dau: {exc}. Loi sau sua: {repair_exc}. "
+                    f"Loi ban dau: {error_text}. Loi sau sua: {repair_exc}. "
                     f"Do dai response goc: {len(content)}. Do dai response sua: {len(repaired)}."
                 ) from repair_exc
 
