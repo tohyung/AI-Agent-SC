@@ -5,6 +5,7 @@ from collections.abc import Callable
 
 from .logic_graph import LogicGraphVerifier
 from .models import ContractDraft, LogicGraphResult, PipelineResult, TraceEvent, VerificationResult
+from .utils import unique_strings
 
 
 class PromptToDraftNode:
@@ -22,7 +23,7 @@ class PromptToDraftNode:
         self.last_clarification_audit = verification.reasoning_narrative
         return self.ask_for_clarifications(
             prompt,
-            _unique_strings(verification.questions or verification.findings)[:4],
+            unique_strings(verification.questions or verification.findings)[:4],
             "Thong tin bo sung tu nguoi dung",
         )
 
@@ -33,7 +34,7 @@ class PromptToDraftNode:
         self.last_clarification_audit = str(clarification.get("reasoning_narrative") or "")
 
         internal_instruction = str(clarification.get("internal_instruction") or "").strip()
-        questions = _unique_strings(clarification.get("questions") or [])[:4]
+        questions = unique_strings(clarification.get("questions") or [])[:4]
 
         if clarification.get("needs_user_input") and questions:
             next_prompt = self.ask_for_clarifications(
@@ -113,18 +114,6 @@ class LogicGraphVerificationNode:
 
 
 TraceCallback = Callable[[TraceEvent], None]
-
-
-def _unique_strings(values: list[Any]) -> list[str]:
-    seen: set[str] = set()
-    result: list[str] = []
-    for value in values:
-        text = str(value).strip()
-        key = " ".join(text.split()).casefold()
-        if text and key not in seen:
-            seen.add(key)
-            result.append(text)
-    return result
 
 
 class AgentPipeline:

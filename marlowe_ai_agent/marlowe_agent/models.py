@@ -4,6 +4,10 @@ from dataclasses import dataclass, field
 from typing import Any
 
 
+class LLMError(RuntimeError):
+    """A model request failed or exceeded its call budget."""
+
+
 @dataclass
 class PartySpec:
     role: str

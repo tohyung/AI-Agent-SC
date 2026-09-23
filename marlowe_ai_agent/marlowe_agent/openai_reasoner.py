@@ -7,7 +7,8 @@ import time
 from pathlib import Path
 from typing import Any
 
-from .models import ContractDraft, LogicGraphResult, PartySpec, VerificationResult
+from .models import ContractDraft, LLMError, LogicGraphResult, PartySpec, VerificationResult
+from .utils import unique_strings
 
 
 class OpenAIReasoner:
@@ -157,7 +158,7 @@ class OpenAIReasoner:
             f"Input:\n{json.dumps(payload, ensure_ascii=False)}"
         )
         data = self._json_response(system, user)
-        questions = _unique_strings(data.get("questions") or [])[:4]
+        questions = unique_strings(data.get("questions") or [])[:4]
         return {
             "needs_user_input": bool(data.get("needs_user_input")) and bool(questions),
             "questions": questions,
@@ -227,7 +228,7 @@ class OpenAIReasoner:
             try:
                 return parse_json_text(repaired)
             except json.JSONDecodeError as repair_exc:
-                raise RuntimeError(
+                raise LLMError(
                     "Model tra ve JSON khong hop le ngay ca sau khi yeu cau sua. "
                     "Hay tang LLM_MAX_TOKENS hoac doi model co JSON mode on dinh hon. "
                     f"Loi ban dau: {exc}. Loi sau sua: {repair_exc}. "
@@ -261,7 +262,7 @@ class OpenAIReasoner:
                     if attempt < self.retry_attempts and _is_retryable_error(exc):
                         time.sleep(self.retry_base_delay * attempt)
                         continue
-                    raise
+                    raise LLMError(f"LLM request failed: {exc}") from exc
 
                 choices = getattr(response, "choices", None)
                 if choices:
@@ -281,7 +282,7 @@ class OpenAIReasoner:
 
                 break
 
-            raise RuntimeError(
+            raise LLMError(
                 "Model khong tra ve choices/content sau khi retry. "
                 "Day thuong la loi tam thoi tu provider/model nhu 502/504/524. "
                 f"Response cuoi: {last_debug}"
@@ -290,15 +291,18 @@ class OpenAIReasoner:
         return self._raw_responses_response(system, user)
 
     def _raw_responses_response(self, system: str, user: str) -> str:
-        response = self.client.responses.create(
-            model=self.model,
-            input=[
-                {"role": "system", "content": system},
-                {"role": "user", "content": user},
-            ],
-            text={"format": {"type": "json_object"}},
-            max_output_tokens=self.max_tokens,
-        )
+        try:
+            response = self.client.responses.create(
+                model=self.model,
+                input=[
+                    {"role": "system", "content": system},
+                    {"role": "user", "content": user},
+                ],
+                text={"format": {"type": "json_object"}},
+                max_output_tokens=self.max_tokens,
+            )
+        except Exception as exc:
+            raise LLMError(f"Responses API request failed: {exc}") from exc
         content = response.output_text or ""
         if content.strip():
             return content
@@ -307,7 +311,7 @@ class OpenAIReasoner:
             return self._raw_chat_response(system, user)
 
         debug = _safe_response_debug(response)
-        raise RuntimeError(f"Responses API tra ve noi dung rong. Response: {debug}")
+        raise LLMError(f"Responses API tra ve noi dung rong. Response: {debug}")
 
     def _raw_chat_response(self, system: str, user: str) -> str:
         messages = [
@@ -315,22 +319,25 @@ class OpenAIReasoner:
             {"role": "user", "content": user},
         ]
         try:
-            response = self.client.chat.completions.create(
-                model=self.model,
-                messages=messages,
-                response_format={"type": "json_object"},
-                max_tokens=self.max_tokens,
-            )
-        except Exception:
-            response = self.client.chat.completions.create(
-                model=self.model,
-                messages=messages,
-                max_tokens=self.max_tokens,
-            )
+            try:
+                response = self.client.chat.completions.create(
+                    model=self.model,
+                    messages=messages,
+                    response_format={"type": "json_object"},
+                    max_tokens=self.max_tokens,
+                )
+            except Exception:
+                response = self.client.chat.completions.create(
+                    model=self.model,
+                    messages=messages,
+                    max_tokens=self.max_tokens,
+                )
+        except Exception as exc:
+            raise LLMError(f"Chat completions request failed: {exc}") from exc
         choices = getattr(response, "choices", None)
         if choices and choices[0].message.content:
             return choices[0].message.content
-        raise RuntimeError(f"Chat completions API tra ve noi dung rong. Response: {_safe_response_debug(response)}")
+        raise LLMError(f"Chat completions API tra ve noi dung rong. Response: {_safe_response_debug(response)}")
 
 
 def _safe_response_debug(response: Any) -> str:
@@ -433,18 +440,6 @@ def _compact_text(text: str, limit: int) -> str:
     if len(text) <= limit:
         return text
     return text[:limit] + "\n...[truncated]"
-
-
-def _unique_strings(values: list[Any]) -> list[str]:
-    seen: set[str] = set()
-    result: list[str] = []
-    for value in values:
-        text = str(value).strip()
-        key = re.sub(r"\s+", " ", text).casefold()
-        if text and key not in seen:
-            seen.add(key)
-            result.append(text)
-    return result
 
 
 def load_env_file() -> Path | None:
