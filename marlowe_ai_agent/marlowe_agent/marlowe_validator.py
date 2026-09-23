@@ -2,117 +2,207 @@ from __future__ import annotations
 
 from typing import Any
 
-
-CONTRACT_KEYS = {"close", "pay", "if", "when", "let", "assert"}
+from .marlowe_ast import is_close
 
 
 class MarloweValidationError(ValueError):
-    pass
+    """A Marlowe JSON contract does not match the supported Core V1 grammar."""
 
 
-def validate_contract(contract: dict[str, Any]) -> list[str]:
+def _integer(value: Any) -> bool:
+    return type(value) is int
+
+
+def _shape(value: Any, required: set[str], path: str, errors: list[str]) -> bool:
+    if not isinstance(value, dict):
+        errors.append(f"{path}: phải là object.")
+        return False
+    missing = required - value.keys()
+    extra = value.keys() - required
+    for key in sorted(missing):
+        errors.append(f"{path}: thiếu field '{key}'.")
+    for key in sorted(extra):
+        errors.append(f"{path}: field không được hỗ trợ '{key}'.")
+    return not missing and not extra
+
+
+def _one_shape(value: Any, shapes: list[set[str]], path: str, errors: list[str]) -> set[str] | None:
+    if not isinstance(value, dict):
+        errors.append(f"{path}: phải là object.")
+        return None
+    for shape in shapes:
+        if set(value) == shape:
+            return shape
+    errors.append(f"{path}: tổ hợp field không hợp lệ: {sorted(value)}.")
+    return None
+
+
+def _text(value: Any, path: str, errors: list[str], allow_empty: bool = False) -> None:
+    if not isinstance(value, str) or (not allow_empty and not value):
+        errors.append(f"{path}: phải là chuỗi{' (có thể rỗng)' if allow_empty else ' không rỗng'}.")
+
+
+def validate_party(party: Any, path: str, errors: list[str]) -> None:
+    shape = _one_shape(party, [{"role_token"}, {"address"}], path, errors)
+    if shape:
+        key = next(iter(shape))
+        _text(party[key], f"{path}.{key}", errors)
+
+
+def validate_token(token: Any, path: str, errors: list[str]) -> None:
+    if _shape(token, {"currency_symbol", "token_name"}, path, errors):
+        _text(token["currency_symbol"], f"{path}.currency_symbol", errors, True)
+        _text(token["token_name"], f"{path}.token_name", errors, True)
+
+
+def validate_choice_id(choice: Any, path: str, errors: list[str]) -> None:
+    if _shape(choice, {"choice_name", "choice_owner"}, path, errors):
+        _text(choice["choice_name"], f"{path}.choice_name", errors)
+        validate_party(choice["choice_owner"], f"{path}.choice_owner", errors)
+
+
+def validate_value(value: Any, path: str, errors: list[str]) -> None:
+    if _integer(value) or value in ("time_interval_start", "time_interval_end"):
+        return
+    if isinstance(value, bool) or not isinstance(value, dict):
+        errors.append(f"{path}: Value phải là số nguyên, thời gian hoặc object hợp lệ.")
+        return
+    shapes = [
+        {"in_account", "amount_of_token"}, {"negate"}, {"add", "and"},
+        {"value", "minus"}, {"multiply", "times"}, {"divide", "by"},
+        {"value_of_choice"}, {"use_value"}, {"if", "then", "else"},
+    ]
+    shape = _one_shape(value, shapes, path, errors)
+    if shape is None:
+        return
+    if "in_account" in shape:
+        validate_party(value["in_account"], f"{path}.in_account", errors)
+        validate_token(value["amount_of_token"], f"{path}.amount_of_token", errors)
+    elif "negate" in shape:
+        validate_value(value["negate"], f"{path}.negate", errors)
+    elif "value_of_choice" in shape:
+        validate_choice_id(value["value_of_choice"], f"{path}.value_of_choice", errors)
+    elif "use_value" in shape:
+        _text(value["use_value"], f"{path}.use_value", errors)
+    elif "if" in shape:
+        validate_observation(value["if"], f"{path}.if", errors)
+        validate_value(value["then"], f"{path}.then", errors)
+        validate_value(value["else"], f"{path}.else", errors)
+    else:
+        for key in sorted(shape):
+            validate_value(value[key], f"{path}.{key}", errors)
+
+
+def validate_observation(observation: Any, path: str, errors: list[str]) -> None:
+    if type(observation) is bool:
+        return
+    shapes = [
+        {"both", "and"}, {"either", "or"}, {"not"}, {"chose_something_for"},
+        {"value", "ge_than"}, {"value", "gt"}, {"value", "lt"},
+        {"value", "le_than"}, {"value", "equal_to"},
+    ]
+    shape = _one_shape(observation, shapes, path, errors)
+    if shape is None:
+        return
+    if "chose_something_for" in shape:
+        validate_choice_id(observation["chose_something_for"], f"{path}.chose_something_for", errors)
+    elif "not" in shape:
+        validate_observation(observation["not"], f"{path}.not", errors)
+    elif "both" in shape or "either" in shape:
+        for key in sorted(shape):
+            validate_observation(observation[key], f"{path}.{key}", errors)
+    else:
+        for key in sorted(shape):
+            validate_value(observation[key], f"{path}.{key}", errors)
+
+
+def validate_action(action: Any, path: str, errors: list[str]) -> None:
+    shapes = [
+        {"party", "deposits", "of_token", "into_account"},
+        {"for_choice", "choose_between"}, {"notify_if"},
+    ]
+    shape = _one_shape(action, shapes, path, errors)
+    if shape is None:
+        return
+    if "deposits" in shape:
+        validate_party(action["party"], f"{path}.party", errors)
+        validate_party(action["into_account"], f"{path}.into_account", errors)
+        validate_token(action["of_token"], f"{path}.of_token", errors)
+        validate_value(action["deposits"], f"{path}.deposits", errors)
+    elif "for_choice" in shape:
+        validate_choice_id(action["for_choice"], f"{path}.for_choice", errors)
+        bounds = action["choose_between"]
+        if not isinstance(bounds, list) or not bounds:
+            errors.append(f"{path}.choose_between: phải là danh sách Bound không rỗng.")
+        else:
+            for index, bound in enumerate(bounds):
+                bound_path = f"{path}.choose_between[{index}]"
+                if _shape(bound, {"from", "to"}, bound_path, errors):
+                    if not _integer(bound["from"]) or not _integer(bound["to"]):
+                        errors.append(f"{bound_path}: from/to phải là số nguyên.")
+                    elif bound["from"] > bound["to"]:
+                        errors.append(f"{bound_path}: from phải <= to.")
+    else:
+        validate_observation(action["notify_if"], f"{path}.notify_if", errors)
+
+
+def _validate_contract(contract: Any, path: str, errors: list[str]) -> None:
+    if is_close(contract):
+        return
+    shapes = [
+        {"pay", "from_account", "to", "token", "then"},
+        {"if", "then", "else"}, {"when", "timeout", "timeout_continuation"},
+        {"let", "be", "then"}, {"assert", "then"},
+    ]
+    shape = _one_shape(contract, shapes, path, errors)
+    if shape is None:
+        return
+    if "pay" in shape:
+        validate_value(contract["pay"], f"{path}.pay", errors)
+        validate_party(contract["from_account"], f"{path}.from_account", errors)
+        payee = contract["to"]
+        payee_shape = _one_shape(payee, [{"party"}, {"account"}], f"{path}.to", errors)
+        if payee_shape:
+            key = next(iter(payee_shape))
+            validate_party(payee[key], f"{path}.to.{key}", errors)
+        validate_token(contract["token"], f"{path}.token", errors)
+        _validate_contract(contract["then"], f"{path}.then", errors)
+    elif "when" in shape:
+        cases = contract["when"]
+        if not isinstance(cases, list):
+            errors.append(f"{path}.when: phải là danh sách Case.")
+        else:
+            for index, item in enumerate(cases):
+                case_path = f"{path}.when[{index}]"
+                if _shape(item, {"case", "then"}, case_path, errors):
+                    validate_action(item["case"], f"{case_path}.case", errors)
+                    _validate_contract(item["then"], f"{case_path}.then", errors)
+        timeout = contract["timeout"]
+        if not _integer(timeout) or timeout <= 0:
+            errors.append(f"{path}.timeout: phải là số nguyên POSIX ms > 0.")
+        elif timeout < 10**11:
+            errors.append(f"{path}.timeout: có vẻ đang dùng giây; Marlowe dùng POSIX ms.")
+        _validate_contract(contract["timeout_continuation"], f"{path}.timeout_continuation", errors)
+    elif "if" in shape:
+        validate_observation(contract["if"], f"{path}.if", errors)
+        _validate_contract(contract["then"], f"{path}.then", errors)
+        _validate_contract(contract["else"], f"{path}.else", errors)
+    elif "let" in shape:
+        _text(contract["let"], f"{path}.let", errors)
+        validate_value(contract["be"], f"{path}.be", errors)
+        _validate_contract(contract["then"], f"{path}.then", errors)
+    else:
+        validate_observation(contract["assert"], f"{path}.assert", errors)
+        _validate_contract(contract["then"], f"{path}.then", errors)
+
+
+def validate_contract(contract: Any) -> list[str]:
     errors: list[str] = []
     _validate_contract(contract, "root", errors)
     return errors
 
 
-def _validate_contract(contract: Any, path: str, errors: list[str]) -> None:
-    if not isinstance(contract, dict):
-        errors.append(f"{path}: contract phai la object.")
-        return
-
-    present = [key for key in CONTRACT_KEYS if key in contract]
-    if len(present) != 1:
-        errors.append(f"{path}: contract phai co dung 1 constructor trong {sorted(CONTRACT_KEYS)}.")
-        return
-
-    kind = present[0]
-    if kind == "close":
-        return
-
-    if kind == "pay":
-        _require(contract, ["pay", "from_account", "to", "token", "then"], path, errors)
-        _validate_value(contract.get("pay"), f"{path}.pay", errors)
-        _validate_contract(contract.get("then"), f"{path}.then", errors)
-        return
-
-    if kind == "if":
-        _require(contract, ["if", "then", "else"], path, errors)
-        _validate_observation(contract.get("if"), f"{path}.if", errors)
-        _validate_contract(contract.get("then"), f"{path}.then", errors)
-        _validate_contract(contract.get("else"), f"{path}.else", errors)
-        return
-
-    if kind == "when":
-        _require(contract, ["when", "timeout", "timeout_continuation"], path, errors)
-        cases = contract.get("when")
-        if not isinstance(cases, list):
-            errors.append(f"{path}.when: phai la list Case.")
-        else:
-            for index, case in enumerate(cases):
-                _validate_case(case, f"{path}.when[{index}]", errors)
-        if not isinstance(contract.get("timeout"), int):
-            errors.append(f"{path}.timeout: phai la integer POSIX timeout.")
-        _validate_contract(contract.get("timeout_continuation"), f"{path}.timeout_continuation", errors)
-        return
-
-    if kind == "let":
-        _require(contract, ["let", "be", "then"], path, errors)
-        _validate_value(contract.get("be"), f"{path}.be", errors)
-        _validate_contract(contract.get("then"), f"{path}.then", errors)
-        return
-
-    if kind == "assert":
-        _require(contract, ["assert", "then"], path, errors)
-        _validate_observation(contract.get("assert"), f"{path}.assert", errors)
-        _validate_contract(contract.get("then"), f"{path}.then", errors)
-
-
-def _validate_case(case: Any, path: str, errors: list[str]) -> None:
-    if not isinstance(case, dict):
-        errors.append(f"{path}: Case phai la object.")
-        return
-    _require(case, ["case", "then"], path, errors)
-    _validate_action(case.get("case"), f"{path}.case", errors)
-    _validate_contract(case.get("then"), f"{path}.then", errors)
-
-
-def _validate_action(action: Any, path: str, errors: list[str]) -> None:
-    if not isinstance(action, dict):
-        errors.append(f"{path}: action phai la object.")
-        return
-    if "deposits" in action:
-        _require(action, ["deposits", "into_account", "of_token", "party"], path, errors)
-        _validate_value(action.get("deposits"), f"{path}.deposits", errors)
-        return
-    if "choice" in action:
-        _require(action, ["choice", "bounds"], path, errors)
-        if not isinstance(action.get("bounds"), list) or not action["bounds"]:
-            errors.append(f"{path}.bounds: choice can it nhat 1 bound.")
-        return
-    if "notify_if" in action:
-        _validate_observation(action.get("notify_if"), f"{path}.notify_if", errors)
-        return
-    errors.append(f"{path}: action phai la Deposit, Choice hoac Notify.")
-
-
-def _validate_value(value: Any, path: str, errors: list[str]) -> None:
-    if not isinstance(value, dict):
-        errors.append(f"{path}: value phai la object.")
-        return
-    if not value:
-        errors.append(f"{path}: value rong.")
-
-
-def _validate_observation(observation: Any, path: str, errors: list[str]) -> None:
-    if not isinstance(observation, dict):
-        errors.append(f"{path}: observation phai la object.")
-        return
-    if not observation:
-        errors.append(f"{path}: observation rong.")
-
-
-def _require(data: dict[str, Any], keys: list[str], path: str, errors: list[str]) -> None:
-    for key in keys:
-        if key not in data:
-            errors.append(f"{path}: thieu field '{key}'.")
+def assert_valid(contract: Any) -> None:
+    errors = validate_contract(contract)
+    if errors:
+        raise MarloweValidationError("\n".join(errors))

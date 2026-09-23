@@ -4,6 +4,7 @@ from collections.abc import Callable
 from typing import Any
 
 from .logic_graph import LogicGraphVerifier
+from .marlowe_ast import normalize_marlowe_ast
 from .marlowe_validator import validate_contract
 from .models import ContractDraft, LLMError, LogicGraphResult, PipelineResult, TraceEvent, VerificationResult
 from .utils import fingerprint, unique_strings
@@ -147,6 +148,11 @@ class AgentPipeline:
                     "reasoning_narrative": draft.reasoning_narrative,
                     "intent": draft.intent,
                 })
+
+                draft.marlowe_contract, notes = normalize_marlowe_ast(draft.marlowe_contract)
+                notes = draft.normalization_notes + notes
+                if notes:
+                    self.track("structural_gate", "normalized", "Đã chuẩn hóa AST cũ.", {"notes": notes})
 
                 errors = validate_contract(draft.marlowe_contract)
                 if errors:

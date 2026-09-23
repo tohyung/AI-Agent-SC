@@ -7,6 +7,7 @@ import time
 from pathlib import Path
 from typing import Any
 
+from .marlowe_ast import escrow_contract, normalize_marlowe_ast
 from .models import ContractDraft, LLMError, LogicGraphResult, PartySpec, VerificationResult
 from .utils import unique_strings
 
@@ -48,6 +49,7 @@ class OpenAIReasoner:
 
     def draft_from_prompt(self, prompt: str) -> ContractDraft:
         extracted = self._extract_contract_config(prompt)
+        normalized, notes = normalize_marlowe_ast(extracted.get("marlowe_contract") or {})
         parties = [
             PartySpec(str(party.get("role") or ""), str(party.get("name") or ""))
             for party in extracted.get("parties") or []
@@ -68,7 +70,8 @@ class OpenAIReasoner:
             reasoning_summary=str(extracted.get("reasoning_summary") or ""),
             reasoning_narrative=str(extracted.get("reasoning_narrative") or ""),
             contract_plan=dict(extracted.get("contract_plan") or {}),
-            marlowe_contract=dict(extracted.get("marlowe_contract") or {}),
+            marlowe_contract=normalized,
+            normalization_notes=notes,
         )
 
     def set_call_budget(self, limit: int) -> None:
@@ -86,6 +89,8 @@ class OpenAIReasoner:
             "You are the semantic verification node of a Marlowe smart-contract AI agent. "
             "All user-facing fields MUST be written in Vietnamese. Reason from the user prompt, "
             "draft.contract_plan, and draft.marlowe_contract. Do not add facts not present in the input. "
+            "Marlowe Close is the string 'close'; values are integer lovelace and timeouts are POSIX milliseconds. "
+            "Check unit conversion: 250 ADA equals 250000000 lovelace. "
             "If important business information is missing, passed must be false and questions must contain "
             "specific Vietnamese business questions for the user. Do not ask vague questions about AST/JSON "
             "unless the user explicitly asks technical questions. "
@@ -155,6 +160,8 @@ class OpenAIReasoner:
         system = (
             "You are Node 1 of a Marlowe smart-contract AI agent. "
             "Node 3 has returned logic/AST findings. Convert them into a small number of clear Vietnamese "
+            "The AST uses standard Marlowe Core V1 JSON: Close is 'close', Choice uses for_choice/choose_between, "
+            "amounts are lovelace and timeouts are POSIX milliseconds. "
             "business questions only when the user truly needs to decide business behavior. "
             "Never ask the user to fix AST, JSON, constructor names, fields, graph nodes, or Marlowe internals. "
             "If the findings are purely technical AST/JSON/constructor/schema errors, needs_user_input must be false "
@@ -189,6 +196,9 @@ class OpenAIReasoner:
             "If there is not enough information to safely create a contract, keep marlowe_contract as an empty object. "
             "When there is enough information, produce a Marlowe AST JSON using Close, Pay, If, When, Let, Assert; "
             "actions Deposit, Choice, Notify; and suitable values/observations. "
+            "Use standard Core V1 JSON: Close is the string 'close', Constant is a bare integer, "
+            "Choice uses for_choice/choose_between, timeouts are POSIX milliseconds, "
+            "ADA amounts are lovelace (250 ADA = 250000000), and role_token equals party name. "
             "reasoning_summary is short. reasoning_narrative is a natural intermediate explanation in Vietnamese, "
             "varied by context and not a rigid template, but not detailed chain-of-thought. "
             "Keep reasoning_narrative under 900 Vietnamese characters. Return only valid JSON."
@@ -199,10 +209,11 @@ class OpenAIReasoner:
             '"amount": number|null, "token": string|null, "deposit_timeout": number|null, '
             '"decision_timeout": number|null, "reasoning_summary": string, "reasoning_narrative": string, '
             '"clauses": [string], "assumptions": [string], "clarification_questions": [string], '
-            '"contract_plan": {"nodes": [], "edges": [], "notes": []}, "marlowe_contract": object}. '
-            'Marlowe AST convention: Close={"close":"close"}; Pay has pay/from_account/to/token/then; '
-            "When has when/timeout/timeout_continuation and each case has case/then; "
-            "If has if/then/else; Let has let/be/then; Assert has assert/then. "
+            '"contract_plan": {"nodes": [], "edges": [], "notes": []}, "marlowe_contract": object|string}. '
+            "Reference escrow JSON: "
+            + json.dumps(escrow_contract("Alice", "Bob", 250000000, 1893456000000, 1893542400000),
+                         ensure_ascii=False, separators=(",", ":"))
+            + ". "
             f"Prompt: {prompt}"
         )
         return self._json_response(system, user)
@@ -447,13 +458,13 @@ def _compact_draft_for_semantic(draft: ContractDraft) -> dict[str, Any]:
     }
 
 
-def _compact_contract(contract: dict[str, Any]) -> Any:
+def _compact_contract(contract: Any) -> Any:
     text = json.dumps(contract, ensure_ascii=False)
     if len(text) <= 12000:
         return contract
     return {
         "_truncated": True,
-        "root": next(iter(contract.keys()), None) if contract else None,
+        "root": next(iter(contract), None) if isinstance(contract, dict) else contract,
         "preview": text[:12000],
     }
 

@@ -32,7 +32,8 @@ class ContractDraft:
     reasoning_summary: str = ""
     reasoning_narrative: str = ""
     contract_plan: dict[str, Any] = field(default_factory=dict)
-    marlowe_contract: dict[str, Any] = field(default_factory=dict)
+    marlowe_contract: Any = field(default_factory=dict)
+    normalization_notes: list[str] = field(default_factory=list)
 
     def party_by_role(self, role: str) -> PartySpec | None:
         return next((party for party in self.parties if party.role == role), None)
@@ -53,6 +54,7 @@ class ContractDraft:
             "reasoning_narrative": self.reasoning_narrative,
             "contract_plan": self.contract_plan,
             "marlowe_contract": self.marlowe_contract,
+            "normalization_notes": self.normalization_notes,
         }
 
 
