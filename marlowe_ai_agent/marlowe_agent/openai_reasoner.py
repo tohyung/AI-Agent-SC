@@ -29,6 +29,8 @@ class OpenAIReasoner:
         self.max_tokens = int(os.getenv("LLM_MAX_TOKENS") or "8000")
         self.retry_attempts = int(os.getenv("LLM_RETRY_ATTEMPTS") or "3")
         self.retry_base_delay = float(os.getenv("LLM_RETRY_BASE_DELAY") or "2")
+        self.max_llm_calls = 40
+        self.llm_calls = 0
 
         if not api_key:
             raise RuntimeError(
@@ -69,6 +71,15 @@ class OpenAIReasoner:
             marlowe_contract=dict(extracted.get("marlowe_contract") or {}),
         )
 
+    def set_call_budget(self, limit: int) -> None:
+        self.max_llm_calls = limit
+        self.llm_calls = 0
+
+    def _consume_call(self) -> None:
+        if self.llm_calls >= self.max_llm_calls:
+            raise LLMError(f"Đã đạt giới hạn {self.max_llm_calls} lời gọi LLM.")
+        self.llm_calls += 1
+
     def semantic_verify(self, prompt: str, draft: ContractDraft) -> VerificationResult:
         payload = {"prompt": _compact_text(prompt, 6000), "draft": _compact_draft_for_semantic(draft)}
         system = (
@@ -92,6 +103,8 @@ class OpenAIReasoner:
         )
         try:
             data = self._json_response(system, user)
+        except LLMError:
+            raise
         except RuntimeError as exc:
             return VerificationResult(
                 passed=False,
@@ -245,13 +258,17 @@ class OpenAIReasoner:
             for attempt in range(1, self.retry_attempts + 1):
                 try:
                     try:
+                        self._consume_call()
                         response = self.client.chat.completions.create(
                             model=self.model,
                             messages=messages,
                             response_format={"type": "json_object"},
                             max_tokens=self.max_tokens,
                         )
+                    except LLMError:
+                        raise
                     except Exception:
+                        self._consume_call()
                         response = self.client.chat.completions.create(
                             model=self.model,
                             messages=messages,
@@ -292,6 +309,7 @@ class OpenAIReasoner:
 
     def _raw_responses_response(self, system: str, user: str) -> str:
         try:
+            self._consume_call()
             response = self.client.responses.create(
                 model=self.model,
                 input=[
@@ -320,13 +338,17 @@ class OpenAIReasoner:
         ]
         try:
             try:
+                self._consume_call()
                 response = self.client.chat.completions.create(
                     model=self.model,
                     messages=messages,
                     response_format={"type": "json_object"},
                     max_tokens=self.max_tokens,
                 )
+            except LLMError:
+                raise
             except Exception:
+                self._consume_call()
                 response = self.client.chat.completions.create(
                     model=self.model,
                     messages=messages,

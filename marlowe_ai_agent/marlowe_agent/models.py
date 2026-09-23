@@ -109,10 +109,14 @@ class PipelineResult:
     logic_verification: LogicGraphResult
     iterations: int
     trace: list[TraceEvent] = field(default_factory=list)
+    status: str = "blocked"
+    stop_reason: str = "max_iterations"
 
     def to_dict(self) -> dict[str, Any]:
         return {
             "iterations": self.iterations,
+            "status": self.status,
+            "stop_reason": self.stop_reason,
             "trace": [event.to_dict() for event in self.trace],
             "draft": self.draft.to_dict(),
             "semantic_verification": self.semantic_verification.to_dict(),

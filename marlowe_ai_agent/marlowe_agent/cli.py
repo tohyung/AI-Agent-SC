@@ -7,6 +7,13 @@ from .nodes import AgentPipeline
 from .openai_reasoner import OpenAIReasoner
 
 
+def positive_int(value: str) -> int:
+    parsed = int(value)
+    if parsed < 1:
+        raise argparse.ArgumentTypeError("N phải >= 1")
+    return parsed
+
+
 def node_display_name(node: str) -> str:
     labels = {
         "node_1_prompt_to_draft": "Node 1 - Draft",
@@ -59,13 +66,11 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Tuong thich nguoc: audit dien giai da bat mac dinh.",
     )
-    parser.add_argument(
-        "--max-clarifications",
-        type=int,
-        default=None,
-        metavar="N",
-        help="Gioi han so vong hoi bo sung. Mac dinh khong gioi han.",
-    )
+    parser.add_argument("--max-iterations", "--max-clarifications", dest="max_iterations",
+                        type=positive_int, default=8, metavar="N",
+                        help="Số lượt sinh draft tối đa (mặc định 8). --max-clarifications đã cũ.")
+    parser.add_argument("--max-llm-calls", type=positive_int, default=40, metavar="N",
+                        help="Số lời gọi LLM tối đa, kể cả retry và repair (mặc định 40).")
     parser.add_argument(
         "--allow-unverified",
         action="store_true",
@@ -74,7 +79,7 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def main() -> None:
+def main() -> int:
     parser = build_parser()
     args = parser.parse_args()
 
@@ -95,7 +100,7 @@ def main() -> None:
 
         if event.status == "start" and node_label:
             print(f"Đang chạy: {node_label}")
-        elif event.status in {"blocked", "skipped"} and node_label:
+        elif event.status in {"blocked", "skipped", "error"} and node_label:
             print(f"{node_label}: {event.message}")
 
         narrative = event.data.get("reasoning_narrative") if event.data else None
@@ -106,7 +111,8 @@ def main() -> None:
     pipeline = AgentPipeline(
         reasoner=reasoner,
         interactive=interactive,
-        max_iterations=args.max_clarifications,
+        max_iterations=args.max_iterations,
+        max_llm_calls=args.max_llm_calls,
         require_semantic_pass=not args.allow_unverified,
         trace_callback=print_trace,
     )
@@ -118,8 +124,11 @@ def main() -> None:
         print(f"- semantic_passed: {result.semantic_verification.passed}")
         print(f"- logic_passed: {result.logic_verification.passed}")
         print(f"- intent: {result.draft.intent}")
-        print(f"- contract_root: {next(iter(result.draft.marlowe_contract.keys()), None) if result.draft.marlowe_contract else None}")
-        return
+        contract = result.draft.marlowe_contract
+        print(f"- contract_root: {next(iter(contract), None) if isinstance(contract, dict) else contract}")
+        print(f"- status: {result.status}")
+        print(f"- stop_reason: {stop_reason_label(result.stop_reason)}")
+        return 0 if result.status == "done" else 2
 
     text = json.dumps(payload, ensure_ascii=False, indent=2)
     print(text)
@@ -128,3 +137,18 @@ def main() -> None:
         out_path = Path(args.out)
         out_path.write_text(text + "\n", encoding="utf-8")
         print(f"\nSaved: {out_path.resolve()}")
+    print(f"\nSummary: {result.status}; {stop_reason_label(result.stop_reason)}")
+    return 0 if result.status == "done" else 2
+
+
+def stop_reason_label(reason: str) -> str:
+    labels = {
+        "ok": "Đã kiểm tra xong",
+        "max_iterations": "Đã hết số lượt sinh draft",
+        "stalled": "Bản draft không tiến triển",
+        "no_user_input": "Cần thêm thông tin từ người dùng",
+        "llm_error": "Lời gọi LLM thất bại hoặc vượt giới hạn",
+        "semantic_not_passed": "Semantic chưa đạt",
+        "logic_not_passed": "Logic graph chưa đạt",
+    }
+    return labels.get(reason, reason)
