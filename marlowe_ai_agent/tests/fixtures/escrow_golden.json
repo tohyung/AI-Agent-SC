@@ -1,0 +1,26 @@
+{
+  "when": [{
+    "case": {
+      "party": {"role_token": "Alice"},
+      "deposits": 250000000,
+      "of_token": {"currency_symbol": "", "token_name": ""},
+      "into_account": {"role_token": "Alice"}
+    },
+    "then": {
+      "when": [
+        {
+          "case": {"for_choice": {"choice_name": "approve", "choice_owner": {"role_token": "Alice"}}, "choose_between": [{"from": 1, "to": 1}]},
+          "then": {"pay": 250000000, "token": {"currency_symbol": "", "token_name": ""}, "from_account": {"role_token": "Alice"}, "to": {"party": {"role_token": "Bob"}}, "then": "close"}
+        },
+        {
+          "case": {"for_choice": {"choice_name": "reject", "choice_owner": {"role_token": "Alice"}}, "choose_between": [{"from": 0, "to": 0}]},
+          "then": {"pay": 250000000, "token": {"currency_symbol": "", "token_name": ""}, "from_account": {"role_token": "Alice"}, "to": {"party": {"role_token": "Alice"}}, "then": "close"}
+        }
+      ],
+      "timeout": 1893542400000,
+      "timeout_continuation": {"pay": 250000000, "token": {"currency_symbol": "", "token_name": ""}, "from_account": {"role_token": "Alice"}, "to": {"party": {"role_token": "Alice"}}, "then": "close"}
+    }
+  }],
+  "timeout": 1893456000000,
+  "timeout_continuation": "close"
+}
