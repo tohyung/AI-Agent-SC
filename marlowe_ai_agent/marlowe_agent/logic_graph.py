@@ -1,124 +1,248 @@
 from __future__ import annotations
 
+from dataclasses import dataclass, field
 from typing import Any
 
-from .marlowe_ast import walk_contract
+from .marlowe_ast import is_close, walk_contract
 from .marlowe_validator import validate_contract
-from .models import LogicGraphResult
+from .models import ContractDraft, LogicGraphResult
+from .utils import canonical_json, unique_strings
+
+
+MAX_PATHS = 10_000
+
+
+@dataclass
+class PathState:
+    balances: dict[tuple[str, str], int | None] = field(default_factory=dict)
+    bound_values: dict[str, int | None] = field(default_factory=dict)
+    chosen_ids: set[str] = field(default_factory=set)
+    deadline_stack: list[int] = field(default_factory=list)
+
+    def copy(self) -> PathState:
+        return PathState(self.balances.copy(), self.bound_values.copy(),
+                         self.chosen_ids.copy(), self.deadline_stack.copy())
+
+
+def _key(account: Any, token: Any) -> tuple[str, str]:
+    return canonical_json(account), canonical_json(token)
+
+
+def _evaluate(value: Any, state: PathState) -> int | None:
+    if type(value) is int:
+        return value
+    if not isinstance(value, dict):
+        return None
+    if "use_value" in value:
+        return state.bound_values.get(value["use_value"])
+    if "negate" in value:
+        inner = _evaluate(value["negate"], state)
+        return -inner if inner is not None else None
+    for left, right, operation in [("add", "and", 1), ("value", "minus", -1)]:
+        if left in value and right in value:
+            a, b = _evaluate(value[left], state), _evaluate(value[right], state)
+            return a + operation * b if a is not None and b is not None else None
+    return None
+
+
+def _inspect_refs(expr: Any, state: PathState, path: str,
+                  errors: list[str], warnings: list[str]) -> None:
+    if isinstance(expr, list):
+        for index, item in enumerate(expr):
+            _inspect_refs(item, state, f"{path}[{index}]", errors, warnings)
+    elif isinstance(expr, dict):
+        if "use_value" in expr and expr["use_value"] not in state.bound_values:
+            errors.append(f"{path}.use_value: biến '{expr['use_value']}' chưa được Let định nghĩa.")
+        for key in ("value_of_choice", "chose_something_for"):
+            if key in expr and canonical_json(expr[key]) not in state.chosen_ids:
+                warnings.append(f"{path}.{key}: Choice chưa được chọn trên đường đi này.")
+        for key, value in expr.items():
+            _inspect_refs(value, state, f"{path}.{key}", errors, warnings)
+
+
+def check_draft_consistency(draft: ContractDraft) -> tuple[list[str], list[str]]:
+    errors: list[str] = []
+    warnings: list[str] = []
+    roles: set[str] = set()
+    amounts: set[int] = set()
+    timeouts: set[int] = set()
+
+    def visit(value: Any, path: str) -> None:
+        if isinstance(value, list):
+            for index, item in enumerate(value):
+                visit(item, f"{path}[{index}]")
+        elif isinstance(value, dict):
+            if "role_token" in value:
+                role_name = value["role_token"]
+                roles.add(role_name)
+                allowed = {item for party in draft.parties for item in (party.name, party.role)}
+                if role_name not in allowed:
+                    errors.append(f"{path}.role_token: vai trò '{role_name}' không có trong draft.parties.")
+            if "timeout" in value:
+                timeouts.add(value["timeout"])
+            for key in ("pay", "deposits"):
+                if key in value and type(value[key]) is int:
+                    amounts.add(value[key])
+            for key, item in value.items():
+                visit(item, f"{path}.{key}")
+
+    visit(draft.marlowe_contract, "root")
+    for party in draft.parties:
+        if party.name not in roles and party.role not in roles:
+            warnings.append(f"root: bên '{party.name}' trong draft không xuất hiện trong AST.")
+    if draft.amount is not None and draft.amount not in amounts:
+        warnings.append(f"root: không thấy số tiền {draft.amount} trong Deposit/Pay; kiểm tra đơn vị lovelace.")
+    for name in ("deposit_timeout", "decision_timeout"):
+        timeout = getattr(draft, name)
+        if timeout is not None and timeout not in timeouts:
+            warnings.append(f"root: {name}={timeout} không xuất hiện trong AST.")
+    return unique_strings(errors), unique_strings(warnings)
 
 
 class LogicGraphVerifier:
-    def verify(self, contract: dict[str, Any]) -> LogicGraphResult:
+    def verify(self, contract: Any, draft: ContractDraft | None = None) -> LogicGraphResult:
         validation_errors = validate_contract(contract)
         if validation_errors:
-            return LogicGraphResult(
-                passed=False,
-                findings=_unique_findings(["AST Marlowe khong hop le ve cau truc.", *validation_errors]),
-                graph={"nodes": [], "edges": []},
-            )
+            return LogicGraphResult(False, validation_errors, {"nodes": [], "edges": []},
+                                    errors=validation_errors)
 
         graph = self._build_graph(contract)
-        findings = _unique_findings(self._find_logic_issues(contract, graph))
-        return LogicGraphResult(passed=not findings, findings=findings or ["Logic graph pass."], graph=graph)
+        errors: list[str] = []
+        warnings: list[str] = []
+        paths_explored = 0
+        truncated = False
+        unknown = False
 
-    def _build_graph(self, contract: dict[str, Any]) -> dict[str, Any]:
-        nodes = []
-        edges = []
+        def visit(node: Any, path: str, state: PathState) -> None:
+            nonlocal paths_explored, truncated, unknown
+            if paths_explored >= MAX_PATHS:
+                truncated = True
+                return
+            if is_close(node):
+                paths_explored += 1
+                for balance in state.balances.values():
+                    if balance is not None and balance > 0:
+                        warnings.append(f"{path}: Close còn dư {balance}; Marlowe sẽ hoàn về chủ account.")
+                return
+            if "when" in node:
+                timeout = node["timeout"]
+                if state.deadline_stack and timeout <= state.deadline_stack[-1]:
+                    errors.append(f"{path}.timeout: timeout lồng nhau không tăng ({timeout} <= {state.deadline_stack[-1]}).")
+                if not node["when"]:
+                    warnings.append(f"{path}.when: When rỗng, chỉ chờ timeout.")
+                self._check_case_overlap(node["when"], path, errors)
+                for index, item in enumerate(node["when"]):
+                    action = item["case"]
+                    action_path = f"{path}.when[{index}].case"
+                    branch = state.copy()
+                    branch.deadline_stack.append(timeout)
+                    _inspect_refs(action, branch, action_path, errors, warnings)
+                    if "deposits" in action:
+                        amount = _evaluate(action["deposits"], branch)
+                        if amount is not None and amount <= 0:
+                            errors.append(f"{action_path}.deposits: số tiền Deposit phải > 0.")
+                        # TODO(spec): Minimum ADA is protocol-parameter dependent; query it before warning.
+                        account_key = _key(action["into_account"], action["of_token"])
+                        balance = branch.balances.get(account_key, 0)
+                        branch.balances[account_key] = balance + amount if balance is not None and amount is not None else None
+                        unknown |= amount is None
+                    elif "for_choice" in action:
+                        branch.chosen_ids.add(canonical_json(action["for_choice"]))
+                    visit(item["then"], f"{path}.when[{index}].then", branch)
+                timeout_branch = state.copy()
+                timeout_branch.deadline_stack.append(timeout)
+                visit(node["timeout_continuation"], f"{path}.timeout_continuation", timeout_branch)
+            elif "pay" in node:
+                _inspect_refs(node["pay"], state, f"{path}.pay", errors, warnings)
+                amount = _evaluate(node["pay"], state)
+                if amount is not None and amount <= 0:
+                    errors.append(f"{path}.pay: số tiền Pay phải > 0.")
+                account_key = _key(node["from_account"], node["token"])
+                balance = state.balances.get(account_key, 0)
+                if amount is not None and balance is not None:
+                    if amount > balance:
+                        errors.append(f"{path}.pay: Pay {amount} vượt số dư {balance}; sẽ chỉ trả một phần.")
+                    transferred = min(max(amount, 0), balance)
+                    state.balances[account_key] = balance - transferred
+                    if "account" in node["to"]:
+                        payee_key = _key(node["to"]["account"], node["token"])
+                        payee_balance = state.balances.get(payee_key, 0)
+                        state.balances[payee_key] = payee_balance + transferred if payee_balance is not None else None
+                else:
+                    state.balances[account_key] = None
+                    unknown = True
+                visit(node["then"], f"{path}.then", state)
+            elif "let" in node:
+                _inspect_refs(node["be"], state, f"{path}.be", errors, warnings)
+                state.bound_values[node["let"]] = _evaluate(node["be"], state)
+                unknown |= state.bound_values[node["let"]] is None
+                visit(node["then"], f"{path}.then", state)
+            elif "if" in node:
+                _inspect_refs(node["if"], state, f"{path}.if", errors, warnings)
+                if type(node["if"]) is bool:
+                    dead = "else" if node["if"] else "then"
+                    live = "then" if node["if"] else "else"
+                    warnings.append(f"{path}.{dead}: nhánh chết vì điều kiện hằng.")
+                    visit(node[live], f"{path}.{live}", state)
+                else:
+                    visit(node["then"], f"{path}.then", state.copy())
+                    visit(node["else"], f"{path}.else", state.copy())
+            else:
+                _inspect_refs(node["assert"], state, f"{path}.assert", errors, warnings)
+                visit(node["then"], f"{path}.then", state)
 
-        def visit(node: dict[str, Any], node_id: str) -> None:
-            nodes.append({"id": node_id, "type": self._node_type(node)})
+        visit(contract, "root", PathState())
+        if truncated:
+            warnings.append("root: đã cắt bớt phân tích vì vượt MAX_PATHS.")
+        if unknown:
+            warnings.append("root: không thể kiểm tĩnh đầy đủ với giá trị không xác định.")
+        if draft:
+            draft_errors, draft_warnings = check_draft_consistency(draft)
+            errors.extend(draft_errors)
+            warnings.extend(draft_warnings)
+        errors = unique_strings(errors)
+        warnings = unique_strings(warnings)
+        findings = errors + warnings or ["Logic graph pass."]
+        return LogicGraphResult(not errors, findings, graph, errors, warnings, paths_explored)
+
+    def _check_case_overlap(self, cases: list[dict[str, Any]], path: str, errors: list[str]) -> None:
+        seen: set[str] = set()
+        choices: dict[str, list[tuple[int, int]]] = {}
+        for index, item in enumerate(cases):
+            action = item["case"]
+            action_path = f"{path}.when[{index}].case"
+            encoded = canonical_json(action)
+            if encoded in seen:
+                errors.append(f"{action_path}: action trùng hệt case khác trong cùng When.")
+            seen.add(encoded)
+            if "for_choice" not in action:
+                continue
+            key = canonical_json(action["for_choice"])
+            previous = choices.setdefault(key, [])
+            for bound in action["choose_between"]:
+                low, high = bound["from"], bound["to"]
+                if any(max(low, old_low) <= min(high, old_high) for old_low, old_high in previous):
+                    errors.append(f"{action_path}.choose_between: các khoảng Choice cùng ID chồng lấn.")
+            previous.extend((bound["from"], bound["to"]) for bound in action["choose_between"])
+
+    def _build_graph(self, contract: Any) -> dict[str, Any]:
+        nodes: list[dict[str, str]] = []
+        edges: list[dict[str, str]] = []
+        for path, node in walk_contract(contract):
+            kind = "Close" if is_close(node) else next((name for name in ("when", "pay", "if", "let", "assert") if name in node), "Unknown")
+            nodes.append({"id": path, "type": kind.title()})
+            if is_close(node):
+                continue
             if "when" in node:
                 for index, item in enumerate(node["when"]):
-                    child_id = f"{node_id}.case[{index}]"
-                    edges.append({"from": node_id, "to": child_id, "label": self._action_label(item["case"])})
-                    visit(item["then"], child_id)
-                timeout_id = f"{node_id}.timeout"
-                edges.append({"from": node_id, "to": timeout_id, "label": f"timeout@{node['timeout']}"})
-                visit(node["timeout_continuation"], timeout_id)
+                    label = canonical_json(item["case"])
+                    edges.append({"from": path, "to": f"{path}.when[{index}].then",
+                                  "label": label[:80] + ("..." if len(label) > 80 else "")})
+                edges.append({"from": path, "to": f"{path}.timeout_continuation",
+                              "label": f"timeout@{node['timeout']}"})
             elif "if" in node:
-                then_id = f"{node_id}.then"
-                else_id = f"{node_id}.else"
-                edges.append({"from": node_id, "to": then_id, "label": "if true"})
-                edges.append({"from": node_id, "to": else_id, "label": "if false"})
-                visit(node["then"], then_id)
-                visit(node["else"], else_id)
-            elif "then" in node:
-                child_id = f"{node_id}.then"
-                edges.append({"from": node_id, "to": child_id, "label": "then"})
-                visit(node["then"], child_id)
-
-        visit(contract, "root")
+                for branch in ("then", "else"):
+                    edges.append({"from": path, "to": f"{path}.{branch}", "label": branch})
+            else:
+                edges.append({"from": path, "to": f"{path}.then", "label": "then"})
         return {"nodes": nodes, "edges": edges}
-
-    def _find_logic_issues(self, contract: dict[str, Any], graph: dict[str, Any]) -> list[str]:
-        findings: list[str] = []
-        visited_paths = walk_contract(contract)
-
-        if not any(node.get("close") == "close" for _, node in visited_paths):
-            findings.append("Hop dong khong co nhanh ket thuc Close.")
-
-        when_nodes = [(path, node) for path, node in visited_paths if "when" in node]
-        for path, node in when_nodes:
-            labels = [self._action_label(item["case"]) for item in node["when"]]
-            duplicates = sorted({label for label in labels if labels.count(label) > 1})
-            if duplicates:
-                findings.append(f"{path} co case trung lap: {', '.join(duplicates)}.")
-
-            if len(node["when"]) == 0:
-                findings.append(f"{path} la When rong, chi co timeout.")
-
-            if node["timeout_continuation"] == node:
-                findings.append(f"{path} timeout tao vong lap truc tiep.")
-
-        pay_edges = [edge for edge in graph["edges"] if "Choice" in edge["label"]]
-        choice_labels = [edge["label"] for edge in pay_edges]
-        if len(choice_labels) != len(set(choice_labels)):
-            findings.append("Cac nhanh choice co nhan trung nhau.")
-
-        for path, node in visited_paths:
-            if "pay" in node and node["pay"].get("constant", 0) <= 0:
-                findings.append(f"{path} co Pay voi so tien <= 0.")
-
-        return findings
-
-    def _node_type(self, node: dict[str, Any]) -> str:
-        if "when" in node:
-            return "When"
-        if "pay" in node:
-            return "Pay"
-        if "close" in node:
-            return "Close"
-        if "if" in node:
-            return "If"
-        if "let" in node:
-            return "Let"
-        if "assert" in node:
-            return "Assert"
-        return "Unknown"
-
-    def _action_label(self, action: dict[str, Any]) -> str:
-        if "deposits" in action:
-            party = action["party"].get("role_token", "?")
-            amount = action["deposits"].get("constant", "?")
-            return f"Deposit({party},{amount})"
-        if "choice" in action:
-            choice = action["choice"]
-            owner = choice["choice_owner"].get("role_token", "?")
-            bounds = action.get("bounds", [])
-            bound_text = ",".join(f"{item['from']}..{item['to']}" for item in bounds)
-            return f"Choice({choice['choice_name']},{owner},{bound_text})"
-        if "notify_if" in action:
-            return "Notify"
-        return "Action"
-
-
-def _unique_findings(findings: list[str]) -> list[str]:
-    seen: set[str] = set()
-    result: list[str] = []
-    for finding in findings:
-        text = finding.strip()
-        key = " ".join(text.split()).casefold()
-        if text and key not in seen:
-            seen.add(key)
-            result.append(text)
-    return result

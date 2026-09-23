@@ -72,13 +72,14 @@ class LogicGraphVerificationNode:
         self.verifier = LogicGraphVerifier()
 
     def run(self, draft: ContractDraft) -> LogicGraphResult:
-        return self.verifier.verify(draft.marlowe_contract)
+        return self.verifier.verify(draft.marlowe_contract, draft)
 
     def audit_narrative(self, logic: LogicGraphResult) -> str:
         count = len(logic.graph.get("nodes", []))
         if logic.passed:
-            return f"Node 3 đã kiểm tra {count} node trong logic graph; không phát hiện lỗi."
-        return f"Node 3 kiểm tra {count} node và phát hiện: {'; '.join(logic.findings[:3])}"
+            return f"Node 3 đã kiểm tra {count} node, {logic.paths_explored} đường đi; có {len(logic.warnings)} cảnh báo."
+        return (f"Node 3 kiểm tra {count} node và phát hiện {len(logic.errors)} lỗi, "
+                f"{len(logic.warnings)} cảnh báo: {'; '.join(logic.errors[:3])}")
 
 
 TraceCallback = Callable[[TraceEvent], None]
