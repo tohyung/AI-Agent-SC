@@ -4,7 +4,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from enum import Enum
 from time import perf_counter, sleep
-from typing import Any
+from typing import Any, TypeVar
 
 from .logic_graph import LogicGraphVerifier
 from .marlowe_ast import normalize_marlowe_ast
@@ -45,14 +45,17 @@ class StallTracker:
 
 
 class PromptToDraftNode:
-    def __init__(self, reasoner: Any, interactive: bool = False) -> None:
+    def __init__(self, reasoner: Any, interactive: bool = False,
+                 call_llm: Callable[[str, str, Callable[[], Any]], Any] | None = None) -> None:
         self.reasoner = reasoner
         self.interactive = interactive
+        self.call_llm = call_llm or (lambda _node, _operation, call: call())
         self.last_clarification_audit = ""
         self.last_answered_questions_count = 0
 
     def run(self, prompt: str) -> ContractDraft:
-        return self.reasoner.draft_from_prompt(prompt)
+        return self.call_llm("node_1_prompt_to_draft", "draft_from_prompt",
+                             lambda: self.reasoner.draft_from_prompt(prompt))
 
     def clarify_prompt(self, prompt: str, verification: VerificationResult,
                        allow_no_action: bool = False) -> ClarificationOutcome:
@@ -67,7 +70,10 @@ class PromptToDraftNode:
 
     def clarify_logic_prompt(self, prompt: str, draft: ContractDraft, logic: LogicGraphResult,
                              stall_hint: str = "") -> ClarificationOutcome:
-        clarification = self.reasoner.logic_feedback_to_clarification(prompt, draft, logic)
+        clarification = self.call_llm(
+            "node_1_prompt_to_draft", "logic_feedback_to_clarification",
+            lambda: self.reasoner.logic_feedback_to_clarification(prompt, draft, logic),
+        )
         self.last_clarification_audit = str(clarification.get("reasoning_narrative") or "")
         llm_instruction = str(clarification.get("internal_instruction") or "").strip()
         instruction = "\n".join(part for part in [
@@ -132,6 +138,7 @@ class LogicGraphVerificationNode:
 
 
 TraceCallback = Callable[[TraceEvent], None]
+T = TypeVar("T")
 STALL_HINT = (
     "Draft hiện tại lặp lại cùng AST và cùng lỗi như lượt trước. "
     "Không lặp lại cách sửa cũ. Hãy phân tích lại nguyên nhân và tạo AST khác về cấu trúc "
@@ -153,7 +160,7 @@ class AgentPipeline:
     ) -> None:
         if any(limit is not None and limit < 1 for limit in (max_iterations, max_llm_calls, stop_on_stall)):
             raise ValueError("Các giới hạn phải >= 1")
-        self.node_1 = PromptToDraftNode(reasoner, interactive=interactive)
+        self.node_1 = PromptToDraftNode(reasoner, interactive=interactive, call_llm=self._call_llm_with_retry)
         self.node_2 = SemanticVerificationNode(reasoner)
         self.node_3 = LogicGraphVerificationNode()
         self.max_iterations = max_iterations
@@ -256,6 +263,21 @@ class AgentPipeline:
     def _limit_reached(self, iterations: int) -> bool:
         return self.max_iterations is not None and iterations >= self.max_iterations
 
+    def _call_llm_with_retry(self, node: str, operation: str, call: Callable[[], T],
+                             max_attempts: int = 3) -> T:
+        for attempt in range(1, max_attempts + 1):
+            try:
+                return call()
+            except LLMTransientError as exc:
+                if attempt == max_attempts:
+                    raise
+                self.track(node, "retry", "Lỗi LLM tạm thời; thử lại operation.", {
+                    "operation": operation, "attempt": attempt, "max_attempts": max_attempts,
+                    "error": str(exc)[:200],
+                })
+                self.retry_sleep(0.5 * attempt)
+        raise AssertionError("unreachable")
+
     def run(self, prompt: str) -> PipelineResult:
         self.trace = []
         self.stall_tracker = StallTracker()
@@ -325,16 +347,10 @@ class AgentPipeline:
                     self.track("structural_gate", "skipped", "Chưa có AST; chuyển Node 2 xác minh.")
 
                 self.track("node_2_semantic_verification", "start", "Đang kiểm semantic.")
-                for attempt in range(1, 4):
-                    try:
-                        semantic = self.node_2.run(current_prompt, draft)
-                        break
-                    except LLMTransientError as exc:
-                        if attempt == 3:
-                            raise
-                        self.track("node_2_semantic_verification", "retry", "Lỗi tạm thời; thử lại Node 2.",
-                                   {"attempt": attempt, "error": str(exc)})
-                        self.retry_sleep(0.5 * attempt)
+                semantic = self._call_llm_with_retry(
+                    "node_2_semantic_verification", "semantic_verify",
+                    lambda: self.node_2.run(current_prompt, draft),
+                )
                 self.track("node_2_semantic_verification", "pass" if semantic.passed else "fail",
                            "Đã kiểm semantic.", {"findings": semantic.findings,
                                                   "reasoning_narrative": semantic.reasoning_narrative})

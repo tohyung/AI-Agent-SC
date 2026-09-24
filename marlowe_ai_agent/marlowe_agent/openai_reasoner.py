@@ -95,9 +95,9 @@ class OpenAIReasoner:
         self.llm_calls = 0
 
     def _consume_call(self) -> None:
-        self.llm_calls += 1
-        if self.max_llm_calls is not None and self.llm_calls > self.max_llm_calls:
+        if self.max_llm_calls is not None and self.llm_calls >= self.max_llm_calls:
             raise LLMBudgetError(f"Đã đạt giới hạn {self.max_llm_calls} lời gọi LLM.")
+        self.llm_calls += 1
 
     def semantic_verify(self, prompt: str, draft: ContractDraft) -> VerificationResult:
         payload = {"prompt": _compact_text(prompt, 6000), "draft": _compact_draft_for_semantic(draft)}

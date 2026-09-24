@@ -412,7 +412,66 @@ def test_semantic_retries_transient_error_then_continues() -> None:
     assert reasoner.calls == ["draft", "semantic", "semantic", "semantic"]
     assert delays == [0.5, 1.0]
     assert len([event for event in result.trace if event.status == "retry"]) == 2
+    assert all(event.data["operation"] == "semantic_verify" for event in result.trace if event.status == "retry")
     assert result.semantic_verification.questions == []
+
+
+def test_draft_retries_transient_error_then_continues() -> None:
+    delays = []
+    reasoner = FakeReasoner([LLMTransientError("502"), LLMTransientError("503"), make_draft()])
+    result = AgentPipeline(reasoner, retry_sleep=delays.append).run("escrow")
+    assert result.status == "done"
+    assert reasoner.calls == ["draft", "draft", "draft", "semantic"]
+    assert delays == [0.5, 1.0]
+    retries = [event for event in result.trace if event.status == "retry"]
+    assert len(retries) == 2
+    assert all(event.data["operation"] == "draft_from_prompt" for event in retries)
+
+
+@pytest.mark.parametrize("error", [LLMBudgetError("cap"), LLMConfigError("config")])
+def test_draft_budget_and_config_errors_are_not_retried(error) -> None:
+    reasoner = FakeReasoner([error])
+    result = AgentPipeline(reasoner, retry_sleep=lambda _: pytest.fail("No retry expected")).run("escrow")
+    assert result.stop_reason == "llm_error"
+    assert reasoner.calls == ["draft"]
+
+
+def test_logic_feedback_retries_transient_error_then_continues() -> None:
+    delays = []
+    reasoner = FakeReasoner([make_draft(pay("Alice", "Bob", 10)), make_draft()], clarifications=[
+        LLMTransientError("502"), LLMTransientError("503"),
+        {"needs_user_input": False, "questions": [], "internal_instruction": "Sửa Pay."},
+    ])
+    result = AgentPipeline(reasoner, retry_sleep=delays.append).run("escrow")
+    assert result.status == "done"
+    assert reasoner.calls.count("clarification") == 3
+    assert delays == [0.5, 1.0]
+    retries = [event for event in result.trace if event.status == "retry"]
+    assert len(retries) == 2
+    assert all(event.data["operation"] == "logic_feedback_to_clarification" for event in retries)
+
+
+def test_logic_feedback_budget_error_is_not_retried() -> None:
+    reasoner = FakeReasoner([make_draft(pay("Alice", "Bob", 10))], clarifications=[LLMBudgetError("cap")])
+    result = AgentPipeline(reasoner, retry_sleep=lambda _: pytest.fail("No retry expected")).run("escrow")
+    assert result.stop_reason == "llm_error"
+    assert reasoner.calls == ["draft", "semantic", "clarification"]
+
+
+def test_llm_call_counter_does_not_count_blocked_budget_attempt() -> None:
+    real = OpenAIReasoner.__new__(OpenAIReasoner)
+    real.set_call_budget(1)
+    real._consume_call()
+    with pytest.raises(LLMBudgetError):
+        real._consume_call()
+    assert real.llm_calls == 1
+
+    fake = FakeReasoner([make_draft()])
+    fake.set_call_budget(1)
+    fake.draft_from_prompt("escrow")
+    with pytest.raises(LLMBudgetError):
+        fake.draft_from_prompt("escrow")
+    assert fake.calls == ["draft"]
 
 
 def test_semantic_transient_error_exhausted_blocks_llm_error() -> None:
@@ -510,6 +569,7 @@ def test_reasoner_counts_repair_requests_in_call_cap() -> None:
     with pytest.raises(LLMBudgetError):
         reasoner._json_response("system", "user")
     assert len(calls) == 1
+    assert reasoner.llm_calls == 1
 
 
 def test_after_regenerate_always_reruns_semantic_before_logic() -> None:
