@@ -68,10 +68,10 @@ def build_parser() -> argparse.ArgumentParser:
         help="Tuong thich nguoc: audit dien giai da bat mac dinh.",
     )
     parser.add_argument("--max-iterations", "--max-clarifications", dest="max_iterations",
-                        type=positive_int, default=8, metavar="N",
-                        help="Số lượt sinh draft tối đa (mặc định 8). --max-clarifications đã cũ.")
-    parser.add_argument("--max-llm-calls", type=positive_int, default=40, metavar="N",
-                        help="Số lời gọi LLM tối đa, kể cả retry và repair (mặc định 40).")
+                        type=positive_int, default=None, metavar="N",
+                        help="Giới hạn số lượt sinh draft (mặc định không giới hạn). --max-clarifications đã cũ.")
+    parser.add_argument("--max-llm-calls", type=positive_int, default=None, metavar="N",
+                        help="Giới hạn số lời gọi LLM, kể cả retry và repair (mặc định không giới hạn).")
     parser.add_argument(
         "--allow-unverified",
         action="store_true",

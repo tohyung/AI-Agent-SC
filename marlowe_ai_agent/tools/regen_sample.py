@@ -46,7 +46,7 @@ def generate_payload() -> dict[str, Any]:
         reasoning_summary="Các bên, số tiền và nhánh xử lý đã rõ.",
         reasoning_narrative="Node 2 xác nhận các điều kiện nạp, duyệt, từ chối và hoàn tiền.",
     )
-    result = AgentPipeline(FakeReasoner([draft], [semantic])).run(SAMPLE_PROMPT)
+    result = AgentPipeline(FakeReasoner([draft], [semantic]), max_iterations=8).run(SAMPLE_PROMPT)
     if result.status != "done":
         raise RuntimeError(f"Sample generation failed: {result.stop_reason}")
     return result.to_dict()

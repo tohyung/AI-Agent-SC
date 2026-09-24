@@ -74,6 +74,36 @@ def test_happy_path_done() -> None:
     assert result.to_dict()["marlowe_contract"] == result.draft.marlowe_contract
 
 
+def test_default_max_iterations_and_max_llm_calls_are_none() -> None:
+    reasoner = FakeReasoner([make_draft()])
+    pipeline = AgentPipeline(reasoner)
+    assert pipeline.max_iterations is None
+    assert pipeline.max_llm_calls is None
+    assert reasoner.max_llm_calls is None
+
+
+def test_default_pipeline_can_converge_after_25_iterations() -> None:
+    drafts = [make_draft(invalid_contract(index)) for index in range(25)] + [make_draft()]
+    result = AgentPipeline(FakeReasoner(drafts)).run("escrow")
+    assert result.status == "done"
+    assert result.iterations == 26
+
+
+@pytest.mark.parametrize("kwargs", [
+    {"max_iterations": 0}, {"max_iterations": -1},
+    {"max_llm_calls": 0}, {"max_llm_calls": -1},
+])
+def test_invalid_explicit_limits_raise_value_error(kwargs) -> None:
+    with pytest.raises(ValueError):
+        AgentPipeline(FakeReasoner([make_draft()]), **kwargs)
+
+
+def test_cli_defaults_are_unlimited() -> None:
+    args = cli.build_parser().parse_args(["--prompt", "escrow"])
+    assert args.max_iterations is None
+    assert args.max_llm_calls is None
+
+
 def test_always_invalid_ast_stops_at_max_iterations() -> None:
     reasoner = FakeReasoner([make_draft(invalid_contract(index)) for index in range(3)])
     result = AgentPipeline(reasoner, max_iterations=3).run("escrow")

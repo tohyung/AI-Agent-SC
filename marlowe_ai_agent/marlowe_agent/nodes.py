@@ -97,12 +97,12 @@ class AgentPipeline:
         self,
         reasoner: Any,
         interactive: bool = False,
-        max_iterations: int = 8,
-        max_llm_calls: int = 40,
+        max_iterations: int | None = None,
+        max_llm_calls: int | None = None,
         require_semantic_pass: bool = True,
         trace_callback: TraceCallback | None = None,
     ) -> None:
-        if max_iterations < 1 or max_llm_calls < 1:
+        if (max_iterations is not None and max_iterations < 1) or (max_llm_calls is not None and max_llm_calls < 1):
             raise ValueError("max_iterations và max_llm_calls phải >= 1")
         self.node_1 = PromptToDraftNode(reasoner, interactive=interactive)
         self.node_2 = SemanticVerificationNode(reasoner)
@@ -135,6 +135,9 @@ class AgentPipeline:
         seen.add(signature)
         return False
 
+    def _limit_reached(self, iterations: int) -> bool:
+        return self.max_iterations is not None and iterations >= self.max_iterations
+
     def run(self, prompt: str) -> PipelineResult:
         self.trace = []
         if hasattr(self.reasoner, "set_call_budget"):
@@ -148,7 +151,7 @@ class AgentPipeline:
         self.track("pipeline", "start", "Đã nhận prompt.", {"max_iterations": self.max_iterations})
 
         try:
-            while iterations < self.max_iterations:
+            while True:
                 iterations += 1
                 self.track("node_1_prompt_to_draft", "start", "Đang sinh draft.", {"iteration": iterations})
                 draft = self.node_1.run(current_prompt)
@@ -171,7 +174,7 @@ class AgentPipeline:
                     )
                     if next_prompt == current_prompt:
                         return self._result(draft, semantic, logic, iterations, "blocked", "no_user_input")
-                    if iterations >= self.max_iterations:
+                    if self._limit_reached(iterations):
                         return self._result(draft, semantic, logic, iterations, "blocked", "max_iterations")
                     current_prompt = next_prompt
                     continue
@@ -182,6 +185,8 @@ class AgentPipeline:
                     self.track("structural_gate", "fail", "AST chưa hợp lệ.", {"findings": errors})
                     if self._stalled(seen, draft.marlowe_contract, errors):
                         return self._result(draft, semantic, logic, iterations, "blocked", "stalled")
+                    if self._limit_reached(iterations):
+                        return self._result(draft, semantic, logic, iterations, "blocked", "max_iterations")
                     current_prompt = self.node_1.append_internal_feedback(
                         current_prompt, "Sửa AST theo lỗi cấu trúc: " + "; ".join(errors[:8])
                     )
@@ -202,7 +207,7 @@ class AgentPipeline:
                 if not semantic.passed:
                     if self._stalled(seen, draft.marlowe_contract, semantic.findings + semantic.questions):
                         return self._result(draft, semantic, logic, iterations, "blocked", "stalled")
-                    if iterations >= self.max_iterations:
+                    if self._limit_reached(iterations):
                         return self._result(draft, semantic, logic, iterations, "blocked", "max_iterations")
                     next_prompt = self.node_1.clarify_prompt(current_prompt, semantic)
                     if next_prompt != current_prompt:
@@ -223,7 +228,7 @@ class AgentPipeline:
                     return self._result(draft, semantic, logic, iterations, status, reason)
                 if self._stalled(seen, draft.marlowe_contract, logic.findings):
                     return self._result(draft, semantic, logic, iterations, "blocked", "stalled")
-                if iterations >= self.max_iterations:
+                if self._limit_reached(iterations):
                     return self._result(draft, semantic, logic, iterations, "blocked", "max_iterations")
                 next_prompt = self.node_1.clarify_logic_prompt(current_prompt, draft, logic)
                 if next_prompt == current_prompt:
@@ -232,7 +237,6 @@ class AgentPipeline:
                            {"reasoning_narrative": self.node_1.last_clarification_audit})
                 current_prompt = next_prompt
 
-            return self._result(draft, semantic, logic, iterations, "blocked", "max_iterations")
         except LLMError as exc:
             self.track("pipeline", "error", "Lời gọi LLM thất bại.", {"error": str(exc)})
             return self._result(draft, semantic, logic, iterations, "blocked", "llm_error")

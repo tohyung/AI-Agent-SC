@@ -39,7 +39,7 @@ class OpenAIReasoner:
             self.retry_base_delay = float(os.getenv("LLM_RETRY_BASE_DELAY") or "2")
         except ValueError as exc:
             raise LLMError(f"Cấu hình số cho LLM không hợp lệ: {exc}") from exc
-        self.max_llm_calls = 40
+        self.max_llm_calls: int | None = None
         self.llm_calls = 0
 
         if not api_key:
@@ -83,12 +83,12 @@ class OpenAIReasoner:
             normalization_notes=notes,
         )
 
-    def set_call_budget(self, limit: int) -> None:
+    def set_call_budget(self, limit: int | None) -> None:
         self.max_llm_calls = limit
         self.llm_calls = 0
 
     def _consume_call(self) -> None:
-        if self.llm_calls >= self.max_llm_calls:
+        if self.max_llm_calls is not None and self.llm_calls >= self.max_llm_calls:
             raise LLMError(f"Đã đạt giới hạn {self.max_llm_calls} lời gọi LLM.")
         self.llm_calls += 1
 

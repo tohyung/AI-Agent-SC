@@ -14,14 +14,14 @@ class FakeReasoner:
         self.semantics = deque(semantics or [VerificationResult(True, 1.0, ["Đạt."])])
         self.clarifications = deque(clarifications or [])
         self.calls: list[str] = []
-        self.max_llm_calls = 40
+        self.max_llm_calls: int | None = None
 
-    def set_call_budget(self, limit: int) -> None:
+    def set_call_budget(self, limit: int | None) -> None:
         self.max_llm_calls = limit
         self.calls.clear()
 
     def _take(self, name: str, values: deque[Any]) -> Any:
-        if len(self.calls) >= self.max_llm_calls:
+        if self.max_llm_calls is not None and len(self.calls) >= self.max_llm_calls:
             raise LLMError("Fake LLM call cap reached")
         self.calls.append(name)
         value = values.popleft() if len(values) > 1 else values[0]
