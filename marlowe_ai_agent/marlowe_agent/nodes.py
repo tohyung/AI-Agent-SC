@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from time import perf_counter
+from time import perf_counter, sleep
 from typing import Any
 
 from .logic_graph import LogicGraphVerifier
@@ -10,6 +10,7 @@ from .marlowe_validator import validate_contract
 from .models import (
     ContractDraft,
     LLMError,
+    LLMTransientError,
     LogicGraphResult,
     PipelineResult,
     TraceEvent,
@@ -112,6 +113,7 @@ class AgentPipeline:
         stop_on_stall: int | None = None,
         require_semantic_pass: bool = True,
         trace_callback: TraceCallback | None = None,
+        retry_sleep: Callable[[float], None] = sleep,
     ) -> None:
         if any(limit is not None and limit < 1 for limit in (max_iterations, max_llm_calls, stop_on_stall)):
             raise ValueError("Các giới hạn phải >= 1")
@@ -124,6 +126,7 @@ class AgentPipeline:
         self.stall_count = 0
         self.require_semantic_pass = require_semantic_pass
         self.trace_callback = trace_callback
+        self.retry_sleep = retry_sleep
         self.trace: list[TraceEvent] = []
         self.reasoner = reasoner
         self._iteration_start: float | None = None
@@ -255,7 +258,16 @@ class AgentPipeline:
                     self.track("structural_gate", "skipped", "Chưa có AST; chuyển Node 2 xác minh.")
 
                 self.track("node_2_semantic_verification", "start", "Đang kiểm semantic.")
-                semantic = self.node_2.run(current_prompt, draft)
+                for attempt in range(1, 4):
+                    try:
+                        semantic = self.node_2.run(current_prompt, draft)
+                        break
+                    except LLMTransientError as exc:
+                        if attempt == 3:
+                            raise
+                        self.track("node_2_semantic_verification", "retry", "Lỗi tạm thời; thử lại Node 2.",
+                                   {"attempt": attempt, "error": str(exc)})
+                        self.retry_sleep(0.5 * attempt)
                 self.track("node_2_semantic_verification", "pass" if semantic.passed else "fail",
                            "Đã kiểm semantic.", {"findings": semantic.findings,
                                                   "reasoning_narrative": semantic.reasoning_narrative})

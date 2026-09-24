@@ -14,7 +14,7 @@ from marlowe_agent.marlowe_validator import (
     describe_marlowe_grammar, validate_contract,
 )
 from marlowe_agent.logic_graph import LogicGraphVerifier
-from marlowe_agent.models import LLMError, VerificationResult
+from marlowe_agent.models import LLMBudgetError, LLMConfigError, LLMError, LLMTransientError, VerificationResult
 from marlowe_agent.nodes import AgentPipeline
 from marlowe_agent.openai_reasoner import OpenAIReasoner, parse_json_text
 from tools.fake_reasoner import FakeReasoner
@@ -93,6 +93,30 @@ def test_default_pipeline_can_converge_after_25_iterations() -> None:
     result = AgentPipeline(FakeReasoner(drafts)).run("escrow")
     assert result.status == "done"
     assert result.iterations == 26
+
+
+def test_default_pipeline_can_exceed_40_llm_calls() -> None:
+    drafts = [make_draft(pay("Alice", "Bob", index + 1)) for index in range(21)] + [make_draft()]
+    reasoner = FakeReasoner(drafts, clarifications=[{
+        "needs_user_input": False, "questions": [], "internal_instruction": "Sửa nhánh Pay.",
+    }])
+    result = AgentPipeline(reasoner).run("escrow")
+    assert result.status == "done"
+    assert len(reasoner.calls) > 40
+
+
+def test_explicit_max_iterations_still_blocks() -> None:
+    reasoner = FakeReasoner([make_draft(invalid_contract(index)) for index in range(8)])
+    result = AgentPipeline(reasoner, max_iterations=8).run("escrow")
+    assert result.stop_reason == "max_iterations"
+    assert reasoner.calls.count("draft") == 8
+
+
+def test_explicit_llm_call_cap_still_blocks() -> None:
+    reasoner = FakeReasoner([make_draft()])
+    result = AgentPipeline(reasoner, max_llm_calls=1).run("escrow")
+    assert result.stop_reason == "llm_error"
+    assert reasoner.calls == ["draft"]
 
 
 @pytest.mark.parametrize("kwargs", [
@@ -223,8 +247,38 @@ def test_invalid_numeric_llm_configuration_is_domain_error(monkeypatch) -> None:
     monkeypatch.setenv("LLM_MODEL", "fake")
     monkeypatch.setenv("LLM_API_KEY", "fake")
     monkeypatch.setenv("LLM_MAX_TOKENS", "invalid")
-    with pytest.raises(LLMError, match="Cấu hình số cho LLM không hợp lệ"):
+    with pytest.raises(LLMConfigError, match="Cấu hình số cho LLM không hợp lệ"):
         OpenAIReasoner()
+
+
+def test_semantic_retries_transient_error_then_continues() -> None:
+    delays = []
+    reasoner = FakeReasoner([make_draft()], semantics=[
+        LLMTransientError("temporary 502"), LLMTransientError("temporary 503"),
+        VerificationResult(True, 1.0, []),
+    ])
+    result = AgentPipeline(reasoner, retry_sleep=delays.append).run("escrow")
+    assert result.status == "done"
+    assert reasoner.calls == ["draft", "semantic", "semantic", "semantic"]
+    assert delays == [0.5, 1.0]
+    assert len([event for event in result.trace if event.status == "retry"]) == 2
+    assert result.semantic_verification.questions == []
+
+
+def test_semantic_transient_error_exhausted_blocks_llm_error() -> None:
+    reasoner = FakeReasoner([make_draft()], semantics=[LLMTransientError("temporary")])
+    result = AgentPipeline(reasoner, retry_sleep=lambda _: None).run("escrow")
+    assert result.stop_reason == "llm_error"
+    assert reasoner.calls == ["draft", "semantic", "semantic", "semantic"]
+    assert result.semantic_verification.questions == []
+
+
+@pytest.mark.parametrize("error", [LLMBudgetError("cap"), LLMConfigError("config")])
+def test_semantic_budget_error_is_not_retried(error) -> None:
+    reasoner = FakeReasoner([make_draft()], semantics=[error])
+    result = AgentPipeline(reasoner, retry_sleep=lambda _: pytest.fail("No retry expected")).run("escrow")
+    assert result.stop_reason == "llm_error"
+    assert reasoner.calls == ["draft", "semantic"]
 
 
 def test_logic_feedback_llm_error_is_caught_and_reported(monkeypatch, capsys) -> None:
@@ -303,7 +357,7 @@ def test_reasoner_counts_repair_requests_in_call_cap() -> None:
         return SimpleNamespace(choices=[SimpleNamespace(message=SimpleNamespace(content="not json"))])
 
     reasoner.client = SimpleNamespace(chat=SimpleNamespace(completions=SimpleNamespace(create=create)))
-    with pytest.raises(LLMError):
+    with pytest.raises(LLMBudgetError):
         reasoner._json_response("system", "user")
     assert len(calls) == 1
 

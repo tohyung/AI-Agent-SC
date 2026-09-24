@@ -4,7 +4,7 @@ from collections import deque
 from copy import deepcopy
 from typing import Any
 
-from marlowe_agent.models import ContractDraft, LLMError, VerificationResult
+from marlowe_agent.models import ContractDraft, LLMBudgetError, VerificationResult
 
 
 class FakeReasoner:
@@ -22,7 +22,7 @@ class FakeReasoner:
 
     def _take(self, name: str, values: deque[Any]) -> Any:
         if self.max_llm_calls is not None and len(self.calls) >= self.max_llm_calls:
-            raise LLMError("Fake LLM call cap reached")
+            raise LLMBudgetError("Fake LLM call cap reached")
         self.calls.append(name)
         value = values.popleft() if len(values) > 1 else values[0]
         if isinstance(value, BaseException):

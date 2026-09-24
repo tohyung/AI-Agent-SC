@@ -8,6 +8,18 @@ class LLMError(RuntimeError):
     """A model request failed or exceeded its call budget."""
 
 
+class LLMTransientError(LLMError):
+    """A provider or model response failed temporarily."""
+
+
+class LLMBudgetError(LLMError):
+    """The configured LLM call budget was exceeded."""
+
+
+class LLMConfigError(LLMError):
+    """Expected LLM configuration is missing or invalid."""
+
+
 @dataclass
 class PartySpec:
     role: str

@@ -11,7 +11,10 @@ from .marlowe_ast import normalize_marlowe_ast, prompt_contract_examples
 from .marlowe_validator import describe_marlowe_grammar
 from .models import (
     ContractDraft,
+    LLMBudgetError,
+    LLMConfigError,
     LLMError,
+    LLMTransientError,
     LogicGraphResult,
     PartySpec,
     VerificationResult,
@@ -28,7 +31,7 @@ class OpenAIReasoner:
         try:
             from openai import OpenAI
         except ImportError as exc:
-            raise RuntimeError("Chua cai package openai. Hay chay: pip install -r requirements.txt") from exc
+            raise LLMConfigError("Chua cai package openai. Hay chay: pip install -r requirements.txt") from exc
 
         api_key = os.getenv("LLM_API_KEY") or os.getenv("OPENROUTER_API_KEY") or os.getenv("OPENAI_API_KEY")
         self.base_url = os.getenv("LLM_BASE_URL")
@@ -39,23 +42,26 @@ class OpenAIReasoner:
             self.retry_attempts = int(os.getenv("LLM_RETRY_ATTEMPTS") or "3")
             self.retry_base_delay = float(os.getenv("LLM_RETRY_BASE_DELAY") or "2")
         except ValueError as exc:
-            raise LLMError(f"Cấu hình số cho LLM không hợp lệ: {exc}") from exc
+            raise LLMConfigError(f"Cấu hình số cho LLM không hợp lệ: {exc}") from exc
         self.max_llm_calls: int | None = None
         self.llm_calls = 0
 
         if not api_key:
-            raise RuntimeError(
+            raise LLMConfigError(
                 "Chua co API key. Hay set LLM_API_KEY, OPENROUTER_API_KEY, hoac OPENAI_API_KEY.\n"
                 f"Da tim file .env tai: {', '.join(str(path) for path in env_search_paths())}\n"
                 f"File .env da doc: {loaded_env if loaded_env else 'khong co'}"
             )
         if not self.model:
-            raise RuntimeError("Chua co model. Hay set LLM_MODEL trong .env hoac truyen --model.")
+            raise LLMConfigError("Chua co model. Hay set LLM_MODEL trong .env hoac truyen --model.")
 
         client_kwargs: dict[str, Any] = {"api_key": api_key, "timeout": self.timeout_seconds}
         if self.base_url:
             client_kwargs["base_url"] = self.base_url
-        self.client = OpenAI(**client_kwargs)
+        try:
+            self.client = OpenAI(**client_kwargs)
+        except (TypeError, ValueError) as exc:
+            raise LLMConfigError(f"Cấu hình OpenAI client không hợp lệ: {exc}") from exc
 
     def draft_from_prompt(self, prompt: str) -> ContractDraft:
         extracted = self._extract_contract_config(prompt)
@@ -89,9 +95,9 @@ class OpenAIReasoner:
         self.llm_calls = 0
 
     def _consume_call(self) -> None:
-        if self.max_llm_calls is not None and self.llm_calls >= self.max_llm_calls:
-            raise LLMError(f"Đã đạt giới hạn {self.max_llm_calls} lời gọi LLM.")
         self.llm_calls += 1
+        if self.max_llm_calls is not None and self.llm_calls > self.max_llm_calls:
+            raise LLMBudgetError(f"Đã đạt giới hạn {self.max_llm_calls} lời gọi LLM.")
 
     def semantic_verify(self, prompt: str, draft: ContractDraft) -> VerificationResult:
         payload = {"prompt": _compact_text(prompt, 6000), "draft": _compact_draft_for_semantic(draft)}
@@ -245,7 +251,7 @@ class OpenAIReasoner:
             try:
                 return parse_json_text(repaired)
             except json.JSONDecodeError as repair_exc:
-                raise LLMError(
+                raise LLMTransientError(
                     "Model tra ve JSON khong hop le ngay ca sau khi yeu cau sua. "
                     "Hay tang LLM_MAX_TOKENS hoac doi model co JSON mode on dinh hon. "
                     f"Loi ban dau: {error_text}. Loi sau sua: {repair_exc}. "
@@ -278,12 +284,14 @@ class OpenAIReasoner:
                             messages=messages,
                             max_tokens=self.max_tokens,
                         )
+                except LLMError:
+                    raise
                 except Exception as exc:
                     last_debug = repr(exc)
                     if attempt < self.retry_attempts and _is_retryable_error(exc):
                         time.sleep(self.retry_base_delay * attempt)
                         continue
-                    raise LLMError(f"LLM request failed: {exc}") from exc
+                    raise LLMTransientError(f"LLM request failed: {exc}") from exc
 
                 choices = getattr(response, "choices", None)
                 if choices:
@@ -303,7 +311,7 @@ class OpenAIReasoner:
 
                 break
 
-            raise LLMError(
+            raise LLMTransientError(
                 "Model khong tra ve choices/content sau khi retry. "
                 "Day thuong la loi tam thoi tu provider/model nhu 502/504/524. "
                 f"Response cuoi: {last_debug}"
@@ -323,8 +331,10 @@ class OpenAIReasoner:
                 text={"format": {"type": "json_object"}},
                 max_output_tokens=self.max_tokens,
             )
+        except LLMError:
+            raise
         except Exception as exc:
-            raise LLMError(f"Responses API request failed: {exc}") from exc
+            raise LLMTransientError(f"Responses API request failed: {exc}") from exc
         content = response.output_text or ""
         if content.strip():
             return content
@@ -333,7 +343,7 @@ class OpenAIReasoner:
             return self._raw_chat_response(system, user)
 
         debug = _safe_response_debug(response)
-        raise LLMError(f"Responses API tra ve noi dung rong. Response: {debug}")
+        raise LLMTransientError(f"Responses API tra ve noi dung rong. Response: {debug}")
 
     def _raw_chat_response(self, system: str, user: str) -> str:
         messages = [
@@ -358,12 +368,14 @@ class OpenAIReasoner:
                     messages=messages,
                     max_tokens=self.max_tokens,
                 )
+        except LLMError:
+            raise
         except Exception as exc:
-            raise LLMError(f"Chat completions request failed: {exc}") from exc
+            raise LLMTransientError(f"Chat completions request failed: {exc}") from exc
         choices = getattr(response, "choices", None)
         if choices and choices[0].message.content:
             return choices[0].message.content
-        raise LLMError(f"Chat completions API tra ve noi dung rong. Response: {_safe_response_debug(response)}")
+        raise LLMTransientError(f"Chat completions API tra ve noi dung rong. Response: {_safe_response_debug(response)}")
 
 
 def _safe_response_debug(response: Any) -> str:
