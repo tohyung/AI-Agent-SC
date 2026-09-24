@@ -50,6 +50,22 @@ def deposit(account: str, party: str, amount: int) -> dict[str, Any]:
     return {"deposits": constant(amount), "into_account": role(account), "of_token": ada(), "party": role(party)}
 
 
+def notify(observation: Any) -> dict[str, Any]:
+    return {"notify_if": observation}
+
+
+def if_(observation: Any, then: Any, else_: Any) -> dict[str, Any]:
+    return {"if": observation, "then": then, "else": else_}
+
+
+def let(name: str, value: Any, then: Any) -> dict[str, Any]:
+    return {"let": name, "be": value, "then": then}
+
+
+def assert_(observation: Any, then: Any) -> dict[str, Any]:
+    return {"assert": observation, "then": then}
+
+
 def pay(from_account: str, to_party: str, amount: int, then: Any = None) -> dict[str, Any]:
     return {
         "pay": constant(amount), "from_account": role(from_account), "to": {"party": role(to_party)},
@@ -75,6 +91,16 @@ def escrow_contract(buyer: str, seller: str, amount: int, deposit_timeout: int, 
         ))],
         deposit_timeout,
     )
+
+
+def prompt_contract_examples() -> list[dict[str, Any]]:
+    return [
+        escrow_contract("Alice", "Bob", 250000000, 1893456000000, 1893542400000),
+        when([case(notify(True), if_(
+            {"value": 1, "ge_than": 0},
+            let("count", 1, assert_(True, close())), close(),
+        ))], 1893456000000),
+    ]
 
 
 def normalize_marlowe_ast(contract: Any) -> tuple[Any, list[str]]:

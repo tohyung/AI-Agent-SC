@@ -7,7 +7,8 @@ import time
 from pathlib import Path
 from typing import Any
 
-from .marlowe_ast import escrow_contract, normalize_marlowe_ast
+from .marlowe_ast import normalize_marlowe_ast, prompt_contract_examples
+from .marlowe_validator import describe_marlowe_grammar
 from .models import (
     ContractDraft,
     LLMError,
@@ -188,11 +189,9 @@ class OpenAIReasoner:
             "Do not invent missing information. If important information is missing, set unknown fields to null or empty, "
             "write assumptions, and produce specific Vietnamese clarification_questions. "
             "If there is not enough information to safely create a contract, keep marlowe_contract as an empty object. "
-            "When there is enough information, produce a Marlowe AST JSON using Close, Pay, If, When, Let, Assert; "
-            "actions Deposit, Choice, Notify; and suitable values/observations. "
-            "Use standard Core V1 JSON: Close is the string 'close', Constant is a bare integer, "
-            "Choice uses for_choice/choose_between, timeouts are POSIX milliseconds, "
-            "ADA amounts are lovelace (250 ADA = 250000000), and role_token equals party name. "
+            "When there is enough information, produce a Marlowe AST JSON following this grammar exactly:\n"
+            + describe_marlowe_grammar() + "\n"
+            "Use role_token equal to party name. "
             "reasoning_summary is short. reasoning_narrative is a natural intermediate explanation in Vietnamese, "
             "varied by context and not a rigid template, but not detailed chain-of-thought. "
             "Keep reasoning_narrative under 900 Vietnamese characters. Return only valid JSON."
@@ -204,9 +203,8 @@ class OpenAIReasoner:
             '"decision_timeout": number|null, "reasoning_summary": string, "reasoning_narrative": string, '
             '"clauses": [string], "assumptions": [string], "clarification_questions": [string], '
             '"contract_plan": {"nodes": [], "edges": [], "notes": []}, "marlowe_contract": object|string}. '
-            "Reference escrow JSON: "
-            + json.dumps(escrow_contract("Alice", "Bob", 250000000, 1893456000000, 1893542400000),
-                         ensure_ascii=False, separators=(",", ":"))
+            "Reference escrow JSON and Notify/If/Let/Assert JSON: "
+            + json.dumps(prompt_contract_examples(), ensure_ascii=False, separators=(",", ":"))
             + ". "
             f"Prompt: {prompt}"
         )

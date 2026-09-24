@@ -8,6 +8,12 @@ import pytest
 from conftest import make_draft
 from marlowe_agent import cli, openai_reasoner
 from marlowe_agent.marlowe_ast import pay
+from marlowe_agent.marlowe_ast import prompt_contract_examples
+from marlowe_agent.marlowe_validator import (
+    ACTION_SHAPES, CONTRACT_SHAPES, OBSERVATION_SHAPES, VALUE_SHAPES,
+    describe_marlowe_grammar, validate_contract,
+)
+from marlowe_agent.logic_graph import LogicGraphVerifier
 from marlowe_agent.models import LLMError, VerificationResult
 from marlowe_agent.nodes import AgentPipeline
 from marlowe_agent.openai_reasoner import OpenAIReasoner, parse_json_text
@@ -250,6 +256,35 @@ def test_final_iteration_does_not_request_logic_feedback() -> None:
 def test_json_array_is_rejected_as_model_response() -> None:
     with pytest.raises(json.JSONDecodeError):
         parse_json_text("[]")
+
+
+def test_node1_prompt_contains_supported_marlowe_grammar(monkeypatch) -> None:
+    reasoner = OpenAIReasoner.__new__(OpenAIReasoner)
+    captured = {}
+
+    def capture(system, user):
+        captured["system"] = system
+        captured["user"] = user
+        return {}
+
+    monkeypatch.setattr(reasoner, "_json_response", capture)
+    reasoner._extract_contract_config("sample")
+    assert describe_marlowe_grammar() in captured["system"]
+    for shapes in (CONTRACT_SHAPES, ACTION_SHAPES, VALUE_SHAPES, OBSERVATION_SHAPES):
+        for shape in shapes:
+            assert "{" + ", ".join(sorted(shape)) + "}" in captured["system"]
+    for field in ("role_token", "address", "account", "currency_symbol", "token_name",
+                  "choice_name", "choice_owner", "from", "to", "case", "time_interval_start",
+                  "time_interval_end", "true", "false"):
+        assert field in captured["system"]
+
+
+def test_prompt_examples_are_valid() -> None:
+    examples = prompt_contract_examples()
+    assert len(examples) >= 2
+    for example in examples:
+        assert validate_contract(example) == []
+        assert LogicGraphVerifier().verify(example).errors == []
 
 
 def test_reasoner_counts_repair_requests_in_call_cap() -> None:
