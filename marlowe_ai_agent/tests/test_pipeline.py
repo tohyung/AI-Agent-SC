@@ -101,6 +101,53 @@ def test_logic_stall_hint_keeps_current_findings() -> None:
     assert "Không lặp lại cách sửa cũ" in result.draft.original_prompt
 
 
+def test_logic_repeated_same_instruction_does_not_become_no_user_input() -> None:
+    invalid = make_draft(pay("Alice", "Bob", 10))
+    reasoner = FakeReasoner([invalid for _ in range(6)] + [make_draft()], clarifications=[{
+        "needs_user_input": False, "questions": [], "internal_instruction": "Sửa nhánh Pay.",
+    }])
+    pipeline = AgentPipeline(reasoner)
+    result = pipeline.run("escrow")
+    assert (result.status, result.stop_reason, result.iterations) == ("done", "ok", 7)
+    assert pipeline.stall_count >= 4
+    assert reasoner.calls.count("clarification") == 6
+
+
+def test_logic_real_missing_user_answer_blocks_no_user_input(monkeypatch) -> None:
+    reasoner = FakeReasoner([make_draft(pay("Alice", "Bob", 10))], clarifications=[{
+        "needs_user_input": True, "questions": ["Ai nhận tiền?"], "internal_instruction": "",
+    }])
+    monkeypatch.setattr("builtins.input", lambda _: " ")
+    result = AgentPipeline(reasoner, interactive=True).run("escrow")
+    assert (result.status, result.stop_reason) == ("blocked", "no_user_input")
+
+
+def test_logic_blank_user_answer_with_internal_instruction_can_regenerate(monkeypatch) -> None:
+    reasoner = FakeReasoner([make_draft(pay("Alice", "Bob", 10)), make_draft()], clarifications=[{
+        "needs_user_input": True, "questions": ["Ai nhận tiền?"], "internal_instruction": "Sửa nhánh Pay.",
+    }])
+    monkeypatch.setattr("builtins.input", lambda _: " ")
+    result = AgentPipeline(reasoner, interactive=True).run("escrow")
+    assert result.status == "done"
+    assert result.iterations == 2
+
+
+def test_logic_no_questions_no_instruction_still_regenerates() -> None:
+    reasoner = FakeReasoner([make_draft(pay("Alice", "Bob", 10)), make_draft()], clarifications=[{
+        "needs_user_input": False, "questions": [], "internal_instruction": "",
+    }])
+    result = AgentPipeline(reasoner).run("escrow")
+    assert result.status == "done"
+    assert "Lỗi logic hiện tại" in result.draft.original_prompt
+
+
+def test_semantic_no_action_with_allow_unverified_proceeds_to_node3() -> None:
+    semantic = VerificationResult(False, 0.0, ["Thiếu điều kiện"], ["Ai nhận tiền?"])
+    result = AgentPipeline(FakeReasoner([make_draft()], [semantic]), require_semantic_pass=False).run("escrow")
+    assert result.stop_reason == "semantic_not_passed"
+    assert any(event.node == "node_3_logic_graph_verification" and event.status == "start" for event in result.trace)
+
+
 def test_happy_path_done() -> None:
     result = AgentPipeline(FakeReasoner([make_draft()])).run("escrow")
     assert result.status == "done"

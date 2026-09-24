@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from dataclasses import dataclass
+from enum import Enum
 from time import perf_counter, sleep
 from typing import Any
 
@@ -19,51 +21,75 @@ from .models import (
 from .utils import fingerprint, unique_strings
 
 
+class ClarificationAction(Enum):
+    REGENERATE = "regenerate"
+    BLOCK_NO_INPUT = "block_no_input"
+    NO_ACTION = "no_action"
+
+
+@dataclass
+class ClarificationOutcome:
+    prompt: str
+    action: ClarificationAction
+    user_answered: bool = False
+
+
 class PromptToDraftNode:
     def __init__(self, reasoner: Any, interactive: bool = False) -> None:
         self.reasoner = reasoner
         self.interactive = interactive
         self.last_clarification_audit = ""
+        self.last_answered_questions_count = 0
 
     def run(self, prompt: str) -> ContractDraft:
         return self.reasoner.draft_from_prompt(prompt)
 
-    def clarify_prompt(self, prompt: str, verification: VerificationResult) -> str:
+    def clarify_prompt(self, prompt: str, verification: VerificationResult,
+                       allow_no_action: bool = False) -> ClarificationOutcome:
         self.last_clarification_audit = verification.reasoning_narrative
-        return self.ask_for_clarifications(
+        outcome = self.ask_for_clarifications(
             prompt, unique_strings(verification.questions or verification.findings)[:4],
             "Thong tin bo sung tu nguoi dung",
         )
+        if outcome.action is ClarificationAction.BLOCK_NO_INPUT and allow_no_action:
+            return ClarificationOutcome(prompt, ClarificationAction.NO_ACTION)
+        return outcome
 
     def clarify_logic_prompt(self, prompt: str, draft: ContractDraft, logic: LogicGraphResult,
-                             stall_hint: str = "") -> str:
+                             stall_hint: str = "") -> ClarificationOutcome:
         clarification = self.reasoner.logic_feedback_to_clarification(prompt, draft, logic)
         self.last_clarification_audit = str(clarification.get("reasoning_narrative") or "")
+        llm_instruction = str(clarification.get("internal_instruction") or "").strip()
         instruction = "\n".join(part for part in [
             "Lỗi logic hiện tại: " + "; ".join(logic.errors[:8]),
-            str(clarification.get("internal_instruction") or "").strip(), stall_hint,
+            llm_instruction, stall_hint,
         ] if part)
         questions = unique_strings(clarification.get("questions") or [])[:4]
         if clarification.get("needs_user_input") and questions:
-            answered = self.ask_for_clarifications(
+            outcome = self.ask_for_clarifications(
                 prompt, questions, "Thong tin bo sung tu nguoi dung sau kiem logic graph",
             )
-            if answered == prompt:
-                return prompt
-            return self.append_internal_feedback(answered, instruction)
-        if instruction:
-            return self.append_internal_feedback(prompt, instruction)
-        return prompt
+            if outcome.action is ClarificationAction.BLOCK_NO_INPUT and not llm_instruction:
+                return outcome
+            return ClarificationOutcome(self.append_internal_feedback(outcome.prompt, instruction),
+                                        ClarificationAction.REGENERATE, outcome.user_answered)
+        return ClarificationOutcome(self.append_internal_feedback(prompt, instruction),
+                                    ClarificationAction.REGENERATE)
 
-    def ask_for_clarifications(self, prompt: str, questions: list[str], heading: str) -> str:
+    def ask_for_clarifications(self, prompt: str, questions: list[str], heading: str) -> ClarificationOutcome:
+        self.last_answered_questions_count = 0
         if not self.interactive or not questions:
-            return prompt
+            return ClarificationOutcome(prompt, ClarificationAction.BLOCK_NO_INPUT)
         additions = []
         for index, question in enumerate(questions, start=1):
             answer = input(f"Cau hoi {index}: {question}\n> ").strip()
             if answer:
                 additions.append(f"- {question}\n  Tra loi: {answer}")
-        return prompt + f"\n\n{heading}:\n" + "\n".join(additions) if additions else prompt
+        self.last_answered_questions_count = len(additions)
+        if not additions:
+            return ClarificationOutcome(prompt, ClarificationAction.BLOCK_NO_INPUT)
+        return ClarificationOutcome(prompt + f"\n\n{heading}:\n" + "\n".join(additions),
+                                    ClarificationAction.REGENERATE, True)
 
     def append_internal_feedback(self, prompt: str, instruction: str) -> str:
         if not instruction.strip():
@@ -228,15 +254,15 @@ class AgentPipeline:
                 empty_contract = draft.marlowe_contract is None or draft.marlowe_contract == {}
                 if empty_contract and draft.clarification_questions:
                     self.track("structural_gate", "skipped", "Chưa có AST do thiếu thông tin nghiệp vụ.")
-                    next_prompt = self.node_1.ask_for_clarifications(
+                    outcome = self.node_1.ask_for_clarifications(
                         current_prompt, unique_strings(draft.clarification_questions)[:4],
                         "Thong tin bo sung tu nguoi dung",
                     )
-                    if next_prompt == current_prompt:
+                    if outcome.action is ClarificationAction.BLOCK_NO_INPUT:
                         return self._result(draft, semantic, logic, iterations, "blocked", "no_user_input")
                     if self._limit_reached(iterations):
                         return self._result(draft, semantic, logic, iterations, "blocked", "max_iterations")
-                    current_prompt = next_prompt
+                    current_prompt = outcome.prompt
                     continue
 
                 errors = [] if empty_contract else validate_contract(draft.marlowe_contract)
@@ -282,11 +308,13 @@ class AgentPipeline:
                         return self._result(draft, semantic, logic, iterations, "blocked", "stalled")
                     if self._limit_reached(iterations):
                         return self._result(draft, semantic, logic, iterations, "blocked", "max_iterations")
-                    next_prompt = self.node_1.clarify_prompt(current_prompt, semantic)
-                    if next_prompt != current_prompt:
-                        current_prompt = next_prompt
+                    outcome = self.node_1.clarify_prompt(
+                        current_prompt, semantic, allow_no_action=not self.require_semantic_pass and not empty_contract,
+                    )
+                    if outcome.action is ClarificationAction.REGENERATE:
+                        current_prompt = outcome.prompt
                         continue
-                    if self.require_semantic_pass or empty_contract:
+                    if outcome.action is ClarificationAction.BLOCK_NO_INPUT:
                         self.track("node_3_logic_graph_verification", "skipped", "Semantic chưa đạt.")
                         return self._result(draft, semantic, logic, iterations, "blocked", "no_user_input")
 
@@ -305,12 +333,12 @@ class AgentPipeline:
                     return self._result(draft, semantic, logic, iterations, "blocked", "stalled")
                 if self._limit_reached(iterations):
                     return self._result(draft, semantic, logic, iterations, "blocked", "max_iterations")
-                next_prompt = self.node_1.clarify_logic_prompt(current_prompt, draft, logic, stall_hint)
-                if next_prompt == current_prompt:
+                outcome = self.node_1.clarify_logic_prompt(current_prompt, draft, logic, stall_hint)
+                if outcome.action is ClarificationAction.BLOCK_NO_INPUT:
                     return self._result(draft, semantic, logic, iterations, "blocked", "no_user_input")
                 self.track("node_1_prompt_to_draft", "done", "Đã nhận phản hồi từ Node 3.",
                            {"reasoning_narrative": self.node_1.last_clarification_audit})
-                current_prompt = next_prompt
+                current_prompt = outcome.prompt
 
         except LLMError as exc:
             self.track("pipeline", "error", "Lời gọi LLM thất bại.", {"error": str(exc)})
