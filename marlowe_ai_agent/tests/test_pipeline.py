@@ -115,9 +115,32 @@ def test_always_invalid_ast_stops_at_max_iterations() -> None:
 
 def test_stall_detection_stops_when_same_fingerprint_repeats() -> None:
     reasoner = FakeReasoner([make_draft(invalid_contract(1))])
-    result = AgentPipeline(reasoner).run("escrow")
+    result = AgentPipeline(reasoner, stop_on_stall=2).run("escrow")
     assert result.stop_reason == "stalled"
     assert result.iterations == 2
+
+
+def test_stall_is_warning_by_default() -> None:
+    reasoner = FakeReasoner([make_draft(invalid_contract(1)) for _ in range(3)] + [make_draft()])
+    result = AgentPipeline(reasoner).run("escrow")
+    assert result.status == "done"
+    assert result.iterations == 4
+    warnings = [event for event in result.trace if event.status == "warn" and event.data.get("reason") == "stalled"]
+    assert [event.data["occurrences"] for event in warnings] == [2, 3]
+
+
+def test_stall_hint_keeps_original_errors() -> None:
+    reasoner = FakeReasoner([make_draft(invalid_contract(1)), make_draft(invalid_contract(1)), make_draft()])
+    result = AgentPipeline(reasoner).run("escrow")
+    assert result.status == "done"
+    assert "tổ hợp field không hợp lệ" in result.draft.original_prompt
+    assert "Không lặp lại cách sửa cũ" in result.draft.original_prompt
+
+
+def test_stop_on_stall_blocks_when_configured() -> None:
+    result = AgentPipeline(FakeReasoner([make_draft(invalid_contract(1))]), stop_on_stall=3).run("escrow")
+    assert result.stop_reason == "stalled"
+    assert result.iterations == 3
 
 
 def test_semantic_fail_non_interactive_blocks_with_no_user_input() -> None:

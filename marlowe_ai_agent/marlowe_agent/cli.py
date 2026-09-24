@@ -72,6 +72,8 @@ def build_parser() -> argparse.ArgumentParser:
                         help="Giới hạn số lượt sinh draft (mặc định không giới hạn). --max-clarifications đã cũ.")
     parser.add_argument("--max-llm-calls", type=positive_int, default=None, metavar="N",
                         help="Giới hạn số lời gọi LLM, kể cả retry và repair (mặc định không giới hạn).")
+    parser.add_argument("--stop-on-stall", type=positive_int, default=None, metavar="K",
+                        help="Dừng khi cùng AST và lỗi xuất hiện K lần (mặc định chỉ cảnh báo).")
     parser.add_argument(
         "--allow-unverified",
         action="store_true",
@@ -118,6 +120,7 @@ def main() -> int:
         interactive=interactive,
         max_iterations=args.max_iterations,
         max_llm_calls=args.max_llm_calls,
+        stop_on_stall=args.stop_on_stall,
         require_semantic_pass=not args.allow_unverified,
         trace_callback=print_trace,
     )

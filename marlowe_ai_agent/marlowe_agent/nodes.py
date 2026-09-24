@@ -33,10 +33,14 @@ class PromptToDraftNode:
             "Thong tin bo sung tu nguoi dung",
         )
 
-    def clarify_logic_prompt(self, prompt: str, draft: ContractDraft, logic: LogicGraphResult) -> str:
+    def clarify_logic_prompt(self, prompt: str, draft: ContractDraft, logic: LogicGraphResult,
+                             stall_hint: str = "") -> str:
         clarification = self.reasoner.logic_feedback_to_clarification(prompt, draft, logic)
         self.last_clarification_audit = str(clarification.get("reasoning_narrative") or "")
-        instruction = str(clarification.get("internal_instruction") or "").strip()
+        instruction = "\n".join(part for part in [
+            "Lỗi logic hiện tại: " + "; ".join(logic.errors[:8]),
+            str(clarification.get("internal_instruction") or "").strip(), stall_hint,
+        ] if part)
         questions = unique_strings(clarification.get("questions") or [])[:4]
         if clarification.get("needs_user_input") and questions:
             answered = self.ask_for_clarifications(
@@ -90,6 +94,11 @@ class LogicGraphVerificationNode:
 
 
 TraceCallback = Callable[[TraceEvent], None]
+STALL_HINT = (
+    "Draft hiện tại lặp lại cùng AST và cùng lỗi như lượt trước. "
+    "Không lặp lại cách sửa cũ. Hãy phân tích lại nguyên nhân và tạo AST khác về cấu trúc "
+    "nếu cần, nhưng giữ nguyên business intent của người dùng."
+)
 
 
 class AgentPipeline:
@@ -99,16 +108,19 @@ class AgentPipeline:
         interactive: bool = False,
         max_iterations: int | None = None,
         max_llm_calls: int | None = None,
+        stop_on_stall: int | None = None,
         require_semantic_pass: bool = True,
         trace_callback: TraceCallback | None = None,
     ) -> None:
-        if (max_iterations is not None and max_iterations < 1) or (max_llm_calls is not None and max_llm_calls < 1):
-            raise ValueError("max_iterations và max_llm_calls phải >= 1")
+        if any(limit is not None and limit < 1 for limit in (max_iterations, max_llm_calls, stop_on_stall)):
+            raise ValueError("Các giới hạn phải >= 1")
         self.node_1 = PromptToDraftNode(reasoner, interactive=interactive)
         self.node_2 = SemanticVerificationNode(reasoner)
         self.node_3 = LogicGraphVerificationNode()
         self.max_iterations = max_iterations
         self.max_llm_calls = max_llm_calls
+        self.stop_on_stall = stop_on_stall
+        self.stall_count = 0
         self.require_semantic_pass = require_semantic_pass
         self.trace_callback = trace_callback
         self.trace: list[TraceEvent] = []
@@ -128,23 +140,30 @@ class AgentPipeline:
                    {"iterations": iterations, "stop_reason": reason})
         return PipelineResult(draft, semantic, logic, iterations, self.trace, status, reason)
 
-    def _stalled(self, seen: set[str], contract: Any, errors: list[str]) -> bool:
+    def _observe_stall(self, seen: dict[str, int], contract: Any, errors: list[str]) -> tuple[bool, str]:
         signature = fingerprint({"contract": contract, "errors": sorted(errors)})
-        if signature in seen:
-            return True
-        seen.add(signature)
-        return False
+        occurrences = seen.get(signature, 0) + 1
+        seen[signature] = occurrences
+        if occurrences >= 2:
+            self.stall_count += 1
+            self.track("pipeline", "warn", "Draft và lỗi đang lặp lại.", {
+                "reason": "stalled", "fingerprint": signature[:12],
+                "occurrences": occurrences, "stall_count": self.stall_count,
+            })
+        return (self.stop_on_stall is not None and occurrences >= self.stop_on_stall,
+                STALL_HINT if occurrences >= 2 else "")
 
     def _limit_reached(self, iterations: int) -> bool:
         return self.max_iterations is not None and iterations >= self.max_iterations
 
     def run(self, prompt: str) -> PipelineResult:
         self.trace = []
+        self.stall_count = 0
         if hasattr(self.reasoner, "set_call_budget"):
             self.reasoner.set_call_budget(self.max_llm_calls)
         current_prompt = prompt
         iterations = 0
-        seen: set[str] = set()
+        seen: dict[str, int] = {}
         draft = ContractDraft(prompt, "", [], None)
         semantic = VerificationResult(False, 0.0, [])
         logic = LogicGraphResult(False, [], {"nodes": [], "edges": []})
@@ -183,12 +202,14 @@ class AgentPipeline:
                 if errors:
                     logic = LogicGraphResult(False, errors, {"nodes": [], "edges": []})
                     self.track("structural_gate", "fail", "AST chưa hợp lệ.", {"findings": errors})
-                    if self._stalled(seen, draft.marlowe_contract, errors):
+                    stalled, stall_hint = self._observe_stall(seen, draft.marlowe_contract, errors)
+                    if stalled:
                         return self._result(draft, semantic, logic, iterations, "blocked", "stalled")
                     if self._limit_reached(iterations):
                         return self._result(draft, semantic, logic, iterations, "blocked", "max_iterations")
                     current_prompt = self.node_1.append_internal_feedback(
                         current_prompt, "Sửa AST theo lỗi cấu trúc: " + "; ".join(errors[:8])
+                        + ("\n" + stall_hint if stall_hint else "")
                     )
                     continue
                 if not empty_contract:
@@ -205,7 +226,9 @@ class AgentPipeline:
                     self.track("node_3_logic_graph_verification", "skipped", "Chưa có AST để kiểm logic graph.")
                     return self._result(draft, semantic, logic, iterations, "blocked", "semantic_not_passed")
                 if not semantic.passed:
-                    if self._stalled(seen, draft.marlowe_contract, semantic.findings + semantic.questions):
+                    stalled, _ = self._observe_stall(seen, draft.marlowe_contract,
+                                                     semantic.findings + semantic.questions)
+                    if stalled:
                         return self._result(draft, semantic, logic, iterations, "blocked", "stalled")
                     if self._limit_reached(iterations):
                         return self._result(draft, semantic, logic, iterations, "blocked", "max_iterations")
@@ -226,11 +249,12 @@ class AgentPipeline:
                     status = "done" if semantic.passed else "blocked"
                     reason = "ok" if semantic.passed else "semantic_not_passed"
                     return self._result(draft, semantic, logic, iterations, status, reason)
-                if self._stalled(seen, draft.marlowe_contract, logic.findings):
+                stalled, stall_hint = self._observe_stall(seen, draft.marlowe_contract, logic.findings)
+                if stalled:
                     return self._result(draft, semantic, logic, iterations, "blocked", "stalled")
                 if self._limit_reached(iterations):
                     return self._result(draft, semantic, logic, iterations, "blocked", "max_iterations")
-                next_prompt = self.node_1.clarify_logic_prompt(current_prompt, draft, logic)
+                next_prompt = self.node_1.clarify_logic_prompt(current_prompt, draft, logic, stall_hint)
                 if next_prompt == current_prompt:
                     return self._result(draft, semantic, logic, iterations, "blocked", "no_user_input")
                 self.track("node_1_prompt_to_draft", "done", "Đã nhận phản hồi từ Node 3.",
