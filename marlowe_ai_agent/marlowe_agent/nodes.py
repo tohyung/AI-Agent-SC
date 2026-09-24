@@ -162,7 +162,21 @@ class AgentPipeline:
                 if notes:
                     self.track("structural_gate", "normalized", "Đã chuẩn hóa AST cũ.", {"notes": notes})
 
-                errors = validate_contract(draft.marlowe_contract)
+                empty_contract = draft.marlowe_contract is None or draft.marlowe_contract == {}
+                if empty_contract and draft.clarification_questions:
+                    self.track("structural_gate", "skipped", "Chưa có AST do thiếu thông tin nghiệp vụ.")
+                    next_prompt = self.node_1.ask_for_clarifications(
+                        current_prompt, unique_strings(draft.clarification_questions)[:4],
+                        "Thong tin bo sung tu nguoi dung",
+                    )
+                    if next_prompt == current_prompt:
+                        return self._result(draft, semantic, logic, iterations, "blocked", "no_user_input")
+                    if iterations >= self.max_iterations:
+                        return self._result(draft, semantic, logic, iterations, "blocked", "max_iterations")
+                    current_prompt = next_prompt
+                    continue
+
+                errors = [] if empty_contract else validate_contract(draft.marlowe_contract)
                 if errors:
                     logic = LogicGraphResult(False, errors, {"nodes": [], "edges": []})
                     self.track("structural_gate", "fail", "AST chưa hợp lệ.", {"findings": errors})
@@ -172,13 +186,19 @@ class AgentPipeline:
                         current_prompt, "Sửa AST theo lỗi cấu trúc: " + "; ".join(errors[:8])
                     )
                     continue
-                self.track("structural_gate", "pass", "AST hợp lệ.")
+                if not empty_contract:
+                    self.track("structural_gate", "pass", "AST hợp lệ.")
+                else:
+                    self.track("structural_gate", "skipped", "Chưa có AST; chuyển Node 2 xác minh.")
 
                 self.track("node_2_semantic_verification", "start", "Đang kiểm semantic.")
                 semantic = self.node_2.run(current_prompt, draft)
                 self.track("node_2_semantic_verification", "pass" if semantic.passed else "fail",
                            "Đã kiểm semantic.", {"findings": semantic.findings,
                                                   "reasoning_narrative": semantic.reasoning_narrative})
+                if empty_contract and semantic.passed:
+                    self.track("node_3_logic_graph_verification", "skipped", "Chưa có AST để kiểm logic graph.")
+                    return self._result(draft, semantic, logic, iterations, "blocked", "semantic_not_passed")
                 if not semantic.passed:
                     if self._stalled(seen, draft.marlowe_contract, semantic.findings + semantic.questions):
                         return self._result(draft, semantic, logic, iterations, "blocked", "stalled")

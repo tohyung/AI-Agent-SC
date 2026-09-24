@@ -19,6 +19,53 @@ def invalid_contract(index: int) -> dict:
             "timeout_continuation": "close", "bad_key": index}
 
 
+def empty_draft(questions: list[str] | None = None):
+    draft = make_draft()
+    draft.marlowe_contract = {}
+    draft.clarification_questions = questions or []
+    return draft
+
+
+def test_empty_contract_with_questions_asks_user(monkeypatch) -> None:
+    reasoner = FakeReasoner([empty_draft(["Ai nhận tiền?"]), make_draft()])
+    monkeypatch.setattr("builtins.input", lambda _: "Bob")
+    result = AgentPipeline(reasoner, interactive=True).run("escrow")
+    assert result.status == "done"
+    assert "Bob" in result.draft.original_prompt
+    assert reasoner.calls == ["draft", "draft", "semantic"]
+
+
+def test_empty_contract_with_questions_noninteractive_blocks_no_user_input() -> None:
+    reasoner = FakeReasoner([empty_draft(["Ai nhận tiền?"])])
+    result = AgentPipeline(reasoner).run("escrow")
+    assert result.stop_reason == "no_user_input"
+    assert reasoner.calls == ["draft"]
+
+
+def test_empty_contract_without_questions_goes_to_semantic() -> None:
+    reasoner = FakeReasoner([empty_draft()], [VerificationResult(False, 0, ["Thiếu bên nhận"], ["Ai nhận?"])])
+    result = AgentPipeline(reasoner).run("escrow")
+    assert result.stop_reason == "no_user_input"
+    assert reasoner.calls == ["draft", "semantic"]
+    assert not any(event.node == "structural_gate" and event.status == "fail" for event in result.trace)
+
+
+def test_empty_contract_blank_user_answers_blocks_no_user_input(monkeypatch) -> None:
+    reasoner = FakeReasoner([empty_draft(["Ai nhận tiền?"])])
+    monkeypatch.setattr("builtins.input", lambda _: "  ")
+    result = AgentPipeline(reasoner, interactive=True).run("escrow")
+    assert result.stop_reason == "no_user_input"
+    assert reasoner.calls == ["draft"]
+
+
+def test_empty_contract_semantic_pass_never_reaches_node3() -> None:
+    reasoner = FakeReasoner([empty_draft()])
+    result = AgentPipeline(reasoner, require_semantic_pass=False).run("escrow")
+    assert result.stop_reason == "semantic_not_passed"
+    assert reasoner.calls == ["draft", "semantic"]
+    assert not any(event.node == "node_3_logic_graph_verification" and event.status == "start" for event in result.trace)
+
+
 def test_happy_path_done() -> None:
     result = AgentPipeline(FakeReasoner([make_draft()])).run("escrow")
     assert result.status == "done"
