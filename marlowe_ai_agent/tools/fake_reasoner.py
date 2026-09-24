@@ -25,7 +25,7 @@ class FakeReasoner:
             raise LLMError("Fake LLM call cap reached")
         self.calls.append(name)
         value = values.popleft() if len(values) > 1 else values[0]
-        if isinstance(value, Exception):
+        if isinstance(value, BaseException):
             raise value
         return deepcopy(value)
 

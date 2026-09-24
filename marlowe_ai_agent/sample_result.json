@@ -65,7 +65,25 @@
         "findings": [
           "Logic graph pass."
         ],
+        "errors": [],
+        "warnings": [],
         "reasoning_narrative": "Node 3 đã kiểm tra 9 node, 4 đường đi; có 0 cảnh báo."
+      }
+    },
+    {
+      "node": "pipeline",
+      "status": "iteration",
+      "message": "Đã hoàn tất lượt xử lý.",
+      "data": {
+        "iteration": 1,
+        "structural": "pass",
+        "semantic": "pass",
+        "logic": "pass",
+        "logic_errors": 0,
+        "logic_warnings": 0,
+        "stall_count": 0,
+        "llm_calls": 2,
+        "elapsed_seconds": 0.0
       }
     },
     {

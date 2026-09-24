@@ -312,3 +312,56 @@ def test_cli_out_file_written(monkeypatch, tmp_path) -> None:
     monkeypatch.setattr(sys, "argv", ["main.py", "--prompt", "escrow", "--out", str(target)])
     assert cli.main() == 0
     assert json.loads(target.read_text(encoding="utf-8"))["status"] == "done"
+
+
+def test_progress_line_and_jsonl_log_written_each_iteration(monkeypatch, tmp_path, capsys) -> None:
+    reasoner = FakeReasoner([make_draft(invalid_contract(1)), make_draft()])
+    monkeypatch.setattr(cli, "OpenAIReasoner", lambda model=None: reasoner)
+    monkeypatch.setattr(sys, "argv", ["main.py", "--prompt", "escrow", "--run-log-dir", str(tmp_path)])
+    assert cli.main() == 0
+    lines = capsys.readouterr().out
+    assert "Lượt 1 | structural=FAIL" in lines
+    assert "Lượt 2 | structural=PASS | semantic=PASS | logic=PASS" in lines
+    logs = list(tmp_path.glob("*.jsonl"))
+    assert len(logs) == 1
+    records = [json.loads(line) for line in logs[0].read_text(encoding="utf-8").splitlines()]
+    assert [item["iteration"] for item in records] == [1, 2]
+    assert records[0]["structural"] == "fail"
+    assert records[1]["llm_calls"] == 3
+
+
+def test_run_log_write_failure_does_not_break_run(monkeypatch, tmp_path, capsys) -> None:
+    target = tmp_path / "not_a_directory"
+    target.write_text("occupied", encoding="utf-8")
+    monkeypatch.setattr(cli, "OpenAIReasoner", lambda model=None: FakeReasoner([make_draft()]))
+    monkeypatch.setattr(sys, "argv", ["main.py", "--prompt", "escrow", "--run-log-dir", str(target)])
+    assert cli.main() == 0
+    assert "không ghi được run log" in capsys.readouterr().err
+
+
+def test_keyboard_interrupt_returns_partial_result(monkeypatch, tmp_path, capsys) -> None:
+    draft = make_draft()
+    reasoner = FakeReasoner([draft], semantics=[KeyboardInterrupt()])
+    result = AgentPipeline(reasoner).run("escrow")
+    assert result.stop_reason == "interrupted"
+    assert result.draft.marlowe_contract == draft.marlowe_contract
+    assert result.iterations == 1
+    assert result.trace
+    assert "Traceback" not in capsys.readouterr().err
+
+    target = tmp_path / "partial.json"
+    monkeypatch.setattr(cli, "OpenAIReasoner", lambda model=None: FakeReasoner([draft], semantics=[KeyboardInterrupt()]))
+    monkeypatch.setattr(sys, "argv", ["main.py", "--prompt", "escrow", "--out", str(target),
+                                   "--run-log-dir", str(tmp_path)])
+    assert cli.main() == 130
+    payload = json.loads(target.read_text(encoding="utf-8"))
+    assert payload["stop_reason"] == "interrupted"
+    assert payload["draft"]["marlowe_contract"] == draft.marlowe_contract
+
+
+def test_cli_exit_code_130_on_interrupt(monkeypatch, tmp_path) -> None:
+    monkeypatch.setattr("builtins.input", lambda _: (_ for _ in ()).throw(KeyboardInterrupt()))
+    target = tmp_path / "empty_partial.json"
+    monkeypatch.setattr(sys, "argv", ["main.py", "--out", str(target), "--no-run-log"])
+    assert cli.main() == 130
+    assert json.loads(target.read_text(encoding="utf-8"))["stop_reason"] == "interrupted"

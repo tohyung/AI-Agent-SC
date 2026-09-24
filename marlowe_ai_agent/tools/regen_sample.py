@@ -49,7 +49,11 @@ def generate_payload() -> dict[str, Any]:
     result = AgentPipeline(FakeReasoner([draft], [semantic]), max_iterations=8).run(SAMPLE_PROMPT)
     if result.status != "done":
         raise RuntimeError(f"Sample generation failed: {result.stop_reason}")
-    return result.to_dict()
+    payload = result.to_dict()
+    for event in payload["trace"]:
+        if event["status"] == "iteration":
+            event["data"]["elapsed_seconds"] = 0.0
+    return payload
 
 
 def main() -> None:

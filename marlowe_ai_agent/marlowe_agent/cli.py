@@ -1,9 +1,10 @@
 import argparse
 import json
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 
-from .models import TraceEvent
+from .models import ContractDraft, LogicGraphResult, PipelineResult, TraceEvent, VerificationResult
 from .nodes import AgentPipeline
 from .openai_reasoner import OpenAIReasoner
 
@@ -36,6 +37,9 @@ def build_parser() -> argparse.ArgumentParser:
         help="Hoi dap bo sung thong tin neu prompt bi thieu. Tu bat neu ban khong truyen --prompt.",
     )
     parser.add_argument("--out", help="Duong dan file JSON de luu ket qua.")
+    parser.add_argument("--run-log-dir", default="runs", metavar="PATH",
+                        help="Thư mục lưu summary từng lượt dưới dạng JSONL (mặc định runs).")
+    parser.add_argument("--no-run-log", action="store_true", help="Tắt ghi JSONL run log.")
     parser.add_argument(
         "--provider",
         choices=["openai"],
@@ -88,17 +92,25 @@ def main() -> int:
 
     prompt = args.prompt
     interactive = args.interactive
+    initial_interrupt = False
 
-    if not prompt:
-        interactive = True
-        print("Marlowe AI Agent")
-        print("Nhap prompt hop dong cua ban:")
-        prompt = input("> ").strip()
+    try:
+        if not prompt:
+            interactive = True
+            print("Marlowe AI Agent")
+            print("Nhap prompt hop dong cua ban:")
+            prompt = input("> ").strip()
+        while not prompt:
+            prompt = input("Prompt dang rong, nhap lai:\n> ").strip()
+    except KeyboardInterrupt:
+        initial_interrupt = True
+        prompt = prompt or ""
 
-    while not prompt:
-        prompt = input("Prompt dang rong, nhap lai:\n> ").strip()
+    log_handle = None
+    log_failed = False
 
     def print_trace(event: TraceEvent) -> None:
+        nonlocal log_handle, log_failed
         node_label = node_display_name(event.node)
 
         if event.status == "start" and node_label:
@@ -110,22 +122,64 @@ def main() -> int:
         if narrative:
             print(f"\nAudit {node_label or event.node}: {narrative}")
 
-    try:
-        reasoner = OpenAIReasoner(model=args.model)
-    except RuntimeError as exc:
-        print(f"Lỗi khởi tạo LLM: {' '.join(str(exc).split())}", file=sys.stderr)
-        return 2
-    pipeline = AgentPipeline(
-        reasoner=reasoner,
-        interactive=interactive,
-        max_iterations=args.max_iterations,
-        max_llm_calls=args.max_llm_calls,
-        stop_on_stall=args.stop_on_stall,
-        require_semantic_pass=not args.allow_unverified,
-        trace_callback=print_trace,
-    )
-    result = pipeline.run(prompt)
+        if event.node == "pipeline" and event.status == "iteration":
+            data = event.data
+            print(f"Lượt {data['iteration']} | structural={data['structural'].upper()} | "
+                  f"semantic={data['semantic'].upper()} | logic={data['logic'].upper()} "
+                  f"({data['logic_errors']}E/{data['logic_warnings']}W) | "
+                  f"llm_calls={data['llm_calls']} | {data['elapsed_seconds']}s")
+            if not args.no_run_log and not log_failed:
+                try:
+                    if log_handle is None:
+                        log_dir = Path(args.run_log_dir)
+                        log_dir.mkdir(parents=True, exist_ok=True)
+                        name = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ") + ".jsonl"
+                        log_handle = (log_dir / name).open("w", encoding="utf-8")
+                    log_handle.write(json.dumps(data, ensure_ascii=False) + "\n")
+                    log_handle.flush()
+                except OSError as exc:
+                    log_failed = True
+                    print(f"Cảnh báo: không ghi được run log: {exc}", file=sys.stderr)
+                    if log_handle is not None:
+                        log_handle.close()
+                        log_handle = None
+
+    if initial_interrupt:
+        result = PipelineResult(ContractDraft(prompt, "", [], None),
+                                VerificationResult(False, 0.0, []),
+                                LogicGraphResult(False, [], {"nodes": [], "edges": []}),
+                                0, [], "blocked", "interrupted")
+    else:
+        try:
+            reasoner = OpenAIReasoner(model=args.model)
+        except RuntimeError as exc:
+            print(f"Lỗi khởi tạo LLM: {' '.join(str(exc).split())}", file=sys.stderr)
+            return 2
+        pipeline = AgentPipeline(
+            reasoner=reasoner,
+            interactive=interactive,
+            max_iterations=args.max_iterations,
+            max_llm_calls=args.max_llm_calls,
+            stop_on_stall=args.stop_on_stall,
+            require_semantic_pass=not args.allow_unverified,
+            trace_callback=print_trace,
+        )
+        try:
+            result = pipeline.run(prompt)
+        except KeyboardInterrupt:
+            result = PipelineResult(ContractDraft(prompt, "", [], None),
+                                    VerificationResult(False, 0.0, []),
+                                    LogicGraphResult(False, [], {"nodes": [], "edges": []}),
+                                    0, pipeline.trace, "blocked", "interrupted")
+        finally:
+            if log_handle is not None:
+                log_handle.close()
     payload = result.to_dict()
+
+    if args.out:
+        out_path = Path(args.out)
+        out_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        print(f"\nSaved: {out_path.resolve()}")
 
     if args.trace_only:
         print("\nSummary")
@@ -136,17 +190,13 @@ def main() -> int:
         print(f"- contract_root: {next(iter(contract), None) if isinstance(contract, dict) else contract}")
         print(f"- status: {result.status}")
         print(f"- stop_reason: {stop_reason_label(result.stop_reason)}")
-        return 0 if result.status == "done" else 2
+        return 130 if result.stop_reason == "interrupted" else (0 if result.status == "done" else 2)
 
     text = json.dumps(payload, ensure_ascii=False, indent=2)
     print(text)
 
-    if args.out:
-        out_path = Path(args.out)
-        out_path.write_text(text + "\n", encoding="utf-8")
-        print(f"\nSaved: {out_path.resolve()}")
     print(f"\nSummary: {result.status}; {stop_reason_label(result.stop_reason)}")
-    return 0 if result.status == "done" else 2
+    return 130 if result.stop_reason == "interrupted" else (0 if result.status == "done" else 2)
 
 
 def stop_reason_label(reason: str) -> str:
@@ -158,5 +208,6 @@ def stop_reason_label(reason: str) -> str:
         "llm_error": "Lời gọi LLM thất bại hoặc vượt giới hạn",
         "semantic_not_passed": "Semantic chưa đạt",
         "logic_not_passed": "Logic graph chưa đạt",
+        "interrupted": "Đã dừng bằng Ctrl+C",
     }
     return labels.get(reason, reason)

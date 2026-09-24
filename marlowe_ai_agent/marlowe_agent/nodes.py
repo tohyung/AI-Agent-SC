@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from time import perf_counter
 from typing import Any
 
 from .logic_graph import LogicGraphVerifier
@@ -125,6 +126,9 @@ class AgentPipeline:
         self.trace_callback = trace_callback
         self.trace: list[TraceEvent] = []
         self.reasoner = reasoner
+        self._iteration_start: float | None = None
+        self._iteration_trace_start = 0
+        self._iteration_number = 0
 
     def track(self, node: str, status: str, message: str, data: dict[str, Any] | None = None) -> None:
         event = TraceEvent(node, status, message, data or {})
@@ -136,9 +140,37 @@ class AgentPipeline:
         self, draft: ContractDraft, semantic: VerificationResult, logic: LogicGraphResult,
         iterations: int, status: str, reason: str,
     ) -> PipelineResult:
+        self._finish_iteration()
         self.track("pipeline", status, "Workflow đã hoàn tất." if status == "done" else "Workflow đã dừng.",
                    {"iterations": iterations, "stop_reason": reason})
         return PipelineResult(draft, semantic, logic, iterations, self.trace, status, reason)
+
+    def _llm_call_count(self) -> int:
+        if hasattr(self.reasoner, "llm_calls"):
+            return self.reasoner.llm_calls
+        return len(getattr(self.reasoner, "calls", []))
+
+    def _finish_iteration(self) -> None:
+        if self._iteration_start is None:
+            return
+        states = {"structural": "skip", "semantic": "skip", "logic": "skip"}
+        nodes = {"structural_gate": "structural", "node_2_semantic_verification": "semantic",
+                 "node_3_logic_graph_verification": "logic"}
+        logic_errors = logic_warnings = 0
+        for event in self.trace[self._iteration_trace_start:]:
+            key = nodes.get(event.node)
+            if key and event.status in {"pass", "fail"}:
+                states[key] = event.status
+            if key == "logic" and event.status in {"pass", "fail"}:
+                logic_errors = len(event.data.get("errors", []))
+                logic_warnings = len(event.data.get("warnings", []))
+        self.track("pipeline", "iteration", "Đã hoàn tất lượt xử lý.", {
+            "iteration": self._iteration_number, **states,
+            "logic_errors": logic_errors, "logic_warnings": logic_warnings,
+            "stall_count": self.stall_count, "llm_calls": self._llm_call_count(),
+            "elapsed_seconds": round(perf_counter() - self._iteration_start, 3),
+        })
+        self._iteration_start = None
 
     def _observe_stall(self, seen: dict[str, int], contract: Any, errors: list[str]) -> tuple[bool, str]:
         signature = fingerprint({"contract": contract, "errors": sorted(errors)})
@@ -159,6 +191,7 @@ class AgentPipeline:
     def run(self, prompt: str) -> PipelineResult:
         self.trace = []
         self.stall_count = 0
+        self._iteration_start = None
         if hasattr(self.reasoner, "set_call_budget"):
             self.reasoner.set_call_budget(self.max_llm_calls)
         current_prompt = prompt
@@ -171,7 +204,11 @@ class AgentPipeline:
 
         try:
             while True:
+                self._finish_iteration()
                 iterations += 1
+                self._iteration_number = iterations
+                self._iteration_trace_start = len(self.trace)
+                self._iteration_start = perf_counter()
                 self.track("node_1_prompt_to_draft", "start", "Đang sinh draft.", {"iteration": iterations})
                 draft = self.node_1.run(current_prompt)
                 self.track("node_1_prompt_to_draft", "done", "Đã sinh draft.", {
@@ -244,6 +281,7 @@ class AgentPipeline:
                 logic = self.node_3.run(draft)
                 self.track("node_3_logic_graph_verification", "pass" if logic.passed else "fail",
                            "Đã kiểm logic graph.", {"findings": logic.findings,
+                                                     "errors": logic.errors, "warnings": logic.warnings,
                                                      "reasoning_narrative": self.node_3.audit_narrative(logic)})
                 if logic.passed:
                     status = "done" if semantic.passed else "blocked"
@@ -264,3 +302,6 @@ class AgentPipeline:
         except LLMError as exc:
             self.track("pipeline", "error", "Lời gọi LLM thất bại.", {"error": str(exc)})
             return self._result(draft, semantic, logic, iterations, "blocked", "llm_error")
+        except KeyboardInterrupt:
+            self.track("pipeline", "warn", "Đã dừng theo yêu cầu người dùng.")
+            return self._result(draft, semantic, logic, iterations, "blocked", "interrupted")
