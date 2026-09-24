@@ -119,6 +119,28 @@ class TraceEvent:
 
 
 @dataclass
+class SemanticHistoryEntry:
+    iteration: int
+    semantic_generation: int
+    semantic_fingerprint: str
+    prompt_fingerprint: str
+    contract_fingerprint: str
+    passed: bool
+    user_answered: bool
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "iteration": self.iteration,
+            "semantic_generation": self.semantic_generation,
+            "semantic_fingerprint": self.semantic_fingerprint,
+            "prompt_fingerprint": self.prompt_fingerprint,
+            "contract_fingerprint": self.contract_fingerprint,
+            "passed": self.passed,
+            "user_answered": self.user_answered,
+        }
+
+
+@dataclass
 class PipelineResult:
     draft: ContractDraft
     semantic_verification: VerificationResult
@@ -127,6 +149,7 @@ class PipelineResult:
     trace: list[TraceEvent] = field(default_factory=list)
     status: str = "blocked"
     stop_reason: str = "max_iterations"
+    semantic_history: list[SemanticHistoryEntry] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -138,4 +161,5 @@ class PipelineResult:
             "semantic_verification": self.semantic_verification.to_dict(),
             "logic_verification": self.logic_verification.to_dict(),
             "marlowe_contract": self.draft.marlowe_contract,
+            "semantic_history": [entry.to_dict() for entry in self.semantic_history],
         }

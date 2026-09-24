@@ -148,6 +148,80 @@ def test_semantic_no_action_with_allow_unverified_proceeds_to_node3() -> None:
     assert any(event.node == "node_3_logic_graph_verification" and event.status == "start" for event in result.trace)
 
 
+def test_semantic_stall_resets_after_new_user_answer(monkeypatch) -> None:
+    failure = VerificationResult(False, 0.0, ["Thiếu điều kiện"], ["Ai quyết định?"])
+    reasoner = FakeReasoner([make_draft() for _ in range(3)], semantics=[
+        failure, failure, VerificationResult(True, 1.0, []),
+    ])
+    answers = iter(["Alice", "Bob"])
+    monkeypatch.setattr("builtins.input", lambda _: next(answers))
+    pipeline = AgentPipeline(reasoner, interactive=True, stop_on_stall=2)
+    result = pipeline.run("escrow")
+    assert result.status == "done"
+    assert [entry.semantic_generation for entry in result.semantic_history] == [0, 1, 2]
+    assert pipeline.stall_count == 0
+
+
+def test_semantic_stop_on_stall_counts_only_current_generation(monkeypatch) -> None:
+    failure = VerificationResult(False, 0.0, ["Thiếu điều kiện"], ["Ai quyết định?"])
+    invalid_logic = make_draft(pay("Alice", "Bob", 10))
+    reasoner = FakeReasoner([make_draft(), invalid_logic, invalid_logic], semantics=[failure],
+                            clarifications=[{"needs_user_input": False, "questions": [],
+                                             "internal_instruction": "Sửa Pay."}])
+    answers = iter(["Alice", " "])
+    monkeypatch.setattr("builtins.input", lambda _: next(answers))
+    result = AgentPipeline(reasoner, interactive=True, require_semantic_pass=False,
+                           stop_on_stall=2).run("escrow")
+    assert result.stop_reason == "stalled"
+    assert result.iterations == 3
+    assert [entry.semantic_generation for entry in result.semantic_history] == [0, 1, 1]
+
+
+def test_semantic_history_survives_stall_reset(monkeypatch) -> None:
+    failure = VerificationResult(False, 0.0, ["Thiếu điều kiện"], ["Ai quyết định?"])
+    reasoner = FakeReasoner([make_draft(), make_draft()], semantics=[failure, VerificationResult(True, 1.0, [])])
+    monkeypatch.setattr("builtins.input", lambda _: "Alice")
+    result = AgentPipeline(reasoner, interactive=True).run("escrow")
+    history = result.to_dict()["semantic_history"]
+    assert len(history) == 2
+    assert [entry["semantic_generation"] for entry in history] == [0, 1]
+    assert [entry["user_answered"] for entry in history] == [True, False]
+    assert all(len(entry["prompt_fingerprint"]) == 64 for entry in history)
+    resets = [event for event in result.trace if event.status == "semantic_reset"]
+    assert len(resets) == 1
+    assert resets[0].data["history_entries"] == 1
+    assert resets[0].data["answered_questions_count"] == 1
+
+
+def test_blank_user_answer_does_not_reset_semantic_stall(monkeypatch) -> None:
+    failure = VerificationResult(False, 0.0, ["Thiếu điều kiện"], ["Ai quyết định?"])
+    invalid_logic = make_draft(pay("Alice", "Bob", 10))
+    reasoner = FakeReasoner([invalid_logic], semantics=[failure], clarifications=[{
+        "needs_user_input": False, "questions": [], "internal_instruction": "Sửa Pay.",
+    }])
+    monkeypatch.setattr("builtins.input", lambda _: " ")
+    pipeline = AgentPipeline(reasoner, interactive=True, require_semantic_pass=False, stop_on_stall=2)
+    result = pipeline.run("escrow")
+    assert result.stop_reason == "stalled"
+    assert [entry.semantic_generation for entry in result.semantic_history] == [0, 0]
+    assert pipeline.stall_tracker.semantic_generation == 0
+    assert not any(event.status == "semantic_reset" for event in result.trace)
+
+
+def test_semantic_reset_does_not_clear_logic_or_structural_history(monkeypatch) -> None:
+    reasoner = FakeReasoner([
+        make_draft(invalid_contract(1)), make_draft(pay("Alice", "Bob", 10)), make_draft(),
+    ], clarifications=[{"needs_user_input": True, "questions": ["Ai nhận tiền?"],
+                       "internal_instruction": "Sửa Pay."}])
+    monkeypatch.setattr("builtins.input", lambda _: "Bob")
+    pipeline = AgentPipeline(reasoner, interactive=True)
+    result = pipeline.run("escrow")
+    assert result.status == "done"
+    assert pipeline.stall_tracker.semantic_generation == 1
+    assert len(pipeline.stall_tracker.structural_seen) == 1
+    assert len(pipeline.stall_tracker.logic_seen) == 1
+
+
 def test_happy_path_done() -> None:
     result = AgentPipeline(FakeReasoner([make_draft()])).run("escrow")
     assert result.status == "done"

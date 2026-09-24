@@ -83,6 +83,8 @@
         "logic_warnings": 0,
         "stall_count": 0,
         "llm_calls": 2,
+        "semantic_generation": 0,
+        "semantic_history_entries": 1,
         "elapsed_seconds": 0.0
       }
     },
@@ -436,5 +438,16 @@
     ],
     "timeout": 1893456000000,
     "timeout_continuation": "close"
-  }
+  },
+  "semantic_history": [
+    {
+      "iteration": 1,
+      "semantic_generation": 0,
+      "semantic_fingerprint": "d9885da3741ee8cfa6b5f092f72f25d551807fa53e27e92173777e28e7cbb043",
+      "prompt_fingerprint": "b2469707ce16dda0066d5e075fc11846d4f3aa654effd6e6e3703767c3267969",
+      "contract_fingerprint": "6af8b82c6d91a5f62fc63371be11ca6c2ce78e2d575a10959a4f8793b23254fd",
+      "passed": true,
+      "user_answered": false
+    }
+  ]
 }
