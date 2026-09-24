@@ -243,15 +243,20 @@ class AgentPipeline:
                 STALL_HINT if occurrences >= 2 else "")
 
     def _record_semantic(self, iteration: int, prompt: str, draft: ContractDraft,
-                         semantic: VerificationResult, user_answered: bool = False) -> None:
+                         semantic: VerificationResult) -> None:
         self.semantic_history.append(SemanticHistoryEntry(
             iteration, self.stall_tracker.semantic_generation,
             fingerprint({"contract": draft.marlowe_contract,
                          "errors": sorted(semantic.findings + semantic.questions)}),
-            fingerprint(prompt), fingerprint(draft.marlowe_contract), semantic.passed, user_answered,
+            fingerprint(prompt), fingerprint(draft.marlowe_contract), semantic.passed, False,
         ))
 
-    def _reset_semantic_after_answer(self) -> None:
+    def _mark_current_semantic_answered(self, source: str) -> None:
+        if self.semantic_history and self.semantic_history[-1].iteration == self._iteration_number:
+            self.semantic_history[-1].user_answered = True
+            self.semantic_history[-1].answer_source = source
+
+    def _reset_semantic_after_answer(self, source: str) -> None:
         self.stall_tracker.semantic_seen.clear()
         self.stall_tracker.semantic_generation += 1
         self.track("pipeline", "semantic_reset",
@@ -259,6 +264,7 @@ class AgentPipeline:
                        "semantic_generation": self.stall_tracker.semantic_generation,
                        "history_entries": len(self.semantic_history),
                        "answered_questions_count": self.node_1.last_answered_questions_count,
+                       "answer_source": source,
                    })
 
     def _limit_reached(self, iterations: int) -> bool:
@@ -322,7 +328,8 @@ class AgentPipeline:
                     if outcome.action is ClarificationAction.BLOCK_NO_INPUT:
                         return self._result(draft, semantic, logic, iterations, "blocked", "no_user_input")
                     if outcome.user_answered:
-                        self._reset_semantic_after_answer()
+                        self._mark_current_semantic_answered("empty_contract")
+                        self._reset_semantic_after_answer("empty_contract")
                     if self._limit_reached(iterations):
                         return self._result(draft, semantic, logic, iterations, "blocked", "max_iterations")
                     current_prompt = outcome.prompt
@@ -371,9 +378,10 @@ class AgentPipeline:
                     outcome = self.node_1.clarify_prompt(
                         current_prompt, semantic, allow_no_action=not self.require_semantic_pass and not empty_contract,
                     )
-                    self._record_semantic(iterations, current_prompt, draft, semantic, outcome.user_answered)
+                    self._record_semantic(iterations, current_prompt, draft, semantic)
                     if outcome.user_answered:
-                        self._reset_semantic_after_answer()
+                        self._mark_current_semantic_answered("semantic")
+                        self._reset_semantic_after_answer("semantic")
                     if outcome.action is ClarificationAction.REGENERATE:
                         current_prompt = outcome.prompt
                         continue
@@ -400,7 +408,8 @@ class AgentPipeline:
                     return self._result(draft, semantic, logic, iterations, "blocked", "max_iterations")
                 outcome = self.node_1.clarify_logic_prompt(current_prompt, draft, logic, stall_hint)
                 if outcome.user_answered:
-                    self._reset_semantic_after_answer()
+                    self._mark_current_semantic_answered("logic")
+                    self._reset_semantic_after_answer("logic")
                 if outcome.action is ClarificationAction.BLOCK_NO_INPUT:
                     return self._result(draft, semantic, logic, iterations, "blocked", "no_user_input")
                 self.track("node_1_prompt_to_draft", "done", "Đã nhận phản hồi từ Node 3.",

@@ -193,6 +193,56 @@ def test_semantic_history_survives_stall_reset(monkeypatch) -> None:
     assert resets[0].data["answered_questions_count"] == 1
 
 
+def test_logic_user_answer_marks_current_semantic_history_entry(monkeypatch) -> None:
+    reasoner = FakeReasoner(
+        [make_draft(pay("Alice", "Bob", 10)), make_draft()],
+        clarifications=[{"needs_user_input": True, "questions": ["Ai nhận tiền?"],
+                         "internal_instruction": ""}],
+    )
+    monkeypatch.setattr("builtins.input", lambda _: "Bob")
+    result = AgentPipeline(reasoner, interactive=True).run("escrow")
+    assert result.status == "done"
+    assert len(result.semantic_history) == 2
+    assert result.semantic_history[0].user_answered is True
+    assert result.semantic_history[0].semantic_generation == 0
+    assert result.semantic_history[0].answer_source == "logic"
+    assert result.semantic_history[1].semantic_generation == 1
+    assert result.semantic_history[1].user_answered is False
+    assert result.to_dict()["semantic_history"][0]["answer_source"] == "logic"
+
+
+def test_empty_contract_answer_does_not_mark_previous_history_entry(monkeypatch) -> None:
+    reasoner = FakeReasoner(
+        [make_draft(pay("Alice", "Bob", 10)), empty_draft(["Ai nhận tiền?"]), make_draft()],
+        clarifications=[{"needs_user_input": False, "questions": [],
+                         "internal_instruction": "Sửa nhánh Pay."}],
+    )
+    monkeypatch.setattr("builtins.input", lambda _: "Bob")
+    result = AgentPipeline(reasoner, interactive=True).run("escrow")
+    assert result.status == "done"
+    assert result.semantic_history[0].iteration == 1
+    assert result.semantic_history[0].user_answered is False
+    assert result.semantic_history[0].answer_source is None
+    assert result.semantic_history[1].iteration == 3
+    resets = [event for event in result.trace if event.status == "semantic_reset"]
+    assert len(resets) == 1
+    assert resets[0].data["answer_source"] == "empty_contract"
+
+
+def test_semantic_answer_records_source_semantic(monkeypatch) -> None:
+    failure = VerificationResult(False, 0.0, ["Thiếu điều kiện"], ["Ai quyết định?"])
+    reasoner = FakeReasoner([make_draft(), make_draft()],
+                            semantics=[failure, VerificationResult(True, 1.0, [])])
+    monkeypatch.setattr("builtins.input", lambda _: "Alice")
+    result = AgentPipeline(reasoner, interactive=True).run("escrow")
+    assert result.status == "done"
+    assert result.semantic_history[0].user_answered is True
+    assert result.semantic_history[0].answer_source == "semantic"
+    assert result.semantic_history[0].semantic_generation == 0
+    resets = [event for event in result.trace if event.status == "semantic_reset"]
+    assert resets[0].data["answer_source"] == "semantic"
+
+
 def test_blank_user_answer_does_not_reset_semantic_stall(monkeypatch) -> None:
     failure = VerificationResult(False, 0.0, ["Thiếu điều kiện"], ["Ai quyết định?"])
     invalid_logic = make_draft(pay("Alice", "Bob", 10))
@@ -220,6 +270,10 @@ def test_semantic_reset_does_not_clear_logic_or_structural_history(monkeypatch) 
     assert pipeline.stall_tracker.semantic_generation == 1
     assert len(pipeline.stall_tracker.structural_seen) == 1
     assert len(pipeline.stall_tracker.logic_seen) == 1
+    assert result.semantic_history[0].iteration == 2
+    assert result.semantic_history[0].user_answered is True
+    assert result.semantic_history[0].answer_source == "logic"
+    assert result.semantic_history[1].user_answered is False
 
 
 def test_happy_path_done() -> None:

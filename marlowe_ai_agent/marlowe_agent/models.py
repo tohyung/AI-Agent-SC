@@ -127,6 +127,7 @@ class SemanticHistoryEntry:
     contract_fingerprint: str
     passed: bool
     user_answered: bool
+    answer_source: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -137,6 +138,7 @@ class SemanticHistoryEntry:
             "contract_fingerprint": self.contract_fingerprint,
             "passed": self.passed,
             "user_answered": self.user_answered,
+            "answer_source": self.answer_source,
         }
 
 

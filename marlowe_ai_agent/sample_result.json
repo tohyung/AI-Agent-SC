@@ -447,7 +447,8 @@
       "prompt_fingerprint": "b2469707ce16dda0066d5e075fc11846d4f3aa654effd6e6e3703767c3267969",
       "contract_fingerprint": "6af8b82c6d91a5f62fc63371be11ca6c2ce78e2d575a10959a4f8793b23254fd",
       "passed": true,
-      "user_answered": false
+      "user_answered": false,
+      "answer_source": null
     }
   ]
 }
