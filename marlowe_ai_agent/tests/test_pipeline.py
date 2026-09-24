@@ -11,10 +11,10 @@ from marlowe_agent import cli, openai_reasoner
 from marlowe_agent.logic_graph import LogicGraphVerifier
 from marlowe_agent.marlowe_ast import pay, prompt_contract_examples
 from marlowe_agent.marlowe_validator import (
-    ACTION_SHAPES,
-    CONTRACT_SHAPES,
-    OBSERVATION_SHAPES,
-    VALUE_SHAPES,
+    ACTION_VARIANTS,
+    CONTRACT_VARIANTS,
+    OBSERVATION_VARIANTS,
+    VALUE_VARIANTS,
     describe_marlowe_grammar,
     validate_contract,
 )
@@ -533,13 +533,49 @@ def test_node1_prompt_contains_supported_marlowe_grammar(monkeypatch) -> None:
     monkeypatch.setattr(reasoner, "_json_response", capture)
     reasoner._extract_contract_config("sample")
     assert describe_marlowe_grammar() in captured["system"]
-    for shapes in (CONTRACT_SHAPES, ACTION_SHAPES, VALUE_SHAPES, OBSERVATION_SHAPES):
-        for shape in shapes:
-            assert "{" + ", ".join(sorted(shape)) + "}" in captured["system"]
+    for variants in (CONTRACT_VARIANTS, ACTION_VARIANTS, VALUE_VARIANTS, OBSERVATION_VARIANTS):
+        for name, spec in variants.items():
+            assert name + ":" in captured["system"]
+            if isinstance(spec, dict):
+                assert all(f"{field}: {field_type}" in captured["system"]
+                           for field, field_type in spec.items())
     for field in ("role_token", "address", "account", "currency_symbol", "token_name",
                   "choice_name", "choice_owner", "from", "to", "case", "time_interval_start",
                   "time_interval_end", "true", "false"):
         assert field in captured["system"]
+
+
+def test_node1_prompt_contains_constructor_names_and_types(monkeypatch) -> None:
+    reasoner = OpenAIReasoner.__new__(OpenAIReasoner)
+    captured = {}
+    monkeypatch.setattr(reasoner, "_json_response", lambda system, user: captured.update(system=system) or {})
+    reasoner._extract_contract_config("sample")
+    for name in ("Close", "Pay", "If", "When", "Let", "Assert", "Deposit", "Choice", "Notify"):
+        assert name + ":" in captured["system"]
+    for kind in ("Contract", "Action", "Value", "Observation", "Party", "Payee", "Token",
+                 "ChoiceId", "Bound", "Case", "POSIXMilliseconds"):
+        assert kind in captured["system"]
+    assert "pay: Value" in captured["system"]
+    assert "to: Payee" in captured["system"]
+
+
+def test_typed_grammar_and_validator_share_one_source(monkeypatch) -> None:
+    from marlowe_agent import marlowe_validator as grammar
+
+    synthetic = {"temporary_role": "Alice"}
+    baseline_errors = []
+    grammar.validate_party(synthetic, "root", baseline_errors)
+    assert baseline_errors
+    monkeypatch.setitem(grammar.PARTY_VARIANTS, "TemporaryRole", {"temporary_role": "String"})
+    assert "TemporaryRole: { temporary_role: String }" in grammar.describe_marlowe_grammar()
+    updated_errors = []
+    grammar.validate_party(synthetic, "root", updated_errors)
+    assert updated_errors == []
+    monkeypatch.delitem(grammar.PARTY_VARIANTS, "TemporaryRole")
+    after_errors = []
+    grammar.validate_party(synthetic, "root", after_errors)
+    assert after_errors == baseline_errors
+    assert "TemporaryRole:" not in grammar.describe_marlowe_grammar()
 
 
 def test_prompt_examples_are_valid() -> None:

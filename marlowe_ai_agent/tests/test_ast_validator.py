@@ -5,6 +5,7 @@ from pathlib import Path
 
 import pytest
 from conftest import AMOUNT, DECISION_TIMEOUT, DEPOSIT_TIMEOUT
+
 from marlowe_agent.logic_graph import LogicGraphVerifier
 from marlowe_agent.marlowe_ast import (
     ada_to_lovelace,
@@ -12,6 +13,7 @@ from marlowe_agent.marlowe_ast import (
     escrow_contract,
     is_close,
     normalize_marlowe_ast,
+    pay,
     seconds_to_posix_ms,
     walk_contract,
 )
@@ -94,3 +96,9 @@ def test_validator_rejects_bool_timeout() -> None:
 def test_validator_rejects_seconds_timeout() -> None:
     assert any("đang dùng giây" in error for error in validate_contract(
         {"when": [], "timeout": 1893456000, "timeout_continuation": "close"}))
+
+
+def test_typed_grammar_does_not_accept_integer_type_label_as_value() -> None:
+    contract = pay("Alice", "Bob", 10)
+    contract["pay"] = "integer"
+    assert any("Value phải là số nguyên" in error for error in validate_contract(contract))

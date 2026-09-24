@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from typing import Any
 
 from .marlowe_ast import is_close
@@ -9,56 +10,84 @@ class MarloweValidationError(ValueError):
     """A Marlowe JSON contract does not match the supported Core V1 grammar."""
 
 
-PARTY_SHAPES = ({"role_token"}, {"address"})
-PAYEE_SHAPES = ({"party"}, {"account"})
-TOKEN_FIELDS = {"currency_symbol", "token_name"}
-CHOICE_ID_FIELDS = {"choice_name", "choice_owner"}
-BOUND_FIELDS = {"from", "to"}
-CASE_FIELDS = {"case", "then"}
-VALUE_LITERALS = ("time_interval_start", "time_interval_end")
-OBSERVATION_LITERALS = (True, False)
-VALUE_SHAPES = (
-    {"in_account", "amount_of_token"}, {"negate"}, {"add", "and"},
-    {"value", "minus"}, {"multiply", "times"}, {"divide", "by"},
-    {"value_of_choice"}, {"use_value"}, {"if", "then", "else"},
-)
-OBSERVATION_SHAPES = (
-    {"both", "and"}, {"either", "or"}, {"not"}, {"chose_something_for"},
-    {"value", "ge_than"}, {"value", "gt"}, {"value", "lt"},
-    {"value", "le_than"}, {"value", "equal_to"},
-)
-ACTION_SHAPES = (
-    {"party", "deposits", "of_token", "into_account"},
-    {"for_choice", "choose_between"}, {"notify_if"},
-)
-CONTRACT_SHAPES = (
-    {"pay", "from_account", "to", "token", "then"},
-    {"if", "then", "else"}, {"when", "timeout", "timeout_continuation"},
-    {"let", "be", "then"}, {"assert", "then"},
-)
+PARTY_VARIANTS = {
+    "Role": {"role_token": "TokenName"},
+    "Address": {"address": "AddressString"},
+}
+PAYEE_VARIANTS = {
+    "Party": {"party": "Party"},
+    "Account": {"account": "Party"},
+}
+TOKEN_VARIANTS = {"Token": {"currency_symbol": "CurrencySymbol", "token_name": "TokenName"}}
+CHOICE_ID_VARIANTS = {"ChoiceId": {"choice_name": "ChoiceName", "choice_owner": "Party"}}
+BOUND_VARIANTS = {"Bound": {"from": "Integer", "to": "Integer"}}
+CASE_VARIANTS = {"Case": {"case": "Action", "then": "Contract"}}
+VALUE_VARIANTS = {
+    "AvailableMoney": {"in_account": "Party", "amount_of_token": "Token"},
+    "Constant": "integer",
+    "NegValue": {"negate": "Value"},
+    "AddValue": {"add": "Value", "and": "Value"},
+    "SubValue": {"value": "Value", "minus": "Value"},
+    "MulValue": {"multiply": "Value", "times": "Value"},
+    "DivValue": {"divide": "Value", "by": "Value"},
+    "ChoiceValue": {"value_of_choice": "ChoiceId"},
+    "TimeIntervalStart": "time_interval_start",
+    "TimeIntervalEnd": "time_interval_end",
+    "UseValue": {"use_value": "ValueId"},
+    "Cond": {"if": "Observation", "then": "Value", "else": "Value"},
+}
+OBSERVATION_VARIANTS = {
+    "AndObs": {"both": "Observation", "and": "Observation"},
+    "OrObs": {"either": "Observation", "or": "Observation"},
+    "NotObs": {"not": "Observation"},
+    "ChoseSomething": {"chose_something_for": "ChoiceId"},
+    "ValueGE": {"value": "Value", "ge_than": "Value"},
+    "ValueGT": {"value": "Value", "gt": "Value"},
+    "ValueLT": {"value": "Value", "lt": "Value"},
+    "ValueLE": {"value": "Value", "le_than": "Value"},
+    "ValueEQ": {"value": "Value", "equal_to": "Value"},
+    "TrueObs": True,
+    "FalseObs": False,
+}
+ACTION_VARIANTS = {
+    "Deposit": {"party": "Party", "deposits": "Value", "of_token": "Token", "into_account": "Party"},
+    "Choice": {"for_choice": "ChoiceId", "choose_between": "list[Bound]"},
+    "Notify": {"notify_if": "Observation"},
+}
+CONTRACT_VARIANTS = {
+    "Close": "close",
+    "Pay": {"pay": "Value", "from_account": "Party", "to": "Payee", "token": "Token", "then": "Contract"},
+    "If": {"if": "Observation", "then": "Contract", "else": "Contract"},
+    "When": {"when": "list[Case]", "timeout": "POSIXMilliseconds", "timeout_continuation": "Contract"},
+    "Let": {"let": "ValueId", "be": "Value", "then": "Contract"},
+    "Assert": {"assert": "Observation", "then": "Contract"},
+}
 
 
 def describe_marlowe_grammar() -> str:
-    def shapes(items: tuple[set[str], ...]) -> str:
-        return " | ".join("{" + ", ".join(sorted(item)) + "}" for item in items)
-
-    return "\n".join((
-        'Marlowe Core V1 JSON; Close = "close".',
-        "Contract: " + shapes(CONTRACT_SHAPES),
-        "Action: " + shapes(ACTION_SHAPES),
-        "Value: integer | " + " | ".join(VALUE_LITERALS) + " | " + shapes(VALUE_SHAPES),
-        "Observation: " + " | ".join(str(value).lower() for value in OBSERVATION_LITERALS)
-        + " | " + shapes(OBSERVATION_SHAPES),
-        "Party: " + shapes(PARTY_SHAPES),
-        "Payee: " + shapes(PAYEE_SHAPES),
-        "Token: {" + ", ".join(sorted(TOKEN_FIELDS)) + "}",
-        "ChoiceId: {" + ", ".join(sorted(CHOICE_ID_FIELDS)) + "}",
-        "Bound: {" + ", ".join(sorted(BOUND_FIELDS)) + "}",
-        "Case: {" + ", ".join(sorted(CASE_FIELDS)) + "}",
+    groups = (
+        ("Contract", CONTRACT_VARIANTS), ("Action", ACTION_VARIANTS),
+        ("Value", VALUE_VARIANTS), ("Observation", OBSERVATION_VARIANTS),
+        ("Party", PARTY_VARIANTS), ("Payee", PAYEE_VARIANTS),
+        ("Token", TOKEN_VARIANTS), ("ChoiceId", CHOICE_ID_VARIANTS),
+        ("Bound", BOUND_VARIANTS), ("Case", CASE_VARIANTS),
+    )
+    lines = ["Marlowe Core V1 JSON grammar:"]
+    for group_name, variants in groups:
+        lines.append(f"{group_name} constructors:")
+        for name, spec in variants.items():
+            if isinstance(spec, dict):
+                fields = ", ".join(f"{field}: {field_type}" for field, field_type in spec.items())
+                lines.append(f"{name}: {{ {fields} }}")
+            else:
+                literal = spec if spec == "integer" else json.dumps(spec)
+                lines.append(f"{name}: {literal}")
+    lines.extend((
         "Every object must have exactly one listed field set; no extra fields. "
         + "When timeout is a positive POSIX millisecond timestamp; choose_between is a nonempty Bound list. "
         + "ADA amounts are integer lovelace (1 ADA = 1000000 lovelace).",
     ))
+    return "\n".join(lines)
 
 
 def _integer(value: Any) -> bool:
@@ -78,11 +107,14 @@ def _shape(value: Any, required: set[str], path: str, errors: list[str]) -> bool
     return not missing and not extra
 
 
-def _one_shape(value: Any, shapes: tuple[set[str], ...], path: str, errors: list[str]) -> set[str] | None:
+def _one_shape(value: Any, variants: dict[str, Any], path: str, errors: list[str]) -> set[str] | None:
     if not isinstance(value, dict):
         errors.append(f"{path}: phải là object.")
         return None
-    for shape in shapes:
+    for spec in variants.values():
+        if not isinstance(spec, dict):
+            continue
+        shape = set(spec)
         if set(value) == shape:
             return shape
     errors.append(f"{path}: tổ hợp field không hợp lệ: {sorted(value)}.")
@@ -95,31 +127,35 @@ def _text(value: Any, path: str, errors: list[str], allow_empty: bool = False) -
 
 
 def validate_party(party: Any, path: str, errors: list[str]) -> None:
-    shape = _one_shape(party, PARTY_SHAPES, path, errors)
+    shape = _one_shape(party, PARTY_VARIANTS, path, errors)
     if shape:
         key = next(iter(shape))
         _text(party[key], f"{path}.{key}", errors)
 
 
 def validate_token(token: Any, path: str, errors: list[str]) -> None:
-    if _shape(token, TOKEN_FIELDS, path, errors):
+    if _shape(token, set(TOKEN_VARIANTS["Token"]), path, errors):
         _text(token["currency_symbol"], f"{path}.currency_symbol", errors, True)
         _text(token["token_name"], f"{path}.token_name", errors, True)
 
 
 def validate_choice_id(choice: Any, path: str, errors: list[str]) -> None:
-    if _shape(choice, CHOICE_ID_FIELDS, path, errors):
+    if _shape(choice, set(CHOICE_ID_VARIANTS["ChoiceId"]), path, errors):
         _text(choice["choice_name"], f"{path}.choice_name", errors)
         validate_party(choice["choice_owner"], f"{path}.choice_owner", errors)
 
 
 def validate_value(value: Any, path: str, errors: list[str]) -> None:
-    if _integer(value) or value in VALUE_LITERALS:
+    if (_integer(value) and VALUE_VARIANTS.get("Constant") == "integer") or (
+        isinstance(value, str) and value in (
+            spec for name, spec in VALUE_VARIANTS.items() if name != "Constant" and isinstance(spec, str)
+        )
+    ):
         return
     if isinstance(value, bool) or not isinstance(value, dict):
         errors.append(f"{path}: Value phải là số nguyên, thời gian hoặc object hợp lệ.")
         return
-    shape = _one_shape(value, VALUE_SHAPES, path, errors)
+    shape = _one_shape(value, VALUE_VARIANTS, path, errors)
     if shape is None:
         return
     if "in_account" in shape:
@@ -141,9 +177,9 @@ def validate_value(value: Any, path: str, errors: list[str]) -> None:
 
 
 def validate_observation(observation: Any, path: str, errors: list[str]) -> None:
-    if type(observation) is bool and observation in OBSERVATION_LITERALS:
+    if type(observation) is bool and observation in OBSERVATION_VARIANTS.values():
         return
-    shape = _one_shape(observation, OBSERVATION_SHAPES, path, errors)
+    shape = _one_shape(observation, OBSERVATION_VARIANTS, path, errors)
     if shape is None:
         return
     if "chose_something_for" in shape:
@@ -159,7 +195,7 @@ def validate_observation(observation: Any, path: str, errors: list[str]) -> None
 
 
 def validate_action(action: Any, path: str, errors: list[str]) -> None:
-    shape = _one_shape(action, ACTION_SHAPES, path, errors)
+    shape = _one_shape(action, ACTION_VARIANTS, path, errors)
     if shape is None:
         return
     if "deposits" in shape:
@@ -175,7 +211,7 @@ def validate_action(action: Any, path: str, errors: list[str]) -> None:
         else:
             for index, bound in enumerate(bounds):
                 bound_path = f"{path}.choose_between[{index}]"
-                if _shape(bound, BOUND_FIELDS, bound_path, errors):
+                if _shape(bound, set(BOUND_VARIANTS["Bound"]), bound_path, errors):
                     if not _integer(bound["from"]) or not _integer(bound["to"]):
                         errors.append(f"{bound_path}: from/to phải là số nguyên.")
                     elif bound["from"] > bound["to"]:
@@ -185,16 +221,16 @@ def validate_action(action: Any, path: str, errors: list[str]) -> None:
 
 
 def _validate_contract(contract: Any, path: str, errors: list[str]) -> None:
-    if is_close(contract):
+    if is_close(contract) and CONTRACT_VARIANTS.get("Close") == "close":
         return
-    shape = _one_shape(contract, CONTRACT_SHAPES, path, errors)
+    shape = _one_shape(contract, CONTRACT_VARIANTS, path, errors)
     if shape is None:
         return
     if "pay" in shape:
         validate_value(contract["pay"], f"{path}.pay", errors)
         validate_party(contract["from_account"], f"{path}.from_account", errors)
         payee = contract["to"]
-        payee_shape = _one_shape(payee, PAYEE_SHAPES, f"{path}.to", errors)
+        payee_shape = _one_shape(payee, PAYEE_VARIANTS, f"{path}.to", errors)
         if payee_shape:
             key = next(iter(payee_shape))
             validate_party(payee[key], f"{path}.to.{key}", errors)
@@ -207,7 +243,7 @@ def _validate_contract(contract: Any, path: str, errors: list[str]) -> None:
         else:
             for index, item in enumerate(cases):
                 case_path = f"{path}.when[{index}]"
-                if _shape(item, CASE_FIELDS, case_path, errors):
+                if _shape(item, set(CASE_VARIANTS["Case"]), case_path, errors):
                     validate_action(item["case"], f"{case_path}.case", errors)
                     _validate_contract(item["then"], f"{case_path}.then", errors)
         timeout = contract["timeout"]

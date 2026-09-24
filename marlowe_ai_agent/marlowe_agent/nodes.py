@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from enum import Enum
+from functools import partial
 from time import perf_counter, sleep
 from typing import Any, TypeVar
 
@@ -349,7 +350,7 @@ class AgentPipeline:
                 self.track("node_2_semantic_verification", "start", "Đang kiểm semantic.")
                 semantic = self._call_llm_with_retry(
                     "node_2_semantic_verification", "semantic_verify",
-                    lambda: self.node_2.run(current_prompt, draft),
+                    partial(self.node_2.run, current_prompt, draft),
                 )
                 self.track("node_2_semantic_verification", "pass" if semantic.passed else "fail",
                            "Đã kiểm semantic.", {"findings": semantic.findings,
