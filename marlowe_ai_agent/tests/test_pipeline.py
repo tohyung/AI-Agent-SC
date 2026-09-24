@@ -6,15 +6,25 @@ from types import ModuleType, SimpleNamespace
 
 import pytest
 from conftest import make_draft
+
 from marlowe_agent import cli, openai_reasoner
-from marlowe_agent.marlowe_ast import pay
-from marlowe_agent.marlowe_ast import prompt_contract_examples
-from marlowe_agent.marlowe_validator import (
-    ACTION_SHAPES, CONTRACT_SHAPES, OBSERVATION_SHAPES, VALUE_SHAPES,
-    describe_marlowe_grammar, validate_contract,
-)
 from marlowe_agent.logic_graph import LogicGraphVerifier
-from marlowe_agent.models import LLMBudgetError, LLMConfigError, LLMError, LLMTransientError, VerificationResult
+from marlowe_agent.marlowe_ast import pay, prompt_contract_examples
+from marlowe_agent.marlowe_validator import (
+    ACTION_SHAPES,
+    CONTRACT_SHAPES,
+    OBSERVATION_SHAPES,
+    VALUE_SHAPES,
+    describe_marlowe_grammar,
+    validate_contract,
+)
+from marlowe_agent.models import (
+    LLMBudgetError,
+    LLMConfigError,
+    LLMError,
+    LLMTransientError,
+    VerificationResult,
+)
 from marlowe_agent.nodes import AgentPipeline
 from marlowe_agent.openai_reasoner import OpenAIReasoner, parse_json_text
 from tools.fake_reasoner import FakeReasoner
@@ -70,6 +80,25 @@ def test_empty_contract_semantic_pass_never_reaches_node3() -> None:
     assert result.stop_reason == "semantic_not_passed"
     assert reasoner.calls == ["draft", "semantic"]
     assert not any(event.node == "node_3_logic_graph_verification" and event.status == "start" for event in result.trace)
+
+
+def test_empty_contract_semantic_fail_never_reaches_node3_with_override() -> None:
+    semantic = VerificationResult(False, 0.0, ["Thiếu điều kiện"], ["Ai quyết định?"])
+    reasoner = FakeReasoner([empty_draft()], [semantic])
+    result = AgentPipeline(reasoner, require_semantic_pass=False).run("escrow")
+    assert result.stop_reason == "no_user_input"
+    assert not any(event.node == "node_3_logic_graph_verification" and event.status == "start" for event in result.trace)
+
+
+def test_logic_stall_hint_keeps_current_findings() -> None:
+    invalid = make_draft(pay("Alice", "Bob", 10))
+    reasoner = FakeReasoner([invalid, invalid, make_draft()], clarifications=[{
+        "needs_user_input": False, "questions": [], "internal_instruction": "Sửa nhánh Pay.",
+    }])
+    result = AgentPipeline(reasoner).run("escrow")
+    assert result.status == "done"
+    assert "vượt số dư" in result.draft.original_prompt
+    assert "Không lặp lại cách sửa cũ" in result.draft.original_prompt
 
 
 def test_happy_path_done() -> None:
@@ -452,5 +481,16 @@ def test_cli_exit_code_130_on_interrupt(monkeypatch, tmp_path) -> None:
     monkeypatch.setattr("builtins.input", lambda _: (_ for _ in ()).throw(KeyboardInterrupt()))
     target = tmp_path / "empty_partial.json"
     monkeypatch.setattr(sys, "argv", ["main.py", "--out", str(target), "--no-run-log"])
+    assert cli.main() == 130
+    assert json.loads(target.read_text(encoding="utf-8"))["stop_reason"] == "interrupted"
+
+
+def test_cli_reasoner_initialization_interrupt_writes_partial_result(monkeypatch, tmp_path) -> None:
+    def interrupt(model=None):
+        raise KeyboardInterrupt()
+
+    target = tmp_path / "init_partial.json"
+    monkeypatch.setattr(cli, "OpenAIReasoner", interrupt)
+    monkeypatch.setattr(sys, "argv", ["main.py", "--prompt", "escrow", "--out", str(target), "--no-run-log"])
     assert cli.main() == 130
     assert json.loads(target.read_text(encoding="utf-8"))["stop_reason"] == "interrupted"

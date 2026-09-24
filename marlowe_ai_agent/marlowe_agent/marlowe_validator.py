@@ -56,8 +56,8 @@ def describe_marlowe_grammar() -> str:
         "Bound: {" + ", ".join(sorted(BOUND_FIELDS)) + "}",
         "Case: {" + ", ".join(sorted(CASE_FIELDS)) + "}",
         "Every object must have exactly one listed field set; no extra fields. "
-        "When timeout is a positive POSIX millisecond timestamp; choose_between is a nonempty Bound list. "
-        "ADA amounts are integer lovelace (1 ADA = 1000000 lovelace).",
+        + "When timeout is a positive POSIX millisecond timestamp; choose_between is a nonempty Bound list. "
+        + "ADA amounts are integer lovelace (1 ADA = 1000000 lovelace).",
     ))
 
 

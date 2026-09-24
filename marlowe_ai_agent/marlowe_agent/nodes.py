@@ -167,13 +167,14 @@ class AgentPipeline:
             if key == "logic" and event.status in {"pass", "fail"}:
                 logic_errors = len(event.data.get("errors", []))
                 logic_warnings = len(event.data.get("warnings", []))
+        elapsed = round(perf_counter() - self._iteration_start, 3)
+        self._iteration_start = None
         self.track("pipeline", "iteration", "Đã hoàn tất lượt xử lý.", {
             "iteration": self._iteration_number, **states,
             "logic_errors": logic_errors, "logic_warnings": logic_warnings,
             "stall_count": self.stall_count, "llm_calls": self._llm_call_count(),
-            "elapsed_seconds": round(perf_counter() - self._iteration_start, 3),
+            "elapsed_seconds": elapsed,
         })
-        self._iteration_start = None
 
     def _observe_stall(self, seen: dict[str, int], contract: Any, errors: list[str]) -> tuple[bool, str]:
         signature = fingerprint({"contract": contract, "errors": sorted(errors)})
@@ -285,7 +286,7 @@ class AgentPipeline:
                     if next_prompt != current_prompt:
                         current_prompt = next_prompt
                         continue
-                    if self.require_semantic_pass:
+                    if self.require_semantic_pass or empty_contract:
                         self.track("node_3_logic_graph_verification", "skipped", "Semantic chưa đạt.")
                         return self._result(draft, semantic, logic, iterations, "blocked", "no_user_input")
 

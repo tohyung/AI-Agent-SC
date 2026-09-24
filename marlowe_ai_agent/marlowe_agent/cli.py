@@ -4,7 +4,13 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-from .models import ContractDraft, LogicGraphResult, PipelineResult, TraceEvent, VerificationResult
+from .models import (
+    ContractDraft,
+    LogicGraphResult,
+    PipelineResult,
+    TraceEvent,
+    VerificationResult,
+)
 from .nodes import AgentPipeline
 from .openai_reasoner import OpenAIReasoner
 
@@ -23,6 +29,13 @@ def node_display_name(node: str) -> str:
         "node_3_logic_graph_verification": "Node 3 - Logic graph",
     }
     return labels.get(node, "")
+
+
+def interrupted_result(prompt: str, trace: list[TraceEvent] | None = None) -> PipelineResult:
+    return PipelineResult(ContractDraft(prompt, "", [], None),
+                          VerificationResult(False, 0.0, []),
+                          LogicGraphResult(False, [], {"nodes": [], "edges": []}),
+                          0, trace or [], "blocked", "interrupted")
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -145,35 +158,32 @@ def main() -> int:
                         log_handle = None
 
     if initial_interrupt:
-        result = PipelineResult(ContractDraft(prompt, "", [], None),
-                                VerificationResult(False, 0.0, []),
-                                LogicGraphResult(False, [], {"nodes": [], "edges": []}),
-                                0, [], "blocked", "interrupted")
+        result = interrupted_result(prompt)
     else:
         try:
             reasoner = OpenAIReasoner(model=args.model)
         except RuntimeError as exc:
             print(f"Lỗi khởi tạo LLM: {' '.join(str(exc).split())}", file=sys.stderr)
             return 2
-        pipeline = AgentPipeline(
-            reasoner=reasoner,
-            interactive=interactive,
-            max_iterations=args.max_iterations,
-            max_llm_calls=args.max_llm_calls,
-            stop_on_stall=args.stop_on_stall,
-            require_semantic_pass=not args.allow_unverified,
-            trace_callback=print_trace,
-        )
-        try:
-            result = pipeline.run(prompt)
         except KeyboardInterrupt:
-            result = PipelineResult(ContractDraft(prompt, "", [], None),
-                                    VerificationResult(False, 0.0, []),
-                                    LogicGraphResult(False, [], {"nodes": [], "edges": []}),
-                                    0, pipeline.trace, "blocked", "interrupted")
-        finally:
-            if log_handle is not None:
-                log_handle.close()
+            result = interrupted_result(prompt)
+        else:
+            pipeline = AgentPipeline(
+                reasoner=reasoner,
+                interactive=interactive,
+                max_iterations=args.max_iterations,
+                max_llm_calls=args.max_llm_calls,
+                stop_on_stall=args.stop_on_stall,
+                require_semantic_pass=not args.allow_unverified,
+                trace_callback=print_trace,
+            )
+            try:
+                result = pipeline.run(prompt)
+            except KeyboardInterrupt:
+                result = interrupted_result(prompt, pipeline.trace)
+            finally:
+                if log_handle is not None:
+                    log_handle.close()
     payload = result.to_dict()
 
     if args.out:
