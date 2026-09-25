@@ -1,0 +1,172 @@
+{
+  "metadata": {
+    "model": "nvidia/nemotron-3-ultra-550b-a55b:free",
+    "provider": "https://openrouter.ai/api/v1",
+    "git_commit": "ae3147bc1e8c579e51cab8e449cf9461688ceeaf",
+    "dataset_sha256": "bddc66e4223abbdc9278edd8972651448b9752ac4e898533bde2de69bc45226d",
+    "workers": 3,
+    "limits": {
+      "max_iterations": 30,
+      "max_llm_calls": 250,
+      "wall_clock": 60.0
+    },
+    "started_at": "2026-09-24T21:02:14.310125+00:00"
+  },
+  "n": 2,
+  "infeasible_n": 0,
+  "counts": {
+    "converged": 0,
+    "correct_90": 0,
+    "strict_correct": 0,
+    "false_convergence": 0
+  },
+  "rates": {
+    "converged": {
+      "rate": 0.0,
+      "wilson_95": [
+        0.0,
+        0.6576197724933345
+      ]
+    },
+    "correct_90": {
+      "rate": 0.0,
+      "wilson_95": [
+        0.0,
+        0.6576197724933345
+      ]
+    },
+    "strict_correct": {
+      "rate": 0.0,
+      "wilson_95": [
+        0.0,
+        0.6576197724933345
+      ]
+    },
+    "false_convergence": {
+      "rate": 0.0,
+      "wilson_95": [
+        0.0,
+        0.6576197724933345
+      ]
+    }
+  },
+  "infeasible_correct": 0,
+  "accuracy_mean": 1.0,
+  "accuracy_median": 1.0,
+  "iterations_median": null,
+  "iterations_p90": null,
+  "iterations_max": null,
+  "cdf": {
+    "1": 0.0,
+    "2": 0.0,
+    "3": 0.0,
+    "5": 0.0,
+    "10": 0.0,
+    "20": 0.0,
+    "30": 0.0
+  },
+  "wall_mean": 99.66833934996976,
+  "wall_p90": 117.88307114996715,
+  "llm_latency_p50": 75.2596430000267,
+  "llm_latency_p95": 102.90997589000617,
+  "total_cost_usd": 0,
+  "cost_known_runs": 2,
+  "cost_per_strict_contract": null,
+  "stop_reasons": {
+    "wallclock_timeout": 2
+  },
+  "strata": {
+    "difficulty": {
+      "1": {
+        "n": 1,
+        "converged": 0,
+        "strict_correct": 0,
+        "small_sample": true
+      },
+      "3": {
+        "n": 1,
+        "converged": 0,
+        "strict_correct": 0,
+        "small_sample": true
+      }
+    },
+    "type": {
+      "cancellation_fee": {
+        "n": 1,
+        "converged": 0,
+        "strict_correct": 0,
+        "small_sample": true
+      },
+      "swap": {
+        "n": 1,
+        "converged": 0,
+        "strict_correct": 0,
+        "small_sample": true
+      }
+    },
+    "language": {
+      "en": {
+        "n": 1,
+        "converged": 0,
+        "strict_correct": 0,
+        "small_sample": true
+      },
+      "vi": {
+        "n": 1,
+        "converged": 0,
+        "strict_correct": 0,
+        "small_sample": true
+      }
+    },
+    "info_mode": {
+      "ambiguous": {
+        "n": 1,
+        "converged": 0,
+        "strict_correct": 0,
+        "small_sample": true
+      },
+      "complete": {
+        "n": 1,
+        "converged": 0,
+        "strict_correct": 0,
+        "small_sample": true
+      }
+    },
+    "challenges": {
+      "absolute_date": {
+        "n": 2,
+        "converged": 0,
+        "strict_correct": 0,
+        "small_sample": true
+      },
+      "conflicting_info": {
+        "n": 1,
+        "converged": 0,
+        "strict_correct": 0,
+        "small_sample": true
+      },
+      "non_ada_token": {
+        "n": 1,
+        "converged": 0,
+        "strict_correct": 0,
+        "small_sample": true
+      },
+      "refund_on_timeout": {
+        "n": 1,
+        "converged": 0,
+        "strict_correct": 0,
+        "small_sample": true
+      }
+    }
+  },
+  "judge_evaluator_spearman": null,
+  "self_judging_bias": true,
+  "repeat_subset": {
+    "n": 0,
+    "same_status": 0
+  },
+  "extend_nonconverged": {
+    "n": 0,
+    "late_converged": 0
+  }
+}

@@ -1,0 +1,264 @@
+{
+  "metadata": {
+    "model": "fake",
+    "provider": null,
+    "git_commit": "ae3147bc1e8c579e51cab8e449cf9461688ceeaf",
+    "dataset_sha256": "bddc66e4223abbdc9278edd8972651448b9752ac4e898533bde2de69bc45226d",
+    "workers": 3,
+    "limits": {
+      "max_iterations": 30,
+      "max_llm_calls": 250,
+      "wall_clock": 900
+    },
+    "started_at": "2026-09-24T20:50:34.811345+00:00"
+  },
+  "n": 95,
+  "infeasible_n": 5,
+  "counts": {
+    "converged": 95,
+    "correct_90": 95,
+    "strict_correct": 95,
+    "false_convergence": 0
+  },
+  "rates": {
+    "converged": {
+      "rate": 1.0,
+      "wilson_95": [
+        0.9611351464605291,
+        1.0
+      ]
+    },
+    "correct_90": {
+      "rate": 1.0,
+      "wilson_95": [
+        0.9611351464605291,
+        1.0
+      ]
+    },
+    "strict_correct": {
+      "rate": 1.0,
+      "wilson_95": [
+        0.9611351464605291,
+        1.0
+      ]
+    },
+    "false_convergence": {
+      "rate": 0.0,
+      "wilson_95": [
+        0.0,
+        0.0388648535394709
+      ]
+    }
+  },
+  "infeasible_correct": 0,
+  "accuracy_mean": 1.0,
+  "accuracy_median": 1.0,
+  "iterations_median": 1,
+  "iterations_p90": 1.0,
+  "iterations_max": 1,
+  "cdf": {
+    "1": 1.0,
+    "2": 1.0,
+    "3": 1.0,
+    "5": 1.0,
+    "10": 1.0,
+    "20": 1.0,
+    "30": 1.0
+  },
+  "wall_mean": 0.0005149305271180837,
+  "wall_p90": 0.0006347200251184404,
+  "llm_latency_p50": null,
+  "llm_latency_p95": null,
+  "total_cost_usd": null,
+  "cost_known_runs": 0,
+  "cost_per_strict_contract": null,
+  "stop_reasons": {},
+  "strata": {
+    "difficulty": {
+      "1": {
+        "n": 24,
+        "converged": 24,
+        "strict_correct": 24,
+        "small_sample": false
+      },
+      "2": {
+        "n": 29,
+        "converged": 29,
+        "strict_correct": 29,
+        "small_sample": false
+      },
+      "3": {
+        "n": 28,
+        "converged": 28,
+        "strict_correct": 28,
+        "small_sample": false
+      },
+      "4": {
+        "n": 14,
+        "converged": 14,
+        "strict_correct": 14,
+        "small_sample": false
+      }
+    },
+    "type": {
+      "cancellation_fee": {
+        "n": 7,
+        "converged": 7,
+        "strict_correct": 7,
+        "small_sample": true
+      },
+      "crowdfunding": {
+        "n": 8,
+        "converged": 8,
+        "strict_correct": 8,
+        "small_sample": true
+      },
+      "escrow_2party": {
+        "n": 14,
+        "converged": 14,
+        "strict_correct": 14,
+        "small_sample": false
+      },
+      "escrow_3party": {
+        "n": 10,
+        "converged": 10,
+        "strict_correct": 10,
+        "small_sample": false
+      },
+      "loan": {
+        "n": 10,
+        "converged": 10,
+        "strict_correct": 10,
+        "small_sample": false
+      },
+      "milestone": {
+        "n": 8,
+        "converged": 8,
+        "strict_correct": 8,
+        "small_sample": true
+      },
+      "rental_deposit": {
+        "n": 8,
+        "converged": 8,
+        "strict_correct": 8,
+        "small_sample": true
+      },
+      "swap": {
+        "n": 10,
+        "converged": 10,
+        "strict_correct": 10,
+        "small_sample": false
+      },
+      "third_party": {
+        "n": 10,
+        "converged": 10,
+        "strict_correct": 10,
+        "small_sample": false
+      },
+      "vesting": {
+        "n": 10,
+        "converged": 10,
+        "strict_correct": 10,
+        "small_sample": false
+      }
+    },
+    "language": {
+      "en": {
+        "n": 39,
+        "converged": 39,
+        "strict_correct": 39,
+        "small_sample": false
+      },
+      "vi": {
+        "n": 56,
+        "converged": 56,
+        "strict_correct": 56,
+        "small_sample": false
+      }
+    },
+    "info_mode": {
+      "ambiguous": {
+        "n": 10,
+        "converged": 10,
+        "strict_correct": 10,
+        "small_sample": false
+      },
+      "complete": {
+        "n": 55,
+        "converged": 55,
+        "strict_correct": 55,
+        "small_sample": false
+      },
+      "missing": {
+        "n": 30,
+        "converged": 30,
+        "strict_correct": 30,
+        "small_sample": false
+      }
+    },
+    "challenges": {
+      "absolute_date": {
+        "n": 33,
+        "converged": 33,
+        "strict_correct": 33,
+        "small_sample": false
+      },
+      "conflicting_info": {
+        "n": 10,
+        "converged": 10,
+        "strict_correct": 10,
+        "small_sample": false
+      },
+      "long_narrative": {
+        "n": 14,
+        "converged": 14,
+        "strict_correct": 14,
+        "small_sample": false
+      },
+      "multi_party": {
+        "n": 28,
+        "converged": 28,
+        "strict_correct": 28,
+        "small_sample": false
+      },
+      "multi_stage": {
+        "n": 28,
+        "converged": 28,
+        "strict_correct": 28,
+        "small_sample": false
+      },
+      "non_ada_token": {
+        "n": 10,
+        "converged": 10,
+        "strict_correct": 10,
+        "small_sample": false
+      },
+      "refund_on_timeout": {
+        "n": 42,
+        "converged": 42,
+        "strict_correct": 42,
+        "small_sample": false
+      },
+      "relative_time": {
+        "n": 62,
+        "converged": 62,
+        "strict_correct": 62,
+        "small_sample": false
+      },
+      "third_party_oracle": {
+        "n": 10,
+        "converged": 10,
+        "strict_correct": 10,
+        "small_sample": false
+      },
+      "threshold": {
+        "n": 18,
+        "converged": 18,
+        "strict_correct": 18,
+        "small_sample": false
+      }
+    }
+  },
+  "judge_evaluator_spearman": null,
+  "self_judging_bias": true
+}
