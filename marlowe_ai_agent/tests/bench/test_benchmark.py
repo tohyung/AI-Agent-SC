@@ -1,0 +1,156 @@
+from __future__ import annotations
+
+from copy import deepcopy
+from dataclasses import replace
+from types import SimpleNamespace
+
+import pytest
+
+from bench.cases import load_cases
+from bench.evaluator import evaluate
+from bench.marlowe_sim import run_scenario
+from bench.narrator import narrate
+from bench.runner import FakeBenchReasoner, dataset_hash, read_runs, run_case, run_many
+from bench.stats import percentile, spearman, wilson
+from bench.validate_dataset import validate
+from marlowe_agent.marlowe_ast import case, close, deposit, escrow_contract, pay, when
+from marlowe_agent.nodes import PromptToDraftNode
+from marlowe_agent.openai_reasoner import OpenAIReasoner
+
+
+CASES = load_cases()
+
+
+def _case(kind: str):
+    return next(item for item in CASES if item.type == kind)
+
+
+def test_every_reference_scores_100_and_passes_dataset_validation():
+    assert validate(CASES) == []
+    assert all(evaluate(item, item.reference_contract)["strict_correct"]
+               for item in CASES if item.type != "infeasible")
+
+
+def test_simulator_escrow_approve_and_timeout_by_hand():
+    contract = escrow_contract("buyer", "seller", 10, 100, 200)
+    approved = run_scenario(contract, [{"kind": "deposit", "party": "buyer", "amount": 10,
+                                        "token": "", "time": 50},
+                                       {"kind": "choice", "party": "buyer", "name": "approve",
+                                        "value": 1, "time": 150}], 0)
+    assert approved["received"] == {"seller": {"": 10}}
+    expired = run_scenario(contract, [{"kind": "deposit", "party": "buyer", "amount": 10,
+                                       "token": "", "time": 50},
+                                      {"kind": "advance", "time": 201}], 0)
+    assert expired["received"] == {"buyer": {"": 10}}
+    no_deposit = run_scenario(contract, [{"kind": "advance", "time": 101}], 0)
+    assert no_deposit["received"] == {}
+
+
+def test_simulator_partial_pay_rejection_refund_and_divvalue():
+    partial = run_scenario(pay("a", "b", 11), [], 0)
+    assert partial["partial_pay"] and partial["received"] == {}
+    contract = when([case(deposit("a", "a", 7), close())], 100)
+    refund = run_scenario(contract, [{"kind": "deposit", "party": "a", "amount": 7,
+                                     "token": "", "time": 50}], 0)
+    assert refund["received"] == {"a": {"": 7}}
+    rejected = run_scenario(contract, [{"kind": "deposit", "party": "b", "amount": 7,
+                                       "token": "", "time": 50}], 0)
+    assert rejected["input_rejected"]
+    divided = pay("a", "b", {"divide": 8, "by": 2})
+    assert run_scenario(divided, [], 0)["not_evaluable"]
+
+
+def test_reference_scenarios_cover_swap_vesting_loan():
+    for kind in ("swap", "vesting", "loan"):
+        item = _case(kind)
+        assert evaluate(item, item.reference_contract)["scenario_accuracy"] == 1
+
+
+def test_mutated_amount_degrades_accuracy_and_unit_error_is_labeled():
+    item = _case("escrow_2party")
+    doubled = FakeBenchReasoner(item, wrong=True).draft_from_prompt(item.prompt).marlowe_contract
+    assert evaluate(item, doubled)["overall_accuracy"] < 1
+    wrong_unit = deepcopy(item.reference_contract)
+    wrong_unit["when"][0]["case"]["deposits"] //= 1000000
+    score = evaluate(item, wrong_unit)
+    assert "lovelace_unit_error" in score["diagnostics"]
+
+
+def test_shifted_deadline_gap_is_not_hidden_by_24h_tolerance():
+    item = _case("escrow_2party")
+    shifted = deepcopy(item.reference_contract)
+    shifted["when"][0]["then"]["timeout"] += 86400000
+    result = evaluate(item, shifted)
+    assert result["timing_accuracy"] < 1
+
+
+def test_dataset_validator_detects_duplicate_banned_word_and_drift():
+    repeated = CASES.copy()
+    repeated[1] = replace(repeated[1], prompt=repeated[0].prompt)
+    assert "duplicate_prompts" in validate(repeated)
+    banned = CASES.copy()
+    banned[0] = replace(banned[0], prompt=banned[0].prompt + " smart contract")
+    assert any(item.startswith("banned:") for item in validate(banned))
+    drift = CASES.copy()
+    drift[0] = replace(drift[0], reference_contract="close")
+    assert any(item.startswith("ground_truth_drift:") for item in validate(drift))
+
+
+def test_narrator_deterministic_and_lists_paths():
+    contract = escrow_contract("a", "b", 10, 100, 200)
+    first = narrate(contract)
+    assert first == narrate(contract)
+    assert len(first.splitlines()) == 4
+
+
+def test_answer_provider_bypasses_stdin(monkeypatch):
+    monkeypatch.setattr("builtins.input", lambda _: pytest.fail("stdin was called"))
+    node = PromptToDraftNode(object(), interactive=True, answer_provider=lambda _: "42 ADA")
+    outcome = node.ask_for_clarifications("Prompt", ["How much?"], "Answers")
+    assert outcome.user_answered and "42 ADA" in outcome.prompt
+
+
+def test_usage_log_counts_real_sdk_request_without_prompt_data():
+    reasoner = object.__new__(OpenAIReasoner)
+    reasoner.model = "requested"
+    reasoner.call_log = []
+    response = SimpleNamespace(model="served", usage=SimpleNamespace(prompt_tokens=12,
+                                completion_tokens=5, cost=0.01))
+    assert reasoner._request(lambda **_: response, secret="do-not-log") is response
+    assert reasoner.usage_summary()["cost"] == 0.01
+    assert reasoner.call_log[0]["model"] == "served"
+    assert "do-not-log" not in str(reasoner.call_log)
+
+
+def test_runner_fake_reference_mutation_resume_and_budget(tmp_path):
+    item = _case("escrow_2party")
+    good = run_case(item, fake=True)
+    bad = run_case(item, fake=True, fake_wrong=True)
+    assert good["evaluation"]["strict_correct"]
+    assert bad["evaluation"]["overall_accuracy"] < 1
+    rows = run_many([item], tmp_path, workers=1, fake=True, dataset_sha256=dataset_hash())
+    assert len(rows) == 1
+    assert len(run_many([item], tmp_path, workers=1, fake=True, dataset_sha256=dataset_hash())) == 1
+    assert len(read_runs(tmp_path / "runs.jsonl")) == 1
+    other = _case("loan")
+    assert len(run_many([other], tmp_path, workers=1, fake=True, dataset_sha256=dataset_hash(),
+                        max_usd=0)) == 1
+
+
+def test_runner_cooperative_timeout_keeps_partial_trace():
+    record = run_case(_case("escrow_2party"), fake=True, wall_clock=1e-12)
+    assert record["stop_reason"] == "wallclock_timeout"
+    assert record["trace"]
+
+
+def test_secret_like_text_is_redacted_from_run_record():
+    item = replace(_case("escrow_2party"), prompt="My key is sk-test-secret-123456789.")
+    record = run_case(item, fake=True)
+    assert "sk-test-secret-123456789" not in str(record)
+
+
+def test_statistics_known_values():
+    lo, hi = wilson(5, 10)
+    assert 0.23 < lo < 0.24 and 0.76 < hi < 0.77
+    assert percentile([1, 2, 3, 4], 50) == 2.5
+    assert spearman([1, 2, 3], [3, 2, 1]) == pytest.approx(-1)

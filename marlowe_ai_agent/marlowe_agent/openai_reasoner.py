@@ -5,7 +5,8 @@ import os
 import re
 import time
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
+from time import perf_counter
 
 from .marlowe_ast import normalize_marlowe_ast, prompt_contract_examples
 from .marlowe_validator import describe_marlowe_grammar
@@ -45,6 +46,7 @@ class OpenAIReasoner:
             raise LLMConfigError(f"Cấu hình số cho LLM không hợp lệ: {exc}") from exc
         self.max_llm_calls: int | None = None
         self.llm_calls = 0
+        self.call_log: list[dict[str, Any]] = []
 
         if not api_key:
             raise LLMConfigError(
@@ -98,6 +100,33 @@ class OpenAIReasoner:
         if self.max_llm_calls is not None and self.llm_calls >= self.max_llm_calls:
             raise LLMBudgetError(f"Đã đạt giới hạn {self.max_llm_calls} lời gọi LLM.")
         self.llm_calls += 1
+
+    def _request(self, create: Callable[..., Any], **kwargs: Any) -> Any:
+        started = perf_counter()
+        response = None
+        try:
+            response = create(**kwargs)
+            return response
+        finally:
+            usage = getattr(response, "usage", None)
+            get = (lambda key: usage.get(key)) if isinstance(usage, dict) else (lambda key: getattr(usage, key, None))
+            self.call_log.append({
+                "latency_seconds": perf_counter() - started,
+                "prompt_tokens": get("prompt_tokens") or get("input_tokens"),
+                "completion_tokens": get("completion_tokens") or get("output_tokens"),
+                "cost": get("cost"),
+                "model": getattr(response, "model", None) or self.model,
+            })
+
+    def usage_summary(self) -> dict[str, Any]:
+        return {
+            "calls": len(self.call_log),
+            "latency_seconds": sum(item["latency_seconds"] for item in self.call_log),
+            "prompt_tokens": sum(item["prompt_tokens"] or 0 for item in self.call_log),
+            "completion_tokens": sum(item["completion_tokens"] or 0 for item in self.call_log),
+            "cost": sum(item["cost"] or 0 for item in self.call_log)
+            if any(item["cost"] is not None for item in self.call_log) else None,
+        }
 
     def semantic_verify(self, prompt: str, draft: ContractDraft) -> VerificationResult:
         payload = {"prompt": _compact_text(prompt, 6000), "draft": _compact_draft_for_semantic(draft)}
@@ -269,7 +298,7 @@ class OpenAIReasoner:
                 try:
                     try:
                         self._consume_call()
-                        response = self.client.chat.completions.create(
+                        response = self._request(self.client.chat.completions.create,
                             model=self.model,
                             messages=messages,
                             response_format={"type": "json_object"},
@@ -279,7 +308,7 @@ class OpenAIReasoner:
                         raise
                     except Exception:  # noqa: BLE001 - providers may reject JSON mode with different errors
                         self._consume_call()
-                        response = self.client.chat.completions.create(
+                        response = self._request(self.client.chat.completions.create,
                             model=self.model,
                             messages=messages,
                             max_tokens=self.max_tokens,
@@ -322,7 +351,7 @@ class OpenAIReasoner:
     def _raw_responses_response(self, system: str, user: str) -> str:
         try:
             self._consume_call()
-            response = self.client.responses.create(
+            response = self._request(self.client.responses.create,
                 model=self.model,
                 input=[
                     {"role": "system", "content": system},
@@ -353,7 +382,7 @@ class OpenAIReasoner:
         try:
             try:
                 self._consume_call()
-                response = self.client.chat.completions.create(
+                response = self._request(self.client.chat.completions.create,
                     model=self.model,
                     messages=messages,
                     response_format={"type": "json_object"},
@@ -363,7 +392,7 @@ class OpenAIReasoner:
                 raise
             except Exception:  # noqa: BLE001 - providers may reject JSON mode with different errors
                 self._consume_call()
-                response = self.client.chat.completions.create(
+                response = self._request(self.client.chat.completions.create,
                     model=self.model,
                     messages=messages,
                     max_tokens=self.max_tokens,

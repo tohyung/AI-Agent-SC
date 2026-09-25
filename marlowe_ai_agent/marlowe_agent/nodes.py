@@ -47,10 +47,12 @@ class StallTracker:
 
 class PromptToDraftNode:
     def __init__(self, reasoner: Any, interactive: bool = False,
-                 call_llm: Callable[[str, str, Callable[[], Any]], Any] | None = None) -> None:
+                 call_llm: Callable[[str, str, Callable[[], Any]], Any] | None = None,
+                 answer_provider: Callable[[str], str] | None = None) -> None:
         self.reasoner = reasoner
         self.interactive = interactive
         self.call_llm = call_llm or (lambda _node, _operation, call: call())
+        self.answer_provider = answer_provider
         self.last_clarification_audit = ""
         self.last_answered_questions_count = 0
 
@@ -99,7 +101,8 @@ class PromptToDraftNode:
             return ClarificationOutcome(prompt, ClarificationAction.BLOCK_NO_INPUT)
         additions = []
         for index, question in enumerate(questions, start=1):
-            answer = input(f"Cau hoi {index}: {question}\n> ").strip()
+            answer = (self.answer_provider(question) if self.answer_provider is not None
+                      else input(f"Cau hoi {index}: {question}\n> ")).strip()
             if answer:
                 additions.append(f"- {question}\n  Tra loi: {answer}")
         self.last_answered_questions_count = len(additions)
@@ -158,10 +161,13 @@ class AgentPipeline:
         require_semantic_pass: bool = True,
         trace_callback: TraceCallback | None = None,
         retry_sleep: Callable[[float], None] = sleep,
+        answer_provider: Callable[[str], str] | None = None,
     ) -> None:
         if any(limit is not None and limit < 1 for limit in (max_iterations, max_llm_calls, stop_on_stall)):
             raise ValueError("Các giới hạn phải >= 1")
-        self.node_1 = PromptToDraftNode(reasoner, interactive=interactive, call_llm=self._call_llm_with_retry)
+        self.node_1 = PromptToDraftNode(reasoner, interactive=interactive,
+                                       call_llm=self._call_llm_with_retry,
+                                       answer_provider=answer_provider)
         self.node_2 = SemanticVerificationNode(reasoner)
         self.node_3 = LogicGraphVerificationNode()
         self.max_iterations = max_iterations
