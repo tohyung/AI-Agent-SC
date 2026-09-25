@@ -3,10 +3,12 @@ from __future__ import annotations
 from copy import deepcopy
 from dataclasses import replace
 from types import SimpleNamespace
+import sys
 
 import pytest
 
 from bench.cases import load_cases
+from bench import run as run_cli
 from bench.evaluator import evaluate
 from bench.marlowe_sim import run_scenario
 from bench.narrator import narrate
@@ -154,3 +156,58 @@ def test_statistics_known_values():
     assert 0.23 < lo < 0.24 and 0.76 < hi < 0.77
     assert percentile([1, 2, 3, 4], 50) == 2.5
     assert spearman([1, 2, 3], [3, 2, 1]) == pytest.approx(-1)
+
+
+def test_case_ids_selection_preserves_order_and_rejects_unknown():
+    ids = [CASES[3].id, CASES[0].id, CASES[8].id]
+    selected = run_cli.select_case_ids(CASES, ",".join(ids))
+    assert [case.id for case in selected] == ids
+    with pytest.raises(ValueError, match="Unknown case ID"):
+        run_cli.select_case_ids(CASES, "does-not-exist")
+    with pytest.raises(ValueError, match="duplicate"):
+        run_cli.select_case_ids(CASES, f"{ids[0]},{ids[0]}")
+
+
+def test_case_ids_cli_is_real_timing_probe_without_budget_or_summary(monkeypatch, tmp_path, capsys):
+    ids = [CASES[3].id, CASES[0].id]
+    captured = {}
+
+    def fake_run_many(selected, directory, **kwargs):
+        captured.update(ids=[item.id for item in selected], options=kwargs)
+        return []
+
+    monkeypatch.setattr(run_cli, "OpenAIReasoner", lambda model=None: SimpleNamespace(model="free:free"))
+    monkeypatch.setattr(run_cli, "run_many", fake_run_many)
+    monkeypatch.setattr(run_cli, "RESULTS", tmp_path)
+    monkeypatch.setattr(run_cli, "generate", lambda _: pytest.fail("official report generated"))
+    monkeypatch.setattr(sys, "argv", ["bench.run", "--case-ids", ",".join(ids)])
+    run_cli.main()
+    assert captured["ids"] == ids
+    assert captured["options"]["preserve_order"] is True
+    assert captured["options"]["timing_probe"] is True
+    assert captured["options"]["max_usd"] is None
+    assert "Timing probe only" in capsys.readouterr().out
+
+
+def test_case_ids_cli_rejects_fake(monkeypatch):
+    monkeypatch.setattr(sys, "argv", ["bench.run", "--case-ids", CASES[0].id, "--fake"])
+    with pytest.raises(SystemExit) as exc:
+        run_cli.main()
+    assert exc.value.code == 2
+
+
+@pytest.mark.parametrize("raw", ["", "does-not-exist"])
+def test_case_ids_cli_rejects_invalid_ids_before_llm_bootstrap(monkeypatch, capsys, raw):
+    monkeypatch.setattr(sys, "argv", ["bench.run", "--case-ids", raw])
+    monkeypatch.setattr(run_cli, "OpenAIReasoner", lambda model=None: pytest.fail("LLM was initialized"))
+    with pytest.raises(SystemExit) as exc:
+        run_cli.main()
+    assert exc.value.code == 2
+    assert "case-ids" in capsys.readouterr().err
+
+
+def test_runner_preserve_order_with_one_worker(tmp_path):
+    selected = [CASES[3], CASES[0]]
+    rows = run_many(selected, tmp_path, workers=1, fake=True,
+                    preserve_order=True, dataset_sha256=dataset_hash())
+    assert [row["case_id"] for row in rows] == [case.id for case in selected]

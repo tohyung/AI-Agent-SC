@@ -157,7 +157,8 @@ def run_case(case: Any, *, model: str | None = None, judge_model: str | None = N
              user_model: str | None = None, max_iterations: int = 30, max_llm_calls: int = 250,
              wall_clock: float = 900, attempt: int = 1, fake: bool = False,
              fake_wrong: bool = False, dataset_sha256: str = "", workers: int = 1,
-             prices: tuple[float | None, float | None] = (None, None)) -> dict[str, Any]:
+             prices: tuple[float | None, float | None] = (None, None),
+             timing_probe: bool = False) -> dict[str, Any]:
     started = perf_counter()
     started_at = datetime.now(timezone.utc).isoformat()
     agent = user_reasoner = judge_reasoner = None
@@ -170,7 +171,8 @@ def run_case(case: Any, *, model: str | None = None, judge_model: str | None = N
         captured = CapturedReasoner(agent)
         if not fake:
             user_reasoner = OpenAIReasoner(model=user_model or judge_model or model)
-            judge_reasoner = OpenAIReasoner(model=judge_model or model)
+            if not timing_probe:
+                judge_reasoner = OpenAIReasoner(model=judge_model or model)
         simulated = SimulatedUser(case, user_reasoner)
 
         def trace_callback(_event: Any) -> None:
@@ -211,6 +213,7 @@ def run_case(case: Any, *, model: str | None = None, judge_model: str | None = N
     history = _history(trace)
     record = {
         "case_id": case.id, "attempt": attempt, "prompt": case.prompt,
+        "run_kind": "timing_probe" if timing_probe else "benchmark",
         "language": case.language, "type": case.type, "difficulty": case.difficulty,
         "info_mode": case.info_mode, "challenges": case.challenges,
         "status": status, "stop_reason": stop_reason,
@@ -228,7 +231,10 @@ def run_case(case: Any, *, model: str | None = None, judge_model: str | None = N
         "wall_seconds": wall, "agent_seconds": agent_seconds,
         "overhead_seconds": max(0.0, agent_seconds - agent_llm_seconds),
         "seconds_per_iteration": agent_seconds / max(1, len(history)),
-        **usage, "complexity": _complexity(contract), "evaluation": evaluation,
+        **usage,
+        "agent_llm_calls": len(agent.call_log) if agent else 0,
+        "user_llm_calls": len(user_reasoner.call_log) if user_reasoner else 0,
+        "complexity": _complexity(contract), "evaluation": evaluation,
         "judge": judgment, "contract_description": narrate(contract) if contract else None,
         "self_reported_semantic_score": result.semantic_verification.score if result else None,
         "questions": len(simulated.transcript) if simulated else 0,
@@ -252,13 +258,15 @@ def read_runs(path: Path) -> list[dict[str, Any]]:
 
 
 def run_many(cases: list[Any], directory: Path, *, workers: int = 3, seed: int = 1234,
-             max_usd: float | None = None, attempt: int = 1, **kwargs: Any) -> list[dict[str, Any]]:
+             max_usd: float | None = None, attempt: int = 1,
+             preserve_order: bool = False, **kwargs: Any) -> list[dict[str, Any]]:
     directory.mkdir(parents=True, exist_ok=True)
     file = directory / "runs.jsonl"
     existing = read_runs(file)
     completed = {(record["case_id"], record["attempt"]) for record in existing}
     queue = [case for case in cases if (case.id, attempt) not in completed]
-    random.Random(seed).shuffle(queue)
+    if not preserve_order:
+        random.Random(seed).shuffle(queue)
     if existing and any(record.get("dataset_sha256") != kwargs.get("dataset_sha256") for record in existing):
         raise ValueError("Resume dataset hash mismatch")
     spent = sum(record.get("cost_usd") or 0 for record in existing)

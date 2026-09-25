@@ -24,11 +24,25 @@ def _price(name: str) -> float | None:
     return float(value) if value else None
 
 
+def select_case_ids(cases: list, raw: str) -> list:
+    ids = [part.strip() for part in raw.split(",")]
+    if not ids or any(not item for item in ids):
+        raise ValueError("--case-ids requires a comma-separated list of nonempty IDs")
+    if len(ids) != len(set(ids)):
+        raise ValueError("--case-ids contains a duplicate ID")
+    by_id = {case.id: case for case in cases}
+    missing = [item for item in ids if item not in by_id]
+    if missing:
+        raise ValueError("Unknown case ID(s): " + ", ".join(missing))
+    return [by_id[item] for item in ids]
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Marlowe offline-first convergence benchmark")
     mode = parser.add_mutually_exclusive_group(required=True)
     mode.add_argument("--smoke", type=int, metavar="N")
     mode.add_argument("--all", action="store_true")
+    mode.add_argument("--case-ids", metavar="ID1,ID2,...")
     parser.add_argument("--fake", action="store_true")
     parser.add_argument("--fake-wrong", action="store_true")
     parser.add_argument("--resume", type=Path)
@@ -42,6 +56,9 @@ def main() -> None:
     parser.add_argument("--extend-nonconverged", type=int, default=0)
     parser.add_argument("--dataset", type=Path, default=DATASET)
     args = parser.parse_args()
+    case_mode = args.case_ids is not None
+    if case_mode and (args.fake or args.fake_wrong):
+        parser.error("--case-ids is for real timing probes; do not combine it with --fake")
     if args.workers < 1 or args.max_iterations < 1 or args.max_llm_calls < 1 or args.wall_clock <= 0:
         parser.error("Limits and workers must be positive")
     cases = load_cases(args.dataset)
@@ -49,35 +66,12 @@ def main() -> None:
     if issues:
         parser.error("Dataset validation failed: " + ", ".join(issues[:5]))
     digest = dataset_hash(args.dataset)
-    model = os.getenv("LLM_MODEL") or os.getenv("OPENAI_MODEL")
-    judge_model = os.getenv("BENCH_JUDGE_MODEL") or model
-    user_model = os.getenv("BENCH_USER_MODEL") or judge_model
-    if not args.fake:
+    if case_mode:
         try:
-            # Only the existing reasoner reads .env; no key or file content is logged.
-            probe = OpenAIReasoner(model=model)
-            model = probe.model
-            judge_model = os.getenv("BENCH_JUDGE_MODEL") or model
-            user_model = os.getenv("BENCH_USER_MODEL") or judge_model
-        except (LLMConfigError, RuntimeError) as exc:
-            print("Không thể khởi tạo LLM benchmark: " + re.sub(r"\b(?:sk|or)-[A-Za-z0-9_-]{8,}\b", "[REDACTED]", str(exc)))
-            raise SystemExit(2) from None
-        if args.max_usd is None:
-            parser.error("Real benchmark requires --max-usd or BENCH_MAX_USD")
-    slug = re.sub(r"[^a-z0-9]+", "-", (model or "fake").lower()).strip("-")[:40]
-    directory = args.resume or RESULTS / (datetime.now().strftime("%Y%m%d-%H%M%S") + "-" + slug)
-    if args.all and not args.fake:
-        smoke_path = directory / "smoke.json"
-        if not smoke_path.exists():
-            parser.error("Run --smoke 5 first, then --all --resume <smoke-dir>")
-        smoke = json.loads(smoke_path.read_text(encoding="utf-8"))
-        if smoke["dataset_sha256"] != digest or smoke["estimated_100_usd"] is None:
-            parser.error("Smoke data cannot establish safe cost estimate")
-        if smoke["estimated_100_usd"] > args.max_usd:
-            parser.error("Projected 100-case cost exceeds budget")
-        if smoke["anomaly"]:
-            parser.error("Smoke anomaly; inspect report before full run")
-    if args.smoke:
+            selected = select_case_ids(cases, args.case_ids)
+        except ValueError as exc:
+            parser.error(str(exc))
+    elif args.smoke:
         rng = random.Random(args.seed)
         selected = []
         seen_types = set()
@@ -94,12 +88,47 @@ def main() -> None:
         selected = selected[:args.smoke]
     else:
         selected = cases
+    model = os.getenv("LLM_MODEL") or os.getenv("OPENAI_MODEL")
+    judge_model = os.getenv("BENCH_JUDGE_MODEL") or model
+    user_model = os.getenv("BENCH_USER_MODEL") or judge_model
+    if not args.fake:
+        try:
+            # Only the existing reasoner reads .env; no key or file content is logged.
+            probe = OpenAIReasoner(model=model)
+            model = probe.model
+            judge_model = os.getenv("BENCH_JUDGE_MODEL") or model
+            user_model = os.getenv("BENCH_USER_MODEL") or judge_model
+        except (LLMConfigError, RuntimeError) as exc:
+            print("Không thể khởi tạo LLM benchmark: " + re.sub(r"\b(?:sk|or)-[A-Za-z0-9_-]{8,}\b", "[REDACTED]", str(exc)))
+            raise SystemExit(2) from None
+        if args.max_usd is None and not case_mode:
+            parser.error("Real benchmark requires --max-usd or BENCH_MAX_USD")
+    slug = re.sub(r"[^a-z0-9]+", "-", (model or "fake").lower()).strip("-")[:40]
+    directory = args.resume or RESULTS / (datetime.now().strftime("%Y%m%d-%H%M%S") + "-" + slug)
+    if args.all and not args.fake:
+        smoke_path = directory / "smoke.json"
+        if not smoke_path.exists():
+            parser.error("Run --smoke 5 first, then --all --resume <smoke-dir>")
+        smoke = json.loads(smoke_path.read_text(encoding="utf-8"))
+        if smoke["dataset_sha256"] != digest or smoke["estimated_100_usd"] is None:
+            parser.error("Smoke data cannot establish safe cost estimate")
+        if smoke["estimated_100_usd"] > args.max_usd:
+            parser.error("Projected 100-case cost exceeds budget")
+        if smoke["anomaly"]:
+            parser.error("Smoke anomaly; inspect report before full run")
     rows = run_many(selected, directory, workers=args.workers, seed=args.seed, max_usd=args.max_usd,
+                    preserve_order=case_mode, timing_probe=case_mode,
                     model=model, judge_model=judge_model, user_model=user_model,
                     max_iterations=args.max_iterations, max_llm_calls=args.max_llm_calls,
                     wall_clock=args.wall_clock, fake=args.fake, fake_wrong=args.fake_wrong,
                     dataset_sha256=digest,
                     prices=(_price("BENCH_PRICE_IN_PER_M"), _price("BENCH_PRICE_OUT_PER_M")))
+    if case_mode:
+        selected_ids = {case.id for case in selected}
+        probe_rows = [row for row in rows if row["case_id"] in selected_ids and row.get("attempt") == 1]
+        print(f"Timing probe only: {len(probe_rows)}/{len(selected)} case records; "
+              f"not an official benchmark summary. Result directory: {directory.resolve()}")
+        return
     extra = {"workers": args.workers, "seed": args.seed, "max_usd": args.max_usd,
              "model": model, "judge_model": judge_model, "user_model": user_model,
              "max_iterations": args.max_iterations, "max_llm_calls": args.max_llm_calls,

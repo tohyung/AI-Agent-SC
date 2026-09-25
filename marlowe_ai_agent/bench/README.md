@@ -9,6 +9,7 @@ python -m bench.validate_dataset
 python -m bench.run --all --fake
 python -m bench.run --all --fake --fake-wrong
 python -m bench.run --smoke 5 --max-usd 50
+python -m bench.run --case-ids ID1,ID2,ID3 --workers 3 --wall-clock 5400 --max-iterations 500 --max-llm-calls 2000
 python -m bench.run --all --resume bench/results/<smoke-directory> --max-usd 50
 python -m bench.report --run bench/results/<run-directory>
 ```
@@ -22,6 +23,9 @@ Without cost data, smoke stops and full run is refused. The cost guard prevents
 new cases from being scheduled when the projected budget is exhausted, but
 already-running requests can finish and incur additional charges. The 900s
 wall-clock limit is cooperative and cannot interrupt an in-flight SDK request.
+`--case-ids` is a real-model timing probe: it preserves the supplied ID order,
+does not require a cost flag, skips the auxiliary judge request, and does not
+generate an official benchmark summary.
 
 The Core V1 simulator is an intentionally limited independent instrument,
 grounded in `evalValue`, `evalObservation`, `reduceContractStep`, `applyAction`,
