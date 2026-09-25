@@ -37,8 +37,9 @@ user requests; agent calls are listed separately.
   `false_convergence=true`.
 
 Provider-reported cost was 0 USD for these `:free` model runs. These three
-selected cases cannot estimate population convergence or accuracy. Raw records
-remain local under `bench/results/20260925-103853-nvidia-nemotron-3-ultra-550b-a55b-free/`.
+selected cases cannot estimate population convergence or accuracy. The raw run
+directory remains ignored; complete copies of the three case records for
+audit are tracked in [bench/audit](audit/README.md).
 
 Live raw results and transcripts remain local under ignored `bench/results/`.
 The next gate for a 100-case accuracy benchmark remains a successful smoke on

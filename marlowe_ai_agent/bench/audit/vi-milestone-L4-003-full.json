@@ -1,0 +1,1519 @@
+{
+  "case_id": "vi-milestone-L4-003",
+  "attempt": 1,
+  "prompt": "Bình ở Hà Nội đây; tiệm nhỏ của mình đang thuê Hà làm hai chặng với tổng 143 ADA, Chi đưa tiền trước ngày 08/01/2027. Nếu Chi nghiệm thu chặng đầu trước bảy ngày sau hạn đầu thì người làm nhận một nửa; nghiệm thu phần còn lại trước mười bốn ngày sau hạn đầu thì nhận hết. Phần chưa nghiệm thu phải quay về Chi.",
+  "run_kind": "timing_probe",
+  "language": "vi",
+  "type": "milestone",
+  "difficulty": 4,
+  "info_mode": "complete",
+  "challenges": [
+    "relative_time",
+    "multi_stage",
+    "long_narrative"
+  ],
+  "status": "done",
+  "stop_reason": "ok",
+  "iterations": 5,
+  "converged": true,
+  "iteration_history": [
+    {
+      "iteration": 1,
+      "structural": "skip",
+      "semantic": "skip",
+      "logic": "skip",
+      "logic_errors": 0,
+      "logic_warnings": 0,
+      "stall_count": 0,
+      "llm_calls": 1,
+      "semantic_generation": 1,
+      "semantic_history_entries": 0,
+      "elapsed_seconds": 152.883
+    },
+    {
+      "iteration": 2,
+      "structural": "fail",
+      "semantic": "skip",
+      "logic": "skip",
+      "logic_errors": 0,
+      "logic_warnings": 0,
+      "stall_count": 0,
+      "llm_calls": 3,
+      "semantic_generation": 1,
+      "semantic_history_entries": 0,
+      "elapsed_seconds": 399.927
+    },
+    {
+      "iteration": 3,
+      "structural": "fail",
+      "semantic": "skip",
+      "logic": "skip",
+      "logic_errors": 0,
+      "logic_warnings": 0,
+      "stall_count": 0,
+      "llm_calls": 4,
+      "semantic_generation": 1,
+      "semantic_history_entries": 0,
+      "elapsed_seconds": 106.061
+    },
+    {
+      "iteration": 4,
+      "structural": "fail",
+      "semantic": "skip",
+      "logic": "skip",
+      "logic_errors": 0,
+      "logic_warnings": 0,
+      "stall_count": 0,
+      "llm_calls": 6,
+      "semantic_generation": 1,
+      "semantic_history_entries": 0,
+      "elapsed_seconds": 431.788
+    },
+    {
+      "iteration": 5,
+      "structural": "pass",
+      "semantic": "pass",
+      "logic": "pass",
+      "logic_errors": 0,
+      "logic_warnings": 1,
+      "stall_count": 0,
+      "llm_calls": 13,
+      "semantic_generation": 1,
+      "semantic_history_entries": 1,
+      "elapsed_seconds": 974.088
+    }
+  ],
+  "convergence_path": " -> S- -> S- -> S- -> S+S+L+",
+  "semantic_history": [
+    {
+      "iteration": 5,
+      "semantic_generation": 1,
+      "semantic_fingerprint": "c3eb1f71b693fe269e55c57038e06e5b0da012aa1c4b33c2585020becaaed6e9",
+      "prompt_fingerprint": "4267c2f4055317b265c7c60d5eadca32f98d9825769efa750bf1bc5687dcc3a0",
+      "contract_fingerprint": "efe0c16e63bba6697e084378b089e46d1fe5dd8552a40bb9542f5f48d77e92a8",
+      "passed": true,
+      "user_answered": false,
+      "answer_source": null
+    }
+  ],
+  "trace": [
+    {
+      "node": "pipeline",
+      "status": "start",
+      "message": "Đã nhận prompt.",
+      "data": {
+        "max_iterations": 500
+      }
+    },
+    {
+      "node": "node_1_prompt_to_draft",
+      "status": "start",
+      "message": "Đang sinh draft.",
+      "data": {
+        "iteration": 1
+      }
+    },
+    {
+      "node": "node_1_prompt_to_draft",
+      "status": "done",
+      "message": "Đã sinh draft.",
+      "data": {
+        "reasoning_narrative": "Người dùng mô tả hợp đồng hai chặng tổng 143 ADA, Chi nộp tiền trước 08/01/2027. Tuy nhiên không rõ ngày hạn chót của chặng đầu (hạn đầu), số tiền từng chặng, và vai trò của Bình. Do đó chưa thể sinh mã Marlowe an toàn.",
+        "intent": "Tạo hợp đồng escrow hai giai đoạn cho công việc thầu nhỏ với tổng 143 ADA, thanh toán trước 08/01/2027, nghiệm thu giai đoạn 1 trong 7 ngày sau hạn đầu, giai đoạn 2 trong 14 ngày sau hạn đầu, phần chưa nghiệm thu hoàn trả."
+      }
+    },
+    {
+      "node": "structural_gate",
+      "status": "skipped",
+      "message": "Chưa có AST do thiếu thông tin nghiệp vụ.",
+      "data": {}
+    },
+    {
+      "node": "pipeline",
+      "status": "semantic_reset",
+      "message": "Đã reset semantic stall state sau khi nhận thông tin mới từ người dùng.",
+      "data": {
+        "semantic_generation": 1,
+        "history_entries": 0,
+        "answered_questions_count": 4,
+        "answer_source": "empty_contract"
+      }
+    },
+    {
+      "node": "pipeline",
+      "status": "iteration",
+      "message": "Đã hoàn tất lượt xử lý.",
+      "data": {
+        "iteration": 1,
+        "structural": "skip",
+        "semantic": "skip",
+        "logic": "skip",
+        "logic_errors": 0,
+        "logic_warnings": 0,
+        "stall_count": 0,
+        "llm_calls": 1,
+        "semantic_generation": 1,
+        "semantic_history_entries": 0,
+        "elapsed_seconds": 152.883
+      }
+    },
+    {
+      "node": "node_1_prompt_to_draft",
+      "status": "start",
+      "message": "Đang sinh draft.",
+      "data": {
+        "iteration": 2
+      }
+    },
+    {
+      "node": "node_1_prompt_to_draft",
+      "status": "done",
+      "message": "Đã sinh draft.",
+      "data": {
+        "reasoning_narrative": "Từ mô tả người dùng, tôi suy ra hai bên tham gia là Chi (người trả tiền/nghiệm thu) và Ha (người làm). Tổng số tiền 143 ADA chia đều thành hai chặng 71.5 ADA vì không có thông tin chia khác. Hạn chót nộp tiền và hạn chót chặng 1 (hạn đầu) đều giả định là 08/01/2027 00:00 UTC để đơn giản. Cửa sổ nghiệm thu chặng 1 kết thúc 7 ngày sau, chặng 2 kết thúc 14 ngày sau. Hợp đồng Marlowe dùng When lồng nhau: trước tiên chờ nộp tiền, sau đó chờ chọn approve/reject cho chặng 1, tiếp tục chờ chọn cho chặng 2. Mỗi chặng có timeout riêng và hành động trả tiền tương ứng.",
+        "intent": "Escrow cho hai chặng thanh toán với cửa sổ nghiệm thu: Chi nộp 143 ADA trước ngày 08/01/2027. Chặng 1 được nghiệm thu trong 7 ngày sau hạn chót (hạn đầu), chặng 2 trong 14 ngày sau hạn chót. Phần chưa nghiệm thu hoàn về Chi."
+      }
+    },
+    {
+      "node": "structural_gate",
+      "status": "fail",
+      "message": "AST chưa hợp lệ.",
+      "data": {
+        "findings": [
+          "root: tổ hợp field không hợp lệ: ['when']."
+        ]
+      }
+    },
+    {
+      "node": "pipeline",
+      "status": "iteration",
+      "message": "Đã hoàn tất lượt xử lý.",
+      "data": {
+        "iteration": 2,
+        "structural": "fail",
+        "semantic": "skip",
+        "logic": "skip",
+        "logic_errors": 0,
+        "logic_warnings": 0,
+        "stall_count": 0,
+        "llm_calls": 3,
+        "semantic_generation": 1,
+        "semantic_history_entries": 0,
+        "elapsed_seconds": 399.927
+      }
+    },
+    {
+      "node": "node_1_prompt_to_draft",
+      "status": "start",
+      "message": "Đang sinh draft.",
+      "data": {
+        "iteration": 3
+      }
+    },
+    {
+      "node": "node_1_prompt_to_draft",
+      "status": "done",
+      "message": "Đã sinh draft.",
+      "data": {
+        "reasoning_narrative": "Hợp đồng được xây dựng theo mô hình escrow đơn giản: Chi đóng toàn bộ 143 ADA (143.000.000 lovelace) vào tài khoản của mình trước mốc 08/01/2027. Số tiền được chia thành hai chặng bằng nhau 71.5 ADA. Cửa sổ nghiệm thu chặng 1 kéo dài 7 ngày sau hạn chót (đến 15/01/2027), chặng 2 kéo dài 14 ngày (đến 22/01/2027). Tại mỗi cửa sổ, Chi có quyền chọn chấp nhận (1) hoặc từ chối (0). Nếu chấp nhận, tiền chuyển cho Hà; nếu từ chối hoặc hết hạn, tiền hoàn về Chi. Mọi số liệu đều dùng ADA (currency_symbol rỗng, token_name rỗng) và timestamp UTC.",
+        "intent": "Tạo hợp đồng escrow hai chặng: người thuê (Chi) nộp 143 ADA trước 08/01/2027; người làm (Hà) nhận 71.5 ADA nếu chặng 1 được nghiệm thu trong 7 ngày sau hạn chót, nhận thêm 71.5 ADA nếu chặng 2 được nghiệm thu trong 14 ngày sau hạn chót; phần chưa nghiệm thu hoàn về Chi."
+      }
+    },
+    {
+      "node": "structural_gate",
+      "status": "fail",
+      "message": "AST chưa hợp lệ.",
+      "data": {
+        "findings": [
+          "root: tổ hợp field không hợp lệ: ['when']."
+        ]
+      }
+    },
+    {
+      "node": "pipeline",
+      "status": "iteration",
+      "message": "Đã hoàn tất lượt xử lý.",
+      "data": {
+        "iteration": 3,
+        "structural": "fail",
+        "semantic": "skip",
+        "logic": "skip",
+        "logic_errors": 0,
+        "logic_warnings": 0,
+        "stall_count": 0,
+        "llm_calls": 4,
+        "semantic_generation": 1,
+        "semantic_history_entries": 0,
+        "elapsed_seconds": 106.061
+      }
+    },
+    {
+      "node": "node_1_prompt_to_draft",
+      "status": "start",
+      "message": "Đang sinh draft.",
+      "data": {
+        "iteration": 4
+      }
+    },
+    {
+      "node": "node_1_prompt_to_draft",
+      "status": "done",
+      "message": "Đã sinh draft.",
+      "data": {
+        "reasoning_narrative": "Từ mô tả, tổng 143 ADA chia đều cho 2 chặng (71.5 ADA mỗi chặng). Hạn chót nộp tiền 08/01/2027 (1799366400000 ms) là 'hạn đầu'. Chi có 7 ngày (tới 1799971200000 ms) nghiệm thu chặng 1 và 14 ngày (tới 1800576000000 ms) nghiệm thu chặng 2. Không phản hồi nghĩa là từ chối, tiền hoàn về Chi. Hợp đồng dùng When lồng nhau: nộp tiền → chờ accept1 → trả/hoàn 71.5 ADA → chờ accept2 → trả/hoàn 71.5 ADA còn lại.",
+        "intent": "Tạo hợp đồng escrow hai giai đoạn: Chi nộp 143 ADA, Hà nhận một nửa nếu Chi chấp nhận chặng 1 trong 7 ngày sau hạn chót, nhận nửa còn lại nếu Chi chấp nhận chặng 2 trong 14 ngày sau hạn chót; phần không được chấp nhận hoàn lại cho Chi."
+      }
+    },
+    {
+      "node": "structural_gate",
+      "status": "fail",
+      "message": "AST chưa hợp lệ.",
+      "data": {
+        "findings": [
+          "root: tổ hợp field không hợp lệ: ['when']."
+        ]
+      }
+    },
+    {
+      "node": "pipeline",
+      "status": "iteration",
+      "message": "Đã hoàn tất lượt xử lý.",
+      "data": {
+        "iteration": 4,
+        "structural": "fail",
+        "semantic": "skip",
+        "logic": "skip",
+        "logic_errors": 0,
+        "logic_warnings": 0,
+        "stall_count": 0,
+        "llm_calls": 6,
+        "semantic_generation": 1,
+        "semantic_history_entries": 0,
+        "elapsed_seconds": 431.788
+      }
+    },
+    {
+      "node": "node_1_prompt_to_draft",
+      "status": "start",
+      "message": "Đang sinh draft.",
+      "data": {
+        "iteration": 5
+      }
+    },
+    {
+      "node": "node_1_prompt_to_draft",
+      "status": "retry",
+      "message": "Lỗi LLM tạm thời; thử lại operation.",
+      "data": {
+        "operation": "draft_from_prompt",
+        "attempt": 1,
+        "max_attempts": 3,
+        "error": "Model tra ve JSON khong hop le ngay ca sau khi yeu cau sua. Hay tang LLM_MAX_TOKENS hoac doi model co JSON mode on dinh hon. Loi ban dau: Expecting property name enclosed in double quotes: line 2 colu"
+      }
+    },
+    {
+      "node": "node_1_prompt_to_draft",
+      "status": "retry",
+      "message": "Lỗi LLM tạm thời; thử lại operation.",
+      "data": {
+        "operation": "draft_from_prompt",
+        "attempt": 2,
+        "max_attempts": 3,
+        "error": "Model tra ve JSON khong hop le ngay ca sau khi yeu cau sua. Hay tang LLM_MAX_TOKENS hoac doi model co JSON mode on dinh hon. Loi ban dau: Extra data: line 1 column 43 (char 42). Loi sau sua: Expecting"
+      }
+    },
+    {
+      "node": "node_1_prompt_to_draft",
+      "status": "done",
+      "message": "Đã sinh draft.",
+      "data": {
+        "reasoning_narrative": "Từ yêu cầu, tôi xác định 2 bên: Chi (người đưa tiền) và Hà (người làm). Tổng 143 ADA chia đều thành 2 chặng 71.5 ADA. Hạn nộp tiền 08/01/2027 làm mốc 'hạn đầu'. Chi có 7 ngày để nghiệm thu chặng 1 và 14 ngày cho chặng 2. Nếu không duyệt kịp hạn, số tiền tương ứng hoàn về Chi. Hợp đồng dùng cấu trúc When lồng nhau: trước khi nộp tiền, sau đó hai giai đoạn Choice của Chi để approve/reject từng chặng.",
+        "intent": "Tạo hợp đồng escrow hai chặng: Chi nộp 143 ADA trước 08/01/2027; Hà nhận 71.5 ADA nếu Chi duyệt chặng 1 trong 7 ngày sau hạn chót, và 71.5 ADA nữa nếu duyệt chặng 2 trong 14 ngày; phần chưa duyệt hoàn về Chi."
+      }
+    },
+    {
+      "node": "structural_gate",
+      "status": "pass",
+      "message": "AST hợp lệ.",
+      "data": {}
+    },
+    {
+      "node": "node_2_semantic_verification",
+      "status": "start",
+      "message": "Đang kiểm semantic.",
+      "data": {}
+    },
+    {
+      "node": "node_2_semantic_verification",
+      "status": "pass",
+      "message": "Đã kiểm semantic.",
+      "data": {
+        "findings": [
+          "Đã chuyển đổi đúng 143 ADA = 143.000.000 lovelace, chia đôi = 71.500.000 lovelace.",
+          "Timeout nộp tiền, chặng 1, chặng 2 khớp với 08/01, 15/01, 22/01/2027 UTC.",
+          "Logic trả tiền/hoàn tiền theo choice và timeout đúng spec.",
+          "Không còn lỗi cấu trúc AST (root when hợp lệ)."
+        ],
+        "reasoning_narrative": "Marlowe contract triển khai chính xác luồng nghiệp vụ: Chi nộp 143.000.000 lovelace trước 08/01/2027 (timeout 1799404799000 ms). 'Hạn đầu' được gán bằng hạn nộp tiền theo yêu cầu đơn giản nhất. Cửa sổ chặng 1 (7 ngày) và chặng 2 (14 ngày) đều tính từ mốc này (timeout 1800009599000 ms và 1800614399000 ms). Mỗi chặng 71.500.000 lovelace. Chi là người duyệt qua choice approve1/reject1 và approve2/reject2. Nếu approve thì trả cho Hà, ngược lại hoặc timeout thì hoàn cho Chi. Không có role cho Bình theo giả định đơn giản. Các timeout tuyệt đối đảm bảo đúng mốc 7/14 ngày sau hạn đầu. Cấu trúc lồng when hợp lệ, dùng close kết thúc."
+      }
+    },
+    {
+      "node": "node_3_logic_graph_verification",
+      "status": "start",
+      "message": "Đang kiểm logic graph.",
+      "data": {}
+    },
+    {
+      "node": "node_3_logic_graph_verification",
+      "status": "pass",
+      "message": "Đã kiểm logic graph.",
+      "data": {
+        "findings": [
+          "root: không thấy số tiền 143 trong Deposit/Pay; kiểm tra đơn vị lovelace."
+        ],
+        "errors": [],
+        "warnings": [
+          "root: không thấy số tiền 143 trong Deposit/Pay; kiểm tra đơn vị lovelace."
+        ],
+        "reasoning_narrative": "Node 3 đã kiểm tra 27 node, 10 đường đi; có 1 cảnh báo."
+      }
+    },
+    {
+      "node": "pipeline",
+      "status": "iteration",
+      "message": "Đã hoàn tất lượt xử lý.",
+      "data": {
+        "iteration": 5,
+        "structural": "pass",
+        "semantic": "pass",
+        "logic": "pass",
+        "logic_errors": 0,
+        "logic_warnings": 1,
+        "stall_count": 0,
+        "llm_calls": 13,
+        "semantic_generation": 1,
+        "semantic_history_entries": 1,
+        "elapsed_seconds": 974.088
+      }
+    },
+    {
+      "node": "pipeline",
+      "status": "done",
+      "message": "Workflow đã hoàn tất.",
+      "data": {
+        "iterations": 5,
+        "stop_reason": "ok"
+      }
+    }
+  ],
+  "qa_transcript": [
+    {
+      "question": "Ngày hạn chót của chặng 1 (hạn đầu) là khi nào?",
+      "answer": "Tôi chưa nghĩ tới, xin chọn cách đơn giản nhất.",
+      "time": "2026-09-25T03:41:03.801919+00:00",
+      "fallback_answer": true,
+      "unspecified_answer": true,
+      "seconds": 5.694291700026952
+    },
+    {
+      "question": "Số tiền chính xác cho mỗi chặng (có chia bằng nhau không)?",
+      "answer": "Không có thông tin chi tiết về cách chia 143 ADA cho hai chặng; nếu chia đều thì mỗi chặng sẽ là 71,5 ADA.",
+      "time": "2026-09-25T03:41:16.966260+00:00",
+      "fallback_answer": false,
+      "unspecified_answer": true,
+      "seconds": 13.16431779996492
+    },
+    {
+      "question": "Bình có phải là bên trả tiền (Chi) hay bên thứ ba?",
+      "answer": "Tôi chưa nghĩ tới, xin chọn cách đơn giản nhất.",
+      "time": "2026-09-25T03:41:23.706059+00:00",
+      "fallback_answer": true,
+      "unspecified_answer": true,
+      "seconds": 6.739774000016041
+    },
+    {
+      "question": "Mốc thời gian 7 ngày và 14 ngày tính từ hạn đầu hay từ ngày nộp tiền?",
+      "answer": "Theo như bạn nói, cả hai mốc 7 ngày và 14 ngày đều tính từ \"hạn đầu\" chứ không phải từ ngày nộp tiền.",
+      "time": "2026-09-25T03:41:27.322217+00:00",
+      "fallback_answer": false,
+      "unspecified_answer": false,
+      "seconds": 3.6161272999597713
+    }
+  ],
+  "contract": {
+    "when": [
+      {
+        "case": {
+          "deposits": 143000000,
+          "into_account": {
+            "role_token": "Chi"
+          },
+          "of_token": {
+            "currency_symbol": "",
+            "token_name": ""
+          },
+          "party": {
+            "role_token": "Chi"
+          }
+        },
+        "then": {
+          "when": [
+            {
+              "case": {
+                "for_choice": {
+                  "choice_name": "approve1",
+                  "choice_owner": {
+                    "role_token": "Chi"
+                  }
+                },
+                "choose_between": [
+                  {
+                    "from": 1,
+                    "to": 1
+                  }
+                ]
+              },
+              "then": {
+                "pay": 71500000,
+                "from_account": {
+                  "role_token": "Chi"
+                },
+                "to": {
+                  "party": {
+                    "role_token": "Ha"
+                  }
+                },
+                "token": {
+                  "currency_symbol": "",
+                  "token_name": ""
+                },
+                "then": {
+                  "when": [
+                    {
+                      "case": {
+                        "for_choice": {
+                          "choice_name": "approve2",
+                          "choice_owner": {
+                            "role_token": "Chi"
+                          }
+                        },
+                        "choose_between": [
+                          {
+                            "from": 1,
+                            "to": 1
+                          }
+                        ]
+                      },
+                      "then": {
+                        "pay": 71500000,
+                        "from_account": {
+                          "role_token": "Chi"
+                        },
+                        "to": {
+                          "party": {
+                            "role_token": "Ha"
+                          }
+                        },
+                        "token": {
+                          "currency_symbol": "",
+                          "token_name": ""
+                        },
+                        "then": "close"
+                      }
+                    },
+                    {
+                      "case": {
+                        "for_choice": {
+                          "choice_name": "reject2",
+                          "choice_owner": {
+                            "role_token": "Chi"
+                          }
+                        },
+                        "choose_between": [
+                          {
+                            "from": 0,
+                            "to": 0
+                          }
+                        ]
+                      },
+                      "then": {
+                        "pay": 71500000,
+                        "from_account": {
+                          "role_token": "Chi"
+                        },
+                        "to": {
+                          "party": {
+                            "role_token": "Chi"
+                          }
+                        },
+                        "token": {
+                          "currency_symbol": "",
+                          "token_name": ""
+                        },
+                        "then": "close"
+                      }
+                    }
+                  ],
+                  "timeout": 1800614399000,
+                  "timeout_continuation": {
+                    "pay": 71500000,
+                    "from_account": {
+                      "role_token": "Chi"
+                    },
+                    "to": {
+                      "party": {
+                        "role_token": "Chi"
+                      }
+                    },
+                    "token": {
+                      "currency_symbol": "",
+                      "token_name": ""
+                    },
+                    "then": "close"
+                  }
+                }
+              }
+            },
+            {
+              "case": {
+                "for_choice": {
+                  "choice_name": "reject1",
+                  "choice_owner": {
+                    "role_token": "Chi"
+                  }
+                },
+                "choose_between": [
+                  {
+                    "from": 0,
+                    "to": 0
+                  }
+                ]
+              },
+              "then": {
+                "pay": 71500000,
+                "from_account": {
+                  "role_token": "Chi"
+                },
+                "to": {
+                  "party": {
+                    "role_token": "Chi"
+                  }
+                },
+                "token": {
+                  "currency_symbol": "",
+                  "token_name": ""
+                },
+                "then": {
+                  "when": [
+                    {
+                      "case": {
+                        "for_choice": {
+                          "choice_name": "approve2",
+                          "choice_owner": {
+                            "role_token": "Chi"
+                          }
+                        },
+                        "choose_between": [
+                          {
+                            "from": 1,
+                            "to": 1
+                          }
+                        ]
+                      },
+                      "then": {
+                        "pay": 71500000,
+                        "from_account": {
+                          "role_token": "Chi"
+                        },
+                        "to": {
+                          "party": {
+                            "role_token": "Ha"
+                          }
+                        },
+                        "token": {
+                          "currency_symbol": "",
+                          "token_name": ""
+                        },
+                        "then": "close"
+                      }
+                    },
+                    {
+                      "case": {
+                        "for_choice": {
+                          "choice_name": "reject2",
+                          "choice_owner": {
+                            "role_token": "Chi"
+                          }
+                        },
+                        "choose_between": [
+                          {
+                            "from": 0,
+                            "to": 0
+                          }
+                        ]
+                      },
+                      "then": {
+                        "pay": 71500000,
+                        "from_account": {
+                          "role_token": "Chi"
+                        },
+                        "to": {
+                          "party": {
+                            "role_token": "Chi"
+                          }
+                        },
+                        "token": {
+                          "currency_symbol": "",
+                          "token_name": ""
+                        },
+                        "then": "close"
+                      }
+                    }
+                  ],
+                  "timeout": 1800614399000,
+                  "timeout_continuation": {
+                    "pay": 71500000,
+                    "from_account": {
+                      "role_token": "Chi"
+                    },
+                    "to": {
+                      "party": {
+                        "role_token": "Chi"
+                      }
+                    },
+                    "token": {
+                      "currency_symbol": "",
+                      "token_name": ""
+                    },
+                    "then": "close"
+                  }
+                }
+              }
+            }
+          ],
+          "timeout": 1800009599000,
+          "timeout_continuation": {
+            "pay": 71500000,
+            "from_account": {
+              "role_token": "Chi"
+            },
+            "to": {
+              "party": {
+                "role_token": "Chi"
+              }
+            },
+            "token": {
+              "currency_symbol": "",
+              "token_name": ""
+            },
+            "then": {
+              "when": [
+                {
+                  "case": {
+                    "for_choice": {
+                      "choice_name": "approve2",
+                      "choice_owner": {
+                        "role_token": "Chi"
+                      }
+                    },
+                    "choose_between": [
+                      {
+                        "from": 1,
+                        "to": 1
+                      }
+                    ]
+                  },
+                  "then": {
+                    "pay": 71500000,
+                    "from_account": {
+                      "role_token": "Chi"
+                    },
+                    "to": {
+                      "party": {
+                        "role_token": "Ha"
+                      }
+                    },
+                    "token": {
+                      "currency_symbol": "",
+                      "token_name": ""
+                    },
+                    "then": "close"
+                  }
+                },
+                {
+                  "case": {
+                    "for_choice": {
+                      "choice_name": "reject2",
+                      "choice_owner": {
+                        "role_token": "Chi"
+                      }
+                    },
+                    "choose_between": [
+                      {
+                        "from": 0,
+                        "to": 0
+                      }
+                    ]
+                  },
+                  "then": {
+                    "pay": 71500000,
+                    "from_account": {
+                      "role_token": "Chi"
+                    },
+                    "to": {
+                      "party": {
+                        "role_token": "Chi"
+                      }
+                    },
+                    "token": {
+                      "currency_symbol": "",
+                      "token_name": ""
+                    },
+                    "then": "close"
+                  }
+                }
+              ],
+              "timeout": 1800614399000,
+              "timeout_continuation": {
+                "pay": 71500000,
+                "from_account": {
+                  "role_token": "Chi"
+                },
+                "to": {
+                  "party": {
+                    "role_token": "Chi"
+                  }
+                },
+                "token": {
+                  "currency_symbol": "",
+                  "token_name": ""
+                },
+                "then": "close"
+              }
+            }
+          }
+        }
+      }
+    ],
+    "timeout": 1799404799000,
+    "timeout_continuation": "close"
+  },
+  "draft": {
+    "original_prompt": "Bình ở Hà Nội đây; tiệm nhỏ của mình đang thuê Hà làm hai chặng với tổng 143 ADA, Chi đưa tiền trước ngày 08/01/2027. Nếu Chi nghiệm thu chặng đầu trước bảy ngày sau hạn đầu thì người làm nhận một nửa; nghiệm thu phần còn lại trước mười bốn ngày sau hạn đầu thì nhận hết. Phần chưa nghiệm thu phải quay về Chi.\n\nThong tin bo sung tu nguoi dung:\n- Ngày hạn chót của chặng 1 (hạn đầu) là khi nào?\n  Tra loi: Tôi chưa nghĩ tới, xin chọn cách đơn giản nhất.\n- Số tiền chính xác cho mỗi chặng (có chia bằng nhau không)?\n  Tra loi: Không có thông tin chi tiết về cách chia 143 ADA cho hai chặng; nếu chia đều thì mỗi chặng sẽ là 71,5 ADA.\n- Bình có phải là bên trả tiền (Chi) hay bên thứ ba?\n  Tra loi: Tôi chưa nghĩ tới, xin chọn cách đơn giản nhất.\n- Mốc thời gian 7 ngày và 14 ngày tính từ hạn đầu hay từ ngày nộp tiền?\n  Tra loi: Theo như bạn nói, cả hai mốc 7 ngày và 14 ngày đều tính từ \"hạn đầu\" chứ không phải từ ngày nộp tiền.\n\nPhan hoi noi bo tu Node 3 de Node 1 sinh lai draft:\nSửa AST theo lỗi cấu trúc: root: tổ hợp field không hợp lệ: ['when'].",
+    "intent": "Tạo hợp đồng escrow hai chặng: Chi nộp 143 ADA trước 08/01/2027; Hà nhận 71.5 ADA nếu Chi duyệt chặng 1 trong 7 ngày sau hạn chót, và 71.5 ADA nữa nếu duyệt chặng 2 trong 14 ngày; phần chưa duyệt hoàn về Chi.",
+    "parties": [
+      {
+        "role": "Chi",
+        "name": "Chi"
+      },
+      {
+        "role": "Ha",
+        "name": "Hà"
+      }
+    ],
+    "amount": 143,
+    "token": "ADA",
+    "deposit_timeout": 1799404799000,
+    "decision_timeout": 1800009599000,
+    "clauses": [
+      "Chi phải nộp 143 ADA vào tài khoản hợp đồng trước 08/01/2027 23:59:59 UTC.",
+      "Sau hạn nộp, Chi có 7 ngày (tới 15/01/2027) để chọn approve/reject chặng 1 qua choice 'approve1'/'reject1'.",
+      "Nếu approve1: Hà nhận 71.5 ADA ngay. Nếu reject1 hoặc hết hạn: 71.5 ADA hoàn về Chi.",
+      "Tiếp theo, Chi có đến 22/01/2027 (14 ngày sau hạn đầu) để approve/reject chặng 2 qua choice 'approve2'/'reject2'.",
+      "Nếu approve2: Hà nhận 71.5 ADA còn lại. Nếu reject2 hoặc hết hạn: 71.5 ADA hoàn về Chi.",
+      "Hợp đồng kết thúc sau khi xử lý xong chặng 2 hoặc khi hết mọi timeout."
+    ],
+    "assumptions": [
+      "Mốc 'hạn đầu' được đặt trùng với hạn nộp tiền 08/01/2027 vì người dùng chưa quy định rõ.",
+      "143 ADA chia ngang bằng cho 2 chặng (71.5 ADA mỗi chặng) vì không có thông tin chia khác.",
+      "Bình không được mô hình hóa như bên tham gia riêng; Chi là người trả tiền và quyết định nghiệm thu.",
+      "Cả hai cửa sổ 7 ngày và 14 ngày đều tính từ 'hạn đầu' (08/01/2027).",
+      "Sử dụng ADA (lovelace) làm token, currency_symbol rỗng, token_name rỗng."
+    ],
+    "clarification_questions": [],
+    "reasoning_summary": "Hợp đồng escrow 2 chặng với Chi là người tài trợ, Hà là người thực hiện. Chi nộp 143 ADA trước 08/01/2027. Mốc 'hạn đầu' trùng hạn nộp tiền. Chặng 1 duyệt trong 7 ngày, chặng 2 trong 14 ngày. Chia tiền ngang bằng (71.5 ADA mỗi chặng).",
+    "reasoning_narrative": "Từ yêu cầu, tôi xác định 2 bên: Chi (người đưa tiền) và Hà (người làm). Tổng 143 ADA chia đều thành 2 chặng 71.5 ADA. Hạn nộp tiền 08/01/2027 làm mốc 'hạn đầu'. Chi có 7 ngày để nghiệm thu chặng 1 và 14 ngày cho chặng 2. Nếu không duyệt kịp hạn, số tiền tương ứng hoàn về Chi. Hợp đồng dùng cấu trúc When lồng nhau: trước khi nộp tiền, sau đó hai giai đoạn Choice của Chi để approve/reject từng chặng.",
+    "contract_plan": {
+      "nodes": [
+        {
+          "id": "start",
+          "label": "Bắt đầu"
+        },
+        {
+          "id": "deposit",
+          "label": "Chi nộp 143 ADA (trước 08/01/2027)"
+        },
+        {
+          "id": "milestone1",
+          "label": "Chặng 1: Chi chọn approve1/reject1 (trước 15/01/2027)"
+        },
+        {
+          "id": "pay1_ha",
+          "label": "Trả 71.5 ADA cho Hà"
+        },
+        {
+          "id": "refund1_chi",
+          "label": "Hoàn 71.5 ADA cho Chi"
+        },
+        {
+          "id": "milestone2",
+          "label": "Chặng 2: Chi chọn approve2/reject2 (trước 22/01/2027)"
+        },
+        {
+          "id": "pay2_ha",
+          "label": "Trả 71.5 ADA cho Hà"
+        },
+        {
+          "id": "refund2_chi",
+          "label": "Hoàn 71.5 ADA cho Chi"
+        },
+        {
+          "id": "end",
+          "label": "Kết thúc"
+        }
+      ],
+      "edges": [
+        {
+          "from": "start",
+          "to": "deposit"
+        },
+        {
+          "from": "deposit",
+          "to": "milestone1"
+        },
+        {
+          "from": "milestone1",
+          "to": "pay1_ha",
+          "label": "approve1"
+        },
+        {
+          "from": "milestone1",
+          "to": "refund1_chi",
+          "label": "reject1 hoặc timeout"
+        },
+        {
+          "from": "pay1_ha",
+          "to": "milestone2"
+        },
+        {
+          "from": "refund1_chi",
+          "to": "milestone2"
+        },
+        {
+          "from": "milestone2",
+          "to": "pay2_ha",
+          "label": "approve2"
+        },
+        {
+          "from": "milestone2",
+          "to": "refund2_chi",
+          "label": "reject2 hoặc timeout"
+        },
+        {
+          "from": "pay2_ha",
+          "to": "end"
+        },
+        {
+          "from": "refund2_chi",
+          "to": "end"
+        }
+      ],
+      "notes": [
+        "Timeout nộp tiền: 1799404799000 ms (08/01/2027 23:59:59 UTC)",
+        "Timeout chặng 1: 1800009599000 ms (15/01/2027 23:59:59 UTC)",
+        "Timeout chặng 2: 1800614399000 ms (22/01/2027 23:59:59 UTC)",
+        "Số tiền: 143000000 lovelace tổng, 71500000 lovelace mỗi chặng"
+      ]
+    },
+    "marlowe_contract": {
+      "when": [
+        {
+          "case": {
+            "deposits": 143000000,
+            "into_account": {
+              "role_token": "Chi"
+            },
+            "of_token": {
+              "currency_symbol": "",
+              "token_name": ""
+            },
+            "party": {
+              "role_token": "Chi"
+            }
+          },
+          "then": {
+            "when": [
+              {
+                "case": {
+                  "for_choice": {
+                    "choice_name": "approve1",
+                    "choice_owner": {
+                      "role_token": "Chi"
+                    }
+                  },
+                  "choose_between": [
+                    {
+                      "from": 1,
+                      "to": 1
+                    }
+                  ]
+                },
+                "then": {
+                  "pay": 71500000,
+                  "from_account": {
+                    "role_token": "Chi"
+                  },
+                  "to": {
+                    "party": {
+                      "role_token": "Ha"
+                    }
+                  },
+                  "token": {
+                    "currency_symbol": "",
+                    "token_name": ""
+                  },
+                  "then": {
+                    "when": [
+                      {
+                        "case": {
+                          "for_choice": {
+                            "choice_name": "approve2",
+                            "choice_owner": {
+                              "role_token": "Chi"
+                            }
+                          },
+                          "choose_between": [
+                            {
+                              "from": 1,
+                              "to": 1
+                            }
+                          ]
+                        },
+                        "then": {
+                          "pay": 71500000,
+                          "from_account": {
+                            "role_token": "Chi"
+                          },
+                          "to": {
+                            "party": {
+                              "role_token": "Ha"
+                            }
+                          },
+                          "token": {
+                            "currency_symbol": "",
+                            "token_name": ""
+                          },
+                          "then": "close"
+                        }
+                      },
+                      {
+                        "case": {
+                          "for_choice": {
+                            "choice_name": "reject2",
+                            "choice_owner": {
+                              "role_token": "Chi"
+                            }
+                          },
+                          "choose_between": [
+                            {
+                              "from": 0,
+                              "to": 0
+                            }
+                          ]
+                        },
+                        "then": {
+                          "pay": 71500000,
+                          "from_account": {
+                            "role_token": "Chi"
+                          },
+                          "to": {
+                            "party": {
+                              "role_token": "Chi"
+                            }
+                          },
+                          "token": {
+                            "currency_symbol": "",
+                            "token_name": ""
+                          },
+                          "then": "close"
+                        }
+                      }
+                    ],
+                    "timeout": 1800614399000,
+                    "timeout_continuation": {
+                      "pay": 71500000,
+                      "from_account": {
+                        "role_token": "Chi"
+                      },
+                      "to": {
+                        "party": {
+                          "role_token": "Chi"
+                        }
+                      },
+                      "token": {
+                        "currency_symbol": "",
+                        "token_name": ""
+                      },
+                      "then": "close"
+                    }
+                  }
+                }
+              },
+              {
+                "case": {
+                  "for_choice": {
+                    "choice_name": "reject1",
+                    "choice_owner": {
+                      "role_token": "Chi"
+                    }
+                  },
+                  "choose_between": [
+                    {
+                      "from": 0,
+                      "to": 0
+                    }
+                  ]
+                },
+                "then": {
+                  "pay": 71500000,
+                  "from_account": {
+                    "role_token": "Chi"
+                  },
+                  "to": {
+                    "party": {
+                      "role_token": "Chi"
+                    }
+                  },
+                  "token": {
+                    "currency_symbol": "",
+                    "token_name": ""
+                  },
+                  "then": {
+                    "when": [
+                      {
+                        "case": {
+                          "for_choice": {
+                            "choice_name": "approve2",
+                            "choice_owner": {
+                              "role_token": "Chi"
+                            }
+                          },
+                          "choose_between": [
+                            {
+                              "from": 1,
+                              "to": 1
+                            }
+                          ]
+                        },
+                        "then": {
+                          "pay": 71500000,
+                          "from_account": {
+                            "role_token": "Chi"
+                          },
+                          "to": {
+                            "party": {
+                              "role_token": "Ha"
+                            }
+                          },
+                          "token": {
+                            "currency_symbol": "",
+                            "token_name": ""
+                          },
+                          "then": "close"
+                        }
+                      },
+                      {
+                        "case": {
+                          "for_choice": {
+                            "choice_name": "reject2",
+                            "choice_owner": {
+                              "role_token": "Chi"
+                            }
+                          },
+                          "choose_between": [
+                            {
+                              "from": 0,
+                              "to": 0
+                            }
+                          ]
+                        },
+                        "then": {
+                          "pay": 71500000,
+                          "from_account": {
+                            "role_token": "Chi"
+                          },
+                          "to": {
+                            "party": {
+                              "role_token": "Chi"
+                            }
+                          },
+                          "token": {
+                            "currency_symbol": "",
+                            "token_name": ""
+                          },
+                          "then": "close"
+                        }
+                      }
+                    ],
+                    "timeout": 1800614399000,
+                    "timeout_continuation": {
+                      "pay": 71500000,
+                      "from_account": {
+                        "role_token": "Chi"
+                      },
+                      "to": {
+                        "party": {
+                          "role_token": "Chi"
+                        }
+                      },
+                      "token": {
+                        "currency_symbol": "",
+                        "token_name": ""
+                      },
+                      "then": "close"
+                    }
+                  }
+                }
+              }
+            ],
+            "timeout": 1800009599000,
+            "timeout_continuation": {
+              "pay": 71500000,
+              "from_account": {
+                "role_token": "Chi"
+              },
+              "to": {
+                "party": {
+                  "role_token": "Chi"
+                }
+              },
+              "token": {
+                "currency_symbol": "",
+                "token_name": ""
+              },
+              "then": {
+                "when": [
+                  {
+                    "case": {
+                      "for_choice": {
+                        "choice_name": "approve2",
+                        "choice_owner": {
+                          "role_token": "Chi"
+                        }
+                      },
+                      "choose_between": [
+                        {
+                          "from": 1,
+                          "to": 1
+                        }
+                      ]
+                    },
+                    "then": {
+                      "pay": 71500000,
+                      "from_account": {
+                        "role_token": "Chi"
+                      },
+                      "to": {
+                        "party": {
+                          "role_token": "Ha"
+                        }
+                      },
+                      "token": {
+                        "currency_symbol": "",
+                        "token_name": ""
+                      },
+                      "then": "close"
+                    }
+                  },
+                  {
+                    "case": {
+                      "for_choice": {
+                        "choice_name": "reject2",
+                        "choice_owner": {
+                          "role_token": "Chi"
+                        }
+                      },
+                      "choose_between": [
+                        {
+                          "from": 0,
+                          "to": 0
+                        }
+                      ]
+                    },
+                    "then": {
+                      "pay": 71500000,
+                      "from_account": {
+                        "role_token": "Chi"
+                      },
+                      "to": {
+                        "party": {
+                          "role_token": "Chi"
+                        }
+                      },
+                      "token": {
+                        "currency_symbol": "",
+                        "token_name": ""
+                      },
+                      "then": "close"
+                    }
+                  }
+                ],
+                "timeout": 1800614399000,
+                "timeout_continuation": {
+                  "pay": 71500000,
+                  "from_account": {
+                    "role_token": "Chi"
+                  },
+                  "to": {
+                    "party": {
+                      "role_token": "Chi"
+                    }
+                  },
+                  "token": {
+                    "currency_symbol": "",
+                    "token_name": ""
+                  },
+                  "then": "close"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "timeout": 1799404799000,
+      "timeout_continuation": "close"
+    },
+    "normalization_notes": []
+  },
+  "first_structural_pass_iter": 5,
+  "first_semantic_pass_iter": 5,
+  "first_logic_pass_iter": 5,
+  "wall_seconds": 2065.300800900033,
+  "agent_seconds": 2036.0853975000791,
+  "overhead_seconds": 3.0344518999918364,
+  "seconds_per_iteration": 407.2170795000158,
+  "llm_calls": 17,
+  "prompt_tokens": 28632,
+  "completion_tokens": 80213,
+  "llm_seconds": 2062.265098800068,
+  "cost_usd": 0,
+  "cost_source": "provider",
+  "call_log": [
+    {
+      "latency_seconds": 122.69318199995905,
+      "prompt_tokens": 1423,
+      "completion_tokens": 1847,
+      "cost": 0,
+      "model": "nvidia/nemotron-3-ultra-550b-a55b:free"
+    },
+    {
+      "latency_seconds": 230.0098334000213,
+      "prompt_tokens": 1558,
+      "completion_tokens": 3416,
+      "cost": 0,
+      "model": "nvidia/nemotron-3-ultra-550b-a55b:free"
+    },
+    {
+      "latency_seconds": 169.9165149999899,
+      "prompt_tokens": 1630,
+      "completion_tokens": 6665,
+      "cost": 0,
+      "model": "nvidia/nemotron-3-ultra-550b-a55b:free"
+    },
+    {
+      "latency_seconds": 106.06028810003772,
+      "prompt_tokens": 1669,
+      "completion_tokens": 5750,
+      "cost": 0,
+      "model": "nvidia/nemotron-3-ultra-550b-a55b:free"
+    },
+    {
+      "latency_seconds": 381.7168029000168,
+      "prompt_tokens": 1669,
+      "completion_tokens": 8000,
+      "cost": 0,
+      "model": "nvidia/nemotron-3-ultra-550b-a55b:free"
+    },
+    {
+      "latency_seconds": 50.07014980004169,
+      "prompt_tokens": 3160,
+      "completion_tokens": 3415,
+      "cost": 0,
+      "model": "nvidia/nemotron-3-ultra-550b-a55b:free"
+    },
+    {
+      "latency_seconds": 106.31452010001522,
+      "prompt_tokens": 1669,
+      "completion_tokens": 8000,
+      "cost": 0,
+      "model": "nvidia/nemotron-3-ultra-550b-a55b:free"
+    },
+    {
+      "latency_seconds": 308.58280469995225,
+      "prompt_tokens": 1922,
+      "completion_tokens": 8000,
+      "cost": 0,
+      "model": "nvidia/nemotron-3-ultra-550b-a55b:free"
+    },
+    {
+      "latency_seconds": 220.1395521000377,
+      "prompt_tokens": 1669,
+      "completion_tokens": 8000,
+      "cost": 0,
+      "model": "nvidia/nemotron-3-ultra-550b-a55b:free"
+    },
+    {
+      "latency_seconds": 117.97345589997713,
+      "prompt_tokens": 2812,
+      "completion_tokens": 8000,
+      "cost": 0,
+      "model": "nvidia/nemotron-3-ultra-550b-a55b:free"
+    },
+    {
+      "latency_seconds": 95.98310920002405,
+      "prompt_tokens": 1669,
+      "completion_tokens": 8000,
+      "cost": 0,
+      "model": "nvidia/nemotron-3-ultra-550b-a55b:free"
+    },
+    {
+      "latency_seconds": 73.38744620000944,
+      "prompt_tokens": 3258,
+      "completion_tokens": 5383,
+      "cost": 0,
+      "model": "nvidia/nemotron-3-ultra-550b-a55b:free"
+    },
+    {
+      "latency_seconds": 50.203286200005095,
+      "prompt_tokens": 3629,
+      "completion_tokens": 4412,
+      "cost": 0,
+      "model": "nvidia/nemotron-3-ultra-550b-a55b:free"
+    },
+    {
+      "latency_seconds": 5.6941260999883525,
+      "prompt_tokens": 223,
+      "completion_tokens": 400,
+      "cost": 0,
+      "model": "nvidia/nemotron-3-ultra-550b-a55b:free"
+    },
+    {
+      "latency_seconds": 13.164276900002733,
+      "prompt_tokens": 222,
+      "completion_tokens": 292,
+      "cost": 0,
+      "model": "nvidia/nemotron-3-ultra-550b-a55b:free"
+    },
+    {
+      "latency_seconds": 6.739691499969922,
+      "prompt_tokens": 221,
+      "completion_tokens": 400,
+      "cost": 0,
+      "model": "nvidia/nemotron-3-ultra-550b-a55b:free"
+    },
+    {
+      "latency_seconds": 3.6160587000194937,
+      "prompt_tokens": 229,
+      "completion_tokens": 233,
+      "cost": 0,
+      "model": "nvidia/nemotron-3-ultra-550b-a55b:free"
+    }
+  ],
+  "agent_llm_calls": 13,
+  "user_llm_calls": 4,
+  "complexity": {
+    "ast_nodes": 27,
+    "depth": 8,
+    "when_count": 5,
+    "case_count": 9,
+    "path_count": 10,
+    "party_count": 0,
+    "constructors": [
+      "close",
+      "pay",
+      "when"
+    ]
+  },
+  "evaluation": {
+    "structure_accuracy": 1.0,
+    "timing_accuracy": 1.0,
+    "scenario_accuracy": 0.0,
+    "overall_accuracy": 0.4,
+    "strict_correct": false,
+    "false_convergence": true,
+    "checks": [
+      {
+        "group": "structure",
+        "name": "party_count",
+        "passed": true
+      },
+      {
+        "group": "structure",
+        "name": "token:",
+        "passed": true
+      },
+      {
+        "group": "structure",
+        "name": "amount:71500000",
+        "passed": true
+      },
+      {
+        "group": "structure",
+        "name": "amount:143000000",
+        "passed": true
+      },
+      {
+        "group": "timing",
+        "name": "distinct_deadlines",
+        "passed": true
+      },
+      {
+        "group": "timing",
+        "name": "gap:604800000",
+        "passed": true
+      },
+      {
+        "group": "timing",
+        "name": "gap:604800000",
+        "passed": true
+      },
+      {
+        "group": "scenarios",
+        "name": "both_accepted",
+        "passed": false,
+        "reason": "input_rejected"
+      },
+      {
+        "group": "scenarios",
+        "name": "first_only",
+        "passed": false,
+        "reason": "input_rejected"
+      }
+    ],
+    "mapping": {
+      "Chi": "Chi",
+      "Hà": "Ha"
+    },
+    "diagnostics": []
+  },
+  "judge": null,
+  "contract_description": "1. Before 1799404799000: Chi sends 143000000 ADA base units to Chi; Before 1800009599000: Chi chooses approve1 in [{'from': 1, 'to': 1}]; Pay 71500000 ADA base units from Chi to Ha; Before 1800614399000: Chi chooses approve2 in [{'from': 1, 'to': 1}]; Pay 71500000 ADA base units from Chi to Ha; Close: remaining balances return to account owners.\n2. Before 1799404799000: Chi sends 143000000 ADA base units to Chi; Before 1800009599000: Chi chooses approve1 in [{'from': 1, 'to': 1}]; Pay 71500000 ADA base units from Chi to Ha; Before 1800614399000: Chi chooses reject2 in [{'from': 0, 'to': 0}]; Pay 71500000 ADA base units from Chi to Chi; Close: remaining balances return to account owners.\n3. Before 1799404799000: Chi sends 143000000 ADA base units to Chi; Before 1800009599000: Chi chooses approve1 in [{'from': 1, 'to': 1}]; Pay 71500000 ADA base units from Chi to Ha; At/after 1800614399000: timeout path; Pay 71500000 ADA base units from Chi to Chi; Close: remaining balances return to account owners.\n4. Before 1799404799000: Chi sends 143000000 ADA base units to Chi; Before 1800009599000: Chi chooses reject1 in [{'from': 0, 'to': 0}]; Pay 71500000 ADA base units from Chi to Chi; Before 1800614399000: Chi chooses approve2 in [{'from': 1, 'to': 1}]; Pay 71500000 ADA base units from Chi to Ha; Close: remaining balances return to account owners.\n5. Before 1799404799000: Chi sends 143000000 ADA base units to Chi; Before 1800009599000: Chi chooses reject1 in [{'from': 0, 'to': 0}]; Pay 71500000 ADA base units from Chi to Chi; Before 1800614399000: Chi chooses reject2 in [{'from': 0, 'to': 0}]; Pay 71500000 ADA base units from Chi to Chi; Close: remaining balances return to account owners.\n6. Before 1799404799000: Chi sends 143000000 ADA base units to Chi; Before 1800009599000: Chi chooses reject1 in [{'from': 0, 'to': 0}]; Pay 71500000 ADA base units from Chi to Chi; At/after 1800614399000: timeout path; Pay 71500000 ADA base units from Chi to Chi; Close: remaining balances return to account owners.\n7. Before 1799404799000: Chi sends 143000000 ADA base units to Chi; At/after 1800009599000: timeout path; Pay 71500000 ADA base units from Chi to Chi; Before 1800614399000: Chi chooses approve2 in [{'from': 1, 'to': 1}]; Pay 71500000 ADA base units from Chi to Ha; Close: remaining balances return to account owners.\n8. Before 1799404799000: Chi sends 143000000 ADA base units to Chi; At/after 1800009599000: timeout path; Pay 71500000 ADA base units from Chi to Chi; Before 1800614399000: Chi chooses reject2 in [{'from': 0, 'to': 0}]; Pay 71500000 ADA base units from Chi to Chi; Close: remaining balances return to account owners.\n9. Before 1799404799000: Chi sends 143000000 ADA base units to Chi; At/after 1800009599000: timeout path; Pay 71500000 ADA base units from Chi to Chi; At/after 1800614399000: timeout path; Pay 71500000 ADA base units from Chi to Chi; Close: remaining balances return to account owners.\n10. At/after 1799404799000: timeout path; Close: remaining balances return to account owners.",
+  "self_reported_semantic_score": 95.0,
+  "questions": 4,
+  "answers": 4,
+  "question_redundancy": "unknown",
+  "git_commit": "a7cd9c690dabe6f475d9358f8beecb07467f8c26",
+  "dataset_sha256": "e05c23f43a2bd025258ad5e2fa77569874357f79173e98863a8f8d48ee9a907a",
+  "model": "nvidia/nemotron-3-ultra-550b-a55b:free",
+  "judge_model": "nvidia/nemotron-3-ultra-550b-a55b:free",
+  "user_model": "nvidia/nemotron-3-ultra-550b-a55b:free",
+  "provider": "https://openrouter.ai/api/v1",
+  "workers": 3,
+  "limits": {
+    "max_iterations": 500,
+    "max_llm_calls": 2000,
+    "wall_clock": 5400.0
+  },
+  "started_at": "2026-09-25T03:38:53.886617+00:00",
+  "error": null
+}

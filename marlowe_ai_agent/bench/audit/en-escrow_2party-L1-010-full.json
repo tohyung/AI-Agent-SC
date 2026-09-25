@@ -1,0 +1,710 @@
+{
+  "case_id": "en-escrow_2party-L1-010",
+  "attempt": 1,
+  "prompt": "Jack from Nha Trang here; my small shop is selling my camera to Kate for 287 ADA. Kate sends the money by 20/01/2027; if they approve the camera by seven days after the first deadline, Noah receives it; otherwise Kate gets it back.",
+  "run_kind": "timing_probe",
+  "language": "en",
+  "type": "escrow_2party",
+  "difficulty": 1,
+  "info_mode": "complete",
+  "challenges": [
+    "relative_time",
+    "refund_on_timeout"
+  ],
+  "status": "done",
+  "stop_reason": "ok",
+  "iterations": 2,
+  "converged": true,
+  "iteration_history": [
+    {
+      "iteration": 1,
+      "structural": "skip",
+      "semantic": "skip",
+      "logic": "skip",
+      "logic_errors": 0,
+      "logic_warnings": 0,
+      "stall_count": 0,
+      "llm_calls": 1,
+      "semantic_generation": 1,
+      "semantic_history_entries": 0,
+      "elapsed_seconds": 174.839
+    },
+    {
+      "iteration": 2,
+      "structural": "pass",
+      "semantic": "pass",
+      "logic": "pass",
+      "logic_errors": 0,
+      "logic_warnings": 0,
+      "stall_count": 0,
+      "llm_calls": 3,
+      "semantic_generation": 1,
+      "semantic_history_entries": 1,
+      "elapsed_seconds": 155.704
+    }
+  ],
+  "convergence_path": " -> S+S+L+",
+  "semantic_history": [
+    {
+      "iteration": 2,
+      "semantic_generation": 1,
+      "semantic_fingerprint": "da0307f35e8573d2b41a2b9cf3a636f38187bea316484df761c97c97abc4a40d",
+      "prompt_fingerprint": "d32a0a6036ce6e361616414793eca3b3521ed47734c4eda3d1ab0188e4f0b9ad",
+      "contract_fingerprint": "c88153b09dd4b09dcc8ff9c69fde79012d8a9f50171f46e085404f4d3ad119e4",
+      "passed": true,
+      "user_answered": false,
+      "answer_source": null
+    }
+  ],
+  "trace": [
+    {
+      "node": "pipeline",
+      "status": "start",
+      "message": "Đã nhận prompt.",
+      "data": {
+        "max_iterations": 500
+      }
+    },
+    {
+      "node": "node_1_prompt_to_draft",
+      "status": "start",
+      "message": "Đang sinh draft.",
+      "data": {
+        "iteration": 1
+      }
+    },
+    {
+      "node": "node_1_prompt_to_draft",
+      "status": "done",
+      "message": "Đã sinh draft.",
+      "data": {
+        "reasoning_narrative": "Người dùng Jack muốn bán camera cho Kate với giá 287 ADA. Kate phải gửi tiền trước 20/01/2027. Sau đó Kate có 7 ngày để duyệt camera; nếu duyệt thì Noah nhận tiền, không thì Kate được hoàn tiền. Cần làm rõ Noah là ai và chính xác mốc thời gian.",
+        "intent": "escrow sale with approval period"
+      }
+    },
+    {
+      "node": "structural_gate",
+      "status": "skipped",
+      "message": "Chưa có AST do thiếu thông tin nghiệp vụ.",
+      "data": {}
+    },
+    {
+      "node": "pipeline",
+      "status": "semantic_reset",
+      "message": "Đã reset semantic stall state sau khi nhận thông tin mới từ người dùng.",
+      "data": {
+        "semantic_generation": 1,
+        "history_entries": 0,
+        "answered_questions_count": 4,
+        "answer_source": "empty_contract"
+      }
+    },
+    {
+      "node": "pipeline",
+      "status": "iteration",
+      "message": "Đã hoàn tất lượt xử lý.",
+      "data": {
+        "iteration": 1,
+        "structural": "skip",
+        "semantic": "skip",
+        "logic": "skip",
+        "logic_errors": 0,
+        "logic_warnings": 0,
+        "stall_count": 0,
+        "llm_calls": 1,
+        "semantic_generation": 1,
+        "semantic_history_entries": 0,
+        "elapsed_seconds": 174.839
+      }
+    },
+    {
+      "node": "node_1_prompt_to_draft",
+      "status": "start",
+      "message": "Đang sinh draft.",
+      "data": {
+        "iteration": 2
+      }
+    },
+    {
+      "node": "node_1_prompt_to_draft",
+      "status": "done",
+      "message": "Đã sinh draft.",
+      "data": {
+        "reasoning_narrative": "Từ mô tả người dùng, Jack bán camera cho Kate với giá 287 ADA. Kate phải gửi tiền trước hạn chót 20/01/2027 (cuối ngày UTC). Sau khi nhận tiền, Kate có 7 ngày (tới 27/01/2027) để xác nhận hàng. Nếu Kate chọn approve (giá trị 1) thì hợp đồng trả tiền cho Jack; nếu chọn reject (giá trị 0) hoặc không làm gì trước hạn chót thì tiền tự động hoàn về cho Kate. Nếu Kate không nộp tiền trước hạn chót đầu tiên thì hợp đồng đóng lại không có giao dịch nào. Ta giả định Noah chính là Jack (người bán) và người duyệt là Kate (người mua) – lựa chọn đơn giản nhất.",
+        "intent": "Tạo hợp đồng escrow cho giao dịch bán camera: Jack (người bán) nhận tiền từ Kate (người mua) sau khi Kate duyệt hàng trong 7 ngày, ngược lại hoàn tiền cho Kate."
+      }
+    },
+    {
+      "node": "structural_gate",
+      "status": "pass",
+      "message": "AST hợp lệ.",
+      "data": {}
+    },
+    {
+      "node": "node_2_semantic_verification",
+      "status": "start",
+      "message": "Đang kiểm semantic.",
+      "data": {}
+    },
+    {
+      "node": "node_2_semantic_verification",
+      "status": "pass",
+      "message": "Đã kiểm semantic.",
+      "data": {
+        "findings": [
+          "Mốc thời gian deposit và decision timeout đúng 7 ngày cách nhau.",
+          "Số tiền 287 ADA = 287,000,000 lovelace chính xác.",
+          "Cấu trúc when lồng nhau xử lý đúng luồng nộp tiền -> duyệt -> thanh toán/hoàn tiền.",
+          "Timeout continuation của decision khi không chọn approve/reject trả tiền về Kate.",
+          "Không có xử lý cho trường hợp Kate nộp tiền nhưng không đủ 287 ADA (Marlowe yêu cầu exact amount)."
+        ],
+        "reasoning_narrative": "Kiểm tra hợp đồng Marlowe thấy logic escrow đúng: timeout nộp tiền 1800489599000 (hết 20/01/2027 UTC), timeout duyệt 1801094399000 (hết 27/01/2027 UTC). Kate deposit 287,000,000 lovelace vào tài khoản mình. Nếu nộp thành công, Kate có 2 lựa chọn 'approve' (giá trị 1) hoặc 'reject' (giá trị 0). Approve: pay 287M lovelace từ tài khoản Kate sang Jack. Reject hoặc timeout: pay 287M lovelace từ tài khoản Kate về Kate (hoàn tiền). Nếu hết hạn nộp tiền: close không chuyển khoản. Số lượng, token, vai trò, mốc thời gian đều chính xác theo assumptions."
+      }
+    },
+    {
+      "node": "node_3_logic_graph_verification",
+      "status": "start",
+      "message": "Đang kiểm logic graph.",
+      "data": {}
+    },
+    {
+      "node": "node_3_logic_graph_verification",
+      "status": "pass",
+      "message": "Đã kiểm logic graph.",
+      "data": {
+        "findings": [
+          "Logic graph pass."
+        ],
+        "errors": [],
+        "warnings": [],
+        "reasoning_narrative": "Node 3 đã kiểm tra 9 node, 4 đường đi; có 0 cảnh báo."
+      }
+    },
+    {
+      "node": "pipeline",
+      "status": "iteration",
+      "message": "Đã hoàn tất lượt xử lý.",
+      "data": {
+        "iteration": 2,
+        "structural": "pass",
+        "semantic": "pass",
+        "logic": "pass",
+        "logic_errors": 0,
+        "logic_warnings": 0,
+        "stall_count": 0,
+        "llm_calls": 3,
+        "semantic_generation": 1,
+        "semantic_history_entries": 1,
+        "elapsed_seconds": 155.704
+      }
+    },
+    {
+      "node": "pipeline",
+      "status": "done",
+      "message": "Workflow đã hoàn tất.",
+      "data": {
+        "iterations": 2,
+        "stop_reason": "ok"
+      }
+    }
+  ],
+  "qa_transcript": [
+    {
+      "question": "Noah là ai? Có phải là Jack (người bán) hay một bên thứ ba?",
+      "answer": "I had not considered that; please choose the simplest option.",
+      "time": "2026-09-25T03:41:22.318103+00:00",
+      "fallback_answer": true,
+      "unspecified_answer": true,
+      "seconds": 5.164841400051955
+    },
+    {
+      "question": "Mốc thời gian nộp tiền (20/01/2027) có phải là hết ngày 20/01/2027 (23:59:59 UTC) không?",
+      "answer": "I had not considered that; please choose the simplest option.",
+      "time": "2026-09-25T03:41:36.196019+00:00",
+      "fallback_answer": true,
+      "unspecified_answer": true,
+      "seconds": 13.877886099973693
+    },
+    {
+      "question": "Mốc thời gian duyệt (7 ngày sau) có phải là hết ngày 27/01/2027 không?",
+      "answer": "I had not considered that; please choose the simplest option.",
+      "time": "2026-09-25T03:41:41.038128+00:00",
+      "fallback_answer": true,
+      "unspecified_answer": true,
+      "seconds": 4.8420777000137605
+    },
+    {
+      "question": "Ai là người thực hiện hành động 'approve'? Là Kate (người mua) hay Jack (người bán)?",
+      "answer": "I had not considered that; please choose the simplest option.",
+      "time": "2026-09-25T03:41:49.281599+00:00",
+      "fallback_answer": true,
+      "unspecified_answer": true,
+      "seconds": 8.243446799984667
+    }
+  ],
+  "contract": {
+    "when": [
+      {
+        "case": {
+          "party": {
+            "role_token": "Kate"
+          },
+          "deposits": 287000000,
+          "of_token": {
+            "currency_symbol": "",
+            "token_name": ""
+          },
+          "into_account": {
+            "role_token": "Kate"
+          }
+        },
+        "then": {
+          "when": [
+            {
+              "case": {
+                "for_choice": {
+                  "choice_name": "approve",
+                  "choice_owner": {
+                    "role_token": "Kate"
+                  }
+                },
+                "choose_between": [
+                  {
+                    "from": 1,
+                    "to": 1
+                  }
+                ]
+              },
+              "then": {
+                "pay": 287000000,
+                "from_account": {
+                  "role_token": "Kate"
+                },
+                "to": {
+                  "party": {
+                    "role_token": "Jack"
+                  }
+                },
+                "token": {
+                  "currency_symbol": "",
+                  "token_name": ""
+                },
+                "then": "close"
+              }
+            },
+            {
+              "case": {
+                "for_choice": {
+                  "choice_name": "reject",
+                  "choice_owner": {
+                    "role_token": "Kate"
+                  }
+                },
+                "choose_between": [
+                  {
+                    "from": 0,
+                    "to": 0
+                  }
+                ]
+              },
+              "then": {
+                "pay": 287000000,
+                "from_account": {
+                  "role_token": "Kate"
+                },
+                "to": {
+                  "party": {
+                    "role_token": "Kate"
+                  }
+                },
+                "token": {
+                  "currency_symbol": "",
+                  "token_name": ""
+                },
+                "then": "close"
+              }
+            }
+          ],
+          "timeout": 1801094399000,
+          "timeout_continuation": {
+            "pay": 287000000,
+            "from_account": {
+              "role_token": "Kate"
+            },
+            "to": {
+              "party": {
+                "role_token": "Kate"
+              }
+            },
+            "token": {
+              "currency_symbol": "",
+              "token_name": ""
+            },
+            "then": "close"
+          }
+        }
+      }
+    ],
+    "timeout": 1800489599000,
+    "timeout_continuation": "close"
+  },
+  "draft": {
+    "original_prompt": "Jack from Nha Trang here; my small shop is selling my camera to Kate for 287 ADA. Kate sends the money by 20/01/2027; if they approve the camera by seven days after the first deadline, Noah receives it; otherwise Kate gets it back.\n\nThong tin bo sung tu nguoi dung:\n- Noah là ai? Có phải là Jack (người bán) hay một bên thứ ba?\n  Tra loi: I had not considered that; please choose the simplest option.\n- Mốc thời gian nộp tiền (20/01/2027) có phải là hết ngày 20/01/2027 (23:59:59 UTC) không?\n  Tra loi: I had not considered that; please choose the simplest option.\n- Mốc thời gian duyệt (7 ngày sau) có phải là hết ngày 27/01/2027 không?\n  Tra loi: I had not considered that; please choose the simplest option.\n- Ai là người thực hiện hành động 'approve'? Là Kate (người mua) hay Jack (người bán)?\n  Tra loi: I had not considered that; please choose the simplest option.",
+    "intent": "Tạo hợp đồng escrow cho giao dịch bán camera: Jack (người bán) nhận tiền từ Kate (người mua) sau khi Kate duyệt hàng trong 7 ngày, ngược lại hoàn tiền cho Kate.",
+    "parties": [
+      {
+        "role": "seller",
+        "name": "Jack"
+      },
+      {
+        "role": "buyer",
+        "name": "Kate"
+      }
+    ],
+    "amount": 287000000,
+    "token": "ADA",
+    "deposit_timeout": 1800489599000,
+    "decision_timeout": 1801094399000,
+    "clauses": [
+      "Kate nộp 287 ADA vào tài khoản hợp đồng trước 20/01/2027 23:59:59 UTC.",
+      "Sau khi nộp tiền, Kate có 7 ngày (tới 27/01/2027 23:59:59 UTC) để thực hiện lựa chọn 'approve' (1) hoặc 'reject' (0).",
+      "Nếu Kate chọn approve: 287 ADA chuyển từ tài khoản Kate sang Jack.",
+      "Nếu Kate chọn reject hoặc hết hạn duyệt: 287 ADA hoàn về tài khoản Kate.",
+      "Nếu Kate không nộp tiền trước hạn chót đầu tiên: hợp đồng kết thúc không có chuyển khoản."
+    ],
+    "assumptions": [
+      "Noah là Jack (người bán).",
+      "Hạn chót nộp tiền là hết ngày 20/01/2027 (23:59:59 UTC).",
+      "Hạn chót duyệt là hết ngày 27/01/2027 (23:59:59 UTC).",
+      "Người thực hiện hành động approve/reject là Kate (người mua).",
+      "Sử dụng ADA (lovelace) làm token, currency_symbol rỗng."
+    ],
+    "clarification_questions": [],
+    "reasoning_summary": "Hợp đồng escrow đơn giản: Kate nộp 287 ADA trước 20/01/2027, sau đó có 7 ngày để chọn 'approve' hoặc 'reject'. Nếu approve thì tiền chuyển cho Jack,reject hoặc hết hạn thì hoàn tiền cho Kate.",
+    "reasoning_narrative": "Từ mô tả người dùng, Jack bán camera cho Kate với giá 287 ADA. Kate phải gửi tiền trước hạn chót 20/01/2027 (cuối ngày UTC). Sau khi nhận tiền, Kate có 7 ngày (tới 27/01/2027) để xác nhận hàng. Nếu Kate chọn approve (giá trị 1) thì hợp đồng trả tiền cho Jack; nếu chọn reject (giá trị 0) hoặc không làm gì trước hạn chót thì tiền tự động hoàn về cho Kate. Nếu Kate không nộp tiền trước hạn chót đầu tiên thì hợp đồng đóng lại không có giao dịch nào. Ta giả định Noah chính là Jack (người bán) và người duyệt là Kate (người mua) – lựa chọn đơn giản nhất.",
+    "contract_plan": {
+      "nodes": [
+        {
+          "id": "deposit",
+          "label": "Kate nộp tiền"
+        },
+        {
+          "id": "approval",
+          "label": "Kate duyệt/hủy trong 7 ngày"
+        },
+        {
+          "id": "pay_jack",
+          "label": "Chuyển tiền cho Jack"
+        },
+        {
+          "id": "refund_kate",
+          "label": "Hoàn tiền cho Kate"
+        },
+        {
+          "id": "close_no_deposit",
+          "label": "Đóng hợp đồng (không nộp tiền)"
+        }
+      ],
+      "edges": [
+        {
+          "from": "deposit",
+          "to": "approval",
+          "label": "nộp thành công"
+        },
+        {
+          "from": "approval",
+          "to": "pay_jack",
+          "label": "approve (1)"
+        },
+        {
+          "from": "approval",
+          "to": "refund_kate",
+          "label": "reject (0)"
+        },
+        {
+          "from": "approval",
+          "to": "refund_kate",
+          "label": "hết hạn duyệt"
+        },
+        {
+          "from": "deposit",
+          "to": "close_no_deposit",
+          "label": "hết hạn nộp tiền"
+        }
+      ],
+      "notes": [
+        "Mỗi node đại diện cho một giai đoạn trong hợp đồng Marlowe."
+      ]
+    },
+    "marlowe_contract": {
+      "when": [
+        {
+          "case": {
+            "party": {
+              "role_token": "Kate"
+            },
+            "deposits": 287000000,
+            "of_token": {
+              "currency_symbol": "",
+              "token_name": ""
+            },
+            "into_account": {
+              "role_token": "Kate"
+            }
+          },
+          "then": {
+            "when": [
+              {
+                "case": {
+                  "for_choice": {
+                    "choice_name": "approve",
+                    "choice_owner": {
+                      "role_token": "Kate"
+                    }
+                  },
+                  "choose_between": [
+                    {
+                      "from": 1,
+                      "to": 1
+                    }
+                  ]
+                },
+                "then": {
+                  "pay": 287000000,
+                  "from_account": {
+                    "role_token": "Kate"
+                  },
+                  "to": {
+                    "party": {
+                      "role_token": "Jack"
+                    }
+                  },
+                  "token": {
+                    "currency_symbol": "",
+                    "token_name": ""
+                  },
+                  "then": "close"
+                }
+              },
+              {
+                "case": {
+                  "for_choice": {
+                    "choice_name": "reject",
+                    "choice_owner": {
+                      "role_token": "Kate"
+                    }
+                  },
+                  "choose_between": [
+                    {
+                      "from": 0,
+                      "to": 0
+                    }
+                  ]
+                },
+                "then": {
+                  "pay": 287000000,
+                  "from_account": {
+                    "role_token": "Kate"
+                  },
+                  "to": {
+                    "party": {
+                      "role_token": "Kate"
+                    }
+                  },
+                  "token": {
+                    "currency_symbol": "",
+                    "token_name": ""
+                  },
+                  "then": "close"
+                }
+              }
+            ],
+            "timeout": 1801094399000,
+            "timeout_continuation": {
+              "pay": 287000000,
+              "from_account": {
+                "role_token": "Kate"
+              },
+              "to": {
+                "party": {
+                  "role_token": "Kate"
+                }
+              },
+              "token": {
+                "currency_symbol": "",
+                "token_name": ""
+              },
+              "then": "close"
+            }
+          }
+        }
+      ],
+      "timeout": 1800489599000,
+      "timeout_continuation": "close"
+    },
+    "normalization_notes": []
+  },
+  "first_structural_pass_iter": 2,
+  "first_semantic_pass_iter": 2,
+  "first_logic_pass_iter": 2,
+  "wall_seconds": 331.1004145000479,
+  "agent_seconds": 298.9716276000254,
+  "overhead_seconds": 1.533498000120744,
+  "seconds_per_iteration": 149.4858138000127,
+  "llm_calls": 7,
+  "prompt_tokens": 5831,
+  "completion_tokens": 10992,
+  "llm_seconds": 329.565939999884,
+  "cost_usd": 0,
+  "cost_source": "provider",
+  "call_log": [
+    {
+      "latency_seconds": 141.73475760000292,
+      "prompt_tokens": 1392,
+      "completion_tokens": 4040,
+      "cost": 0,
+      "model": "nvidia/nemotron-3-ultra-550b-a55b:free"
+    },
+    {
+      "latency_seconds": 108.36309199995594,
+      "prompt_tokens": 1595,
+      "completion_tokens": 3638,
+      "cost": 0,
+      "model": "nvidia/nemotron-3-ultra-550b-a55b:free"
+    },
+    {
+      "latency_seconds": 47.34027999994578,
+      "prompt_tokens": 2027,
+      "completion_tokens": 1758,
+      "cost": 0,
+      "model": "nvidia/nemotron-3-ultra-550b-a55b:free"
+    },
+    {
+      "latency_seconds": 5.164670999976806,
+      "prompt_tokens": 193,
+      "completion_tokens": 400,
+      "cost": 0,
+      "model": "nvidia/nemotron-3-ultra-550b-a55b:free"
+    },
+    {
+      "latency_seconds": 13.877773599990178,
+      "prompt_tokens": 222,
+      "completion_tokens": 400,
+      "cost": 0,
+      "model": "nvidia/nemotron-3-ultra-550b-a55b:free"
+    },
+    {
+      "latency_seconds": 4.8419978999882005,
+      "prompt_tokens": 202,
+      "completion_tokens": 400,
+      "cost": 0,
+      "model": "nvidia/nemotron-3-ultra-550b-a55b:free"
+    },
+    {
+      "latency_seconds": 8.243367900024168,
+      "prompt_tokens": 200,
+      "completion_tokens": 356,
+      "cost": 0,
+      "model": "nvidia/nemotron-3-ultra-550b-a55b:free"
+    }
+  ],
+  "agent_llm_calls": 3,
+  "user_llm_calls": 4,
+  "complexity": {
+    "ast_nodes": 9,
+    "depth": 5,
+    "when_count": 2,
+    "case_count": 3,
+    "path_count": 4,
+    "party_count": 0,
+    "constructors": [
+      "close",
+      "pay",
+      "when"
+    ]
+  },
+  "evaluation": {
+    "structure_accuracy": 1.0,
+    "timing_accuracy": 1.0,
+    "scenario_accuracy": 1.0,
+    "overall_accuracy": 1.0,
+    "strict_correct": true,
+    "false_convergence": false,
+    "checks": [
+      {
+        "group": "structure",
+        "name": "party_count",
+        "passed": true
+      },
+      {
+        "group": "structure",
+        "name": "token:",
+        "passed": true
+      },
+      {
+        "group": "structure",
+        "name": "amount:287000000",
+        "passed": true
+      },
+      {
+        "group": "timing",
+        "name": "distinct_deadlines",
+        "passed": true
+      },
+      {
+        "group": "timing",
+        "name": "gap:604800000",
+        "passed": true
+      },
+      {
+        "group": "scenarios",
+        "name": "approved",
+        "passed": true,
+        "reason": "ok"
+      },
+      {
+        "group": "scenarios",
+        "name": "rejected",
+        "passed": true,
+        "reason": "ok"
+      },
+      {
+        "group": "scenarios",
+        "name": "decision_timeout",
+        "passed": true,
+        "reason": "ok"
+      },
+      {
+        "group": "scenarios",
+        "name": "no_deposit",
+        "passed": true,
+        "reason": "ok"
+      }
+    ],
+    "mapping": {
+      "Kate": "Kate",
+      "Noah": "Jack"
+    },
+    "diagnostics": []
+  },
+  "judge": null,
+  "contract_description": "1. Before 1800489599000: Kate sends 287000000 ADA base units to Kate; Before 1801094399000: Kate chooses approve in [{'from': 1, 'to': 1}]; Pay 287000000 ADA base units from Kate to Jack; Close: remaining balances return to account owners.\n2. Before 1800489599000: Kate sends 287000000 ADA base units to Kate; Before 1801094399000: Kate chooses reject in [{'from': 0, 'to': 0}]; Pay 287000000 ADA base units from Kate to Kate; Close: remaining balances return to account owners.\n3. Before 1800489599000: Kate sends 287000000 ADA base units to Kate; At/after 1801094399000: timeout path; Pay 287000000 ADA base units from Kate to Kate; Close: remaining balances return to account owners.\n4. At/after 1800489599000: timeout path; Close: remaining balances return to account owners.",
+  "self_reported_semantic_score": 95.0,
+  "questions": 4,
+  "answers": 4,
+  "question_redundancy": "unknown",
+  "git_commit": "a7cd9c690dabe6f475d9358f8beecb07467f8c26",
+  "dataset_sha256": "e05c23f43a2bd025258ad5e2fa77569874357f79173e98863a8f8d48ee9a907a",
+  "model": "nvidia/nemotron-3-ultra-550b-a55b:free",
+  "judge_model": "nvidia/nemotron-3-ultra-550b-a55b:free",
+  "user_model": "nvidia/nemotron-3-ultra-550b-a55b:free",
+  "provider": "https://openrouter.ai/api/v1",
+  "workers": 3,
+  "limits": {
+    "max_iterations": 500,
+    "max_llm_calls": 2000,
+    "wall_clock": 5400.0
+  },
+  "started_at": "2026-09-25T03:38:53.886198+00:00",
+  "error": null
+}

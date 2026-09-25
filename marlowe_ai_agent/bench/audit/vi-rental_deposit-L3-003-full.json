@@ -1,0 +1,625 @@
+{
+  "case_id": "vi-rental_deposit-L3-003",
+  "attempt": 1,
+  "prompt": "Sơn ở Huế đây; bác muốn nhờ chút, đang Thảo thuê phòng của Uyên và đặt cọc 56 ADA trước ngày 15/01/2027. Đến ngày 22/01/2027 nếu không hư hại thì hoàn đủ; nếu có hư hại, Uyên giữ 7 ADA và trả phần còn lại cho Thảo.",
+  "run_kind": "timing_probe",
+  "language": "vi",
+  "type": "rental_deposit",
+  "difficulty": 3,
+  "info_mode": "complete",
+  "challenges": [
+    "absolute_date"
+  ],
+  "status": "done",
+  "stop_reason": "ok",
+  "iterations": 1,
+  "converged": true,
+  "iteration_history": [
+    {
+      "iteration": 1,
+      "structural": "pass",
+      "semantic": "pass",
+      "logic": "pass",
+      "logic_errors": 0,
+      "logic_warnings": 0,
+      "stall_count": 0,
+      "llm_calls": 2,
+      "semantic_generation": 0,
+      "semantic_history_entries": 1,
+      "elapsed_seconds": 374.827
+    }
+  ],
+  "convergence_path": "S+S+L+",
+  "semantic_history": [
+    {
+      "iteration": 1,
+      "semantic_generation": 0,
+      "semantic_fingerprint": "2752835b090332f72810027977230bb222b2cb3f74a868e205a8aaad9201ef33",
+      "prompt_fingerprint": "cb58e2677e18429ae2b0798b3b7ea3f8889b0d495cd76a8b97d9995a710321f5",
+      "contract_fingerprint": "e2f869b966ef302a60451ebc84343669f83e848a720e4574ef915a7bdbd73158",
+      "passed": true,
+      "user_answered": false,
+      "answer_source": null
+    }
+  ],
+  "trace": [
+    {
+      "node": "pipeline",
+      "status": "start",
+      "message": "Đã nhận prompt.",
+      "data": {
+        "max_iterations": 500
+      }
+    },
+    {
+      "node": "node_1_prompt_to_draft",
+      "status": "start",
+      "message": "Đang sinh draft.",
+      "data": {
+        "iteration": 1
+      }
+    },
+    {
+      "node": "node_1_prompt_to_draft",
+      "status": "done",
+      "message": "Đã sinh draft.",
+      "data": {
+        "reasoning_narrative": "Sơn yêu cầu tạo hợp đồng escrow đặt cọc 56 ADA cho Thảo thuê phòng của Uyên. Thảo phải nộp cọc trước 15/01/2027. Vào 22/01/2027, Uyên quyết định có hư hại hay không: nếu không, hoàn toàn bộ 56 ADA cho Thảo; nếu có, Uyên giữ 7 ADA và trả 49 ADA cho Thảo. Hợp đồng sử dụng hai giai đoạn When: giai đoạn chờ nộp cọc, giai đoạn chờ quyết định. Nếu quá hạn nộp cọc thì đóng hợp đồng. Nếu Uyên không quyết định kịp thì mặc định hoàn tiền cho Thảo.",
+        "intent": "Tạo hợp đồng escrow đặt cọc thuê phòng 56 ADA với điều kiện hoàn tiền tùy hư hại."
+      }
+    },
+    {
+      "node": "structural_gate",
+      "status": "pass",
+      "message": "AST hợp lệ.",
+      "data": {}
+    },
+    {
+      "node": "node_2_semantic_verification",
+      "status": "start",
+      "message": "Đang kiểm semantic.",
+      "data": {}
+    },
+    {
+      "node": "node_2_semantic_verification",
+      "status": "pass",
+      "message": "Đã kiểm semantic.",
+      "data": {
+        "findings": [
+          "Hợp đồng tuân thủ đúng logic nghiệp vụ.",
+          "Số tiền và timeout chuyển đổi chính xác.",
+          "Cấu trúc lồng when/if xử lý đủ các trường hợp."
+        ],
+        "reasoning_narrative": "Hợp đồng Marlowe triển khai đúng luồng: Thảo nộp 56 ADA trước 15/01/2027 (timeout 1799971200000 ms), sau đó Uyên chọn 0 (không hư hại) hoặc 1 (có hư hại) trước 22/01/2027 (timeout 1800576000000 ms). Nếu chọn 0, hoàn 56 ADA cho Thảo; chọn 1, trả 7 ADA cho Uyên và 49 ADA cho Thảo. Nếu Uyên không chọn kịp, mặc định hoàn toàn bộ cọc cho Thảo. Nếu Thảo không nộp kịp, hợp đồng đóng không chuyển tiền. Tất cả số tiền dùng lovelace chính xác (56 ADA = 56.000.000 lovelace)."
+      }
+    },
+    {
+      "node": "node_3_logic_graph_verification",
+      "status": "start",
+      "message": "Đang kiểm logic graph.",
+      "data": {}
+    },
+    {
+      "node": "node_3_logic_graph_verification",
+      "status": "pass",
+      "message": "Đã kiểm logic graph.",
+      "data": {
+        "findings": [
+          "Logic graph pass."
+        ],
+        "errors": [],
+        "warnings": [],
+        "reasoning_narrative": "Node 3 đã kiểm tra 11 node, 4 đường đi; có 0 cảnh báo."
+      }
+    },
+    {
+      "node": "pipeline",
+      "status": "iteration",
+      "message": "Đã hoàn tất lượt xử lý.",
+      "data": {
+        "iteration": 1,
+        "structural": "pass",
+        "semantic": "pass",
+        "logic": "pass",
+        "logic_errors": 0,
+        "logic_warnings": 0,
+        "stall_count": 0,
+        "llm_calls": 2,
+        "semantic_generation": 0,
+        "semantic_history_entries": 1,
+        "elapsed_seconds": 374.827
+      }
+    },
+    {
+      "node": "pipeline",
+      "status": "done",
+      "message": "Workflow đã hoàn tất.",
+      "data": {
+        "iterations": 1,
+        "stop_reason": "ok"
+      }
+    }
+  ],
+  "qa_transcript": [],
+  "contract": {
+    "when": [
+      {
+        "case": {
+          "party": {
+            "role_token": "Thảo"
+          },
+          "deposits": 56000000,
+          "of_token": {
+            "currency_symbol": "",
+            "token_name": ""
+          },
+          "into_account": {
+            "role_token": "Thảo"
+          }
+        },
+        "then": {
+          "when": [
+            {
+              "case": {
+                "for_choice": {
+                  "choice_name": "damage_decision",
+                  "choice_owner": {
+                    "role_token": "Uyên"
+                  }
+                },
+                "choose_between": [
+                  {
+                    "from": 0,
+                    "to": 0
+                  },
+                  {
+                    "from": 1,
+                    "to": 1
+                  }
+                ]
+              },
+              "then": {
+                "if": {
+                  "value": {
+                    "value_of_choice": {
+                      "choice_name": "damage_decision",
+                      "choice_owner": {
+                        "role_token": "Uyên"
+                      }
+                    }
+                  },
+                  "equal_to": 0
+                },
+                "then": {
+                  "pay": 56000000,
+                  "from_account": {
+                    "role_token": "Thảo"
+                  },
+                  "to": {
+                    "party": {
+                      "role_token": "Thảo"
+                    }
+                  },
+                  "token": {
+                    "currency_symbol": "",
+                    "token_name": ""
+                  },
+                  "then": "close"
+                },
+                "else": {
+                  "pay": 7000000,
+                  "from_account": {
+                    "role_token": "Thảo"
+                  },
+                  "to": {
+                    "party": {
+                      "role_token": "Uyên"
+                    }
+                  },
+                  "token": {
+                    "currency_symbol": "",
+                    "token_name": ""
+                  },
+                  "then": {
+                    "pay": 49000000,
+                    "from_account": {
+                      "role_token": "Thảo"
+                    },
+                    "to": {
+                      "party": {
+                        "role_token": "Thảo"
+                      }
+                    },
+                    "token": {
+                      "currency_symbol": "",
+                      "token_name": ""
+                    },
+                    "then": "close"
+                  }
+                }
+              }
+            }
+          ],
+          "timeout": 1800576000000,
+          "timeout_continuation": {
+            "pay": 56000000,
+            "from_account": {
+              "role_token": "Thảo"
+            },
+            "to": {
+              "party": {
+                "role_token": "Thảo"
+              }
+            },
+            "token": {
+              "currency_symbol": "",
+              "token_name": ""
+            },
+            "then": "close"
+          }
+        }
+      }
+    ],
+    "timeout": 1799971200000,
+    "timeout_continuation": "close"
+  },
+  "draft": {
+    "original_prompt": "Sơn ở Huế đây; bác muốn nhờ chút, đang Thảo thuê phòng của Uyên và đặt cọc 56 ADA trước ngày 15/01/2027. Đến ngày 22/01/2027 nếu không hư hại thì hoàn đủ; nếu có hư hại, Uyên giữ 7 ADA và trả phần còn lại cho Thảo.",
+    "intent": "Tạo hợp đồng escrow đặt cọc thuê phòng 56 ADA với điều kiện hoàn tiền tùy hư hại.",
+    "parties": [
+      {
+        "role": "tenant",
+        "name": "Thảo"
+      },
+      {
+        "role": "landlord",
+        "name": "Uyên"
+      }
+    ],
+    "amount": 56000000,
+    "token": "ADA",
+    "deposit_timeout": 1799971200000,
+    "decision_timeout": 1800576000000,
+    "clauses": [
+      "Thảo nộp cọc 56 ADA vào tài khoản hợp đồng trước ngày 15/01/2027.",
+      "Vào ngày 22/01/2027, Uyên chọn: không hư hại (0) hoặc có hư hại (1).",
+      "Nếu chọn không hư hại: hợp đồng trả 56 ADA cho Thảo.",
+      "Nếu chọn có hư hại: hợp đồng trả 7 ADA cho Uyên và 49 ADA cho Thảo.",
+      "Nếu Thảo không nộp cọc kịp hạn: hợp đồng kết thúc không chuyển tiền.",
+      "Nếu Uyên không quyết định kịp ngày 22/01/2027: mặc định hoàn toàn bộ cọc cho Thảo."
+    ],
+    "assumptions": [
+      "Ngày 15/01/2027 và 22/01/2027 được hiểu là 00:00 UTC.",
+      "Số tiền tính bằng lovelace (1 ADA = 1.000.000 lovelace).",
+      "Uyên là người quyết định duy nhất về hư hại.",
+      "Nếu Uyên không hành động đến hạn, mặc định coi như không hư hại."
+    ],
+    "clarification_questions": [
+      "Xác nhận múi giờ cho các deadline (UTC hay giờ Việt Nam)?",
+      "Nếu Uyên không ra quyết định trước 22/01/2027, có nên mặc định hoàn tiền cho Thảo không?",
+      "Có cần thêm bên trung gian trọng tài không?"
+    ],
+    "reasoning_summary": "Hợp đồng đặt cọc 56 ADA cho thuê phòng, hoàn tiền ngày 22/01/2027 tùy hư hại.",
+    "reasoning_narrative": "Sơn yêu cầu tạo hợp đồng escrow đặt cọc 56 ADA cho Thảo thuê phòng của Uyên. Thảo phải nộp cọc trước 15/01/2027. Vào 22/01/2027, Uyên quyết định có hư hại hay không: nếu không, hoàn toàn bộ 56 ADA cho Thảo; nếu có, Uyên giữ 7 ADA và trả 49 ADA cho Thảo. Hợp đồng sử dụng hai giai đoạn When: giai đoạn chờ nộp cọc, giai đoạn chờ quyết định. Nếu quá hạn nộp cọc thì đóng hợp đồng. Nếu Uyên không quyết định kịp thì mặc định hoàn tiền cho Thảo.",
+    "contract_plan": {
+      "nodes": [
+        {
+          "id": "start",
+          "label": "Bắt đầu"
+        },
+        {
+          "id": "deposit",
+          "label": "Thảo nộp cọc 56 ADA"
+        },
+        {
+          "id": "decision",
+          "label": "Uyên quyết định hư hại (ngày 22/01)"
+        },
+        {
+          "id": "no_damage",
+          "label": "Không hư hại: trả 56 ADA cho Thảo"
+        },
+        {
+          "id": "damage",
+          "label": "Có hư hại: Uyên nhận 7 ADA, Thảo nhận 49 ADA"
+        },
+        {
+          "id": "deposit_timeout",
+          "label": "Hết hạn nộp cọc (15/01): đóng hợp đồng"
+        },
+        {
+          "id": "decision_timeout",
+          "label": "Hết hạn quyết định (22/01): mặc định hoàn tiền"
+        }
+      ],
+      "edges": [
+        {
+          "from": "start",
+          "to": "deposit"
+        },
+        {
+          "from": "deposit",
+          "to": "decision"
+        },
+        {
+          "from": "decision",
+          "to": "no_damage",
+          "label": "Chọn 0"
+        },
+        {
+          "from": "decision",
+          "to": "damage",
+          "label": "Chọn 1"
+        },
+        {
+          "from": "deposit",
+          "to": "deposit_timeout",
+          "label": "Quá hạn 15/01"
+        },
+        {
+          "from": "decision",
+          "to": "decision_timeout",
+          "label": "Quá hạn 22/01"
+        }
+      ],
+      "notes": [
+        "Tất cả số tiền tính bằng lovelace."
+      ]
+    },
+    "marlowe_contract": {
+      "when": [
+        {
+          "case": {
+            "party": {
+              "role_token": "Thảo"
+            },
+            "deposits": 56000000,
+            "of_token": {
+              "currency_symbol": "",
+              "token_name": ""
+            },
+            "into_account": {
+              "role_token": "Thảo"
+            }
+          },
+          "then": {
+            "when": [
+              {
+                "case": {
+                  "for_choice": {
+                    "choice_name": "damage_decision",
+                    "choice_owner": {
+                      "role_token": "Uyên"
+                    }
+                  },
+                  "choose_between": [
+                    {
+                      "from": 0,
+                      "to": 0
+                    },
+                    {
+                      "from": 1,
+                      "to": 1
+                    }
+                  ]
+                },
+                "then": {
+                  "if": {
+                    "value": {
+                      "value_of_choice": {
+                        "choice_name": "damage_decision",
+                        "choice_owner": {
+                          "role_token": "Uyên"
+                        }
+                      }
+                    },
+                    "equal_to": 0
+                  },
+                  "then": {
+                    "pay": 56000000,
+                    "from_account": {
+                      "role_token": "Thảo"
+                    },
+                    "to": {
+                      "party": {
+                        "role_token": "Thảo"
+                      }
+                    },
+                    "token": {
+                      "currency_symbol": "",
+                      "token_name": ""
+                    },
+                    "then": "close"
+                  },
+                  "else": {
+                    "pay": 7000000,
+                    "from_account": {
+                      "role_token": "Thảo"
+                    },
+                    "to": {
+                      "party": {
+                        "role_token": "Uyên"
+                      }
+                    },
+                    "token": {
+                      "currency_symbol": "",
+                      "token_name": ""
+                    },
+                    "then": {
+                      "pay": 49000000,
+                      "from_account": {
+                        "role_token": "Thảo"
+                      },
+                      "to": {
+                        "party": {
+                          "role_token": "Thảo"
+                        }
+                      },
+                      "token": {
+                        "currency_symbol": "",
+                        "token_name": ""
+                      },
+                      "then": "close"
+                    }
+                  }
+                }
+              }
+            ],
+            "timeout": 1800576000000,
+            "timeout_continuation": {
+              "pay": 56000000,
+              "from_account": {
+                "role_token": "Thảo"
+              },
+              "to": {
+                "party": {
+                  "role_token": "Thảo"
+                }
+              },
+              "token": {
+                "currency_symbol": "",
+                "token_name": ""
+              },
+              "then": "close"
+            }
+          }
+        }
+      ],
+      "timeout": 1799971200000,
+      "timeout_continuation": "close"
+    },
+    "normalization_notes": []
+  },
+  "first_structural_pass_iter": 1,
+  "first_semantic_pass_iter": 1,
+  "first_logic_pass_iter": 1,
+  "wall_seconds": 375.3827975000022,
+  "agent_seconds": 375.3823449999909,
+  "overhead_seconds": 1.532208799966611,
+  "seconds_per_iteration": 375.3823449999909,
+  "llm_calls": 2,
+  "prompt_tokens": 3244,
+  "completion_tokens": 10683,
+  "llm_seconds": 373.8501362000243,
+  "cost_usd": 0,
+  "cost_source": "provider",
+  "call_log": [
+    {
+      "latency_seconds": 210.51224180002464,
+      "prompt_tokens": 1418,
+      "completion_tokens": 7603,
+      "cost": 0,
+      "model": "nvidia/nemotron-3-ultra-550b-a55b:free"
+    },
+    {
+      "latency_seconds": 163.33789439999964,
+      "prompt_tokens": 1826,
+      "completion_tokens": 3080,
+      "cost": 0,
+      "model": "nvidia/nemotron-3-ultra-550b-a55b:free"
+    }
+  ],
+  "agent_llm_calls": 2,
+  "user_llm_calls": 0,
+  "complexity": {
+    "ast_nodes": 11,
+    "depth": 6,
+    "when_count": 2,
+    "case_count": 2,
+    "path_count": 4,
+    "party_count": 0,
+    "constructors": [
+      "close",
+      "if",
+      "pay",
+      "when"
+    ]
+  },
+  "evaluation": {
+    "structure_accuracy": 1.0,
+    "timing_accuracy": 1.0,
+    "scenario_accuracy": 0.0,
+    "overall_accuracy": 0.4,
+    "strict_correct": false,
+    "false_convergence": true,
+    "checks": [
+      {
+        "group": "structure",
+        "name": "party_count",
+        "passed": true
+      },
+      {
+        "group": "structure",
+        "name": "token:",
+        "passed": true
+      },
+      {
+        "group": "structure",
+        "name": "amount:7000000",
+        "passed": true
+      },
+      {
+        "group": "structure",
+        "name": "amount:49000000",
+        "passed": true
+      },
+      {
+        "group": "structure",
+        "name": "amount:56000000",
+        "passed": true
+      },
+      {
+        "group": "timing",
+        "name": "distinct_deadlines",
+        "passed": true
+      },
+      {
+        "group": "timing",
+        "name": "gap:604800000",
+        "passed": true
+      },
+      {
+        "group": "timing",
+        "name": "absolute_date",
+        "passed": true
+      },
+      {
+        "group": "scenarios",
+        "name": "undamaged",
+        "passed": false,
+        "reason": "input_rejected"
+      },
+      {
+        "group": "scenarios",
+        "name": "damaged",
+        "passed": false,
+        "reason": "input_rejected"
+      }
+    ],
+    "mapping": {
+      "Thảo": "Thảo",
+      "Uyên": "Uyên"
+    },
+    "diagnostics": []
+  },
+  "judge": null,
+  "contract_description": "1. Before 1799971200000: Thảo sends 56000000 ADA base units to Thảo; Before 1800576000000: Uyên chooses damage_decision in [{'from': 0, 'to': 0}, {'from': 1, 'to': 1}]; If {'value': {'value_of_choice': {'choice_name': 'damage_decision', 'choice_owner': {'role_token': 'Uyên'}}}, 'equal_to': 0} is true; Pay 56000000 ADA base units from Thảo to Thảo; Close: remaining balances return to account owners.\n2. Before 1799971200000: Thảo sends 56000000 ADA base units to Thảo; Before 1800576000000: Uyên chooses damage_decision in [{'from': 0, 'to': 0}, {'from': 1, 'to': 1}]; If {'value': {'value_of_choice': {'choice_name': 'damage_decision', 'choice_owner': {'role_token': 'Uyên'}}}, 'equal_to': 0} is false; Pay 7000000 ADA base units from Thảo to Uyên; Pay 49000000 ADA base units from Thảo to Thảo; Close: remaining balances return to account owners.\n3. Before 1799971200000: Thảo sends 56000000 ADA base units to Thảo; At/after 1800576000000: timeout path; Pay 56000000 ADA base units from Thảo to Thảo; Close: remaining balances return to account owners.\n4. At/after 1799971200000: timeout path; Close: remaining balances return to account owners.",
+  "self_reported_semantic_score": 95.0,
+  "questions": 0,
+  "answers": 0,
+  "question_redundancy": "unknown",
+  "git_commit": "a7cd9c690dabe6f475d9358f8beecb07467f8c26",
+  "dataset_sha256": "e05c23f43a2bd025258ad5e2fa77569874357f79173e98863a8f8d48ee9a907a",
+  "model": "nvidia/nemotron-3-ultra-550b-a55b:free",
+  "judge_model": "nvidia/nemotron-3-ultra-550b-a55b:free",
+  "user_model": "nvidia/nemotron-3-ultra-550b-a55b:free",
+  "provider": "https://openrouter.ai/api/v1",
+  "workers": 3,
+  "limits": {
+    "max_iterations": 500,
+    "max_llm_calls": 2000,
+    "wall_clock": 5400.0
+  },
+  "started_at": "2026-09-25T03:38:53.886424+00:00",
+  "error": null
+}
