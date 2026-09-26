@@ -61,3 +61,25 @@ and model `nvidia/nemotron-3-ultra-550b-a55b:free`. Secret-pattern checks found
 no API key, bearer token, or key assignment in any of the five published
 records. This selected probe is diagnostic evidence only, not a population
 estimate.
+
+## Retry after the five-case probe
+
+The two provider-failed cases were retried from commit `adc4636` in a separate
+two-worker timing probe at approximately 04:35:03 UTC on 2026-09-26. The raw
+retry directory remains local at
+`bench/results/20260926-113503-nvidia-nemotron-3-ultra-550b-a55b-free/`.
+
+- [L3 swap retry](vi-swap-L3-010-retry-full.json): one partial iteration,
+  `blocked/llm_error`, 3 agent requests, 7.8 seconds, and no independent
+  evaluation.
+- [L4 cancellation-fee retry](vi-cancellation_fee-L4-001-retry-full.json):
+  one partial iteration, `blocked/llm_error`, 3 agent requests, 7.9 seconds,
+  and no independent evaluation.
+
+Both pipelines retried draft generation three times. Every request received
+OpenRouter HTTP 429 with `X-RateLimit-Remaining: 0` from the daily free-model
+quota. The response advertised a reset at 2026-09-27 00:00 UTC (07:00 in
+Asia/Bangkok). These records confirm an external provider limit rather than an
+agent convergence failure; they do not provide new contract-quality evidence.
+Secret-pattern checks found no API key, bearer token, or key assignment in
+either retry record.

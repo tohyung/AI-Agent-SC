@@ -1,0 +1,197 @@
+{
+  "case_id": "vi-cancellation_fee-L4-001",
+  "attempt": 1,
+  "prompt": "Chi ở Đà Nẵng đây; mình mới chuyển tới, đang Dũng đặt chuyến đi của Huy với 86 ADA trước ngày 07/01/2027. Trước bảy ngày sau hạn đầu nếu Dũng hủy thì Huy giữ phí cố định 3 ADA, trả phần còn lại; nếu đi thì Huy nhận tất cả. Mình hơi lo chuyện phải đòi lại tiền nếu mọi việc không thành.",
+  "run_kind": "timing_probe",
+  "language": "vi",
+  "type": "cancellation_fee",
+  "difficulty": 4,
+  "info_mode": "complete",
+  "challenges": [
+    "relative_time",
+    "long_narrative"
+  ],
+  "status": "blocked",
+  "stop_reason": "llm_error",
+  "iterations": 1,
+  "converged": false,
+  "iteration_history": [
+    {
+      "iteration": 1,
+      "structural": "skip",
+      "semantic": "skip",
+      "logic": "skip",
+      "logic_errors": 0,
+      "logic_warnings": 0,
+      "stall_count": 0,
+      "llm_calls": 3,
+      "semantic_generation": 0,
+      "semantic_history_entries": 0,
+      "elapsed_seconds": 7.344
+    }
+  ],
+  "convergence_path": "",
+  "semantic_history": [],
+  "trace": [
+    {
+      "node": "pipeline",
+      "status": "start",
+      "message": "Đã nhận prompt.",
+      "data": {
+        "max_iterations": 500
+      }
+    },
+    {
+      "node": "node_1_prompt_to_draft",
+      "status": "start",
+      "message": "Đang sinh draft.",
+      "data": {
+        "iteration": 1
+      }
+    },
+    {
+      "node": "node_1_prompt_to_draft",
+      "status": "retry",
+      "message": "Lỗi LLM tạm thời; thử lại operation.",
+      "data": {
+        "operation": "draft_from_prompt",
+        "attempt": 1,
+        "max_attempts": 3,
+        "error": "Responses API request failed: Error code: 429 - {'error': {'message': 'Rate limit exceeded: free-models-per-day. Add 10 credits to unlock 1000 free model requests per day', 'code': 429, 'metadata': {'"
+      }
+    },
+    {
+      "node": "node_1_prompt_to_draft",
+      "status": "retry",
+      "message": "Lỗi LLM tạm thời; thử lại operation.",
+      "data": {
+        "operation": "draft_from_prompt",
+        "attempt": 2,
+        "max_attempts": 3,
+        "error": "Responses API request failed: Error code: 429 - {'error': {'message': 'Rate limit exceeded: free-models-per-day. Add 10 credits to unlock 1000 free model requests per day', 'code': 429, 'metadata': {'"
+      }
+    },
+    {
+      "node": "pipeline",
+      "status": "error",
+      "message": "Lời gọi LLM thất bại.",
+      "data": {
+        "error": "Responses API request failed: Error code: 429 - {'error': {'message': 'Rate limit exceeded: free-models-per-day. Add 10 credits to unlock 1000 free model requests per day', 'code': 429, 'metadata': {'headers': {'X-RateLimit-Limit': '50', 'X-RateLimit-Remaining': '0', 'X-RateLimit-Reset': '1790467200000'}, 'limit_source': 'openrouter_free_tier_daily', 'remedy_hint': 'Wait for the daily reset (see X-RateLimit-Reset), or purchase credits to raise your free-model daily limit.', 'provider_name': None}}, 'user_id': 'user_3DXex6z8AFP7pjFxex1wPASiaaf'}"
+      }
+    },
+    {
+      "node": "pipeline",
+      "status": "iteration",
+      "message": "Đã hoàn tất lượt xử lý.",
+      "data": {
+        "iteration": 1,
+        "structural": "skip",
+        "semantic": "skip",
+        "logic": "skip",
+        "logic_errors": 0,
+        "logic_warnings": 0,
+        "stall_count": 0,
+        "llm_calls": 3,
+        "semantic_generation": 0,
+        "semantic_history_entries": 0,
+        "elapsed_seconds": 7.344
+      }
+    },
+    {
+      "node": "pipeline",
+      "status": "blocked",
+      "message": "Workflow đã dừng.",
+      "data": {
+        "iterations": 1,
+        "stop_reason": "llm_error"
+      }
+    }
+  ],
+  "qa_transcript": [],
+  "contract": {},
+  "draft": {
+    "original_prompt": "Chi ở Đà Nẵng đây; mình mới chuyển tới, đang Dũng đặt chuyến đi của Huy với 86 ADA trước ngày 07/01/2027. Trước bảy ngày sau hạn đầu nếu Dũng hủy thì Huy giữ phí cố định 3 ADA, trả phần còn lại; nếu đi thì Huy nhận tất cả. Mình hơi lo chuyện phải đòi lại tiền nếu mọi việc không thành.",
+    "intent": "",
+    "parties": [],
+    "amount": null,
+    "token": null,
+    "deposit_timeout": null,
+    "decision_timeout": null,
+    "clauses": [],
+    "assumptions": [],
+    "clarification_questions": [],
+    "reasoning_summary": "",
+    "reasoning_narrative": "",
+    "contract_plan": {},
+    "marlowe_contract": {},
+    "normalization_notes": []
+  },
+  "first_structural_pass_iter": null,
+  "first_semantic_pass_iter": null,
+  "first_logic_pass_iter": null,
+  "wall_seconds": 7.867290899972431,
+  "agent_seconds": 7.867287400003988,
+  "overhead_seconds": 3.0869582000304945,
+  "seconds_per_iteration": 7.867287400003988,
+  "llm_calls": 3,
+  "prompt_tokens": 0,
+  "completion_tokens": 0,
+  "llm_seconds": 4.780329199973494,
+  "cost_usd": null,
+  "cost_source": "unknown",
+  "call_log": [
+    {
+      "latency_seconds": 1.8290647999965586,
+      "prompt_tokens": null,
+      "completion_tokens": null,
+      "cost": null,
+      "model": "nvidia/nemotron-3-ultra-550b-a55b:free"
+    },
+    {
+      "latency_seconds": 1.4422719000140205,
+      "prompt_tokens": null,
+      "completion_tokens": null,
+      "cost": null,
+      "model": "nvidia/nemotron-3-ultra-550b-a55b:free"
+    },
+    {
+      "latency_seconds": 1.5089924999629147,
+      "prompt_tokens": null,
+      "completion_tokens": null,
+      "cost": null,
+      "model": "nvidia/nemotron-3-ultra-550b-a55b:free"
+    }
+  ],
+  "agent_llm_calls": 3,
+  "user_llm_calls": 0,
+  "complexity": {
+    "ast_nodes": 0,
+    "depth": 0,
+    "when_count": 0,
+    "case_count": 0,
+    "path_count": 0,
+    "party_count": 0,
+    "constructors": []
+  },
+  "evaluation": null,
+  "judge": null,
+  "contract_description": null,
+  "self_reported_semantic_score": 0.0,
+  "questions": 0,
+  "answers": 0,
+  "question_redundancy": "unknown",
+  "git_commit": "adc4636d324befe3a5daa645e8260532839b78fd",
+  "dataset_sha256": "e05c23f43a2bd025258ad5e2fa77569874357f79173e98863a8f8d48ee9a907a",
+  "model": "nvidia/nemotron-3-ultra-550b-a55b:free",
+  "judge_model": "nvidia/nemotron-3-ultra-550b-a55b:free",
+  "user_model": "nvidia/nemotron-3-ultra-550b-a55b:free",
+  "provider": "https://openrouter.ai/api/v1",
+  "workers": 2,
+  "limits": {
+    "max_iterations": 500,
+    "max_llm_calls": 2000,
+    "wall_clock": 5400.0
+  },
+  "started_at": "2026-09-26T04:35:03.705569+00:00",
+  "error": null
+}

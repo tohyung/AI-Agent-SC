@@ -88,3 +88,20 @@ was strict but the pipeline ended in `llm_error`, and cancellation fee produced
 no contract because OpenRouter returned an explicit HTTP 429 free-tier daily
 limit. These eight selected cases remain too small and non-random to estimate
 100-case convergence or accuracy.
+
+### Retry of the two provider-failed cases
+
+`vi-swap-L3-010` and `vi-cancellation_fee-L4-001` were retried together from
+commit `adc4636` at approximately 04:35:03 UTC on 2026-09-26, using the same
+500-iteration, 2000-call, and 5400-second per-case limits. Both stopped during
+the first partial iteration after three agent attempts: swap took 7.8 seconds
+and cancellation fee took 7.9 seconds. Each trace records OpenRouter HTTP 429,
+daily free-model quota remaining `0`, and a reset timestamp of 2026-09-27
+00:00 UTC (07:00 Asia/Bangkok).
+
+This retry strengthens the diagnosis that the two stops were caused by an
+external provider quota, not by the configured wall-clock or iteration limits.
+Because neither retry produced an evaluable contract, they add no evidence for
+or against convergence, accuracy, or false convergence. Complete retry records
+are published separately in [bench/audit](audit/README.md); the original audit
+records remain unchanged.

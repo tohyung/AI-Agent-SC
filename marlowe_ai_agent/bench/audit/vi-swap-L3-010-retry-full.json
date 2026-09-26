@@ -1,0 +1,198 @@
+{
+  "case_id": "vi-swap-L3-010",
+  "attempt": 1,
+  "prompt": "Lan ở Nha Trang đây; shop online của mình đang muốn đổi 281 ADA của Minh lấy 16 điểm thưởng GOLD của Quỳnh. Minh đưa phần mình trước ngày 18/01/2027, Quỳnh đưa điểm trước ngày 25/01/2027; đủ cả hai mới đổi, thiếu thì mỗi người nhận lại phần của mình.",
+  "run_kind": "timing_probe",
+  "language": "vi",
+  "type": "swap",
+  "difficulty": 3,
+  "info_mode": "complete",
+  "challenges": [
+    "absolute_date",
+    "non_ada_token",
+    "refund_on_timeout"
+  ],
+  "status": "blocked",
+  "stop_reason": "llm_error",
+  "iterations": 1,
+  "converged": false,
+  "iteration_history": [
+    {
+      "iteration": 1,
+      "structural": "skip",
+      "semantic": "skip",
+      "logic": "skip",
+      "logic_errors": 0,
+      "logic_warnings": 0,
+      "stall_count": 0,
+      "llm_calls": 3,
+      "semantic_generation": 0,
+      "semantic_history_entries": 0,
+      "elapsed_seconds": 7.266
+    }
+  ],
+  "convergence_path": "",
+  "semantic_history": [],
+  "trace": [
+    {
+      "node": "pipeline",
+      "status": "start",
+      "message": "Đã nhận prompt.",
+      "data": {
+        "max_iterations": 500
+      }
+    },
+    {
+      "node": "node_1_prompt_to_draft",
+      "status": "start",
+      "message": "Đang sinh draft.",
+      "data": {
+        "iteration": 1
+      }
+    },
+    {
+      "node": "node_1_prompt_to_draft",
+      "status": "retry",
+      "message": "Lỗi LLM tạm thời; thử lại operation.",
+      "data": {
+        "operation": "draft_from_prompt",
+        "attempt": 1,
+        "max_attempts": 3,
+        "error": "Responses API request failed: Error code: 429 - {'error': {'message': 'Rate limit exceeded: free-models-per-day. Add 10 credits to unlock 1000 free model requests per day', 'code': 429, 'metadata': {'"
+      }
+    },
+    {
+      "node": "node_1_prompt_to_draft",
+      "status": "retry",
+      "message": "Lỗi LLM tạm thời; thử lại operation.",
+      "data": {
+        "operation": "draft_from_prompt",
+        "attempt": 2,
+        "max_attempts": 3,
+        "error": "Responses API request failed: Error code: 429 - {'error': {'message': 'Rate limit exceeded: free-models-per-day. Add 10 credits to unlock 1000 free model requests per day', 'code': 429, 'metadata': {'"
+      }
+    },
+    {
+      "node": "pipeline",
+      "status": "error",
+      "message": "Lời gọi LLM thất bại.",
+      "data": {
+        "error": "Responses API request failed: Error code: 429 - {'error': {'message': 'Rate limit exceeded: free-models-per-day. Add 10 credits to unlock 1000 free model requests per day', 'code': 429, 'metadata': {'headers': {'X-RateLimit-Limit': '50', 'X-RateLimit-Remaining': '0', 'X-RateLimit-Reset': '1790467200000'}, 'limit_source': 'openrouter_free_tier_daily', 'remedy_hint': 'Wait for the daily reset (see X-RateLimit-Reset), or purchase credits to raise your free-model daily limit.', 'provider_name': None}}, 'user_id': 'user_3DXex6z8AFP7pjFxex1wPASiaaf'}"
+      }
+    },
+    {
+      "node": "pipeline",
+      "status": "iteration",
+      "message": "Đã hoàn tất lượt xử lý.",
+      "data": {
+        "iteration": 1,
+        "structural": "skip",
+        "semantic": "skip",
+        "logic": "skip",
+        "logic_errors": 0,
+        "logic_warnings": 0,
+        "stall_count": 0,
+        "llm_calls": 3,
+        "semantic_generation": 0,
+        "semantic_history_entries": 0,
+        "elapsed_seconds": 7.266
+      }
+    },
+    {
+      "node": "pipeline",
+      "status": "blocked",
+      "message": "Workflow đã dừng.",
+      "data": {
+        "iterations": 1,
+        "stop_reason": "llm_error"
+      }
+    }
+  ],
+  "qa_transcript": [],
+  "contract": {},
+  "draft": {
+    "original_prompt": "Lan ở Nha Trang đây; shop online của mình đang muốn đổi 281 ADA của Minh lấy 16 điểm thưởng GOLD của Quỳnh. Minh đưa phần mình trước ngày 18/01/2027, Quỳnh đưa điểm trước ngày 25/01/2027; đủ cả hai mới đổi, thiếu thì mỗi người nhận lại phần của mình.",
+    "intent": "",
+    "parties": [],
+    "amount": null,
+    "token": null,
+    "deposit_timeout": null,
+    "decision_timeout": null,
+    "clauses": [],
+    "assumptions": [],
+    "clarification_questions": [],
+    "reasoning_summary": "",
+    "reasoning_narrative": "",
+    "contract_plan": {},
+    "marlowe_contract": {},
+    "normalization_notes": []
+  },
+  "first_structural_pass_iter": null,
+  "first_semantic_pass_iter": null,
+  "first_logic_pass_iter": null,
+  "wall_seconds": 7.7973421000060625,
+  "agent_seconds": 7.797339699987788,
+  "overhead_seconds": 3.091018199978862,
+  "seconds_per_iteration": 7.797339699987788,
+  "llm_calls": 3,
+  "prompt_tokens": 0,
+  "completion_tokens": 0,
+  "llm_seconds": 4.706321500008926,
+  "cost_usd": null,
+  "cost_source": "unknown",
+  "call_log": [
+    {
+      "latency_seconds": 1.8233481000061147,
+      "prompt_tokens": null,
+      "completion_tokens": null,
+      "cost": null,
+      "model": "nvidia/nemotron-3-ultra-550b-a55b:free"
+    },
+    {
+      "latency_seconds": 1.3823609999963082,
+      "prompt_tokens": null,
+      "completion_tokens": null,
+      "cost": null,
+      "model": "nvidia/nemotron-3-ultra-550b-a55b:free"
+    },
+    {
+      "latency_seconds": 1.5006124000065029,
+      "prompt_tokens": null,
+      "completion_tokens": null,
+      "cost": null,
+      "model": "nvidia/nemotron-3-ultra-550b-a55b:free"
+    }
+  ],
+  "agent_llm_calls": 3,
+  "user_llm_calls": 0,
+  "complexity": {
+    "ast_nodes": 0,
+    "depth": 0,
+    "when_count": 0,
+    "case_count": 0,
+    "path_count": 0,
+    "party_count": 0,
+    "constructors": []
+  },
+  "evaluation": null,
+  "judge": null,
+  "contract_description": null,
+  "self_reported_semantic_score": 0.0,
+  "questions": 0,
+  "answers": 0,
+  "question_redundancy": "unknown",
+  "git_commit": "adc4636d324befe3a5daa645e8260532839b78fd",
+  "dataset_sha256": "e05c23f43a2bd025258ad5e2fa77569874357f79173e98863a8f8d48ee9a907a",
+  "model": "nvidia/nemotron-3-ultra-550b-a55b:free",
+  "judge_model": "nvidia/nemotron-3-ultra-550b-a55b:free",
+  "user_model": "nvidia/nemotron-3-ultra-550b-a55b:free",
+  "provider": "https://openrouter.ai/api/v1",
+  "workers": 2,
+  "limits": {
+    "max_iterations": 500,
+    "max_llm_calls": 2000,
+    "wall_clock": 5400.0
+  },
+  "started_at": "2026-09-26T04:35:03.704956+00:00",
+  "error": null
+}
