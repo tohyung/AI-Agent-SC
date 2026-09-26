@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from copy import deepcopy
 from dataclasses import replace
+import json
+from pathlib import Path
 from types import SimpleNamespace
 import sys
 
@@ -9,7 +11,7 @@ import pytest
 
 from bench.cases import load_cases
 from bench import run as run_cli
-from bench.evaluator import evaluate
+from bench.evaluator import _run, evaluate
 from bench.marlowe_sim import run_scenario
 from bench.narrator import narrate
 from bench.runner import FakeBenchReasoner, dataset_hash, read_runs, run_case, run_many
@@ -25,6 +27,11 @@ CASES = load_cases()
 
 def _case(kind: str):
     return next(item for item in CASES if item.type == kind)
+
+
+def _audit(case_id: str):
+    path = Path(__file__).parents[2] / "bench" / "audit" / f"{case_id}-full.json"
+    return json.loads(path.read_text(encoding="utf-8"))["contract"]
 
 
 def test_every_reference_scores_100_and_passes_dataset_validation():
@@ -72,6 +79,59 @@ def test_choice_exact_match_requires_owner_and_bound_not_just_name():
     assert run_scenario(contract, [wrong_bound_and_owner], 0)["input_rejected"]
     valid = {"kind": "choice", "party": "alice", "name": "decision", "value": 0, "time": 50}
     assert not run_scenario(contract, [valid], 0)["input_rejected"]
+
+
+@pytest.mark.parametrize("case_id", ["vi-rental_deposit-L3-003", "vi-milestone-L4-003"])
+def test_audit_choice_name_fallback_runs_original_scenarios(case_id):
+    item = next(case for case in CASES if case.id == case_id)
+    contract = _audit(case_id)
+    mapping = evaluate(item, contract)["mapping"]
+    for scenario in item.checks["scenarios"]:
+        outcome = _run(contract, scenario, mapping)
+        assert not outcome["input_rejected"]
+        assert outcome["closed"] == scenario["closed"]
+        assert outcome["received"] == scenario["received"]
+
+
+def test_choice_name_fallback_rejects_ambiguous_and_unmatched_candidates():
+    ambiguous = when([
+        case(choice_action("first", "alice", 1, 1), close()),
+        case(choice_action("second", "alice", 1, 1), close()),
+    ], 100)
+    unmatched_name = {"kind": "choice", "party": "alice", "name": "expected",
+                      "value": 1, "time": 50}
+    assert run_scenario(ambiguous, [unmatched_name], 0)["input_rejected"]
+
+    no_candidate = when([case(choice_action("actual", "bob", 0, 0), close())], 100)
+    assert run_scenario(no_candidate, [unmatched_name], 0)["input_rejected"]
+
+
+def test_choice_name_fallback_never_looks_into_a_case_continuation():
+    nested = when([case(choice_action("nested", "bob", 1, 1), close())], 200)
+    contract = when([case(choice_action("outer", "alice", 0, 0), nested)], 100)
+    step = {"kind": "choice", "party": "bob", "name": "expected", "value": 1, "time": 50}
+    assert run_scenario(contract, [step], 0)["input_rejected"]
+
+
+def test_choice_exact_match_does_not_emit_fallback_warning():
+    contract = when([case(choice_action("decision", "alice", 1, 1), close())], 100)
+    step = {"kind": "choice", "party": "alice", "name": "decision", "value": 1,
+            "time": 50}
+    outcome = run_scenario(contract, [step], 0)
+    assert not outcome["input_rejected"]
+    assert outcome["warnings"] == []
+
+    fallback_step = {**step, "name": "expected"}
+    fallback = run_scenario(contract, [fallback_step], 0)
+    assert not fallback["input_rejected"]
+    assert fallback["warnings"] == ["choice_name_fallback:expected->decision"]
+
+
+def test_evaluator_counts_scenarios_using_choice_name_fallback():
+    rental = next(case for case in CASES if case.id == "vi-rental_deposit-L3-003")
+    milestone = next(case for case in CASES if case.id == "vi-milestone-L4-003")
+    assert evaluate(rental, _audit(rental.id))["diagnostics"]["choice_name_fallback_count"] == 2
+    assert evaluate(milestone, _audit(milestone.id))["diagnostics"]["choice_name_fallback_count"] == 2
 
 
 def test_reference_scenarios_cover_swap_vesting_loan():

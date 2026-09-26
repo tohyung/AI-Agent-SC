@@ -149,9 +149,42 @@ class SimState:
         if not isinstance(node, dict) or "when" not in node:
             self.rejected = True
             return
+        kind = step["kind"]
+        if kind == "choice":
+            number = step["value"]
+            fallback_candidates = []
+            for branch in node["when"]:
+                action = branch["case"]
+                if "for_choice" not in action:
+                    continue
+                choice = action["for_choice"]
+                owner_and_bound_match = (
+                    identity(choice["choice_owner"]) == step["party"]
+                    and any(bound["from"] <= number <= bound["to"]
+                            for bound in action["choose_between"])
+                )
+                if choice["choice_name"] == step["name"] and owner_and_bound_match:
+                    self.choices[(choice["choice_name"], step["party"])] = number
+                    self.contract = branch["then"]
+                    self.reduce()
+                    return
+                if owner_and_bound_match:
+                    fallback_candidates.append((branch, choice))
+
+            # Only cases in the current When are considered, never another case's continuation.
+            # After exact matching, a unique owner/bound match may fall back to its contract name.
+            if len(fallback_candidates) == 1:
+                branch, choice = fallback_candidates[0]
+                actual_name = choice["choice_name"]
+                self.choices[(actual_name, step["party"])] = number
+                self.warnings.append(f"choice_name_fallback:{step['name']}->{actual_name}")
+                self.contract = branch["then"]
+                self.reduce()
+                return
+            self.rejected = True
+            return
         for branch in node["when"]:
             action = branch["case"]
-            kind = step["kind"]
             if kind == "deposit" and "deposits" in action:
                 amount = self.value(action["deposits"])
                 if (identity(action["party"]) == step["party"]
@@ -159,18 +192,6 @@ class SimState:
                         and amount == step["amount"] and amount > 0):
                     account = (identity(action["into_account"]), token_id(action["of_token"]))
                     self.accounts[account] = self.accounts.get(account, 0) + amount
-                    self.contract = branch["then"]
-                    self.reduce()
-                    return
-            if kind == "choice" and "for_choice" in action:
-                # Only cases in the current When are considered, never another case's continuation.
-                # No owner/bound fallback exists: an exact name also requires owner and bound.
-                choice = action["for_choice"]
-                number = step["value"]
-                if (choice["choice_name"] == step["name"]
-                        and identity(choice["choice_owner"]) == step["party"]
-                        and any(bound["from"] <= number <= bound["to"] for bound in action["choose_between"])):
-                    self.choices[(step["name"], step["party"])] = number
                     self.contract = branch["then"]
                     self.reduce()
                     return

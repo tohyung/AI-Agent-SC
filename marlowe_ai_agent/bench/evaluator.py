@@ -69,14 +69,16 @@ def _run(contract: Any, scenario: dict[str, Any], mapping: dict[str, str]) -> di
 def evaluate(case: Any, contract: Any, status: str = "done") -> dict[str, Any]:
     if case.expected_behavior == "should_not_converge_silently":
         return {"strict_correct": status != "done", "false_convergence": status == "done",
-                "overall_accuracy": None, "checks": [], "mapping": {}}
+                "overall_accuracy": None, "checks": [], "mapping": {},
+                "diagnostics": {"choice_name_fallback_count": 0}}
     errors = validate_contract(contract)
     if errors:
         return {"strict_correct": False, "false_convergence": status == "done",
                 "overall_accuracy": 0.0, "structure_accuracy": 0.0, "timing_accuracy": 0.0,
                 "scenario_accuracy": 0.0, "checks": [{"group": "structure", "passed": False,
                                                      "reason": "invalid_contract", "details": errors[:3]}],
-                "mapping": {}, "diagnostics": ["invalid_contract"]}
+                "mapping": {}, "diagnostics": {"invalid_contract": True,
+                                                 "choice_name_fallback_count": 0}}
     checks: list[dict[str, Any]] = []
     reference = case.reference_contract
     expected_parties = _parties(reference)
@@ -127,10 +129,15 @@ def evaluate(case: Any, contract: Any, status: str = "done") -> dict[str, Any]:
                         diagnostics.append("not_evaluable")
                     reason = "not_evaluable" if outcome["not_evaluable"] else (
                         "input_rejected" if outcome["input_rejected"] else "behavior_mismatch")
+                    used_fallback = any(
+                        warning.startswith("choice_name_fallback:")
+                        for warning in outcome["warnings"]
+                    )
                 except ValueError as exc:
-                    passed, reason = False, str(exc)
+                    passed, reason, used_fallback = False, str(exc), False
                 results.append({"group": "scenarios", "name": scenario["name"],
-                                "passed": passed, "reason": "ok" if passed else reason})
+                                "passed": passed, "reason": "ok" if passed else reason,
+                                "_choice_name_fallback": used_fallback})
             metric = (sum(x["passed"] for x in results), sum(a.lower() == b.lower() for a, b in mapping.items()))
             if best is None or metric > best[:2]:
                 best = (*metric, mapping, results)
@@ -141,6 +148,7 @@ def evaluate(case: Any, contract: Any, status: str = "done") -> dict[str, Any]:
     else:
         mapping = best[2]
         checks.extend(best[3])
+    fallback_count = sum(bool(item.pop("_choice_name_fallback", False)) for item in checks)
     scores = {}
     for group in WEIGHTS:
         group_checks = [item for item in checks if item["group"] == group and item.get("reason") != "not_evaluable"]
@@ -148,7 +156,9 @@ def evaluate(case: Any, contract: Any, status: str = "done") -> dict[str, Any]:
     weight_total = sum(WEIGHTS[group] for group, score in scores.items() if score is not None)
     overall = sum(WEIGHTS[group] * score for group, score in scores.items() if score is not None) / weight_total
     strict = bool(checks) and all(item["passed"] for item in checks)
+    diagnostic_summary = {item: True for item in sorted(set(diagnostics))}
+    diagnostic_summary["choice_name_fallback_count"] = fallback_count
     return {"structure_accuracy": scores["structure"], "timing_accuracy": scores["timing"],
             "scenario_accuracy": scores["scenarios"], "overall_accuracy": overall,
             "strict_correct": strict, "false_convergence": status == "done" and not strict,
-            "checks": checks, "mapping": mapping, "diagnostics": sorted(set(diagnostics))}
+            "checks": checks, "mapping": mapping, "diagnostics": diagnostic_summary}
