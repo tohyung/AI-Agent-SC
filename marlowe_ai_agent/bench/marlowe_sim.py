@@ -163,6 +163,8 @@ class SimState:
                     self.reduce()
                     return
             if kind == "choice" and "for_choice" in action:
+                # Only cases in the current When are considered, never another case's continuation.
+                # No owner/bound fallback exists: an exact name also requires owner and bound.
                 choice = action["for_choice"]
                 number = step["value"]
                 if (choice["choice_name"] == step["name"]

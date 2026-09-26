@@ -15,7 +15,7 @@ from bench.narrator import narrate
 from bench.runner import FakeBenchReasoner, dataset_hash, read_runs, run_case, run_many
 from bench.stats import percentile, spearman, wilson
 from bench.validate_dataset import validate
-from marlowe_agent.marlowe_ast import case, close, deposit, escrow_contract, pay, when
+from marlowe_agent.marlowe_ast import case, choice_action, close, deposit, escrow_contract, pay, when
 from marlowe_agent.nodes import PromptToDraftNode
 from marlowe_agent.openai_reasoner import OpenAIReasoner
 
@@ -60,6 +60,18 @@ def test_simulator_partial_pay_rejection_refund_and_divvalue():
     assert rejected["input_rejected"]
     divided = pay("a", "b", {"divide": 8, "by": 2})
     assert run_scenario(divided, [], 0)["not_evaluable"]
+
+
+def test_choice_exact_match_requires_owner_and_bound_not_just_name():
+    contract = when([
+        case(choice_action("decision", "alice", 0, 0), close()),
+        case(choice_action("decision", "bob", 1, 1), close()),
+    ], 100)
+    wrong_bound_and_owner = {"kind": "choice", "party": "alice", "name": "decision",
+                             "value": 1, "time": 50}
+    assert run_scenario(contract, [wrong_bound_and_owner], 0)["input_rejected"]
+    valid = {"kind": "choice", "party": "alice", "name": "decision", "value": 0, "time": 50}
+    assert not run_scenario(contract, [valid], 0)["input_rejected"]
 
 
 def test_reference_scenarios_cover_swap_vesting_loan():

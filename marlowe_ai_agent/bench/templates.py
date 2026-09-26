@@ -114,6 +114,7 @@ def build(kind: str, p: dict[str, Any]) -> tuple[Any, list[dict[str, Any]]]:
                       {r["worker"]: {"": amount}}),
         ]
     elif kind == "milestone":
+        # TODO: Consider reject_first_then_accept_second; decide sequential semantics in dataset ground truth.
         first = amount // 2
         second = when([case(choice_action("finish", r["client"], 1, 1),
                             _pay(r["client"], r["worker"], amount - first))], t3)
