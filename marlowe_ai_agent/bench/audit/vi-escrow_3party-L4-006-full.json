@@ -1,0 +1,1044 @@
+{
+  "case_id": "vi-escrow_3party-L4-006",
+  "attempt": 1,
+  "prompt": "Trang ở Hà Nội đây; mình mới chuyển tới, đang bán món đồ cho Tú giá 182 ADA. Người này gửi tiền trước ngày 03/01/2027; đến ngày 10/01/2027 nếu có bất đồng thì Bình quyết định chuyển cho Yến hay hoàn lại Tú. Nếu không quyết định thì hoàn lại.",
+  "run_kind": "timing_probe",
+  "language": "vi",
+  "type": "escrow_3party",
+  "difficulty": 4,
+  "info_mode": "complete",
+  "challenges": [
+    "absolute_date",
+    "multi_party",
+    "refund_on_timeout",
+    "long_narrative"
+  ],
+  "status": "done",
+  "stop_reason": "ok",
+  "iterations": 5,
+  "converged": true,
+  "iteration_history": [
+    {
+      "iteration": 1,
+      "structural": "skip",
+      "semantic": "skip",
+      "logic": "skip",
+      "logic_errors": 0,
+      "logic_warnings": 0,
+      "stall_count": 0,
+      "llm_calls": 1,
+      "semantic_generation": 1,
+      "semantic_history_entries": 0,
+      "elapsed_seconds": 51.912
+    },
+    {
+      "iteration": 2,
+      "structural": "fail",
+      "semantic": "skip",
+      "logic": "skip",
+      "logic_errors": 0,
+      "logic_warnings": 0,
+      "stall_count": 0,
+      "llm_calls": 2,
+      "semantic_generation": 1,
+      "semantic_history_entries": 0,
+      "elapsed_seconds": 127.292
+    },
+    {
+      "iteration": 3,
+      "structural": "pass",
+      "semantic": "pass",
+      "logic": "fail",
+      "logic_errors": 6,
+      "logic_warnings": 3,
+      "stall_count": 0,
+      "llm_calls": 5,
+      "semantic_generation": 1,
+      "semantic_history_entries": 1,
+      "elapsed_seconds": 126.31
+    },
+    {
+      "iteration": 4,
+      "structural": "fail",
+      "semantic": "skip",
+      "logic": "skip",
+      "logic_errors": 0,
+      "logic_warnings": 0,
+      "stall_count": 0,
+      "llm_calls": 6,
+      "semantic_generation": 1,
+      "semantic_history_entries": 1,
+      "elapsed_seconds": 66.186
+    },
+    {
+      "iteration": 5,
+      "structural": "pass",
+      "semantic": "pass",
+      "logic": "pass",
+      "logic_errors": 0,
+      "logic_warnings": 0,
+      "stall_count": 0,
+      "llm_calls": 10,
+      "semantic_generation": 1,
+      "semantic_history_entries": 2,
+      "elapsed_seconds": 282.777
+    }
+  ],
+  "convergence_path": " -> S- -> S+S+L- -> S- -> S+S+L+",
+  "semantic_history": [
+    {
+      "iteration": 3,
+      "semantic_generation": 1,
+      "semantic_fingerprint": "a7675027d0da379642d471607f9345d3026c3a21f912ba223b3ffa5816291701",
+      "prompt_fingerprint": "b0ea357818ff2b70705d8815af21f81eff801d6f5cab197c45cdbe1f84c22cb9",
+      "contract_fingerprint": "bc441320750f99f244ff74a4d3bef826217ad36f2a20d12063695943a79a6761",
+      "passed": true,
+      "user_answered": false,
+      "answer_source": null
+    },
+    {
+      "iteration": 5,
+      "semantic_generation": 1,
+      "semantic_fingerprint": "2fb0dcfee7248e204fda189f3ecd73b95f70b98b1c676c81a3f22d11dab00226",
+      "prompt_fingerprint": "b0ea357818ff2b70705d8815af21f81eff801d6f5cab197c45cdbe1f84c22cb9",
+      "contract_fingerprint": "72c9ed8dba7ec7d5223a341b40759d3a9738687a81f33cdb726345f894c4835c",
+      "passed": true,
+      "user_answered": false,
+      "answer_source": null
+    }
+  ],
+  "trace": [
+    {
+      "node": "pipeline",
+      "status": "start",
+      "message": "Đã nhận prompt.",
+      "data": {
+        "max_iterations": 500
+      }
+    },
+    {
+      "node": "node_1_prompt_to_draft",
+      "status": "start",
+      "message": "Đang sinh draft.",
+      "data": {
+        "iteration": 1
+      }
+    },
+    {
+      "node": "node_1_prompt_to_draft",
+      "status": "done",
+      "message": "Đã sinh draft.",
+      "data": {
+        "reasoning_narrative": "Người dùng mô tả giao dịch bán hàng 182 ADA từ Trang cho Tú, với Tú nộp tiền trước 03/01/2027. Nếu có tranh chấp đến 10/01/2027, Bình sẽ quyết định chuyển tiền cho Yến hoặc hoàn lại Tú. Nếu không quyết định thì hoàn lại. Cần làm rõ danh tính Yến và múi giờ.",
+        "intent": "Tạo hợp đồng escrow với trọng tài cho giao dịch bán hàng 182 ADA"
+      }
+    },
+    {
+      "node": "structural_gate",
+      "status": "skipped",
+      "message": "Chưa có AST do thiếu thông tin nghiệp vụ.",
+      "data": {}
+    },
+    {
+      "node": "pipeline",
+      "status": "semantic_reset",
+      "message": "Đã reset semantic stall state sau khi nhận thông tin mới từ người dùng.",
+      "data": {
+        "semantic_generation": 1,
+        "history_entries": 0,
+        "answered_questions_count": 3,
+        "answer_source": "empty_contract"
+      }
+    },
+    {
+      "node": "pipeline",
+      "status": "iteration",
+      "message": "Đã hoàn tất lượt xử lý.",
+      "data": {
+        "iteration": 1,
+        "structural": "skip",
+        "semantic": "skip",
+        "logic": "skip",
+        "logic_errors": 0,
+        "logic_warnings": 0,
+        "stall_count": 0,
+        "llm_calls": 1,
+        "semantic_generation": 1,
+        "semantic_history_entries": 0,
+        "elapsed_seconds": 51.912
+      }
+    },
+    {
+      "node": "node_1_prompt_to_draft",
+      "status": "start",
+      "message": "Đang sinh draft.",
+      "data": {
+        "iteration": 2
+      }
+    },
+    {
+      "node": "node_1_prompt_to_draft",
+      "status": "done",
+      "message": "Đã sinh draft.",
+      "data": {
+        "reasoning_narrative": "Từ mô tả, Trang bán đồ cho Tú 182 ADA. Tú phải gửi tiền trước ngày 3/1/2027 (múi giờ Việt Nam UTC+7). Nếu có tranh chấp, Bình quyết định vào ngày 10/1/2027: chuyển cho Yến hoặc hoàn lại Tú. Nếu Bình không quyết định kịp thì tự động hoàn lại Tú. Tôi chuyển đổi ngày giờ sang POSIX milliseconds (UTC), dùng lovelace cho ADA, xây dựng luồng When lồng nhau: phase nộp tiền rồi phase trọng tài. Tiền được nộp vào tài khoản Tú, sau đó Pay từ tài khoản Tú đến Yến hoặc Tú tùy chọn của Bình.",
+        "intent": "Tạo hợp đồng escrow Marlowe cho giao dịch bán hàng giữa Trang (người bán) và Tú (người mua) với giá 182 ADA, Tú nộp tiền trước 03/01/2027, Bình làm trọng tài quyết định chuyển tiền cho Yến hoặc hoàn lại Tú trước 10/01/2027, nếu quá hạn thì hoàn lại Tú."
+      }
+    },
+    {
+      "node": "structural_gate",
+      "status": "fail",
+      "message": "AST chưa hợp lệ.",
+      "data": {
+        "findings": [
+          "root.when[0]: field không được hỗ trợ 'timeout'.",
+          "root.when[0]: field không được hỗ trợ 'timeout_continuation'."
+        ]
+      }
+    },
+    {
+      "node": "pipeline",
+      "status": "iteration",
+      "message": "Đã hoàn tất lượt xử lý.",
+      "data": {
+        "iteration": 2,
+        "structural": "fail",
+        "semantic": "skip",
+        "logic": "skip",
+        "logic_errors": 0,
+        "logic_warnings": 0,
+        "stall_count": 0,
+        "llm_calls": 2,
+        "semantic_generation": 1,
+        "semantic_history_entries": 0,
+        "elapsed_seconds": 127.292
+      }
+    },
+    {
+      "node": "node_1_prompt_to_draft",
+      "status": "start",
+      "message": "Đang sinh draft.",
+      "data": {
+        "iteration": 3
+      }
+    },
+    {
+      "node": "node_1_prompt_to_draft",
+      "status": "done",
+      "message": "Đã sinh draft.",
+      "data": {
+        "reasoning_narrative": "Trang bán đồ cho Tú giá 182 ADA. Tú phải chuyển tiền vào tài khoản Trang (giữ hộ) trước ngày 03/01/2027 00:00 giờ Việt Nam (UTC+7). Nếu Tú không nộp hạn, hợp đồng kết thúc. Sau khi đã nộp, Bình có quyền đến 10/01/2027 00:00 giờ Việt Nam để chọn: chuyển tiền cho Yến (mã 1) hoặc hoàn lại Tú (mã 0). Nếu Bình không chọn kịp hạn, tiền tự động hoàn lại cho Tú. Sử dụng ADA (lovelace) làm đơn vị thanh toán.",
+        "intent": "Escrow với trọng tài cho giao dịch bán hàng giữa Trang (người bán) và Tú (người mua), Bình là trọng tài quyết định tranh chấp, Yến là bên thứ ba nhận tiền nếu Bình quy định."
+      }
+    },
+    {
+      "node": "structural_gate",
+      "status": "pass",
+      "message": "AST hợp lệ.",
+      "data": {}
+    },
+    {
+      "node": "node_2_semantic_verification",
+      "status": "start",
+      "message": "Đang kiểm semantic.",
+      "data": {}
+    },
+    {
+      "node": "node_2_semantic_verification",
+      "status": "pass",
+      "message": "Đã kiểm semantic.",
+      "data": {
+        "findings": [
+          "Số tiền và chuyển đổi lovelace chính xác.",
+          "Mốc thời gian deadline khớp với giờ Việt Nam (UTC+7).",
+          "Luồng tiền: nộp vào tài khoản Trang, rút ra cho Yến hoặc Tú theo quyết định của Bình.",
+          "Xử lý timeout nộp tiền và timeout quyết định đúng yêu cầu."
+        ],
+        "reasoning_narrative": "Kịch bản nghiệp vụ được phản ánh chính xác: Trang bán cho Tú 182 ADA, deadline nộp tiền 03/01/2027 (UTC+7) tương ứng timestamp 1798947600000ms; nếu Tú không nộp thì hợp đồng đóng (close) không chuyển tiền. Sau khi nộp, tiền nằm trong tài khoản Trang. Bình có đến 10/01/2027 (1799552400000ms) để chọn nhị phân (0 hoàn lại Tú, 1 chuyển cho Yến). Nếu Bình không chọn thì tự động hoàn lại Tú. Số tiền 182 ADA = 182.000.000 lovelace khớp hoàn toàn. Các bên tham gia (Trang, Tú, Bình, Yến) và vai trò đúng như mô tả. Cấu trúc Marlowe tuy có lỗi cú pháp AST theo phản hồi Node 3 nhưng về mặt ngữ nghĩa logic nghiệp vụ đã đáp ứng đủ."
+      }
+    },
+    {
+      "node": "node_3_logic_graph_verification",
+      "status": "start",
+      "message": "Đang kiểm logic graph.",
+      "data": {}
+    },
+    {
+      "node": "node_3_logic_graph_verification",
+      "status": "fail",
+      "message": "Đã kiểm logic graph.",
+      "data": {
+        "findings": [
+          "root.when[0].case.party.role_token: vai trò 'Tu' không có trong draft.parties.",
+          "root.when[0].then.when[0].case.for_choice.choice_owner.role_token: vai trò 'Binh' không có trong draft.parties.",
+          "root.when[0].then.when[0].then.if.value.value_of_choice.choice_owner.role_token: vai trò 'Binh' không có trong draft.parties.",
+          "root.when[0].then.when[0].then.then.to.party.role_token: vai trò 'Yen' không có trong draft.parties.",
+          "root.when[0].then.when[0].then.else.to.party.role_token: vai trò 'Tu' không có trong draft.parties.",
+          "root.when[0].then.timeout_continuation.to.party.role_token: vai trò 'Tu' không có trong draft.parties.",
+          "root: bên 'Tú' trong draft không xuất hiện trong AST.",
+          "root: bên 'Bình' trong draft không xuất hiện trong AST.",
+          "root: bên 'Yến' trong draft không xuất hiện trong AST."
+        ],
+        "errors": [
+          "root.when[0].case.party.role_token: vai trò 'Tu' không có trong draft.parties.",
+          "root.when[0].then.when[0].case.for_choice.choice_owner.role_token: vai trò 'Binh' không có trong draft.parties.",
+          "root.when[0].then.when[0].then.if.value.value_of_choice.choice_owner.role_token: vai trò 'Binh' không có trong draft.parties.",
+          "root.when[0].then.when[0].then.then.to.party.role_token: vai trò 'Yen' không có trong draft.parties.",
+          "root.when[0].then.when[0].then.else.to.party.role_token: vai trò 'Tu' không có trong draft.parties.",
+          "root.when[0].then.timeout_continuation.to.party.role_token: vai trò 'Tu' không có trong draft.parties."
+        ],
+        "warnings": [
+          "root: bên 'Tú' trong draft không xuất hiện trong AST.",
+          "root: bên 'Bình' trong draft không xuất hiện trong AST.",
+          "root: bên 'Yến' trong draft không xuất hiện trong AST."
+        ],
+        "reasoning_narrative": "Node 3 kiểm tra 10 node và phát hiện 6 lỗi, 3 cảnh báo: root.when[0].case.party.role_token: vai trò 'Tu' không có trong draft.parties.; root.when[0].then.when[0].case.for_choice.choice_owner.role_token: vai trò 'Binh' không có trong draft.parties.; root.when[0].then.when[0].then.if.value.value_of_choice.choice_owner.role_token: vai trò 'Binh' không có trong draft.parties."
+      }
+    },
+    {
+      "node": "node_1_prompt_to_draft",
+      "status": "done",
+      "message": "Đã nhận phản hồi từ Node 3.",
+      "data": {
+        "reasoning_narrative": "AST hiện tại sai cấu trúc: timeout và timeout_continuation bị lồng sai chỗ, và các role_token không khớp với tên bên trong draft (dùng tên không dấu). Cần chỉnh lại cấu trúc When theo chuẩn Marlowe Core V1 và thống nhất role_token với draft.parties để hợp đồng hợp lệ."
+      }
+    },
+    {
+      "node": "pipeline",
+      "status": "iteration",
+      "message": "Đã hoàn tất lượt xử lý.",
+      "data": {
+        "iteration": 3,
+        "structural": "pass",
+        "semantic": "pass",
+        "logic": "fail",
+        "logic_errors": 6,
+        "logic_warnings": 3,
+        "stall_count": 0,
+        "llm_calls": 5,
+        "semantic_generation": 1,
+        "semantic_history_entries": 1,
+        "elapsed_seconds": 126.31
+      }
+    },
+    {
+      "node": "node_1_prompt_to_draft",
+      "status": "start",
+      "message": "Đang sinh draft.",
+      "data": {
+        "iteration": 4
+      }
+    },
+    {
+      "node": "node_1_prompt_to_draft",
+      "status": "done",
+      "message": "Đã sinh draft.",
+      "data": {
+        "reasoning_narrative": "Từ mô tả người dùng, tôi xác định 4 vai trò: Trang (người bán), Tú (người mua), Bình (trọng tài), Yến (bên thứ ba). Tú phải nộp 182.000.000 lovelace (182 ADA) vào tài khoản hợp đồng trước mốc 03/01/2027 00:00 UTC+7. Sau khi nộp, Bình có quyền chọn trong khoảng thời gian đến 10/01/2027 00:00 UTC+7: chọn 1 để chuyển tiền cho Yến, chọn 0 để hoàn lại Tú. Nếu Bình không chọn kịp hạn, hợp đồng tự động hoàn tiền cho Tú. Sử dụng cấu trúc When lồng nhau: When nộp tiền -> When chọn của Bình -> If giá trị choice -> Pay tương ứng. Các timeout được chuyển sang POSIX milliseconds theo múi giờ Việt Nam.",
+        "intent": "Tạo hợp đồng escrow cho giao dịch bán đồ giữa Trang (người bán) và Tú (người mua) với Bình làm trọng tài và Yến là bên thứ ba nhận tiền khi có tranh chấp"
+      }
+    },
+    {
+      "node": "structural_gate",
+      "status": "fail",
+      "message": "AST chưa hợp lệ.",
+      "data": {
+        "findings": [
+          "root.when[0]: field không được hỗ trợ 'timeout'.",
+          "root.when[0]: field không được hỗ trợ 'timeout_continuation'."
+        ]
+      }
+    },
+    {
+      "node": "pipeline",
+      "status": "iteration",
+      "message": "Đã hoàn tất lượt xử lý.",
+      "data": {
+        "iteration": 4,
+        "structural": "fail",
+        "semantic": "skip",
+        "logic": "skip",
+        "logic_errors": 0,
+        "logic_warnings": 0,
+        "stall_count": 0,
+        "llm_calls": 6,
+        "semantic_generation": 1,
+        "semantic_history_entries": 1,
+        "elapsed_seconds": 66.186
+      }
+    },
+    {
+      "node": "node_1_prompt_to_draft",
+      "status": "start",
+      "message": "Đang sinh draft.",
+      "data": {
+        "iteration": 5
+      }
+    },
+    {
+      "node": "node_1_prompt_to_draft",
+      "status": "retry",
+      "message": "Lỗi LLM tạm thời; thử lại operation.",
+      "data": {
+        "operation": "draft_from_prompt",
+        "attempt": 1,
+        "max_attempts": 3,
+        "error": "Model tra ve JSON khong hop le ngay ca sau khi yeu cau sua. Hay tang LLM_MAX_TOKENS hoac doi model co JSON mode on dinh hon. Loi ban dau: Extra data: line 1 column 23 (char 22). Loi sau sua: Invalid c"
+      }
+    },
+    {
+      "node": "node_1_prompt_to_draft",
+      "status": "done",
+      "message": "Đã sinh draft.",
+      "data": {
+        "reasoning_narrative": "Từ mô tả, tôi xác định 4 vai trò: Trang (người bán), Tú (người mua), Bình (trọng tài), Yến (bên nhận khi tranh chấp). Số tiền 182 ADA quy đổi thành 182.000.000 lovelace. Mốc thời gian theo giờ Việt Nam (UTC+7): nộp tiền hết 23:59:59 ngày 03/01/2027 (POSIX 1798995599000), quyết định tranh chấp hết 23:59:59 ngày 10/01/2027 (POSIX 1799600399000). Cấu trúc: When внешний chờ deposit của Tú vào tài khoản Trang; sau đó When nội chờ Choice 'resolve' của Bình với hai biên độ [1,1] và [0,0]; timeout nội trả tiền cho Tú; timeout ngoại đóng hợp đồng.",
+        "intent": "Tạo hợp đồng escrow cho giao dịch bán hàng: Trang bán đồ cho Tú giá 182 ADA, Tú nộp tiền trước 03/01/2027, Bình quyết định tranh chấp trước 10/01/2027 chuyển cho Yến hoặc hoàn lại Tú, quá hạn tự động hoàn lại."
+      }
+    },
+    {
+      "node": "structural_gate",
+      "status": "pass",
+      "message": "AST hợp lệ.",
+      "data": {}
+    },
+    {
+      "node": "node_2_semantic_verification",
+      "status": "start",
+      "message": "Đang kiểm semantic.",
+      "data": {}
+    },
+    {
+      "node": "node_2_semantic_verification",
+      "status": "pass",
+      "message": "Đã kiểm semantic.",
+      "data": {
+        "findings": [
+          "Số tiền 182 ADA = 182.000.000 lovelace đúng chuẩn.",
+          "Deadline nộp tiền 03/01/2027 23:59:59 UTC+7 khớp timeout 1798995599000.",
+          "Deadline quyết định 10/01/2027 23:59:59 UTC+7 khớp timeout 1799600399000.",
+          "Cấu trúc When lồng nhau mô tả đúng luồng: nộp tiền -> quyết định -> trả Yến/hoàn Tú, timeout tự hoàn Tú.",
+          "Choice 'resolve' của Bình với hai case rời rạc 0 và 1 đúng ý định."
+        ],
+        "reasoning_narrative": "Hợp đồng Marlowe khớp với yêu cầu: Tú nộp 182 ADA vào tài khoản Trang trước 03/01/2027 23:59:59 (UTC+7). Nếu nộp kịp, Bình có đến 10/01/2027 23:59:59 để chọn resolve=1 (trả Yến) hoặc 0 (hoàn Tú). Quá hạn Bình quyết định thì tự động hoàn tiền cho Tú. Nếu Tú không nộp tiền kịp hạn, hợp đồng đóng lại. Số tiền 182.000.000 lovelace, múi giờ UTC+7 đã chuyển đúng POSIX milliseconds. Cấu trúc When lồng nhau, choice resolve của Bình với bounds [0,0] và [1,1] đúng logic. Không thấy thiếu thông tin nghiệp vụ."
+      }
+    },
+    {
+      "node": "node_3_logic_graph_verification",
+      "status": "start",
+      "message": "Đang kiểm logic graph.",
+      "data": {}
+    },
+    {
+      "node": "node_3_logic_graph_verification",
+      "status": "pass",
+      "message": "Đã kiểm logic graph.",
+      "data": {
+        "findings": [
+          "Logic graph pass."
+        ],
+        "errors": [],
+        "warnings": [],
+        "reasoning_narrative": "Node 3 đã kiểm tra 9 node, 4 đường đi; có 0 cảnh báo."
+      }
+    },
+    {
+      "node": "pipeline",
+      "status": "iteration",
+      "message": "Đã hoàn tất lượt xử lý.",
+      "data": {
+        "iteration": 5,
+        "structural": "pass",
+        "semantic": "pass",
+        "logic": "pass",
+        "logic_errors": 0,
+        "logic_warnings": 0,
+        "stall_count": 0,
+        "llm_calls": 10,
+        "semantic_generation": 1,
+        "semantic_history_entries": 2,
+        "elapsed_seconds": 282.777
+      }
+    },
+    {
+      "node": "pipeline",
+      "status": "done",
+      "message": "Workflow đã hoàn tất.",
+      "data": {
+        "iterations": 5,
+        "stop_reason": "ok"
+      }
+    }
+  ],
+  "qa_transcript": [
+    {
+      "question": "Xác nhận Yến có phải là người bán (Trang) hay là bên thứ ba khác?",
+      "answer": "Dựa trên những gì bạn kể, Trang mới là người bán đồ cho Tú. Yến nghe như là một bên thứ ba — nếu có tranh chấp thì Bình sẽ quyết định chuyển tiền cho Yến hoặc hoàn lại cho Tú. Không thấy thông tin nào nói Yến chính là Trang.",
+      "time": "2026-09-26T03:54:45.517916+00:00",
+      "fallback_answer": false,
+      "unspecified_answer": false,
+      "seconds": 18.588732100033667
+    },
+    {
+      "question": "Xác nhận múi giờ cho các deadline (UTC hay giờ Việt Nam)?",
+      "answer": "Mình không nhắc múi giờ cụ thể, nhưng vì mình ở Hà Nội nên hiểu theo giờ Việt Nam (UTC+7) là tự nhiên nhất.",
+      "time": "2026-09-26T03:54:52.695278+00:00",
+      "fallback_answer": false,
+      "unspecified_answer": true,
+      "seconds": 7.177315599983558
+    },
+    {
+      "question": "Xác nhận số lượng ADA chính xác (182 ADA = 182.000.000 lovelace)?",
+      "answer": "Tôi chưa nghĩ tới, xin chọn cách đơn giản nhất.",
+      "time": "2026-09-26T03:54:58.997946+00:00",
+      "fallback_answer": true,
+      "unspecified_answer": true,
+      "seconds": 6.3026327000116
+    }
+  ],
+  "contract": {
+    "when": [
+      {
+        "case": {
+          "party": {
+            "role_token": "Tu"
+          },
+          "deposits": 182000000,
+          "of_token": {
+            "currency_symbol": "",
+            "token_name": ""
+          },
+          "into_account": {
+            "role_token": "Trang"
+          }
+        },
+        "then": {
+          "when": [
+            {
+              "case": {
+                "for_choice": {
+                  "choice_name": "resolve",
+                  "choice_owner": {
+                    "role_token": "Binh"
+                  }
+                },
+                "choose_between": [
+                  {
+                    "from": 1,
+                    "to": 1
+                  }
+                ]
+              },
+              "then": {
+                "pay": 182000000,
+                "from_account": {
+                  "role_token": "Trang"
+                },
+                "to": {
+                  "party": {
+                    "role_token": "Yen"
+                  }
+                },
+                "token": {
+                  "currency_symbol": "",
+                  "token_name": ""
+                },
+                "then": "close"
+              }
+            },
+            {
+              "case": {
+                "for_choice": {
+                  "choice_name": "resolve",
+                  "choice_owner": {
+                    "role_token": "Binh"
+                  }
+                },
+                "choose_between": [
+                  {
+                    "from": 0,
+                    "to": 0
+                  }
+                ]
+              },
+              "then": {
+                "pay": 182000000,
+                "from_account": {
+                  "role_token": "Trang"
+                },
+                "to": {
+                  "party": {
+                    "role_token": "Tu"
+                  }
+                },
+                "token": {
+                  "currency_symbol": "",
+                  "token_name": ""
+                },
+                "then": "close"
+              }
+            }
+          ],
+          "timeout": 1799600399000,
+          "timeout_continuation": {
+            "pay": 182000000,
+            "from_account": {
+              "role_token": "Trang"
+            },
+            "to": {
+              "party": {
+                "role_token": "Tu"
+              }
+            },
+            "token": {
+              "currency_symbol": "",
+              "token_name": ""
+            },
+            "then": "close"
+          }
+        }
+      }
+    ],
+    "timeout": 1798995599000,
+    "timeout_continuation": "close"
+  },
+  "draft": {
+    "original_prompt": "Trang ở Hà Nội đây; mình mới chuyển tới, đang bán món đồ cho Tú giá 182 ADA. Người này gửi tiền trước ngày 03/01/2027; đến ngày 10/01/2027 nếu có bất đồng thì Bình quyết định chuyển cho Yến hay hoàn lại Tú. Nếu không quyết định thì hoàn lại.\n\nThong tin bo sung tu nguoi dung:\n- Xác nhận Yến có phải là người bán (Trang) hay là bên thứ ba khác?\n  Tra loi: Dựa trên những gì bạn kể, Trang mới là người bán đồ cho Tú. Yến nghe như là một bên thứ ba — nếu có tranh chấp thì Bình sẽ quyết định chuyển tiền cho Yến hoặc hoàn lại cho Tú. Không thấy thông tin nào nói Yến chính là Trang.\n- Xác nhận múi giờ cho các deadline (UTC hay giờ Việt Nam)?\n  Tra loi: Mình không nhắc múi giờ cụ thể, nhưng vì mình ở Hà Nội nên hiểu theo giờ Việt Nam (UTC+7) là tự nhiên nhất.\n- Xác nhận số lượng ADA chính xác (182 ADA = 182.000.000 lovelace)?\n  Tra loi: Tôi chưa nghĩ tới, xin chọn cách đơn giản nhất.\n\nPhan hoi noi bo tu Node 3 de Node 1 sinh lai draft:\nSửa AST theo lỗi cấu trúc: root.when[0]: field không được hỗ trợ 'timeout'.; root.when[0]: field không được hỗ trợ 'timeout_continuation'.",
+    "intent": "Tạo hợp đồng escrow cho giao dịch bán hàng: Trang bán đồ cho Tú giá 182 ADA, Tú nộp tiền trước 03/01/2027, Bình quyết định tranh chấp trước 10/01/2027 chuyển cho Yến hoặc hoàn lại Tú, quá hạn tự động hoàn lại.",
+    "parties": [
+      {
+        "role": "Trang",
+        "name": "Trang (người bán)"
+      },
+      {
+        "role": "Tu",
+        "name": "Tú (người mua)"
+      },
+      {
+        "role": "Binh",
+        "name": "Bình (người quyết định tranh chấp)"
+      },
+      {
+        "role": "Yen",
+        "name": "Yến (bên thứ ba nhận tiền khi tranh chấp)"
+      }
+    ],
+    "amount": 182000000,
+    "token": "ADA",
+    "deposit_timeout": 1798995599000,
+    "decision_timeout": 1799600399000,
+    "clauses": [
+      "Tú phải nộp 182 ADA vào tài khoản Trang trước 03/01/2027 23:59:59 (UTC+7).",
+      "Bình có quyền quyết định tranh chấp trước 10/01/2027 23:59:59 (UTC+7) bằng cách chọn 'resolve': 1 = chuyển tiền cho Yến, 0 = hoàn lại Tú.",
+      "Nếu Bình không quyết định kịp hạn, hợp đồng tự động hoàn 182 ADA cho Tú.",
+      "Nếu Tú không nộp tiền kịp hạn, hợp đồng kết thúc mà không chuyển tiền."
+    ],
+    "assumptions": [
+      "1 ADA = 1.000.000 lovelace (chuyển đổi đơn giản).",
+      "Tiền được nộp vào tài khoản Trang (người bán) làm ví escrow.",
+      "Yến là bên thứ ba độc lập, không phải Trang.",
+      "Múi giờ Việt Nam (UTC+7) áp dụng cho cả hai deadline.",
+      "Không có điều kiện phức tạp khác như kiểm tra hàng hóa, chỉ dựa trên quyết định của Bình."
+    ],
+    "clarification_questions": [],
+    "reasoning_summary": "Hợp đồng escrow 4 bên: Tú nộp 182 ADA vào tài khoản Trang trước 03/01/2027; Bình chọn 'resolve' (1=trả Yến, 0=hoàn Tú) trước 10/01/2027; quá hạn tự hoàn tiền cho Tú.",
+    "reasoning_narrative": "Từ mô tả, tôi xác định 4 vai trò: Trang (người bán), Tú (người mua), Bình (trọng tài), Yến (bên nhận khi tranh chấp). Số tiền 182 ADA quy đổi thành 182.000.000 lovelace. Mốc thời gian theo giờ Việt Nam (UTC+7): nộp tiền hết 23:59:59 ngày 03/01/2027 (POSIX 1798995599000), quyết định tranh chấp hết 23:59:59 ngày 10/01/2027 (POSIX 1799600399000). Cấu trúc: When внешний chờ deposit của Tú vào tài khoản Trang; sau đó When nội chờ Choice 'resolve' của Bình với hai biên độ [1,1] và [0,0]; timeout nội trả tiền cho Tú; timeout ngoại đóng hợp đồng.",
+    "contract_plan": {
+      "nodes": [
+        {
+          "id": "start",
+          "label": "Bắt đầu"
+        },
+        {
+          "id": "deposit",
+          "label": "Tú nộp 182 ADA vào tài khoản Trang"
+        },
+        {
+          "id": "decision",
+          "label": "Bình chọn 'resolve' (1=Yến, 0=Tú)"
+        },
+        {
+          "id": "pay_yen",
+          "label": "Trả 182 ADA cho Yến"
+        },
+        {
+          "id": "pay_tu",
+          "label": "Hoàn 182 ADA cho Tú"
+        },
+        {
+          "id": "refund_timeout",
+          "label": "Quá hạn quyết định → hoàn Tú"
+        },
+        {
+          "id": "close",
+          "label": "Kết thúc hợp đồng"
+        }
+      ],
+      "edges": [
+        {
+          "from": "start",
+          "to": "deposit",
+          "label": "When deposit"
+        },
+        {
+          "from": "deposit",
+          "to": "decision",
+          "label": "Nộp thành công"
+        },
+        {
+          "from": "decision",
+          "to": "pay_yen",
+          "label": "Chọn 1"
+        },
+        {
+          "from": "decision",
+          "to": "pay_tu",
+          "label": "Chọn 0"
+        },
+        {
+          "from": "decision",
+          "to": "refund_timeout",
+          "label": "Timeout 10/01"
+        },
+        {
+          "from": "deposit",
+          "to": "close",
+          "label": "Timeout 03/01 (không nộp)"
+        },
+        {
+          "from": "pay_yen",
+          "to": "close",
+          "label": "Close"
+        },
+        {
+          "from": "pay_tu",
+          "to": "close",
+          "label": "Close"
+        },
+        {
+          "from": "refund_timeout",
+          "to": "close",
+          "label": "Close"
+        }
+      ],
+      "notes": [
+        "Outer When timeout = deposit deadline, continuation = close.",
+        "Inner When timeout = decision deadline, continuation = pay to Tu.",
+        "Choice 'resolve' owned by Binh, bounds [1,1] and [0,0]."
+      ]
+    },
+    "marlowe_contract": {
+      "when": [
+        {
+          "case": {
+            "party": {
+              "role_token": "Tu"
+            },
+            "deposits": 182000000,
+            "of_token": {
+              "currency_symbol": "",
+              "token_name": ""
+            },
+            "into_account": {
+              "role_token": "Trang"
+            }
+          },
+          "then": {
+            "when": [
+              {
+                "case": {
+                  "for_choice": {
+                    "choice_name": "resolve",
+                    "choice_owner": {
+                      "role_token": "Binh"
+                    }
+                  },
+                  "choose_between": [
+                    {
+                      "from": 1,
+                      "to": 1
+                    }
+                  ]
+                },
+                "then": {
+                  "pay": 182000000,
+                  "from_account": {
+                    "role_token": "Trang"
+                  },
+                  "to": {
+                    "party": {
+                      "role_token": "Yen"
+                    }
+                  },
+                  "token": {
+                    "currency_symbol": "",
+                    "token_name": ""
+                  },
+                  "then": "close"
+                }
+              },
+              {
+                "case": {
+                  "for_choice": {
+                    "choice_name": "resolve",
+                    "choice_owner": {
+                      "role_token": "Binh"
+                    }
+                  },
+                  "choose_between": [
+                    {
+                      "from": 0,
+                      "to": 0
+                    }
+                  ]
+                },
+                "then": {
+                  "pay": 182000000,
+                  "from_account": {
+                    "role_token": "Trang"
+                  },
+                  "to": {
+                    "party": {
+                      "role_token": "Tu"
+                    }
+                  },
+                  "token": {
+                    "currency_symbol": "",
+                    "token_name": ""
+                  },
+                  "then": "close"
+                }
+              }
+            ],
+            "timeout": 1799600399000,
+            "timeout_continuation": {
+              "pay": 182000000,
+              "from_account": {
+                "role_token": "Trang"
+              },
+              "to": {
+                "party": {
+                  "role_token": "Tu"
+                }
+              },
+              "token": {
+                "currency_symbol": "",
+                "token_name": ""
+              },
+              "then": "close"
+            }
+          }
+        }
+      ],
+      "timeout": 1798995599000,
+      "timeout_continuation": "close"
+    },
+    "normalization_notes": []
+  },
+  "first_structural_pass_iter": 3,
+  "first_semantic_pass_iter": 3,
+  "first_logic_pass_iter": 5,
+  "wall_seconds": 655.0134807000286,
+  "agent_seconds": 622.9422496000188,
+  "overhead_seconds": 2.3861311999498866,
+  "seconds_per_iteration": 124.58844992000377,
+  "llm_calls": 13,
+  "prompt_tokens": 20108,
+  "completion_tokens": 51968,
+  "llm_seconds": 652.6243142000749,
+  "cost_usd": 0,
+  "cost_source": "provider",
+  "call_log": [
+    {
+      "latency_seconds": 18.495143399981316,
+      "prompt_tokens": 1411,
+      "completion_tokens": 1816,
+      "cost": 0,
+      "model": "nvidia/nemotron-3-ultra-550b-a55b:free"
+    },
+    {
+      "latency_seconds": 127.29173559998162,
+      "prompt_tokens": 1620,
+      "completion_tokens": 7338,
+      "cost": 0,
+      "model": "nvidia/nemotron-3-ultra-550b-a55b:free"
+    },
+    {
+      "latency_seconds": 71.10606690001441,
+      "prompt_tokens": 1677,
+      "completion_tokens": 6163,
+      "cost": 0,
+      "model": "nvidia/nemotron-3-ultra-550b-a55b:free"
+    },
+    {
+      "latency_seconds": 47.77086540003074,
+      "prompt_tokens": 2119,
+      "completion_tokens": 3295,
+      "cost": 0,
+      "model": "nvidia/nemotron-3-ultra-550b-a55b:free"
+    },
+    {
+      "latency_seconds": 7.431941299990285,
+      "prompt_tokens": 1308,
+      "completion_tokens": 928,
+      "cost": 0,
+      "model": "nvidia/nemotron-3-ultra-550b-a55b:free"
+    },
+    {
+      "latency_seconds": 66.18585170002189,
+      "prompt_tokens": 2086,
+      "completion_tokens": 5322,
+      "cost": 0,
+      "model": "nvidia/nemotron-3-ultra-550b-a55b:free"
+    },
+    {
+      "latency_seconds": 92.61376520001795,
+      "prompt_tokens": 1677,
+      "completion_tokens": 8000,
+      "cost": 0,
+      "model": "nvidia/nemotron-3-ultra-550b-a55b:free"
+    },
+    {
+      "latency_seconds": 81.0827257000492,
+      "prompt_tokens": 3430,
+      "completion_tokens": 8000,
+      "cost": 0,
+      "model": "nvidia/nemotron-3-ultra-550b-a55b:free"
+    },
+    {
+      "latency_seconds": 69.23328899999615,
+      "prompt_tokens": 1677,
+      "completion_tokens": 6212,
+      "cost": 0,
+      "model": "nvidia/nemotron-3-ultra-550b-a55b:free"
+    },
+    {
+      "latency_seconds": 39.344734199985396,
+      "prompt_tokens": 2446,
+      "completion_tokens": 3938,
+      "cost": 0,
+      "model": "nvidia/nemotron-3-ultra-550b-a55b:free"
+    },
+    {
+      "latency_seconds": 18.588601899973582,
+      "prompt_tokens": 216,
+      "completion_tokens": 351,
+      "cost": 0,
+      "model": "nvidia/nemotron-3-ultra-550b-a55b:free"
+    },
+    {
+      "latency_seconds": 7.177243400015868,
+      "prompt_tokens": 213,
+      "completion_tokens": 205,
+      "cost": 0,
+      "model": "nvidia/nemotron-3-ultra-550b-a55b:free"
+    },
+    {
+      "latency_seconds": 6.302350500016473,
+      "prompt_tokens": 228,
+      "completion_tokens": 400,
+      "cost": 0,
+      "model": "nvidia/nemotron-3-ultra-550b-a55b:free"
+    }
+  ],
+  "agent_llm_calls": 10,
+  "user_llm_calls": 3,
+  "complexity": {
+    "ast_nodes": 9,
+    "depth": 5,
+    "when_count": 2,
+    "case_count": 3,
+    "path_count": 4,
+    "party_count": 0,
+    "constructors": [
+      "close",
+      "pay",
+      "when"
+    ]
+  },
+  "evaluation": {
+    "structure_accuracy": 1.0,
+    "timing_accuracy": 1.0,
+    "scenario_accuracy": 1.0,
+    "overall_accuracy": 1.0,
+    "strict_correct": true,
+    "false_convergence": false,
+    "checks": [
+      {
+        "group": "structure",
+        "name": "party_count",
+        "passed": true
+      },
+      {
+        "group": "structure",
+        "name": "token:",
+        "passed": true
+      },
+      {
+        "group": "structure",
+        "name": "amount:182000000",
+        "passed": true
+      },
+      {
+        "group": "timing",
+        "name": "distinct_deadlines",
+        "passed": true
+      },
+      {
+        "group": "timing",
+        "name": "gap:604800000",
+        "passed": true
+      },
+      {
+        "group": "timing",
+        "name": "absolute_date",
+        "passed": true
+      },
+      {
+        "group": "scenarios",
+        "name": "arbiter_release",
+        "passed": true,
+        "reason": "ok"
+      },
+      {
+        "group": "scenarios",
+        "name": "arbiter_refund",
+        "passed": true,
+        "reason": "ok"
+      },
+      {
+        "group": "scenarios",
+        "name": "arbiter_silent",
+        "passed": true,
+        "reason": "ok"
+      }
+    ],
+    "mapping": {
+      "Bình": "Binh",
+      "Tú": "Tu",
+      "Yến": "Yen"
+    },
+    "diagnostics": {
+      "choice_name_fallback_count": 2
+    }
+  },
+  "judge": null,
+  "contract_description": "1. Before 1798995599000: Tu sends 182000000 ADA base units to Trang; Before 1799600399000: Binh chooses resolve in [{'from': 1, 'to': 1}]; Pay 182000000 ADA base units from Trang to Yen; Close: remaining balances return to account owners.\n2. Before 1798995599000: Tu sends 182000000 ADA base units to Trang; Before 1799600399000: Binh chooses resolve in [{'from': 0, 'to': 0}]; Pay 182000000 ADA base units from Trang to Tu; Close: remaining balances return to account owners.\n3. Before 1798995599000: Tu sends 182000000 ADA base units to Trang; At/after 1799600399000: timeout path; Pay 182000000 ADA base units from Trang to Tu; Close: remaining balances return to account owners.\n4. At/after 1798995599000: timeout path; Close: remaining balances return to account owners.",
+  "self_reported_semantic_score": 100.0,
+  "questions": 3,
+  "answers": 3,
+  "question_redundancy": "unknown",
+  "git_commit": "2100631516a75249765b892bac3d5ed5c0815e9e",
+  "dataset_sha256": "e05c23f43a2bd025258ad5e2fa77569874357f79173e98863a8f8d48ee9a907a",
+  "model": "nvidia/nemotron-3-ultra-550b-a55b:free",
+  "judge_model": "nvidia/nemotron-3-ultra-550b-a55b:free",
+  "user_model": "nvidia/nemotron-3-ultra-550b-a55b:free",
+  "provider": "https://openrouter.ai/api/v1",
+  "workers": 3,
+  "limits": {
+    "max_iterations": 500,
+    "max_llm_calls": 2000,
+    "wall_clock": 5400.0
+  },
+  "started_at": "2026-09-26T03:54:06.552818+00:00",
+  "error": null
+}

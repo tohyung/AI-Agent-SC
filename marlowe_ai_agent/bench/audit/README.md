@@ -27,3 +27,37 @@ The `git_commit` field inside the run records captures `a7cd9c6`, which was
 HEAD during execution; the timing-probe code was still uncommitted then and
 was committed immediately afterward as `5753306`. Both facts are needed when
 interpreting provenance.
+
+## Five-case high-difficulty timing probe
+
+These are complete, pretty-printed copies of the five records in the local
+`bench/results/20260926-105406-nvidia-nemotron-3-ultra-550b-a55b-free/runs.jsonl`.
+As above, they retain the full recorded prompt, Q&A transcript, histories,
+trace, draft, contract, independent evaluation, request usage, and timing.
+
+- [L4 three-party escrow, Vietnamese](vi-escrow_3party-L4-006-full.json):
+  5 iterations, `done/ok`, 655.0 seconds, 13 total LLM requests (10 agent
+  requests), evaluator score 1.0 with two scenarios using choice-name fallback.
+- [L3 swap, Vietnamese](vi-swap-L3-010-full.json): 9 iterations,
+  `blocked/llm_error`, 622.7 seconds, 26 total LLM requests (14 agent requests).
+  The last available draft independently scores 1.0, but the run did not
+  converge and is not counted as a successful contract.
+- [L4 loan, English, missing information](en-loan-L4-007-full.json):
+  3 iterations, `done/ok`, 251.6 seconds, 11 total LLM requests (5 agent
+  requests), evaluator score 1.0.
+- [L4 crowdfunding, Vietnamese, ambiguous information](vi-crowdfunding-L4-004-full.json):
+  2 iterations, `done/ok`, 317.3 seconds, 7 total LLM requests (3 agent
+  requests), evaluator score 1.0.
+- [L4 cancellation fee, Vietnamese](vi-cancellation_fee-L4-001-full.json):
+  1 partial iteration, `blocked/harness_error`, 79.0 seconds, 2 total LLM
+  requests (1 agent request). The simulated-user request received an explicit
+  OpenRouter free-tier daily-rate-limit response, so no contract was available
+  for evaluation.
+
+All five started from the same timing probe at approximately 03:54:06 UTC on
+2026-09-26, using three workers. The probe used commit `2100631`, dataset
+SHA-256 `e05c23f43a2bd025258ad5e2fa77569874357f79173e98863a8f8d48ee9a907a`,
+and model `nvidia/nemotron-3-ultra-550b-a55b:free`. Secret-pattern checks found
+no API key, bearer token, or key assignment in any of the five published
+records. This selected probe is diagnostic evidence only, not a population
+estimate.

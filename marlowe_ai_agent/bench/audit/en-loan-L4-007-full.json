@@ -1,0 +1,764 @@
+{
+  "case_id": "en-loan-L4-007",
+  "attempt": 1,
+  "prompt": "Iris from Hanoi here; I'm a student and am helping Jack lend an agreed amount to Maya by 15/01/2027. Maya should return the principal plus 8 ADA by 22/01/2027; a missed repayment does not magically reverse the loan.",
+  "run_kind": "timing_probe",
+  "language": "en",
+  "type": "loan",
+  "difficulty": 4,
+  "info_mode": "missing",
+  "challenges": [
+    "absolute_date",
+    "multi_stage",
+    "long_narrative"
+  ],
+  "status": "done",
+  "stop_reason": "ok",
+  "iterations": 3,
+  "converged": true,
+  "iteration_history": [
+    {
+      "iteration": 1,
+      "structural": "skip",
+      "semantic": "skip",
+      "logic": "skip",
+      "logic_errors": 0,
+      "logic_warnings": 0,
+      "stall_count": 0,
+      "llm_calls": 1,
+      "semantic_generation": 1,
+      "semantic_history_entries": 0,
+      "elapsed_seconds": 68.559
+    },
+    {
+      "iteration": 2,
+      "structural": "pass",
+      "semantic": "fail",
+      "logic": "skip",
+      "logic_errors": 0,
+      "logic_warnings": 0,
+      "stall_count": 0,
+      "llm_calls": 3,
+      "semantic_generation": 2,
+      "semantic_history_entries": 1,
+      "elapsed_seconds": 104.861
+    },
+    {
+      "iteration": 3,
+      "structural": "pass",
+      "semantic": "pass",
+      "logic": "pass",
+      "logic_errors": 0,
+      "logic_warnings": 0,
+      "stall_count": 0,
+      "llm_calls": 5,
+      "semantic_generation": 2,
+      "semantic_history_entries": 2,
+      "elapsed_seconds": 77.655
+    }
+  ],
+  "convergence_path": " -> S+S- -> S+S+L+",
+  "semantic_history": [
+    {
+      "iteration": 2,
+      "semantic_generation": 1,
+      "semantic_fingerprint": "0819f7686e12a4ca470dc24d94babcee5be850a28d295d49849c855141c9b5d3",
+      "prompt_fingerprint": "7412689dc085783236d262ef06dffecc1918a8c63dfc874685c8ad3ea5359ddf",
+      "contract_fingerprint": "f86a7b63237fe6a904b4fd018499d18a439fed5c762dccc62401bcd527b1169a",
+      "passed": false,
+      "user_answered": true,
+      "answer_source": "semantic"
+    },
+    {
+      "iteration": 3,
+      "semantic_generation": 2,
+      "semantic_fingerprint": "5938ebc43013a39571314aceeff97f0dc1f488509b85e5c25fc6079475a29ace",
+      "prompt_fingerprint": "534d4762e7ab5dd047ab6009f8a50833ecec2ba255d7517896ad1c9d2bb8c3fd",
+      "contract_fingerprint": "12faf0728d5fb55126cf6f4d5e6fc472047388a9d0250df44d8f8be61c4c00ac",
+      "passed": true,
+      "user_answered": false,
+      "answer_source": null
+    }
+  ],
+  "trace": [
+    {
+      "node": "pipeline",
+      "status": "start",
+      "message": "Đã nhận prompt.",
+      "data": {
+        "max_iterations": 500
+      }
+    },
+    {
+      "node": "node_1_prompt_to_draft",
+      "status": "start",
+      "message": "Đang sinh draft.",
+      "data": {
+        "iteration": 1
+      }
+    },
+    {
+      "node": "node_1_prompt_to_draft",
+      "status": "done",
+      "message": "Đã sinh draft.",
+      "data": {
+        "reasoning_narrative": "Yêu cầu nêu rõ Jack cho vay Maya một khoản tiền chưa xác định, Maya phải trả gốc cộng 8 ADA trước 22/01/2027. Hợp đồng cần số tiền gốc (lovelace), xác định ai nộp tiền vào hợp đồng, Maya rút tiền như thế nào, và hành động khi Maya không trả đúng hạn (vì 'không tự động đảo ngược cho vay'). Iris được nhắc đến nhưng không rõ có vai trò ký hay chỉ hỗ trợ.",
+        "intent": "Tạo hợp đồng cho vay: Jack cho vay Maya một số tiền đã thỏa thuận, Maya trả gốc cộng 8 ADA trước ngày 22/01/2027. Iris hỗ trợ nhưng không rõ vai trò."
+      }
+    },
+    {
+      "node": "structural_gate",
+      "status": "skipped",
+      "message": "Chưa có AST do thiếu thông tin nghiệp vụ.",
+      "data": {}
+    },
+    {
+      "node": "pipeline",
+      "status": "semantic_reset",
+      "message": "Đã reset semantic stall state sau khi nhận thông tin mới từ người dùng.",
+      "data": {
+        "semantic_generation": 1,
+        "history_entries": 0,
+        "answered_questions_count": 4,
+        "answer_source": "empty_contract"
+      }
+    },
+    {
+      "node": "pipeline",
+      "status": "iteration",
+      "message": "Đã hoàn tất lượt xử lý.",
+      "data": {
+        "iteration": 1,
+        "structural": "skip",
+        "semantic": "skip",
+        "logic": "skip",
+        "logic_errors": 0,
+        "logic_warnings": 0,
+        "stall_count": 0,
+        "llm_calls": 1,
+        "semantic_generation": 1,
+        "semantic_history_entries": 0,
+        "elapsed_seconds": 68.559
+      }
+    },
+    {
+      "node": "node_1_prompt_to_draft",
+      "status": "start",
+      "message": "Đang sinh draft.",
+      "data": {
+        "iteration": 2
+      }
+    },
+    {
+      "node": "node_1_prompt_to_draft",
+      "status": "done",
+      "message": "Đã sinh draft.",
+      "data": {
+        "reasoning_narrative": "Hợp đồng cho vay đơn giản: Jack nộp 164 ADA trước ngày 15/01/2027. Nếu Jack nộp tiền, Maya có đến ngày 22/01/2027 để nộp 172 ADA (gốc 164 + lãi 8). Nếu Maya nộp đúng hạn, Jack nhận 172 ADA. Nếu Maya không nộp, Jack rút lại 164 ADA của mình. Iris không tham gia hợp đồng.",
+        "intent": "Loan agreement: Jack lends 164 ADA to Maya, Maya repays 172 ADA by 22/01/2027."
+      }
+    },
+    {
+      "node": "structural_gate",
+      "status": "pass",
+      "message": "AST hợp lệ.",
+      "data": {}
+    },
+    {
+      "node": "node_2_semantic_verification",
+      "status": "start",
+      "message": "Đang kiểm semantic.",
+      "data": {}
+    },
+    {
+      "node": "node_2_semantic_verification",
+      "status": "fail",
+      "message": "Đã kiểm semantic.",
+      "data": {
+        "findings": [
+          "Hợp đồng thiếu bước giải ngân vốn vay: Jack nộp 164 ADA vào tài khoản của chính mình nhưng hợp đồng không chuyển tiền này cho Maya. Điều này khiến Maya không nhận được vốn vay.",
+          "Nếu việc cho vay diễn ra ngoại tuyến (off-chain), thì việc Jack nộp tiền vào hợp đồng là không cần thiết và có thể gây nhầm lẫn.",
+          "Logic hoàn trả khi Maya nợ: hợp đồng trả 164 ADA từ tài khoản Jack cho Jack (đúng), nhưng tiền gốc chưa bao giờ rời khỏi tài khoản Jack."
+        ],
+        "reasoning_narrative": "Hợp đồng Marlowe hiện tại yêu cầu Jack nộp 164 ADA vào tài khoản của mình trước ngày 15/01/2027, sau đó chờ Maya nộp 172 ADA trước ngày 22/01/2027. Nếu Maya nộp tiền, Jack nhận 172 ADA; nếu Maya trễ hạn, Jack rút lại 164 ADA từ tài khoản của chính mình. Tuy nhiên, hợp đồng không có bước chuyển 164 ADA từ Jack sang Maya sau khi Jack nộp tiền, dẫn đến Maya không bao giờ nhận được vốn vay. Nếu cho vay diễn ra ngoại tuyến, bước nộp tiền của Jack là thừa thãi. Cần làm rõ mong muốn: hợp đồng có nên giải ngân vốn tự động không?"
+      }
+    },
+    {
+      "node": "pipeline",
+      "status": "semantic_reset",
+      "message": "Đã reset semantic stall state sau khi nhận thông tin mới từ người dùng.",
+      "data": {
+        "semantic_generation": 2,
+        "history_entries": 1,
+        "answered_questions_count": 2,
+        "answer_source": "semantic"
+      }
+    },
+    {
+      "node": "pipeline",
+      "status": "iteration",
+      "message": "Đã hoàn tất lượt xử lý.",
+      "data": {
+        "iteration": 2,
+        "structural": "pass",
+        "semantic": "fail",
+        "logic": "skip",
+        "logic_errors": 0,
+        "logic_warnings": 0,
+        "stall_count": 0,
+        "llm_calls": 3,
+        "semantic_generation": 2,
+        "semantic_history_entries": 1,
+        "elapsed_seconds": 104.861
+      }
+    },
+    {
+      "node": "node_1_prompt_to_draft",
+      "status": "start",
+      "message": "Đang sinh draft.",
+      "data": {
+        "iteration": 3
+      }
+    },
+    {
+      "node": "node_1_prompt_to_draft",
+      "status": "done",
+      "message": "Đã sinh draft.",
+      "data": {
+        "reasoning_narrative": "Hợp đồng được thiết kế theo yêu cầu đơn giản nhất: Jack nộp 164 ADA vào tài khoản hợp đồng trước ngày 15/01/2027. Sau khi nhận tiền, hợp đồng chuyển ngay 164 ADA cho Maya. Maya sau đó phải nộp 172 ADA (gốc 164 + lãi 8) trước ngày 22/01/2027. Nếu Maya nộp đúng hạn, Jack nhận 172 ADA. Nếu Maya không nộp, hợp đồng kết thúc mà không có hành động thêm, Jack không lấy lại được tiền (vốn đã chuyển cho Maya). Các giả định: dùng ADA trên Cardano, không có tài sản đảm bảo, thời hạn tính đến 00:00 UTC, Iris không tham gia hợp đồng.",
+        "intent": "Create a Marlowe loan contract where Jack lends 164 ADA to Maya, repayable 172 ADA by 22/01/2027."
+      }
+    },
+    {
+      "node": "structural_gate",
+      "status": "pass",
+      "message": "AST hợp lệ.",
+      "data": {}
+    },
+    {
+      "node": "node_2_semantic_verification",
+      "status": "start",
+      "message": "Đang kiểm semantic.",
+      "data": {}
+    },
+    {
+      "node": "node_2_semantic_verification",
+      "status": "pass",
+      "message": "Đã kiểm semantic.",
+      "data": {
+        "findings": [
+          "Số tiền gốc 164 ADA và lãi 8 ADA được chuyển đổi đúng sang lovelace.",
+          "Thời hạn nộp tiền của Jack (15/01/2027) và Maya (22/01/2027) khớp với POSIX milliseconds.",
+          "Luồng tiền: Jack nộp -> hợp đồng chuyển cho Maya -> Maya nộp trả -> hợp đồng chuyển cho Jack.",
+          "Cơ chế timeout: nếu Jack không nộp kịp, hợp đồng đóng; nếu Maya không trả kịp, hợp đồng đóng mà không hoàn tiền."
+        ],
+        "reasoning_narrative": "Hợp đồng triển khai luồng cho vay trên chuỗi đơn giản: Jack nộp 164 ADA trước 15/01/2027, hợp đồng chuyển ngay cho Maya; Maya phải nộp 172 ADA (gốc + 8 ADA lãi) trước 22/01/2027 để Jack nhận được. Nếu bất kỳ bên nào bỏ lỡ hạn chót, hợp đồng đóng lại mà không có chuyển tiền thêm. Số tiền và thời gian chuyển đổi chính xác (164 ADA = 164.000.000 lovelace, 172 ADA = 172.000.000 lovelace). Tất cả giả định phù hợp với câu trả lời 'chọn tùy chọn đơn giản nhất'."
+      }
+    },
+    {
+      "node": "node_3_logic_graph_verification",
+      "status": "start",
+      "message": "Đang kiểm logic graph.",
+      "data": {}
+    },
+    {
+      "node": "node_3_logic_graph_verification",
+      "status": "pass",
+      "message": "Đã kiểm logic graph.",
+      "data": {
+        "findings": [
+          "Logic graph pass."
+        ],
+        "errors": [],
+        "warnings": [],
+        "reasoning_narrative": "Node 3 đã kiểm tra 7 node, 3 đường đi; có 0 cảnh báo."
+      }
+    },
+    {
+      "node": "pipeline",
+      "status": "iteration",
+      "message": "Đã hoàn tất lượt xử lý.",
+      "data": {
+        "iteration": 3,
+        "structural": "pass",
+        "semantic": "pass",
+        "logic": "pass",
+        "logic_errors": 0,
+        "logic_warnings": 0,
+        "stall_count": 0,
+        "llm_calls": 5,
+        "semantic_generation": 2,
+        "semantic_history_entries": 2,
+        "elapsed_seconds": 77.655
+      }
+    },
+    {
+      "node": "pipeline",
+      "status": "done",
+      "message": "Workflow đã hoàn tất.",
+      "data": {
+        "iterations": 3,
+        "stop_reason": "ok"
+      }
+    }
+  ],
+  "qa_transcript": [
+    {
+      "question": "Số tiền gốc là bao nhiêu ADA (hoặc lovelace)?",
+      "answer": "The principal is 164 ADA.",
+      "time": "2026-09-26T03:54:41.024060+00:00",
+      "fallback_answer": false,
+      "unspecified_answer": false,
+      "seconds": 5.08620299998438
+    },
+    {
+      "question": "Jack có nộp tiền gốc vào hợp đồng Marlowe không? Nếu không, luồng tiền như thế nào?",
+      "answer": "I had not considered that; please choose the simplest option.",
+      "time": "2026-09-26T03:55:06.144090+00:00",
+      "fallback_answer": true,
+      "unspecified_answer": true,
+      "seconds": 25.119993200001772
+    },
+    {
+      "question": "Maya có bắt buộc nộp tiền trả nợ vào hợp đồng không?",
+      "answer": "I had not considered that; please choose the simplest option.",
+      "time": "2026-09-26T03:55:12.131049+00:00",
+      "fallback_answer": true,
+      "unspecified_answer": true,
+      "seconds": 5.986927199992351
+    },
+    {
+      "question": "Nếu Maya không trả đúng hạn, Jack có quyền rút tiền gì từ hợp đồng? (ví dụ: tiền gốc đã nộp, hay không có gì?)",
+      "answer": "I had not considered that; please choose the simplest option.",
+      "time": "2026-09-26T03:55:15.642430+00:00",
+      "fallback_answer": true,
+      "unspecified_answer": true,
+      "seconds": 3.511351699999068
+    },
+    {
+      "question": "Bạn có muốn hợp đồng tự động chuyển 164 ADA từ Jack sang Maya ngay sau khi Jack nộp tiền không? (Đây là luồng cho vay chuẩn trên chuỗi).",
+      "answer": "I had not considered that; please choose the simplest option.",
+      "time": "2026-09-26T03:56:54.155565+00:00",
+      "fallback_answer": true,
+      "unspecified_answer": true,
+      "seconds": 5.778489199990872
+    },
+    {
+      "question": "Nếu cho vay đã xảy ra ngoại tuyến, có nên bỏ bỏ bước Jack nộp tiền và chỉ giữ lại việc Maya nộp tiền trả nợ không?",
+      "answer": "I had not considered that; please choose the simplest option.",
+      "time": "2026-09-26T03:57:00.503371+00:00",
+      "fallback_answer": true,
+      "unspecified_answer": true,
+      "seconds": 6.34777180000674
+    }
+  ],
+  "contract": {
+    "when": [
+      {
+        "case": {
+          "deposits": 164000000,
+          "into_account": {
+            "role_token": "Jack"
+          },
+          "of_token": {
+            "currency_symbol": "",
+            "token_name": ""
+          },
+          "party": {
+            "role_token": "Jack"
+          }
+        },
+        "then": {
+          "pay": 164000000,
+          "from_account": {
+            "role_token": "Jack"
+          },
+          "to": {
+            "party": {
+              "role_token": "Maya"
+            }
+          },
+          "token": {
+            "currency_symbol": "",
+            "token_name": ""
+          },
+          "then": {
+            "when": [
+              {
+                "case": {
+                  "deposits": 172000000,
+                  "into_account": {
+                    "role_token": "Maya"
+                  },
+                  "of_token": {
+                    "currency_symbol": "",
+                    "token_name": ""
+                  },
+                  "party": {
+                    "role_token": "Maya"
+                  }
+                },
+                "then": {
+                  "pay": 172000000,
+                  "from_account": {
+                    "role_token": "Maya"
+                  },
+                  "to": {
+                    "party": {
+                      "role_token": "Jack"
+                    }
+                  },
+                  "token": {
+                    "currency_symbol": "",
+                    "token_name": ""
+                  },
+                  "then": "close"
+                }
+              }
+            ],
+            "timeout": 1800576000000,
+            "timeout_continuation": "close"
+          }
+        }
+      }
+    ],
+    "timeout": 1799971200000,
+    "timeout_continuation": "close"
+  },
+  "draft": {
+    "original_prompt": "Iris from Hanoi here; I'm a student and am helping Jack lend an agreed amount to Maya by 15/01/2027. Maya should return the principal plus 8 ADA by 22/01/2027; a missed repayment does not magically reverse the loan.\n\nThong tin bo sung tu nguoi dung:\n- Số tiền gốc là bao nhiêu ADA (hoặc lovelace)?\n  Tra loi: The principal is 164 ADA.\n- Jack có nộp tiền gốc vào hợp đồng Marlowe không? Nếu không, luồng tiền như thế nào?\n  Tra loi: I had not considered that; please choose the simplest option.\n- Maya có bắt buộc nộp tiền trả nợ vào hợp đồng không?\n  Tra loi: I had not considered that; please choose the simplest option.\n- Nếu Maya không trả đúng hạn, Jack có quyền rút tiền gì từ hợp đồng? (ví dụ: tiền gốc đã nộp, hay không có gì?)\n  Tra loi: I had not considered that; please choose the simplest option.\n\nThong tin bo sung tu nguoi dung:\n- Bạn có muốn hợp đồng tự động chuyển 164 ADA từ Jack sang Maya ngay sau khi Jack nộp tiền không? (Đây là luồng cho vay chuẩn trên chuỗi).\n  Tra loi: I had not considered that; please choose the simplest option.\n- Nếu cho vay đã xảy ra ngoại tuyến, có nên bỏ bỏ bước Jack nộp tiền và chỉ giữ lại việc Maya nộp tiền trả nợ không?\n  Tra loi: I had not considered that; please choose the simplest option.",
+    "intent": "Create a Marlowe loan contract where Jack lends 164 ADA to Maya, repayable 172 ADA by 22/01/2027.",
+    "parties": [
+      {
+        "role": "Jack",
+        "name": "Jack"
+      },
+      {
+        "role": "Maya",
+        "name": "Maya"
+      }
+    ],
+    "amount": 164000000,
+    "token": "ADA",
+    "deposit_timeout": 1799971200000,
+    "decision_timeout": 1800576000000,
+    "clauses": [
+      "Jack must deposit 164 ADA by 15/01/2027 (POSIX 1799971200000).",
+      "Upon deposit, contract immediately pays 164 ADA to Maya.",
+      "Maya must deposit 172 ADA (principal + 8 ADA interest) by 22/01/2027 (POSIX 1800576000000).",
+      "If Maya deposits, contract pays 172 ADA to Jack and closes.",
+      "If either party misses their deadline, contract closes with no further transfers."
+    ],
+    "assumptions": [
+      "Token is ADA (currency_symbol=\"\", token_name=\"\").",
+      "No collateral or penalty mechanics.",
+      "Deadlines are at 00:00 UTC on the specified dates.",
+      "Iris is not a party to the contract.",
+      "Simplest on-chain flow chosen per user request."
+    ],
+    "clarification_questions": [],
+    "reasoning_summary": "Simple escrow loan: Jack deposits principal, contract forwards to borrower; borrower repays principal+interest by deadline or contract expires.",
+    "reasoning_narrative": "Hợp đồng được thiết kế theo yêu cầu đơn giản nhất: Jack nộp 164 ADA vào tài khoản hợp đồng trước ngày 15/01/2027. Sau khi nhận tiền, hợp đồng chuyển ngay 164 ADA cho Maya. Maya sau đó phải nộp 172 ADA (gốc 164 + lãi 8) trước ngày 22/01/2027. Nếu Maya nộp đúng hạn, Jack nhận 172 ADA. Nếu Maya không nộp, hợp đồng kết thúc mà không có hành động thêm, Jack không lấy lại được tiền (vốn đã chuyển cho Maya). Các giả định: dùng ADA trên Cardano, không có tài sản đảm bảo, thời hạn tính đến 00:00 UTC, Iris không tham gia hợp đồng.",
+    "contract_plan": {
+      "nodes": [
+        "Jack deposits 164 ADA by 15/01/2027",
+        "Contract pays 164 ADA to Maya",
+        "Maya deposits 172 ADA by 22/01/2027",
+        "Contract pays 172 ADA to Jack",
+        "Contract closes"
+      ],
+      "edges": [
+        [
+          "Jack deposits 164 ADA by 15/01/2027",
+          "Contract pays 164 ADA to Maya"
+        ],
+        [
+          "Contract pays 164 ADA to Maya",
+          "Maya deposits 172 ADA by 22/01/2027"
+        ],
+        [
+          "Maya deposits 172 ADA by 22/01/2027",
+          "Contract pays 172 ADA to Jack"
+        ],
+        [
+          "Contract pays 172 ADA to Jack",
+          "Contract closes"
+        ],
+        [
+          "Jack deposits 164 ADA by 15/01/2027",
+          "Contract closes (timeout)"
+        ],
+        [
+          "Maya deposits 172 ADA by 22/01/2027",
+          "Contract closes (timeout)"
+        ]
+      ],
+      "notes": []
+    },
+    "marlowe_contract": {
+      "when": [
+        {
+          "case": {
+            "deposits": 164000000,
+            "into_account": {
+              "role_token": "Jack"
+            },
+            "of_token": {
+              "currency_symbol": "",
+              "token_name": ""
+            },
+            "party": {
+              "role_token": "Jack"
+            }
+          },
+          "then": {
+            "pay": 164000000,
+            "from_account": {
+              "role_token": "Jack"
+            },
+            "to": {
+              "party": {
+                "role_token": "Maya"
+              }
+            },
+            "token": {
+              "currency_symbol": "",
+              "token_name": ""
+            },
+            "then": {
+              "when": [
+                {
+                  "case": {
+                    "deposits": 172000000,
+                    "into_account": {
+                      "role_token": "Maya"
+                    },
+                    "of_token": {
+                      "currency_symbol": "",
+                      "token_name": ""
+                    },
+                    "party": {
+                      "role_token": "Maya"
+                    }
+                  },
+                  "then": {
+                    "pay": 172000000,
+                    "from_account": {
+                      "role_token": "Maya"
+                    },
+                    "to": {
+                      "party": {
+                        "role_token": "Jack"
+                      }
+                    },
+                    "token": {
+                      "currency_symbol": "",
+                      "token_name": ""
+                    },
+                    "then": "close"
+                  }
+                }
+              ],
+              "timeout": 1800576000000,
+              "timeout_continuation": "close"
+            }
+          }
+        }
+      ],
+      "timeout": 1799971200000,
+      "timeout_continuation": "close"
+    },
+    "normalization_notes": []
+  },
+  "first_structural_pass_iter": 2,
+  "first_semantic_pass_iter": 3,
+  "first_logic_pass_iter": 3,
+  "wall_seconds": 251.60469690000173,
+  "agent_seconds": 199.77361390006263,
+  "overhead_seconds": 1.8812890000990592,
+  "seconds_per_iteration": 66.59120463335421,
+  "llm_calls": 11,
+  "prompt_tokens": 9840,
+  "completion_tokens": 20756,
+  "llm_seconds": 249.72231039998587,
+  "cost_usd": 0,
+  "cost_source": "provider",
+  "call_log": [
+    {
+      "latency_seconds": 27.504812099970877,
+      "prompt_tokens": 1395,
+      "completion_tokens": 1986,
+      "cost": 0,
+      "model": "nvidia/nemotron-3-ultra-550b-a55b:free"
+    },
+    {
+      "latency_seconds": 32.77203140000347,
+      "prompt_tokens": 1565,
+      "completion_tokens": 3765,
+      "cost": 0,
+      "model": "nvidia/nemotron-3-ultra-550b-a55b:free"
+    },
+    {
+      "latency_seconds": 59.96176639996702,
+      "prompt_tokens": 1744,
+      "completion_tokens": 4341,
+      "cost": 0,
+      "model": "nvidia/nemotron-3-ultra-550b-a55b:free"
+    },
+    {
+      "latency_seconds": 43.30982540000696,
+      "prompt_tokens": 1689,
+      "completion_tokens": 5225,
+      "cost": 0,
+      "model": "nvidia/nemotron-3-ultra-550b-a55b:free"
+    },
+    {
+      "latency_seconds": 34.343889600015245,
+      "prompt_tokens": 2024,
+      "completion_tokens": 3059,
+      "cost": 0,
+      "model": "nvidia/nemotron-3-ultra-550b-a55b:free"
+    },
+    {
+      "latency_seconds": 5.086094600032084,
+      "prompt_tokens": 227,
+      "completion_tokens": 380,
+      "cost": 0,
+      "model": "nvidia/nemotron-3-ultra-550b-a55b:free"
+    },
+    {
+      "latency_seconds": 25.11985590000404,
+      "prompt_tokens": 233,
+      "completion_tokens": 400,
+      "cost": 0,
+      "model": "nvidia/nemotron-3-ultra-550b-a55b:free"
+    },
+    {
+      "latency_seconds": 5.9868044999893755,
+      "prompt_tokens": 225,
+      "completion_tokens": 400,
+      "cost": 0,
+      "model": "nvidia/nemotron-3-ultra-550b-a55b:free"
+    },
+    {
+      "latency_seconds": 3.511248299968429,
+      "prompt_tokens": 243,
+      "completion_tokens": 400,
+      "cost": 0,
+      "model": "nvidia/nemotron-3-ultra-550b-a55b:free"
+    },
+    {
+      "latency_seconds": 5.778397999994922,
+      "prompt_tokens": 251,
+      "completion_tokens": 400,
+      "cost": 0,
+      "model": "nvidia/nemotron-3-ultra-550b-a55b:free"
+    },
+    {
+      "latency_seconds": 6.347584200033452,
+      "prompt_tokens": 244,
+      "completion_tokens": 400,
+      "cost": 0,
+      "model": "nvidia/nemotron-3-ultra-550b-a55b:free"
+    }
+  ],
+  "agent_llm_calls": 5,
+  "user_llm_calls": 6,
+  "complexity": {
+    "ast_nodes": 7,
+    "depth": 6,
+    "when_count": 2,
+    "case_count": 2,
+    "path_count": 3,
+    "party_count": 0,
+    "constructors": [
+      "close",
+      "pay",
+      "when"
+    ]
+  },
+  "evaluation": {
+    "structure_accuracy": 1.0,
+    "timing_accuracy": 1.0,
+    "scenario_accuracy": 1.0,
+    "overall_accuracy": 1.0,
+    "strict_correct": true,
+    "false_convergence": false,
+    "checks": [
+      {
+        "group": "structure",
+        "name": "party_count",
+        "passed": true
+      },
+      {
+        "group": "structure",
+        "name": "token:",
+        "passed": true
+      },
+      {
+        "group": "structure",
+        "name": "amount:164000000",
+        "passed": true
+      },
+      {
+        "group": "structure",
+        "name": "amount:172000000",
+        "passed": true
+      },
+      {
+        "group": "timing",
+        "name": "distinct_deadlines",
+        "passed": true
+      },
+      {
+        "group": "timing",
+        "name": "gap:604800000",
+        "passed": true
+      },
+      {
+        "group": "timing",
+        "name": "absolute_date",
+        "passed": true
+      },
+      {
+        "group": "scenarios",
+        "name": "repaid",
+        "passed": true,
+        "reason": "ok"
+      },
+      {
+        "group": "scenarios",
+        "name": "not_repaid",
+        "passed": true,
+        "reason": "ok"
+      }
+    ],
+    "mapping": {
+      "Jack": "Jack",
+      "Maya": "Maya"
+    },
+    "diagnostics": {
+      "choice_name_fallback_count": 0
+    }
+  },
+  "judge": null,
+  "contract_description": "1. Before 1799971200000: Jack sends 164000000 ADA base units to Jack; Pay 164000000 ADA base units from Jack to Maya; Before 1800576000000: Maya sends 172000000 ADA base units to Maya; Pay 172000000 ADA base units from Maya to Jack; Close: remaining balances return to account owners.\n2. Before 1799971200000: Jack sends 164000000 ADA base units to Jack; Pay 164000000 ADA base units from Jack to Maya; At/after 1800576000000: timeout path; Close: remaining balances return to account owners.\n3. At/after 1799971200000: timeout path; Close: remaining balances return to account owners.",
+  "self_reported_semantic_score": 100.0,
+  "questions": 6,
+  "answers": 6,
+  "question_redundancy": "unknown",
+  "git_commit": "2100631516a75249765b892bac3d5ed5c0815e9e",
+  "dataset_sha256": "e05c23f43a2bd025258ad5e2fa77569874357f79173e98863a8f8d48ee9a907a",
+  "model": "nvidia/nemotron-3-ultra-550b-a55b:free",
+  "judge_model": "nvidia/nemotron-3-ultra-550b-a55b:free",
+  "user_model": "nvidia/nemotron-3-ultra-550b-a55b:free",
+  "provider": "https://openrouter.ai/api/v1",
+  "workers": 3,
+  "limits": {
+    "max_iterations": 500,
+    "max_llm_calls": 2000,
+    "wall_clock": 5400.0
+  },
+  "started_at": "2026-09-26T03:54:06.553937+00:00",
+  "error": null
+}

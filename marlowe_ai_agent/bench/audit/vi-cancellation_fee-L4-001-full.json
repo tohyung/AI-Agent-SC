@@ -1,0 +1,237 @@
+{
+  "case_id": "vi-cancellation_fee-L4-001",
+  "attempt": 1,
+  "prompt": "Chi ở Đà Nẵng đây; mình mới chuyển tới, đang Dũng đặt chuyến đi của Huy với 86 ADA trước ngày 07/01/2027. Trước bảy ngày sau hạn đầu nếu Dũng hủy thì Huy giữ phí cố định 3 ADA, trả phần còn lại; nếu đi thì Huy nhận tất cả. Mình hơi lo chuyện phải đòi lại tiền nếu mọi việc không thành.",
+  "run_kind": "timing_probe",
+  "language": "vi",
+  "type": "cancellation_fee",
+  "difficulty": 4,
+  "info_mode": "complete",
+  "challenges": [
+    "relative_time",
+    "long_narrative"
+  ],
+  "status": "blocked",
+  "stop_reason": "harness_error",
+  "iterations": 1,
+  "converged": false,
+  "iteration_history": [],
+  "convergence_path": "",
+  "semantic_history": [],
+  "trace": [
+    {
+      "node": "pipeline",
+      "status": "start",
+      "message": "Đã nhận prompt.",
+      "data": {
+        "max_iterations": 500
+      }
+    },
+    {
+      "node": "node_1_prompt_to_draft",
+      "status": "start",
+      "message": "Đang sinh draft.",
+      "data": {
+        "iteration": 1
+      }
+    },
+    {
+      "node": "node_1_prompt_to_draft",
+      "status": "done",
+      "message": "Đã sinh draft.",
+      "data": {
+        "reasoning_narrative": "Từ mô tả, có ba tên xuất hiện: Chi (người nói), Dũng (người đặt), Huy (người cung cấp). Cốt lõi là Dũng đặt cọc 86 ADA trước 07/01/2027, sau đó có 7 ngày để quyết định hủy. Nếu hủy, Huy giữ 3 ADA phí cố định, trả lại 83 ADA cho Dũng; nếu không hủy, Huy nhận hết 86 ADA. Chi lo lắng về việc hoàn tiền. Tuy nhiên chưa rõ vai trò của Chi, múi giờ của các mốc thời gian, và chi tiết về token.",
+        "intent": "Tạo hợp đồng thông minh cho đặt chuyến đi với chính sách hủy: đặt cọc 86 ADA trước 07/01/2027, nếu hủy trong 7 ngày sau hạn chót thì người cung cấp giữ 3 ADA phí và hoàn lại phần còn lại, nếu chuyến đi diễn ra thì người cung cấp nhận toàn bộ."
+      }
+    },
+    {
+      "node": "structural_gate",
+      "status": "skipped",
+      "message": "Chưa có AST do thiếu thông tin nghiệp vụ.",
+      "data": {}
+    }
+  ],
+  "qa_transcript": [],
+  "contract": {},
+  "draft": {
+    "original_prompt": "Chi ở Đà Nẵng đây; mình mới chuyển tới, đang Dũng đặt chuyến đi của Huy với 86 ADA trước ngày 07/01/2027. Trước bảy ngày sau hạn đầu nếu Dũng hủy thì Huy giữ phí cố định 3 ADA, trả phần còn lại; nếu đi thì Huy nhận tất cả. Mình hơi lo chuyện phải đòi lại tiền nếu mọi việc không thành.",
+    "intent": "Tạo hợp đồng thông minh cho đặt chuyến đi với chính sách hủy: đặt cọc 86 ADA trước 07/01/2027, nếu hủy trong 7 ngày sau hạn chót thì người cung cấp giữ 3 ADA phí và hoàn lại phần còn lại, nếu chuyến đi diễn ra thì người cung cấp nhận toàn bộ.",
+    "parties": [
+      {
+        "role": "Dung",
+        "name": "Dũng (người đặt chuyến)"
+      },
+      {
+        "role": "Huy",
+        "name": "Huy (người cung cấp dịch vụ)"
+      }
+    ],
+    "amount": 86000000,
+    "token": "ADA",
+    "deposit_timeout": null,
+    "decision_timeout": null,
+    "clauses": [
+      "Đặt cọc 86 ADA trước ngày 07/01/2027",
+      "Trong 7 ngày sau hạn chót: Dũng có quyền hủy",
+      "Nếu hủy: Huy giữ 3 ADA làm phí, hoàn lại 83 ADA cho Dũng",
+      "Nếu không hủy: Huy nhận toàn bộ 86 ADA",
+      "Tự động hoàn tiền cho Dũng nếu quá hạn đặt cọc"
+    ],
+    "assumptions": [
+      "Chi có thể là Dũng hoặc người tài trợ cho giao dịch",
+      "Ngày 07/01/2027 theo định dạng dd/mm/yyyy (7 tháng 1 năm 2027)",
+      "Múi giờ mặc định là UTC+7 (Việt Nam)",
+      "Phí 3 ADA được trừ trực tiếp từ số tiền đặt cọc",
+      "Huy là bên nhận tiền và có quyền quyết định chấp nhận chuyến đi"
+    ],
+    "clarification_questions": [
+      "Chi là bên nào trong giao dịch (Dũng, Huy, hay người thứ ba)?",
+      "Ngày 07/01/2027 có phải là 7 tháng 1 năm 2027 (dd/mm/yyyy) không?",
+      "Thời điểm 'bảy ngày sau hạn đầu' tính từ 00:00 hay 23:59 ngày 07/01/2027?",
+      "Có cần cơ chế thông báo (Notify) khi Dũng quyết định hủy hay không?",
+      "Token sử dụng có phải là ADA (lovelace) không?"
+    ],
+    "reasoning_summary": "Yêu cầu hợp đồng escrow cho đặt chuyến đi với điều kiện hủy và hoàn tiền.",
+    "reasoning_narrative": "Từ mô tả, có ba tên xuất hiện: Chi (người nói), Dũng (người đặt), Huy (người cung cấp). Cốt lõi là Dũng đặt cọc 86 ADA trước 07/01/2027, sau đó có 7 ngày để quyết định hủy. Nếu hủy, Huy giữ 3 ADA phí cố định, trả lại 83 ADA cho Dũng; nếu không hủy, Huy nhận hết 86 ADA. Chi lo lắng về việc hoàn tiền. Tuy nhiên chưa rõ vai trò của Chi, múi giờ của các mốc thời gian, và chi tiết về token.",
+    "contract_plan": {
+      "nodes": [
+        {
+          "id": "start",
+          "label": "Bắt đầu"
+        },
+        {
+          "id": "deposit",
+          "label": "Dũng nộp 86 ADA vào tài khoản hợp đồng trước 07/01/2027"
+        },
+        {
+          "id": "wait_decision",
+          "label": "Chờ quyết định của Dũng trong 7 ngày sau hạn chót"
+        },
+        {
+          "id": "cancel",
+          "label": "Dũng hủy chuyến"
+        },
+        {
+          "id": "proceed",
+          "label": "Chuyến đi diễn ra (Dũng không hủy)"
+        },
+        {
+          "id": "refund",
+          "label": "Huy giữ 3 ADA, hoàn 83 ADA cho Dũng"
+        },
+        {
+          "id": "pay_provider",
+          "label": "Huy nhận toàn bộ 86 ADA"
+        },
+        {
+          "id": "close",
+          "label": "Kết thúc hợp đồng"
+        }
+      ],
+      "edges": [
+        {
+          "from": "start",
+          "to": "deposit"
+        },
+        {
+          "from": "deposit",
+          "to": "wait_decision"
+        },
+        {
+          "from": "wait_decision",
+          "to": "cancel",
+          "condition": "Dũng chọn hủy"
+        },
+        {
+          "from": "wait_decision",
+          "to": "proceed",
+          "condition": "Dũng không hủy (hết hạn)"
+        },
+        {
+          "from": "cancel",
+          "to": "refund"
+        },
+        {
+          "from": "proceed",
+          "to": "pay_provider"
+        },
+        {
+          "from": "refund",
+          "to": "close"
+        },
+        {
+          "from": "pay_provider",
+          "to": "close"
+        }
+      ],
+      "notes": [
+        "Cần xác thực timestamp chính xác cho deposit_timeout và decision_timeout",
+        "Cần xác định vai trò của Chi để thêm vào hợp đồng nếu cần",
+        "Có thể thêm Assert để kiểm tra số dư trước khi Pay"
+      ]
+    },
+    "marlowe_contract": {},
+    "normalization_notes": []
+  },
+  "first_structural_pass_iter": null,
+  "first_semantic_pass_iter": null,
+  "first_logic_pass_iter": null,
+  "wall_seconds": 79.01830160000827,
+  "agent_seconds": 79.01829500001622,
+  "overhead_seconds": 1.9259870999958366,
+  "seconds_per_iteration": 79.01829500001622,
+  "llm_calls": 2,
+  "prompt_tokens": 1424,
+  "completion_tokens": 4070,
+  "llm_seconds": 78.51168730005156,
+  "cost_usd": null,
+  "cost_source": "unknown",
+  "call_log": [
+    {
+      "latency_seconds": 77.09230790002039,
+      "prompt_tokens": 1424,
+      "completion_tokens": 4070,
+      "cost": 0,
+      "model": "nvidia/nemotron-3-ultra-550b-a55b:free"
+    },
+    {
+      "latency_seconds": 1.4193794000311755,
+      "prompt_tokens": null,
+      "completion_tokens": null,
+      "cost": null,
+      "model": "nvidia/nemotron-3-ultra-550b-a55b:free"
+    }
+  ],
+  "agent_llm_calls": 1,
+  "user_llm_calls": 1,
+  "complexity": {
+    "ast_nodes": 0,
+    "depth": 0,
+    "when_count": 0,
+    "case_count": 0,
+    "path_count": 0,
+    "party_count": 0,
+    "constructors": []
+  },
+  "evaluation": null,
+  "judge": null,
+  "contract_description": null,
+  "self_reported_semantic_score": null,
+  "questions": 0,
+  "answers": 0,
+  "question_redundancy": "unknown",
+  "git_commit": "2100631516a75249765b892bac3d5ed5c0815e9e",
+  "dataset_sha256": "e05c23f43a2bd025258ad5e2fa77569874357f79173e98863a8f8d48ee9a907a",
+  "model": "nvidia/nemotron-3-ultra-550b-a55b:free",
+  "judge_model": "nvidia/nemotron-3-ultra-550b-a55b:free",
+  "user_model": "nvidia/nemotron-3-ultra-550b-a55b:free",
+  "provider": "https://openrouter.ai/api/v1",
+  "workers": 3,
+  "limits": {
+    "max_iterations": 500,
+    "max_llm_calls": 2000,
+    "wall_clock": 5400.0
+  },
+  "started_at": "2026-09-26T04:03:35.620618+00:00",
+  "error": "Traceback (most recent call last):\n  File \"D:\\code\\marlowe_ai_agent\\marlowe_ai_agent\\bench\\runner.py\", line 185, in run_case\n    result = pipeline.run(case.prompt)\n  File \"D:\\code\\marlowe_ai_agent\\marlowe_ai_agent\\marlowe_agent\\nodes.py\", line 330, in run\n    outcome = self.node_1.ask_for_clarifications(\n        current_prompt, unique_strings(draft.clarification_questions)[:4],\n        \"Thong tin bo sung tu nguoi dung\",\n    )\n  File \"D:\\code\\marlowe_ai_agent\\marlowe_ai_agent\\marlowe_agent\\nodes.py\", line 104, in ask_for_clarifications\n    answer = (self.answer_provider(question) if self.answer_provider is not None\n              ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^\n  File \"D:\\code\\marlowe_ai_agent\\marlowe_ai_agent\\bench\\user_sim.py\", line 33, in answer\n    response = self.reasoner._request(\n        self.reasoner.client.chat.completions.create, model=self.reasoner.model,\n        messages=[{\"role\": \"system\", \"content\": system},\n                  {\"role\": \"user\", \"content\": json.dumps(payload, ensure_ascii=False)}],\n        temperature=0, response_format={\"type\": \"json_object\"}, max_tokens=400)\n  File \"D:\\code\\marlowe_ai_agent\\marlowe_ai_agent\\marlowe_agent\\openai_reasoner.py\", line 108, in _request\n    response = create(**kwargs)\n  File \"C:\\Users\\Admin\\AppData\\Local\\Python\\pythoncore-3.14-64\\Lib\\site-packages\\openai\\_utils\\_utils.py\", line 298, in wrapper\n    return func(*args, **kwargs)\n  File \"C:\\Users\\Admin\\AppData\\Local\\Python\\pythoncore-3.14-64\\Lib\\site-packages\\openai\\resources\\chat\\completions\\completions.py\", line 1296, in create\n    return self._post(\n           ~~~~~~~~~~^\n        \"/chat/completions\",\n        ^^^^^^^^^^^^^^^^^^^^\n    ...<53 lines>...\n        stream_cls=Stream[ChatCompletionChunk],\n        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n    )\n    ^\n  File \"C:\\Users\\Admin\\AppData\\Local\\Python\\pythoncore-3.14-64\\Lib\\site-packages\\openai\\_base_client.py\", line 1375, in post\n    return cast(ResponseT, self.request(cast_to, opts, stream=stream, stream_cls=stream_cls))\n                           ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nopenai.RateLimitError: Error code: 429 - {'error': {'message': 'Rate limit exceeded: free-models-per-day. Add 10 credits to unlock 1000 free model requests per day', 'code': 429, 'metadata': {'headers': {'X-RateLimit-Limit': '50', 'X-RateLimit-Remaining': '0', 'X-RateLimit-Reset': '1790467200000'}, 'limit_source': 'openrouter_free_tier_daily', 'remedy_hint': 'Wait for the daily reset (see X-RateLimit-Reset), or purchase credits to raise your free-model daily limit.', 'provider_name': None}}, 'user_id': 'user_3DXex6z8AFP7pjFxex1wPASiaaf'}\n"
+}

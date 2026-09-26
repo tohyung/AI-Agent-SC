@@ -1,0 +1,1355 @@
+{
+  "case_id": "vi-swap-L3-010",
+  "attempt": 1,
+  "prompt": "Lan ở Nha Trang đây; shop online của mình đang muốn đổi 281 ADA của Minh lấy 16 điểm thưởng GOLD của Quỳnh. Minh đưa phần mình trước ngày 18/01/2027, Quỳnh đưa điểm trước ngày 25/01/2027; đủ cả hai mới đổi, thiếu thì mỗi người nhận lại phần của mình.",
+  "run_kind": "timing_probe",
+  "language": "vi",
+  "type": "swap",
+  "difficulty": 3,
+  "info_mode": "complete",
+  "challenges": [
+    "absolute_date",
+    "non_ada_token",
+    "refund_on_timeout"
+  ],
+  "status": "blocked",
+  "stop_reason": "llm_error",
+  "iterations": 9,
+  "converged": false,
+  "iteration_history": [
+    {
+      "iteration": 1,
+      "structural": "fail",
+      "semantic": "skip",
+      "logic": "skip",
+      "logic_errors": 0,
+      "logic_warnings": 0,
+      "stall_count": 0,
+      "llm_calls": 1,
+      "semantic_generation": 0,
+      "semantic_history_entries": 0,
+      "elapsed_seconds": 67.226
+    },
+    {
+      "iteration": 2,
+      "structural": "pass",
+      "semantic": "fail",
+      "logic": "skip",
+      "logic_errors": 0,
+      "logic_warnings": 0,
+      "stall_count": 0,
+      "llm_calls": 3,
+      "semantic_generation": 1,
+      "semantic_history_entries": 1,
+      "elapsed_seconds": 153.402
+    },
+    {
+      "iteration": 3,
+      "structural": "skip",
+      "semantic": "skip",
+      "logic": "skip",
+      "logic_errors": 0,
+      "logic_warnings": 0,
+      "stall_count": 0,
+      "llm_calls": 4,
+      "semantic_generation": 2,
+      "semantic_history_entries": 1,
+      "elapsed_seconds": 49.034
+    },
+    {
+      "iteration": 4,
+      "structural": "pass",
+      "semantic": "fail",
+      "logic": "skip",
+      "logic_errors": 0,
+      "logic_warnings": 0,
+      "stall_count": 0,
+      "llm_calls": 6,
+      "semantic_generation": 3,
+      "semantic_history_entries": 2,
+      "elapsed_seconds": 93.809
+    },
+    {
+      "iteration": 5,
+      "structural": "skip",
+      "semantic": "skip",
+      "logic": "skip",
+      "logic_errors": 0,
+      "logic_warnings": 0,
+      "stall_count": 0,
+      "llm_calls": 7,
+      "semantic_generation": 4,
+      "semantic_history_entries": 2,
+      "elapsed_seconds": 43.675
+    },
+    {
+      "iteration": 6,
+      "structural": "skip",
+      "semantic": "skip",
+      "logic": "skip",
+      "logic_errors": 0,
+      "logic_warnings": 0,
+      "stall_count": 0,
+      "llm_calls": 8,
+      "semantic_generation": 5,
+      "semantic_history_entries": 2,
+      "elapsed_seconds": 99.491
+    },
+    {
+      "iteration": 7,
+      "structural": "skip",
+      "semantic": "skip",
+      "logic": "skip",
+      "logic_errors": 0,
+      "logic_warnings": 0,
+      "stall_count": 0,
+      "llm_calls": 9,
+      "semantic_generation": 6,
+      "semantic_history_entries": 2,
+      "elapsed_seconds": 17.751
+    },
+    {
+      "iteration": 8,
+      "structural": "skip",
+      "semantic": "skip",
+      "logic": "skip",
+      "logic_errors": 0,
+      "logic_warnings": 0,
+      "stall_count": 0,
+      "llm_calls": 10,
+      "semantic_generation": 7,
+      "semantic_history_entries": 2,
+      "elapsed_seconds": 47.18
+    },
+    {
+      "iteration": 9,
+      "structural": "pass",
+      "semantic": "skip",
+      "logic": "skip",
+      "logic_errors": 0,
+      "logic_warnings": 0,
+      "stall_count": 0,
+      "llm_calls": 14,
+      "semantic_generation": 7,
+      "semantic_history_entries": 2,
+      "elapsed_seconds": 50.64
+    }
+  ],
+  "convergence_path": "S- -> S+S- ->  -> S+S- ->  ->  ->  ->  -> S+",
+  "semantic_history": [
+    {
+      "iteration": 2,
+      "semantic_generation": 0,
+      "semantic_fingerprint": "b5ec6200103b2e05c2867886312ffecb72c873a19f99653581af7037b82f8162",
+      "prompt_fingerprint": "a2469d1a19feb161e3a3dbbc85581546173b7d7973686bf568b1e8432305e567",
+      "contract_fingerprint": "2f016e8a6a53c45146452244839ce51437a8dd1544c18c636c037ff19d84208c",
+      "passed": false,
+      "user_answered": true,
+      "answer_source": "semantic"
+    },
+    {
+      "iteration": 4,
+      "semantic_generation": 2,
+      "semantic_fingerprint": "95aa8110e1cad2c1cddb074804e92ea572d45e0bd3a5ab5c0f960e10afa9633f",
+      "prompt_fingerprint": "bbe9c23595d0bf85b0d0c433c54b9150eb21dfb8897bc497b5b8e499ad89ad8b",
+      "contract_fingerprint": "03a4ba3314cd351de0d7a36de57d66fc206c37142bc3844ec29a625d120c058d",
+      "passed": false,
+      "user_answered": true,
+      "answer_source": "semantic"
+    }
+  ],
+  "trace": [
+    {
+      "node": "pipeline",
+      "status": "start",
+      "message": "Đã nhận prompt.",
+      "data": {
+        "max_iterations": 500
+      }
+    },
+    {
+      "node": "node_1_prompt_to_draft",
+      "status": "start",
+      "message": "Đang sinh draft.",
+      "data": {
+        "iteration": 1
+      }
+    },
+    {
+      "node": "node_1_prompt_to_draft",
+      "status": "done",
+      "message": "Đã sinh draft.",
+      "data": {
+        "reasoning_narrative": "Yêu cầu là một giao dịch trao đổi (swap) giữa Minh và Quỳnh: Minh gửi 281 ADA trước 18/01/2027, Quỳnh gửi 16 GOLD trước 25/01/2027. Nếu cả hai đều nộp đúng hạn thì hợp đồng tự động chuyển ADA cho Quỳnh và GOLD cho Minh. Nếu một bên không nộp tiền thì bên kia được hoàn lại tài sản của mình. Hợp đồng được xây dựng bằng hai cấu trúc When lồng nhau: When ngoài chờ nộp ADA của Minh với timeout 18/01, When trong chờ nộp GOLD của Quỳnh với timeout 25/01. Các khoản trả tiền (Pay) được sắp xếp sau khi cả hai nộp xong. Thiếu thông tin về currency_symbol của token GOLD nên cần hỏi thêm.",
+        "intent": "Đổi 281 ADA của Minh lấy 16 điểm thưởng GOLD của Quỳnh với thời hạn nộp tiền"
+      }
+    },
+    {
+      "node": "structural_gate",
+      "status": "fail",
+      "message": "AST chưa hợp lệ.",
+      "data": {
+        "findings": [
+          "root: tổ hợp field không hợp lệ: ['when']."
+        ]
+      }
+    },
+    {
+      "node": "pipeline",
+      "status": "iteration",
+      "message": "Đã hoàn tất lượt xử lý.",
+      "data": {
+        "iteration": 1,
+        "structural": "fail",
+        "semantic": "skip",
+        "logic": "skip",
+        "logic_errors": 0,
+        "logic_warnings": 0,
+        "stall_count": 0,
+        "llm_calls": 1,
+        "semantic_generation": 0,
+        "semantic_history_entries": 0,
+        "elapsed_seconds": 67.226
+      }
+    },
+    {
+      "node": "node_1_prompt_to_draft",
+      "status": "start",
+      "message": "Đang sinh draft.",
+      "data": {
+        "iteration": 2
+      }
+    },
+    {
+      "node": "node_1_prompt_to_draft",
+      "status": "done",
+      "message": "Đã sinh draft.",
+      "data": {
+        "reasoning_narrative": "Từ yêu cầu, tôi xác định hai bên Minh và Quỳnh, hai loại token ADA (lovelace) và GOLD (token tùy chỉnh). Thời hạn nộp của Minh là 18/01/2027 00:00:00 UTC (1800230400000 ms), của Quỳnh là 25/01/2027 00:00:00 UTC (1800835200000 ms). Cấu trúc hợp đồng dùng When lồng nhau: When đầu chờ Deposit của Minh, timeout thì Close; khi Minh đã nộp, When thứ hai chờ Deposit của Quỳnh, timeout thì Pay hoàn ADA cho Minh; khi Quỳnh nộp thì Pay ADA từ tài khoản Minh cho Quỳnh, rồi Pay GOLD từ tài khoản Quỳnh cho Minh, cuối cùng Close.",
+        "intent": "Tạo hợp đồng Marlowe cho giao dịch đổi atom (atomic swap) 281 ADA của Minh lấy 16 điểm thưởng GOLD của Quỳnh, với điều kiện Minh nộp ADA trước ngày 18/01/2027 và Quỳnh nộp GOLD trước ngày 25/01/2027; nếu đủ cả hai thì đổi, thiếu thì hoàn trả."
+      }
+    },
+    {
+      "node": "structural_gate",
+      "status": "pass",
+      "message": "AST hợp lệ.",
+      "data": {}
+    },
+    {
+      "node": "node_2_semantic_verification",
+      "status": "start",
+      "message": "Đang kiểm semantic.",
+      "data": {}
+    },
+    {
+      "node": "node_2_semantic_verification",
+      "status": "fail",
+      "message": "Đã kiểm semantic.",
+      "data": {
+        "findings": [
+          "Cấu trúc When lồng nhau phù hợp trình tự nộp tiền",
+          "Số tiền ADA và timeout đã chuyển đổi đúng đơn vị",
+          "Token GOLD chưa có currency_symbol và token_name chính thức",
+          "Deadline mặc định dùng UTC 00:00, có thể cần điều chỉnh theo múi giờ địa phương",
+          "Thiếu bước Choice xác nhận nếu nghiệp vụ yêu cầu"
+        ],
+        "reasoning_narrative": "Hợp đồng Marlowe được xây dựng với cấu trúc When lồng nhau: chờ Minh nộp 281 ADA trước 18/01/2027, sau đó chờ Quỳnh nộp 16 GOLD trước 25/01/2027. Nếu cả hai nộp đúng hạn thì thực hiện hai lệnh Pay đổi token; nếu Quỳnh không nộp kịp thì hoàn ADA cho Minh; nếu Minh không nộp kịp thì đóng hợp đồng. Số lượng lovelace (281.000.000) và timeout (POSIX milliseconds) đã chuyển đổi chính xác. Tuy nhiên, token GOLD vẫn dùng placeholder 'GOLD_SYMBOL' và 'GOLD' – cần policy ID và token name thực tế. Ngoài ra, deadline 'trước ngày 18/01' được hiểu là 00:00 UTC ngày 18, có thể khác với kỳ vọng của người dùng (cuối ngày 17). Cần xác nhận thêm về múi giờ và có yêu cầu bước Choice xác nhận hay không."
+      }
+    },
+    {
+      "node": "pipeline",
+      "status": "semantic_reset",
+      "message": "Đã reset semantic stall state sau khi nhận thông tin mới từ người dùng.",
+      "data": {
+        "semantic_generation": 1,
+        "history_entries": 1,
+        "answered_questions_count": 3,
+        "answer_source": "semantic"
+      }
+    },
+    {
+      "node": "pipeline",
+      "status": "iteration",
+      "message": "Đã hoàn tất lượt xử lý.",
+      "data": {
+        "iteration": 2,
+        "structural": "pass",
+        "semantic": "fail",
+        "logic": "skip",
+        "logic_errors": 0,
+        "logic_warnings": 0,
+        "stall_count": 0,
+        "llm_calls": 3,
+        "semantic_generation": 1,
+        "semantic_history_entries": 1,
+        "elapsed_seconds": 153.402
+      }
+    },
+    {
+      "node": "node_1_prompt_to_draft",
+      "status": "start",
+      "message": "Đang sinh draft.",
+      "data": {
+        "iteration": 3
+      }
+    },
+    {
+      "node": "node_1_prompt_to_draft",
+      "status": "done",
+      "message": "Đã sinh draft.",
+      "data": {
+        "reasoning_narrative": "Hợp đồng yêu cầu Minh nộp 281 ADA trước 18/01/2027 (UTC) và Quỳnh nộp 16 GOLD trước 25/01/2027 (UTC). Nếu cả hai đều nộp đúng hạn, ADA sẽ chuyển cho Quỳnh và GOLD chuyển cho Minh. Nếu một bên không nộp kịp, bên kia nhận lại tài sản của mình. Vì thiếu mã policy ID và token_name của GOLD, chưa thể sinh Marlowe AST hoàn chỉnh.",
+        "intent": "Đổi 281 ADA của Minh lấy 16 điểm thưởng GOLD của Quỳnh theo điều kiện nộp trước ngày 18/01/2027 và 25/01/2027"
+      }
+    },
+    {
+      "node": "structural_gate",
+      "status": "skipped",
+      "message": "Chưa có AST do thiếu thông tin nghiệp vụ.",
+      "data": {}
+    },
+    {
+      "node": "pipeline",
+      "status": "semantic_reset",
+      "message": "Đã reset semantic stall state sau khi nhận thông tin mới từ người dùng.",
+      "data": {
+        "semantic_generation": 2,
+        "history_entries": 1,
+        "answered_questions_count": 1,
+        "answer_source": "empty_contract"
+      }
+    },
+    {
+      "node": "pipeline",
+      "status": "iteration",
+      "message": "Đã hoàn tất lượt xử lý.",
+      "data": {
+        "iteration": 3,
+        "structural": "skip",
+        "semantic": "skip",
+        "logic": "skip",
+        "logic_errors": 0,
+        "logic_warnings": 0,
+        "stall_count": 0,
+        "llm_calls": 4,
+        "semantic_generation": 2,
+        "semantic_history_entries": 1,
+        "elapsed_seconds": 49.034
+      }
+    },
+    {
+      "node": "node_1_prompt_to_draft",
+      "status": "start",
+      "message": "Đang sinh draft.",
+      "data": {
+        "iteration": 4
+      }
+    },
+    {
+      "node": "node_1_prompt_to_draft",
+      "status": "done",
+      "message": "Đã sinh draft.",
+      "data": {
+        "reasoning_narrative": "Từ mô tả người dùng, tôi xác định hai bên là Minh và Quỳnh. Minh phải gửi 281 ADA (281.000.000 lovelace) vào tài khoản của mình trước mốc 18/01/2027 00:00 UTC. Sau đó Quỳnh phải gửi 16 đơn vị token GOLD vào tài khoản của mình trước mốc 25/01/2027 00:00 UTC. Nếu Quỳnh nộp kịp, hợp đồng thực hiện hai lệnh Pay: chuyển ADA từ tài khoản Minh sang Quỳnh và chuyển GOLD từ tài khoản Quỳnh sang Minh. Nếu Quỳnh không nộp kịp, ADA được hoàn về Minh. Nếu Minh không nộp kịp hạn đầu, hợp đồng đóng lại không có hành động nào. Token GOLD chưa có policy ID chính thức, nên dùng giá trị giả định.",
+        "intent": "Tạo hợp đồng escrow đổi 281 ADA của Minh lấy 16 GOLD của Quỳnh với hạn nộp tiền 18/01/2027 và 25/01/2027 UTC, nếu đủ cả hai thì đổi, thiếu thì hoàn lại."
+      }
+    },
+    {
+      "node": "structural_gate",
+      "status": "pass",
+      "message": "AST hợp lệ.",
+      "data": {}
+    },
+    {
+      "node": "node_2_semantic_verification",
+      "status": "start",
+      "message": "Đang kiểm semantic.",
+      "data": {}
+    },
+    {
+      "node": "node_2_semantic_verification",
+      "status": "fail",
+      "message": "Đã kiểm semantic.",
+      "data": {
+        "findings": [
+          "Logic escrow đúng với yêu cầu: nộp tiền theo thứ tự, trao đổi khi đủ cả hai, hoàn tiền khi thiếu.",
+          "Chuyển đổi 281 ADA = 281.000.000 lovelace chính xác.",
+          "Timeout Minh: 1.800.230.400.000 ms (18/01/2027 00:00 UTC) và Quỳnh: 1.800.835.200.000 ms (25/01/2027 00:00 UTC) khớp với yêu cầu.",
+          "Thiếu policy ID (currency_symbol) và token_name thực tế của token GOLD – hiện đang dùng giá trị giả định."
+        ],
+        "reasoning_narrative": "Hợp đồng Marlowe được xây dựng theo đúng yêu cầu: Minh nộp 281 ADA (281.000.000 lovelace) trước 18/01/2027 UTC, Quỳnh nộp 16 GOLD trước 25/01/2027 UTC. Nếu cả hai nộp đúng hạn thì trao đổi tự động, ngược lại hoàn tiền cho người đã nộp. Cấu trúc lồng nhau (when trong when) xử lý đúng các trường hợp timeout. Tuy nhiên, token GOLD vẫn dùng placeholder \"GOLD_POLICY_ID\" và \"GOLD\" vì người dùng chưa cung cấp thông tin chính xác. Không có policy ID và token name thực tế thì hợp đồng không thể triển khai trên mainnet. Các thông số khác (múi giờ UTC, đơn vị ADA, số lượng GOLD nguyên) đã được xác nhận và chuyển đổi chính xác."
+      }
+    },
+    {
+      "node": "pipeline",
+      "status": "semantic_reset",
+      "message": "Đã reset semantic stall state sau khi nhận thông tin mới từ người dùng.",
+      "data": {
+        "semantic_generation": 3,
+        "history_entries": 2,
+        "answered_questions_count": 1,
+        "answer_source": "semantic"
+      }
+    },
+    {
+      "node": "pipeline",
+      "status": "iteration",
+      "message": "Đã hoàn tất lượt xử lý.",
+      "data": {
+        "iteration": 4,
+        "structural": "pass",
+        "semantic": "fail",
+        "logic": "skip",
+        "logic_errors": 0,
+        "logic_warnings": 0,
+        "stall_count": 0,
+        "llm_calls": 6,
+        "semantic_generation": 3,
+        "semantic_history_entries": 2,
+        "elapsed_seconds": 93.809
+      }
+    },
+    {
+      "node": "node_1_prompt_to_draft",
+      "status": "start",
+      "message": "Đang sinh draft.",
+      "data": {
+        "iteration": 5
+      }
+    },
+    {
+      "node": "node_1_prompt_to_draft",
+      "status": "done",
+      "message": "Đã sinh draft.",
+      "data": {
+        "reasoning_narrative": "Tôi đã phân tích yêu cầu: Minh gửi 281 ADA (281.000.000 lovelace) trước 23:59:59 UTC ngày 18/01/2027, Quỳnh gửi 16 GOLD trước 23:59:59 UTC ngày 25/01/2027. Nếu cả hai nộp đủ thì trao đổi, ngược lại hoàn lại cho đúng người. Do chưa có mã định danh token GOLD (currency_symbol và token_name) nên không thể xây dựng cấu trúc Token hợp lệ trong Marlowe. Tôi giả định múi giờ UTC, hạn chót ở cuối ngày, và chọn luồng đơn giản nhất không thêm bước Choice xác nhận.",
+        "intent": "Tạo hợp đồng escrow đổi 281 ADA của Minh lấy 16 GOLD của Quỳnh với hạn nộp 18/01/2027 và 25/01/2027"
+      }
+    },
+    {
+      "node": "structural_gate",
+      "status": "skipped",
+      "message": "Chưa có AST do thiếu thông tin nghiệp vụ.",
+      "data": {}
+    },
+    {
+      "node": "pipeline",
+      "status": "semantic_reset",
+      "message": "Đã reset semantic stall state sau khi nhận thông tin mới từ người dùng.",
+      "data": {
+        "semantic_generation": 4,
+        "history_entries": 2,
+        "answered_questions_count": 2,
+        "answer_source": "empty_contract"
+      }
+    },
+    {
+      "node": "pipeline",
+      "status": "iteration",
+      "message": "Đã hoàn tất lượt xử lý.",
+      "data": {
+        "iteration": 5,
+        "structural": "skip",
+        "semantic": "skip",
+        "logic": "skip",
+        "logic_errors": 0,
+        "logic_warnings": 0,
+        "stall_count": 0,
+        "llm_calls": 7,
+        "semantic_generation": 4,
+        "semantic_history_entries": 2,
+        "elapsed_seconds": 43.675
+      }
+    },
+    {
+      "node": "node_1_prompt_to_draft",
+      "status": "start",
+      "message": "Đang sinh draft.",
+      "data": {
+        "iteration": 6
+      }
+    },
+    {
+      "node": "node_1_prompt_to_draft",
+      "status": "done",
+      "message": "Đã sinh draft.",
+      "data": {
+        "reasoning_narrative": "Từ yêu cầu người dùng, mình xác định hai bên Minh và Quỳnh, số ADA cần đổi là 281 ADA (281.000.000 lovelace). Hạn nộp của Minh là 18/01/2027 00:00 UTC (1800230400000 ms) và của Quỳnh là 25/01/2027 00:00 UTC (1800835200000 ms). Người dùng muốn cách đơn giản nhất, không thêm bước xác nhận. Tuy nhiên token GOLD thiếu policy ID và token_name, nên không thể điền trường token trong Marlowe. Do đó hợp đồng Marlowe để trống và đặt câu hỏi làm rõ.",
+        "intent": "Tạo hợp đồng escrow đổi 281 ADA của Minh lấy 16 điểm thưởng GOLD của Quỳnh với hạn nộp: Minh trước 18/01/2027, Quỳnh trước 25/01/2027 (UTC). Nếu đủ cả hai thì đổi, thiếu thì hoàn tiền cho từng bên."
+      }
+    },
+    {
+      "node": "structural_gate",
+      "status": "skipped",
+      "message": "Chưa có AST do thiếu thông tin nghiệp vụ.",
+      "data": {}
+    },
+    {
+      "node": "pipeline",
+      "status": "semantic_reset",
+      "message": "Đã reset semantic stall state sau khi nhận thông tin mới từ người dùng.",
+      "data": {
+        "semantic_generation": 5,
+        "history_entries": 2,
+        "answered_questions_count": 2,
+        "answer_source": "empty_contract"
+      }
+    },
+    {
+      "node": "pipeline",
+      "status": "iteration",
+      "message": "Đã hoàn tất lượt xử lý.",
+      "data": {
+        "iteration": 6,
+        "structural": "skip",
+        "semantic": "skip",
+        "logic": "skip",
+        "logic_errors": 0,
+        "logic_warnings": 0,
+        "stall_count": 0,
+        "llm_calls": 8,
+        "semantic_generation": 5,
+        "semantic_history_entries": 2,
+        "elapsed_seconds": 99.491
+      }
+    },
+    {
+      "node": "node_1_prompt_to_draft",
+      "status": "start",
+      "message": "Đang sinh draft.",
+      "data": {
+        "iteration": 7
+      }
+    },
+    {
+      "node": "node_1_prompt_to_draft",
+      "status": "done",
+      "message": "Đã sinh draft.",
+      "data": {
+        "reasoning_narrative": "Yêu cầu đổi token giữa Minh và Quỳnh có điều kiện nộp tiền vào hai mốc thời gian khác nhau. Người dùng chưa cung cấp mã định danh token GOLD (currency_symbol và token_name) nên không thể định nghĩa token trong hợp đồng. Cần hỏi lại thông tin này mới tạo được contract.",
+        "intent": "Tạo hợp đồng escrow đổi 281 ADA của Minh lấy 16 điểm thưởng GOLD của Quỳnh theo thời hạn nộp tiền"
+      }
+    },
+    {
+      "node": "structural_gate",
+      "status": "skipped",
+      "message": "Chưa có AST do thiếu thông tin nghiệp vụ.",
+      "data": {}
+    },
+    {
+      "node": "pipeline",
+      "status": "semantic_reset",
+      "message": "Đã reset semantic stall state sau khi nhận thông tin mới từ người dùng.",
+      "data": {
+        "semantic_generation": 6,
+        "history_entries": 2,
+        "answered_questions_count": 2,
+        "answer_source": "empty_contract"
+      }
+    },
+    {
+      "node": "pipeline",
+      "status": "iteration",
+      "message": "Đã hoàn tất lượt xử lý.",
+      "data": {
+        "iteration": 7,
+        "structural": "skip",
+        "semantic": "skip",
+        "logic": "skip",
+        "logic_errors": 0,
+        "logic_warnings": 0,
+        "stall_count": 0,
+        "llm_calls": 9,
+        "semantic_generation": 6,
+        "semantic_history_entries": 2,
+        "elapsed_seconds": 17.751
+      }
+    },
+    {
+      "node": "node_1_prompt_to_draft",
+      "status": "start",
+      "message": "Đang sinh draft.",
+      "data": {
+        "iteration": 8
+      }
+    },
+    {
+      "node": "node_1_prompt_to_draft",
+      "status": "done",
+      "message": "Đã sinh draft.",
+      "data": {
+        "reasoning_narrative": "Yêu cầu mô tả một giao dịch đổi token giữa Minh và Quỳnh: Minh gửi 281 ADA trước 18/01/2027, Quỳnh gửi 16 GOLD trước 25/01/2027. Nếu cả hai đều nộp đúng hạn thì hợp đồng thực hiện đổi tiền; ngược lại mỗi bên nhận lại tài sản của mình. Cấu trúc Marlowe phù hợp là lồng hai khối When: trước chờ nộp ADA của Minh đến hạn 18/01, sau đó chờ nộp GOLD của Quỳnh đến hạn 25/01. Thiếu thông tin policy ID của token GOLD nên chưa thể sinh AST hoàn chỉnh.",
+        "intent": "Đổi 281 ADA của Minh lấy 16 điểm thưởng GOLD của Quỳnh với điều kiện nộp tiền trước ngày 18/01/2027 và 25/01/2027; nếu đủ cả hai thì đổi, thiếu thì hoàn trả."
+      }
+    },
+    {
+      "node": "structural_gate",
+      "status": "skipped",
+      "message": "Chưa có AST do thiếu thông tin nghiệp vụ.",
+      "data": {}
+    },
+    {
+      "node": "pipeline",
+      "status": "semantic_reset",
+      "message": "Đã reset semantic stall state sau khi nhận thông tin mới từ người dùng.",
+      "data": {
+        "semantic_generation": 7,
+        "history_entries": 2,
+        "answered_questions_count": 1,
+        "answer_source": "empty_contract"
+      }
+    },
+    {
+      "node": "pipeline",
+      "status": "iteration",
+      "message": "Đã hoàn tất lượt xử lý.",
+      "data": {
+        "iteration": 8,
+        "structural": "skip",
+        "semantic": "skip",
+        "logic": "skip",
+        "logic_errors": 0,
+        "logic_warnings": 0,
+        "stall_count": 0,
+        "llm_calls": 10,
+        "semantic_generation": 7,
+        "semantic_history_entries": 2,
+        "elapsed_seconds": 47.18
+      }
+    },
+    {
+      "node": "node_1_prompt_to_draft",
+      "status": "start",
+      "message": "Đang sinh draft.",
+      "data": {
+        "iteration": 9
+      }
+    },
+    {
+      "node": "node_1_prompt_to_draft",
+      "status": "done",
+      "message": "Đã sinh draft.",
+      "data": {
+        "reasoning_narrative": "Hợp đồng yêu cầu Minh nộp 281 ADA trước 18/01/2027. Nếu Minh nộp đúng hạn, hợp đồng chờ Quỳnh nộp 16 GOLD trước 25/01/2027. Nếu cả hai nộp đủ, ADA chuyển cho Quỳnh và GOLD chuyển cho Minh. Nếu Quỳnh không nộp đúng hạn, Minh nhận lại ADA. Nếu Minh không nộp đúng hạn, hợp đồng kết thúc mà không có hành động nào. Sử dụng policy ID giả định 'GOLD' cho token GOLD do người dùng không cung cấp.",
+        "intent": "Tạo hợp đồng escrow đổi 281 ADA của Minh lấy 16 điểm thưởng GOLD của Quỳnh, Minh nộp trước 18/01/2027, Quỳnh nộp trước 25/01/2027 (UTC), đủ cả hai mới đổi, thiếu thì mỗi người nhận lại phần của mình."
+      }
+    },
+    {
+      "node": "structural_gate",
+      "status": "pass",
+      "message": "AST hợp lệ.",
+      "data": {}
+    },
+    {
+      "node": "node_2_semantic_verification",
+      "status": "start",
+      "message": "Đang kiểm semantic.",
+      "data": {}
+    },
+    {
+      "node": "node_2_semantic_verification",
+      "status": "retry",
+      "message": "Lỗi LLM tạm thời; thử lại operation.",
+      "data": {
+        "operation": "semantic_verify",
+        "attempt": 1,
+        "max_attempts": 3,
+        "error": "Responses API request failed: Error code: 429 - {'error': {'message': 'Rate limit exceeded: free-models-per-day. Add 10 credits to unlock 1000 free model requests per day', 'code': 429, 'metadata': {'"
+      }
+    },
+    {
+      "node": "node_2_semantic_verification",
+      "status": "retry",
+      "message": "Lỗi LLM tạm thời; thử lại operation.",
+      "data": {
+        "operation": "semantic_verify",
+        "attempt": 2,
+        "max_attempts": 3,
+        "error": "Responses API request failed: Error code: 429 - {'error': {'message': 'Rate limit exceeded: free-models-per-day. Add 10 credits to unlock 1000 free model requests per day', 'code': 429, 'metadata': {'"
+      }
+    },
+    {
+      "node": "pipeline",
+      "status": "error",
+      "message": "Lời gọi LLM thất bại.",
+      "data": {
+        "error": "Responses API request failed: Error code: 429 - {'error': {'message': 'Rate limit exceeded: free-models-per-day. Add 10 credits to unlock 1000 free model requests per day', 'code': 429, 'metadata': {'headers': {'X-RateLimit-Limit': '50', 'X-RateLimit-Remaining': '0', 'X-RateLimit-Reset': '1790467200000'}, 'limit_source': 'openrouter_free_tier_daily', 'remedy_hint': 'Wait for the daily reset (see X-RateLimit-Reset), or purchase credits to raise your free-model daily limit.', 'provider_name': None}}, 'user_id': 'user_3DXex6z8AFP7pjFxex1wPASiaaf'}"
+      }
+    },
+    {
+      "node": "pipeline",
+      "status": "iteration",
+      "message": "Đã hoàn tất lượt xử lý.",
+      "data": {
+        "iteration": 9,
+        "structural": "pass",
+        "semantic": "skip",
+        "logic": "skip",
+        "logic_errors": 0,
+        "logic_warnings": 0,
+        "stall_count": 0,
+        "llm_calls": 14,
+        "semantic_generation": 7,
+        "semantic_history_entries": 2,
+        "elapsed_seconds": 50.64
+      }
+    },
+    {
+      "node": "pipeline",
+      "status": "blocked",
+      "message": "Workflow đã dừng.",
+      "data": {
+        "iterations": 9,
+        "stop_reason": "llm_error"
+      }
+    }
+  ],
+  "qa_transcript": [
+    {
+      "question": "Xác nhận policy ID (currency_symbol) và token_name chính xác của token GOLD?",
+      "answer": "Thông tin policy ID và token_name của GOLD không có trong thỏa thuận đổi này. Mình chỉ biết đổi 281 ADA lấy 16 điểm GOLD theo điều kiện ngày 18/01 và 25/01/2027. Bạn nên check hợp đồng token hoặc trang chính thức của dự án GOLD để lấy mã chính xác nhé.",
+      "time": "2026-09-26T03:57:36.668325+00:00",
+      "fallback_answer": false,
+      "unspecified_answer": true,
+      "seconds": 6.149674799991772
+    },
+    {
+      "question": "Xác nhận múi giờ cho các ngày 18/01/2027 và 25/01/2027 (mặc định dùng UTC)?",
+      "answer": "Chúng tôi chưa thống nhất múi giờ cụ thể, nhưng mặc định dùng UTC là được.",
+      "time": "2026-09-26T03:57:40.468436+00:00",
+      "fallback_answer": false,
+      "unspecified_answer": true,
+      "seconds": 3.8000796000123955
+    },
+    {
+      "question": "Có cần thêm bước xác nhận (Choice) từ Minh hoặc Quỳnh sau khi nộp tiền không?",
+      "answer": "Tôi chưa nghĩ tới, xin chọn cách đơn giản nhất.",
+      "time": "2026-09-26T03:57:47.709736+00:00",
+      "fallback_answer": true,
+      "unspecified_answer": true,
+      "seconds": 7.241267900040839
+    },
+    {
+      "question": "Cung cấp policy ID (currency_symbol) và token_name chính xác của token GOLD để hoàn thiện hợp đồng?",
+      "answer": "Tôi chưa nghĩ tới, xin chọn cách đơn giản nhất.",
+      "time": "2026-09-26T03:58:36.744267+00:00",
+      "fallback_answer": true,
+      "unspecified_answer": true,
+      "seconds": 5.234019000025
+    },
+    {
+      "question": "Cung cấp policy ID (currency_symbol) và token_name chính xác của token GOLD để hoàn thiện hợp đồng?",
+      "answer": "Tôi chưa nghĩ tới, xin chọn cách đơn giản nhất.",
+      "time": "2026-09-26T04:00:10.553440+00:00",
+      "fallback_answer": true,
+      "unspecified_answer": true,
+      "seconds": 5.095314100035466
+    },
+    {
+      "question": "Cung cấp policy ID (currency_symbol) của token GOLD?",
+      "answer": "Mình không biết policy ID của token GOLD nhé, thông tin này không có trong thỏa thuận đổi token giữa Minh và Quỳnh.",
+      "time": "2026-09-26T04:00:51.247916+00:00",
+      "fallback_answer": false,
+      "unspecified_answer": true,
+      "seconds": 2.195548699994106
+    },
+    {
+      "question": "Cung cấp token_name của token GOLD?",
+      "answer": "Tôi chưa nghĩ tới, xin chọn cách đơn giản nhất.",
+      "time": "2026-09-26T04:00:54.228187+00:00",
+      "fallback_answer": true,
+      "unspecified_answer": true,
+      "seconds": 2.9802334000123665
+    },
+    {
+      "question": "Cung cấp policy ID (currency_symbol) của token GOLD?",
+      "answer": "Mình không có thông tin policy ID của token GOLD nhé. Yêu cầu chỉ nói đổi 281 ADA lấy 16 điểm GOLD thôi, không đề cập đến mã token chi tiết.",
+      "time": "2026-09-26T04:02:30.820728+00:00",
+      "fallback_answer": false,
+      "unspecified_answer": true,
+      "seconds": 3.575254799972754
+    },
+    {
+      "question": "Cung cấp token_name của token GOLD?",
+      "answer": "Tôi chưa nghĩ tới, xin chọn cách đơn giản nhất.",
+      "time": "2026-09-26T04:02:33.719634+00:00",
+      "fallback_answer": true,
+      "unspecified_answer": true,
+      "seconds": 2.8988739000051282
+    },
+    {
+      "question": "Cung cấp policy ID (currency_symbol) của token GOLD?",
+      "answer": "Thông tin về policy ID (currency_symbol) của token GOLD không được đề cập trong thỏa thuận đổi này. Cuộc trao đổi chỉ nhắc đến \"16 điểm thưởng GOLD\" như một đơn vị điểm thưởng chứ không cung cấp mã định danh token trên blockchain.",
+      "time": "2026-09-26T04:02:43.197069+00:00",
+      "fallback_answer": false,
+      "unspecified_answer": true,
+      "seconds": 2.864209800027311
+    },
+    {
+      "question": "Cung cấp token_name của token GOLD?",
+      "answer": "Thông tin token_name của GOLD không được đề cập trong yêu cầu. Mặc định có thể dùng \"GOLD\".",
+      "time": "2026-09-26T04:02:51.470198+00:00",
+      "fallback_answer": false,
+      "unspecified_answer": true,
+      "seconds": 8.273095400014427
+    },
+    {
+      "question": "Cung cấp policy ID (currency_symbol) chính xác của token GOLD trên blockchain để hoàn thiện hợp đồng?",
+      "answer": "Tôi chưa nghĩ tới, xin chọn cách đơn giản nhất.",
+      "time": "2026-09-26T04:03:38.649817+00:00",
+      "fallback_answer": true,
+      "unspecified_answer": true,
+      "seconds": 5.217693699989468
+    }
+  ],
+  "contract": {
+    "when": [
+      {
+        "case": {
+          "party": {
+            "role_token": "Minh"
+          },
+          "deposits": 281000000,
+          "of_token": {
+            "currency_symbol": "",
+            "token_name": ""
+          },
+          "into_account": {
+            "role_token": "Minh"
+          }
+        },
+        "then": {
+          "when": [
+            {
+              "case": {
+                "party": {
+                  "role_token": "Quynh"
+                },
+                "deposits": 16,
+                "of_token": {
+                  "currency_symbol": "GOLD",
+                  "token_name": "GOLD"
+                },
+                "into_account": {
+                  "role_token": "Quynh"
+                }
+              },
+              "then": {
+                "pay": 281000000,
+                "from_account": {
+                  "role_token": "Minh"
+                },
+                "to": {
+                  "party": {
+                    "role_token": "Quynh"
+                  }
+                },
+                "token": {
+                  "currency_symbol": "",
+                  "token_name": ""
+                },
+                "then": {
+                  "pay": 16,
+                  "from_account": {
+                    "role_token": "Quynh"
+                  },
+                  "to": {
+                    "party": {
+                      "role_token": "Minh"
+                    }
+                  },
+                  "token": {
+                    "currency_symbol": "GOLD",
+                    "token_name": "GOLD"
+                  },
+                  "then": "close"
+                }
+              }
+            }
+          ],
+          "timeout": 1800835200000,
+          "timeout_continuation": {
+            "pay": 281000000,
+            "from_account": {
+              "role_token": "Minh"
+            },
+            "to": {
+              "party": {
+                "role_token": "Minh"
+              }
+            },
+            "token": {
+              "currency_symbol": "",
+              "token_name": ""
+            },
+            "then": "close"
+          }
+        }
+      }
+    ],
+    "timeout": 1800230400000,
+    "timeout_continuation": "close"
+  },
+  "draft": {
+    "original_prompt": "Lan ở Nha Trang đây; shop online của mình đang muốn đổi 281 ADA của Minh lấy 16 điểm thưởng GOLD của Quỳnh. Minh đưa phần mình trước ngày 18/01/2027, Quỳnh đưa điểm trước ngày 25/01/2027; đủ cả hai mới đổi, thiếu thì mỗi người nhận lại phần của mình.\n\nPhan hoi noi bo tu Node 3 de Node 1 sinh lai draft:\nSửa AST theo lỗi cấu trúc: root: tổ hợp field không hợp lệ: ['when'].\n\nThong tin bo sung tu nguoi dung:\n- Xác nhận policy ID (currency_symbol) và token_name chính xác của token GOLD?\n  Tra loi: Thông tin policy ID và token_name của GOLD không có trong thỏa thuận đổi này. Mình chỉ biết đổi 281 ADA lấy 16 điểm GOLD theo điều kiện ngày 18/01 và 25/01/2027. Bạn nên check hợp đồng token hoặc trang chính thức của dự án GOLD để lấy mã chính xác nhé.\n- Xác nhận múi giờ cho các ngày 18/01/2027 và 25/01/2027 (mặc định dùng UTC)?\n  Tra loi: Chúng tôi chưa thống nhất múi giờ cụ thể, nhưng mặc định dùng UTC là được.\n- Có cần thêm bước xác nhận (Choice) từ Minh hoặc Quỳnh sau khi nộp tiền không?\n  Tra loi: Tôi chưa nghĩ tới, xin chọn cách đơn giản nhất.\n\nThong tin bo sung tu nguoi dung:\n- Cung cấp policy ID (currency_symbol) và token_name chính xác của token GOLD để hoàn thiện hợp đồng?\n  Tra loi: Tôi chưa nghĩ tới, xin chọn cách đơn giản nhất.\n\nThong tin bo sung tu nguoi dung:\n- Cung cấp policy ID (currency_symbol) và token_name chính xác của token GOLD để hoàn thiện hợp đồng?\n  Tra loi: Tôi chưa nghĩ tới, xin chọn cách đơn giản nhất.\n\nThong tin bo sung tu nguoi dung:\n- Cung cấp policy ID (currency_symbol) của token GOLD?\n  Tra loi: Mình không biết policy ID của token GOLD nhé, thông tin này không có trong thỏa thuận đổi token giữa Minh và Quỳnh.\n- Cung cấp token_name của token GOLD?\n  Tra loi: Tôi chưa nghĩ tới, xin chọn cách đơn giản nhất.\n\nThong tin bo sung tu nguoi dung:\n- Cung cấp policy ID (currency_symbol) của token GOLD?\n  Tra loi: Mình không có thông tin policy ID của token GOLD nhé. Yêu cầu chỉ nói đổi 281 ADA lấy 16 điểm GOLD thôi, không đề cập đến mã token chi tiết.\n- Cung cấp token_name của token GOLD?\n  Tra loi: Tôi chưa nghĩ tới, xin chọn cách đơn giản nhất.\n\nThong tin bo sung tu nguoi dung:\n- Cung cấp policy ID (currency_symbol) của token GOLD?\n  Tra loi: Thông tin về policy ID (currency_symbol) của token GOLD không được đề cập trong thỏa thuận đổi này. Cuộc trao đổi chỉ nhắc đến \"16 điểm thưởng GOLD\" như một đơn vị điểm thưởng chứ không cung cấp mã định danh token trên blockchain.\n- Cung cấp token_name của token GOLD?\n  Tra loi: Thông tin token_name của GOLD không được đề cập trong yêu cầu. Mặc định có thể dùng \"GOLD\".\n\nThong tin bo sung tu nguoi dung:\n- Cung cấp policy ID (currency_symbol) chính xác của token GOLD trên blockchain để hoàn thiện hợp đồng?\n  Tra loi: Tôi chưa nghĩ tới, xin chọn cách đơn giản nhất.",
+    "intent": "Tạo hợp đồng escrow đổi 281 ADA của Minh lấy 16 điểm thưởng GOLD của Quỳnh, Minh nộp trước 18/01/2027, Quỳnh nộp trước 25/01/2027 (UTC), đủ cả hai mới đổi, thiếu thì mỗi người nhận lại phần của mình.",
+    "parties": [
+      {
+        "role": "Minh",
+        "name": "Minh"
+      },
+      {
+        "role": "Quynh",
+        "name": "Quỳnh"
+      }
+    ],
+    "amount": 281000000,
+    "token": "ADA",
+    "deposit_timeout": 1800230400000,
+    "decision_timeout": 1800835200000,
+    "clauses": [
+      "Minh phải gửi 281 ADA vào tài khoản hợp đồng trước 18/01/2027 00:00 UTC.",
+      "Quỳnh phải gửi 16 GOLD vào tài khoản hợp đồng trước 25/01/2027 00:00 UTC.",
+      "Nếu cả hai gửi đủ hạn: chuyển 281 ADA cho Quỳnh và 16 GOLD cho Minh.",
+      "Nếu Quỳnh không gửi đúng hạn: hoàn trả 281 ADA cho Minh.",
+      "Nếu Minh không gửi đúng hạn: hợp đồng kết thúc, không có chuyển khoản nào."
+    ],
+    "assumptions": [
+      "Múi giờ mặc định UTC cho các hạn chót.",
+      "Token GOLD sử dụng currency_symbol 'GOLD' và token_name 'GOLD' vì người dùng không cung cấp policy ID chính thức.",
+      "Không cần bước xác nhận (Choice) thêm sau khi nộp tiền.",
+      "Số lượng GOLD là 16 đơn vị nguyên (integer)."
+    ],
+    "clarification_questions": [],
+    "reasoning_summary": "Hợp đồng escrow tuần tự: Minh nộp ADA trước 18/01/2027, sau đó Quỳnh nộp GOLD trước 25/01/2027. Nếu cả hai nộp đủ thì trao đổi, ngược lại hoàn trả.",
+    "reasoning_narrative": "Hợp đồng yêu cầu Minh nộp 281 ADA trước 18/01/2027. Nếu Minh nộp đúng hạn, hợp đồng chờ Quỳnh nộp 16 GOLD trước 25/01/2027. Nếu cả hai nộp đủ, ADA chuyển cho Quỳnh và GOLD chuyển cho Minh. Nếu Quỳnh không nộp đúng hạn, Minh nhận lại ADA. Nếu Minh không nộp đúng hạn, hợp đồng kết thúc mà không có hành động nào. Sử dụng policy ID giả định 'GOLD' cho token GOLD do người dùng không cung cấp.",
+    "contract_plan": {
+      "nodes": [
+        "Minh deposit deadline (18/01/2027)",
+        "Quynh deposit deadline (25/01/2027)",
+        "Swap execution (pay ADA to Quynh, pay GOLD to Minh)",
+        "Refund Minh ADA if Quynh misses deadline",
+        "Contract close if Minh misses deadline"
+      ],
+      "edges": [
+        [
+          "Minh deposit deadline (18/01/2027)",
+          "Quynh deposit deadline (25/01/2027)"
+        ],
+        [
+          "Quynh deposit deadline (25/01/2027)",
+          "Swap execution (pay ADA to Quynh, pay GOLD to Minh)"
+        ],
+        [
+          "Quynh deposit deadline (25/01/2027)",
+          "Refund Minh ADA if Quynh misses deadline"
+        ],
+        [
+          "Minh deposit deadline (18/01/2027)",
+          "Contract close if Minh misses deadline"
+        ]
+      ],
+      "notes": [
+        "Hợp đồng dùng cấu trúc When lồng nhau: outer When chờ deposit của Minh, inner When chờ deposit của Quỳnh.",
+        "Timeout outer = 1800230400000 ms (18/01/2027 UTC), timeout inner = 1800835200000 ms (25/01/2027 UTC).",
+        "ADA amount = 281,000,000 lovelace. GOLD amount = 16."
+      ]
+    },
+    "marlowe_contract": {
+      "when": [
+        {
+          "case": {
+            "party": {
+              "role_token": "Minh"
+            },
+            "deposits": 281000000,
+            "of_token": {
+              "currency_symbol": "",
+              "token_name": ""
+            },
+            "into_account": {
+              "role_token": "Minh"
+            }
+          },
+          "then": {
+            "when": [
+              {
+                "case": {
+                  "party": {
+                    "role_token": "Quynh"
+                  },
+                  "deposits": 16,
+                  "of_token": {
+                    "currency_symbol": "GOLD",
+                    "token_name": "GOLD"
+                  },
+                  "into_account": {
+                    "role_token": "Quynh"
+                  }
+                },
+                "then": {
+                  "pay": 281000000,
+                  "from_account": {
+                    "role_token": "Minh"
+                  },
+                  "to": {
+                    "party": {
+                      "role_token": "Quynh"
+                    }
+                  },
+                  "token": {
+                    "currency_symbol": "",
+                    "token_name": ""
+                  },
+                  "then": {
+                    "pay": 16,
+                    "from_account": {
+                      "role_token": "Quynh"
+                    },
+                    "to": {
+                      "party": {
+                        "role_token": "Minh"
+                      }
+                    },
+                    "token": {
+                      "currency_symbol": "GOLD",
+                      "token_name": "GOLD"
+                    },
+                    "then": "close"
+                  }
+                }
+              }
+            ],
+            "timeout": 1800835200000,
+            "timeout_continuation": {
+              "pay": 281000000,
+              "from_account": {
+                "role_token": "Minh"
+              },
+              "to": {
+                "party": {
+                  "role_token": "Minh"
+                }
+              },
+              "token": {
+                "currency_symbol": "",
+                "token_name": ""
+              },
+              "then": "close"
+            }
+          }
+        }
+      ],
+      "timeout": 1800230400000,
+      "timeout_continuation": "close"
+    },
+    "normalization_notes": []
+  },
+  "first_structural_pass_iter": 2,
+  "first_semantic_pass_iter": null,
+  "first_logic_pass_iter": null,
+  "wall_seconds": 622.7372027999954,
+  "agent_seconds": 567.2112994999043,
+  "overhead_seconds": 3.382695299864281,
+  "seconds_per_iteration": 63.02347772221159,
+  "llm_calls": 26,
+  "prompt_tokens": 23335,
+  "completion_tokens": 41407,
+  "llm_seconds": 619.3527093000594,
+  "cost_usd": null,
+  "cost_source": "unknown",
+  "call_log": [
+    {
+      "latency_seconds": 65.8780923000304,
+      "prompt_tokens": 1416,
+      "completion_tokens": 6242,
+      "cost": 0,
+      "model": "nvidia/nemotron-3-ultra-550b-a55b:free"
+    },
+    {
+      "latency_seconds": 89.93490619998192,
+      "prompt_tokens": 1455,
+      "completion_tokens": 6472,
+      "cost": 0,
+      "model": "nvidia/nemotron-3-ultra-550b-a55b:free"
+    },
+    {
+      "latency_seconds": 46.27544429997215,
+      "prompt_tokens": 2121,
+      "completion_tokens": 3421,
+      "cost": 0,
+      "model": "nvidia/nemotron-3-ultra-550b-a55b:free"
+    },
+    {
+      "latency_seconds": 43.79988229996525,
+      "prompt_tokens": 1687,
+      "completion_tokens": 2413,
+      "cost": 0,
+      "model": "nvidia/nemotron-3-ultra-550b-a55b:free"
+    },
+    {
+      "latency_seconds": 48.45229099999415,
+      "prompt_tokens": 1742,
+      "completion_tokens": 4444,
+      "cost": 0,
+      "model": "nvidia/nemotron-3-ultra-550b-a55b:free"
+    },
+    {
+      "latency_seconds": 40.26073650002945,
+      "prompt_tokens": 2325,
+      "completion_tokens": 2520,
+      "cost": 0,
+      "model": "nvidia/nemotron-3-ultra-550b-a55b:free"
+    },
+    {
+      "latency_seconds": 38.49840009998297,
+      "prompt_tokens": 1797,
+      "completion_tokens": 2093,
+      "cost": 0,
+      "model": "nvidia/nemotron-3-ultra-550b-a55b:free"
+    },
+    {
+      "latency_seconds": 93.01678170001833,
+      "prompt_tokens": 1889,
+      "completion_tokens": 1973,
+      "cost": 0,
+      "model": "nvidia/nemotron-3-ultra-550b-a55b:free"
+    },
+    {
+      "latency_seconds": 6.61285630002385,
+      "prompt_tokens": 1995,
+      "completion_tokens": 538,
+      "cost": 0,
+      "model": "nvidia/nemotron-3-ultra-550b-a55b:free"
+    },
+    {
+      "latency_seconds": 41.961525699996855,
+      "prompt_tokens": 2126,
+      "completion_tokens": 3520,
+      "cost": 0,
+      "model": "nvidia/nemotron-3-ultra-550b-a55b:free"
+    },
+    {
+      "latency_seconds": 44.64068030001363,
+      "prompt_tokens": 2180,
+      "completion_tokens": 4723,
+      "cost": 0,
+      "model": "nvidia/nemotron-3-ultra-550b-a55b:free"
+    },
+    {
+      "latency_seconds": 1.5746464999974705,
+      "prompt_tokens": null,
+      "completion_tokens": null,
+      "cost": null,
+      "model": "nvidia/nemotron-3-ultra-550b-a55b:free"
+    },
+    {
+      "latency_seconds": 1.4735859000356868,
+      "prompt_tokens": null,
+      "completion_tokens": null,
+      "cost": null,
+      "model": "nvidia/nemotron-3-ultra-550b-a55b:free"
+    },
+    {
+      "latency_seconds": 1.4487750999978743,
+      "prompt_tokens": null,
+      "completion_tokens": null,
+      "cost": null,
+      "model": "nvidia/nemotron-3-ultra-550b-a55b:free"
+    },
+    {
+      "latency_seconds": 6.149582499987446,
+      "prompt_tokens": 217,
+      "completion_tokens": 275,
+      "cost": 0,
+      "model": "nvidia/nemotron-3-ultra-550b-a55b:free"
+    },
+    {
+      "latency_seconds": 3.8000192000181414,
+      "prompt_tokens": 239,
+      "completion_tokens": 352,
+      "cost": 0,
+      "model": "nvidia/nemotron-3-ultra-550b-a55b:free"
+    },
+    {
+      "latency_seconds": 7.241143000021111,
+      "prompt_tokens": 221,
+      "completion_tokens": 400,
+      "cost": 0,
+      "model": "nvidia/nemotron-3-ultra-550b-a55b:free"
+    },
+    {
+      "latency_seconds": 5.233874799974728,
+      "prompt_tokens": 222,
+      "completion_tokens": 264,
+      "cost": 0,
+      "model": "nvidia/nemotron-3-ultra-550b-a55b:free"
+    },
+    {
+      "latency_seconds": 5.095212499960326,
+      "prompt_tokens": 222,
+      "completion_tokens": 259,
+      "cost": 0,
+      "model": "nvidia/nemotron-3-ultra-550b-a55b:free"
+    },
+    {
+      "latency_seconds": 2.1954735000035726,
+      "prompt_tokens": 212,
+      "completion_tokens": 225,
+      "cost": 0,
+      "model": "nvidia/nemotron-3-ultra-550b-a55b:free"
+    },
+    {
+      "latency_seconds": 2.9801142000360414,
+      "prompt_tokens": 208,
+      "completion_tokens": 128,
+      "cost": 0,
+      "model": "nvidia/nemotron-3-ultra-550b-a55b:free"
+    },
+    {
+      "latency_seconds": 3.5751615000190213,
+      "prompt_tokens": 212,
+      "completion_tokens": 220,
+      "cost": 0,
+      "model": "nvidia/nemotron-3-ultra-550b-a55b:free"
+    },
+    {
+      "latency_seconds": 2.8987533999606967,
+      "prompt_tokens": 208,
+      "completion_tokens": 157,
+      "cost": 0,
+      "model": "nvidia/nemotron-3-ultra-550b-a55b:free"
+    },
+    {
+      "latency_seconds": 2.8641485000262037,
+      "prompt_tokens": 212,
+      "completion_tokens": 293,
+      "cost": 0,
+      "model": "nvidia/nemotron-3-ultra-550b-a55b:free"
+    },
+    {
+      "latency_seconds": 8.27303270000266,
+      "prompt_tokens": 208,
+      "completion_tokens": 256,
+      "cost": 0,
+      "model": "nvidia/nemotron-3-ultra-550b-a55b:free"
+    },
+    {
+      "latency_seconds": 5.217589300009422,
+      "prompt_tokens": 221,
+      "completion_tokens": 219,
+      "cost": 0,
+      "model": "nvidia/nemotron-3-ultra-550b-a55b:free"
+    }
+  ],
+  "agent_llm_calls": 14,
+  "user_llm_calls": 12,
+  "complexity": {
+    "ast_nodes": 8,
+    "depth": 6,
+    "when_count": 2,
+    "case_count": 2,
+    "path_count": 3,
+    "party_count": 0,
+    "constructors": [
+      "close",
+      "pay",
+      "when"
+    ]
+  },
+  "evaluation": {
+    "structure_accuracy": 1.0,
+    "timing_accuracy": 1.0,
+    "scenario_accuracy": 1.0,
+    "overall_accuracy": 1.0,
+    "strict_correct": true,
+    "false_convergence": false,
+    "checks": [
+      {
+        "group": "structure",
+        "name": "party_count",
+        "passed": true
+      },
+      {
+        "group": "structure",
+        "name": "token:",
+        "passed": true
+      },
+      {
+        "group": "structure",
+        "name": "token:GOLD",
+        "passed": true
+      },
+      {
+        "group": "structure",
+        "name": "amount:16",
+        "passed": true
+      },
+      {
+        "group": "structure",
+        "name": "amount:281000000",
+        "passed": true
+      },
+      {
+        "group": "timing",
+        "name": "distinct_deadlines",
+        "passed": true
+      },
+      {
+        "group": "timing",
+        "name": "gap:604800000",
+        "passed": true
+      },
+      {
+        "group": "timing",
+        "name": "absolute_date",
+        "passed": true
+      },
+      {
+        "group": "scenarios",
+        "name": "exchange",
+        "passed": true,
+        "reason": "ok"
+      },
+      {
+        "group": "scenarios",
+        "name": "other_side_absent",
+        "passed": true,
+        "reason": "ok"
+      },
+      {
+        "group": "scenarios",
+        "name": "first_side_absent",
+        "passed": true,
+        "reason": "ok"
+      }
+    ],
+    "mapping": {
+      "Minh": "Minh",
+      "Quỳnh": "Quynh"
+    },
+    "diagnostics": {
+      "choice_name_fallback_count": 0
+    }
+  },
+  "judge": null,
+  "contract_description": "1. Before 1800230400000: Minh sends 281000000 ADA base units to Minh; Before 1800835200000: Quynh sends 16 GOLD to Quynh; Pay 281000000 ADA base units from Minh to Quynh; Pay 16 GOLD from Quynh to Minh; Close: remaining balances return to account owners.\n2. Before 1800230400000: Minh sends 281000000 ADA base units to Minh; At/after 1800835200000: timeout path; Pay 281000000 ADA base units from Minh to Minh; Close: remaining balances return to account owners.\n3. At/after 1800230400000: timeout path; Close: remaining balances return to account owners.",
+  "self_reported_semantic_score": 80.0,
+  "questions": 12,
+  "answers": 12,
+  "question_redundancy": "unknown",
+  "git_commit": "2100631516a75249765b892bac3d5ed5c0815e9e",
+  "dataset_sha256": "e05c23f43a2bd025258ad5e2fa77569874357f79173e98863a8f8d48ee9a907a",
+  "model": "nvidia/nemotron-3-ultra-550b-a55b:free",
+  "judge_model": "nvidia/nemotron-3-ultra-550b-a55b:free",
+  "user_model": "nvidia/nemotron-3-ultra-550b-a55b:free",
+  "provider": "https://openrouter.ai/api/v1",
+  "workers": 3,
+  "limits": {
+    "max_iterations": 500,
+    "max_llm_calls": 2000,
+    "wall_clock": 5400.0
+  },
+  "started_at": "2026-09-26T03:54:06.553366+00:00",
+  "error": null
+}

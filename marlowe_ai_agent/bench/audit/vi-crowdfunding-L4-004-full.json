@@ -1,0 +1,852 @@
+{
+  "case_id": "vi-crowdfunding-L4-004",
+  "attempt": 1,
+  "prompt": "Sơn ở Hà Nội đây; bác muốn nhờ chút, đang Thảo và Uyên cùng góp 176 ADA (có người ghi 177 ADA) cho Đạt, mỗi người một nửa. Người đầu góp trước ngày 19/01/2027, người sau trước bảy ngày sau hạn đầu; đủ mức thì dự án nhận, không đủ thì hoàn lại người đã góp.",
+  "run_kind": "timing_probe",
+  "language": "vi",
+  "type": "crowdfunding",
+  "difficulty": 4,
+  "info_mode": "ambiguous",
+  "challenges": [
+    "relative_time",
+    "multi_party",
+    "threshold",
+    "refund_on_timeout",
+    "conflicting_info",
+    "long_narrative"
+  ],
+  "status": "done",
+  "stop_reason": "ok",
+  "iterations": 2,
+  "converged": true,
+  "iteration_history": [
+    {
+      "iteration": 1,
+      "structural": "skip",
+      "semantic": "skip",
+      "logic": "skip",
+      "logic_errors": 0,
+      "logic_warnings": 0,
+      "stall_count": 0,
+      "llm_calls": 1,
+      "semantic_generation": 1,
+      "semantic_history_entries": 0,
+      "elapsed_seconds": 232.024
+    },
+    {
+      "iteration": 2,
+      "structural": "pass",
+      "semantic": "pass",
+      "logic": "pass",
+      "logic_errors": 0,
+      "logic_warnings": 1,
+      "stall_count": 0,
+      "llm_calls": 3,
+      "semantic_generation": 1,
+      "semantic_history_entries": 1,
+      "elapsed_seconds": 84.901
+    }
+  ],
+  "convergence_path": " -> S+S+L+",
+  "semantic_history": [
+    {
+      "iteration": 2,
+      "semantic_generation": 1,
+      "semantic_fingerprint": "9a464e5692e99bac8658e13121f75b4147e497645bfbd9c6e627f5c7be42b4ae",
+      "prompt_fingerprint": "f5f0fce5b712012e0cefb5c4d56b30eacf08dbe6211dc98895502ad6cd4901d1",
+      "contract_fingerprint": "b1fcc399e714afa1b695e77a789a5d8b037f3b19570edd32a4fc67f3134c940e",
+      "passed": true,
+      "user_answered": false,
+      "answer_source": null
+    }
+  ],
+  "trace": [
+    {
+      "node": "pipeline",
+      "status": "start",
+      "message": "Đã nhận prompt.",
+      "data": {
+        "max_iterations": 500
+      }
+    },
+    {
+      "node": "node_1_prompt_to_draft",
+      "status": "start",
+      "message": "Đang sinh draft.",
+      "data": {
+        "iteration": 1
+      }
+    },
+    {
+      "node": "node_1_prompt_to_draft",
+      "status": "done",
+      "message": "Đã sinh draft.",
+      "data": {
+        "reasoning_narrative": "Yêu cầu mô tả một hợp đồng escrow tuần tự: Thảo nộp trước ngày 19/01/2027, Uyên nộp trước ngày 26/01/2027 (7 ngày sau). Nếu cả hai nộp đủ 88 ADA mỗi người thì 176 ADA chuyển cho Đạt; nếu một trong hai không nộp kịp hạn thì người đã nộp được hoàn tiền. Cần làm rõ số tiền chính xác (176 hay 177 ADA), thứ tự nộp cố định hay linh hoạt, và mốc thời gian chính xác (giờ UTC).",
+        "intent": "Escrow với hai người góp lần lượt, có hạn chót và hoàn tiền nếu không đủ số lượng."
+      }
+    },
+    {
+      "node": "structural_gate",
+      "status": "skipped",
+      "message": "Chưa có AST do thiếu thông tin nghiệp vụ.",
+      "data": {}
+    },
+    {
+      "node": "pipeline",
+      "status": "semantic_reset",
+      "message": "Đã reset semantic stall state sau khi nhận thông tin mới từ người dùng.",
+      "data": {
+        "semantic_generation": 1,
+        "history_entries": 0,
+        "answered_questions_count": 4,
+        "answer_source": "empty_contract"
+      }
+    },
+    {
+      "node": "pipeline",
+      "status": "iteration",
+      "message": "Đã hoàn tất lượt xử lý.",
+      "data": {
+        "iteration": 1,
+        "structural": "skip",
+        "semantic": "skip",
+        "logic": "skip",
+        "logic_errors": 0,
+        "logic_warnings": 0,
+        "stall_count": 0,
+        "llm_calls": 1,
+        "semantic_generation": 1,
+        "semantic_history_entries": 0,
+        "elapsed_seconds": 232.024
+      }
+    },
+    {
+      "node": "node_1_prompt_to_draft",
+      "status": "start",
+      "message": "Đang sinh draft.",
+      "data": {
+        "iteration": 2
+      }
+    },
+    {
+      "node": "node_1_prompt_to_draft",
+      "status": "done",
+      "message": "Đã sinh draft.",
+      "data": {
+        "reasoning_narrative": "Hợp đồng cho phép Thảo hoặc Uyên nộp 88 ADA trước 19/01/2027. Người nộp trước trở thành 'người đầu', người kia phải nộp trước 26/01/2027. Nếu cả hai nộp đúng hạn, 176 ADA được chuyển cho Đạt. Nếu người sau không nộp kịp, người đầu được hoàn tiền. Nếu không ai nộp trước 19/01, hợp đồng đóng mà không có giao dịch.",
+        "intent": "Escrow cho Đạt từ Thảo và Uyên, mỗi người góp 88 ADA, tổng 176 ADA. Người đầu góp trước 19/01/2027, người sau góp trước 26/01/2027. Đủ thì chuyển cho Đạt, không đủ hoàn lại."
+      }
+    },
+    {
+      "node": "structural_gate",
+      "status": "pass",
+      "message": "AST hợp lệ.",
+      "data": {}
+    },
+    {
+      "node": "node_2_semantic_verification",
+      "status": "start",
+      "message": "Đang kiểm semantic.",
+      "data": {}
+    },
+    {
+      "node": "node_2_semantic_verification",
+      "status": "pass",
+      "message": "Đã kiểm semantic.",
+      "data": {
+        "findings": [],
+        "reasoning_narrative": "Hợp đồng Marlowe đã được xây dựng đúng theo yêu cầu: hai bên Thảo và Uyên mỗi người nộp 88 ADA (88.000.000 lovelace) vào tài khoản riêng, người nộp đầu tiên phải hoàn tất trước 19/01/2027, người nộp sau trước 26/01/2027. Cấu trúc When lồng nhau xử lý hai trường hợp ai nộp trước, timeout bên ngoài chờ nộp đầu tiên, timeout bên trong chờ nộp thứ hai. Nếu đủ 176 ADA thì chuyển cho Đạt qua hai lệnh Pay, thiếu thì hoàn tiền cho người nộp đầu. Các timestamp POSIX đã chuyển đổi chính xác. Không có logic thừa hay thiếu."
+      }
+    },
+    {
+      "node": "node_3_logic_graph_verification",
+      "status": "start",
+      "message": "Đang kiểm logic graph.",
+      "data": {}
+    },
+    {
+      "node": "node_3_logic_graph_verification",
+      "status": "pass",
+      "message": "Đã kiểm logic graph.",
+      "data": {
+        "findings": [
+          "root: không thấy số tiền 176 trong Deposit/Pay; kiểm tra đơn vị lovelace."
+        ],
+        "errors": [],
+        "warnings": [
+          "root: không thấy số tiền 176 trong Deposit/Pay; kiểm tra đơn vị lovelace."
+        ],
+        "reasoning_narrative": "Node 3 đã kiểm tra 14 node, 5 đường đi; có 1 cảnh báo."
+      }
+    },
+    {
+      "node": "pipeline",
+      "status": "iteration",
+      "message": "Đã hoàn tất lượt xử lý.",
+      "data": {
+        "iteration": 2,
+        "structural": "pass",
+        "semantic": "pass",
+        "logic": "pass",
+        "logic_errors": 0,
+        "logic_warnings": 1,
+        "stall_count": 0,
+        "llm_calls": 3,
+        "semantic_generation": 1,
+        "semantic_history_entries": 1,
+        "elapsed_seconds": 84.901
+      }
+    },
+    {
+      "node": "pipeline",
+      "status": "done",
+      "message": "Workflow đã hoàn tất.",
+      "data": {
+        "iterations": 2,
+        "stop_reason": "ok"
+      }
+    }
+  ],
+  "qa_transcript": [
+    {
+      "question": "Số tiền chính xác là 176 ADA hay 177 ADA? Nếu 177 ADA thì mỗi người góp bao nhiêu?",
+      "answer": "Ý mình là 176 ADA.",
+      "time": "2026-09-26T04:01:34.075653+00:00",
+      "fallback_answer": true,
+      "unspecified_answer": false,
+      "seconds": 4.8934817999834195
+    },
+    {
+      "question": "Thứ tự nộp có bắt buộc Thảo trước, Uyên sau không, hay bất kỳ ai nộp trước đều được?",
+      "answer": "À, thứ tự nộp không bắt buộc Thảo trước Uyên sau đâu bác ơi. Ai nộp trước thì người đó là \"người đầu\", nộp trước 19/01/2027. Người kia nộp sau, phải nộp trước 7 ngày kể từ hạn của người đầu. Quan trọng là mỗi người nộp một nửa (88 ADA) và đúng hạn thôi.",
+      "time": "2026-09-26T04:01:38.154169+00:00",
+      "fallback_answer": false,
+      "unspecified_answer": false,
+      "seconds": 4.0784754999913275
+    },
+    {
+      "question": "Hạn chót 19/01/2027 và 26/01/2027 có phải là 23:59:59 UTC không? Nếu không, vui lòng cung cấp timestamp POSIX milliseconds chính xác.",
+      "answer": "Tôi chưa nghĩ tới, xin chọn cách đơn giản nhất.",
+      "time": "2026-09-26T04:01:47.954533+00:00",
+      "fallback_answer": true,
+      "unspecified_answer": true,
+      "seconds": 9.800328999990597
+    },
+    {
+      "question": "Có cho phép nộp nhiều lần (ví dụ Thảo nộp một phần trước hạn) hay phải nộp đúng 88 ADA một lần?",
+      "answer": "Mình không nhắc đến nộp nhiều lần, nên mặc định là nộp một lần 88 ADA cho gọn.",
+      "time": "2026-09-26T04:02:10.652718+00:00",
+      "fallback_answer": false,
+      "unspecified_answer": true,
+      "seconds": 22.69815260003088
+    }
+  ],
+  "contract": {
+    "when": [
+      {
+        "case": {
+          "party": {
+            "role_token": "Thảo"
+          },
+          "deposits": 88000000,
+          "of_token": {
+            "currency_symbol": "",
+            "token_name": ""
+          },
+          "into_account": {
+            "role_token": "Thảo"
+          }
+        },
+        "then": {
+          "when": [
+            {
+              "case": {
+                "party": {
+                  "role_token": "Uyên"
+                },
+                "deposits": 88000000,
+                "of_token": {
+                  "currency_symbol": "",
+                  "token_name": ""
+                },
+                "into_account": {
+                  "role_token": "Uyên"
+                }
+              },
+              "then": {
+                "pay": 88000000,
+                "from_account": {
+                  "role_token": "Thảo"
+                },
+                "to": {
+                  "party": {
+                    "role_token": "Đạt"
+                  }
+                },
+                "token": {
+                  "currency_symbol": "",
+                  "token_name": ""
+                },
+                "then": {
+                  "pay": 88000000,
+                  "from_account": {
+                    "role_token": "Uyên"
+                  },
+                  "to": {
+                    "party": {
+                      "role_token": "Đạt"
+                    }
+                  },
+                  "token": {
+                    "currency_symbol": "",
+                    "token_name": ""
+                  },
+                  "then": "close"
+                }
+              }
+            }
+          ],
+          "timeout": 1895731199000,
+          "timeout_continuation": {
+            "pay": 88000000,
+            "from_account": {
+              "role_token": "Thảo"
+            },
+            "to": {
+              "party": {
+                "role_token": "Thảo"
+              }
+            },
+            "token": {
+              "currency_symbol": "",
+              "token_name": ""
+            },
+            "then": "close"
+          }
+        }
+      },
+      {
+        "case": {
+          "party": {
+            "role_token": "Uyên"
+          },
+          "deposits": 88000000,
+          "of_token": {
+            "currency_symbol": "",
+            "token_name": ""
+          },
+          "into_account": {
+            "role_token": "Uyên"
+          }
+        },
+        "then": {
+          "when": [
+            {
+              "case": {
+                "party": {
+                  "role_token": "Thảo"
+                },
+                "deposits": 88000000,
+                "of_token": {
+                  "currency_symbol": "",
+                  "token_name": ""
+                },
+                "into_account": {
+                  "role_token": "Thảo"
+                }
+              },
+              "then": {
+                "pay": 88000000,
+                "from_account": {
+                  "role_token": "Uyên"
+                },
+                "to": {
+                  "party": {
+                    "role_token": "Đạt"
+                  }
+                },
+                "token": {
+                  "currency_symbol": "",
+                  "token_name": ""
+                },
+                "then": {
+                  "pay": 88000000,
+                  "from_account": {
+                    "role_token": "Thảo"
+                  },
+                  "to": {
+                    "party": {
+                      "role_token": "Đạt"
+                    }
+                  },
+                  "token": {
+                    "currency_symbol": "",
+                    "token_name": ""
+                  },
+                  "then": "close"
+                }
+              }
+            }
+          ],
+          "timeout": 1895731199000,
+          "timeout_continuation": {
+            "pay": 88000000,
+            "from_account": {
+              "role_token": "Uyên"
+            },
+            "to": {
+              "party": {
+                "role_token": "Uyên"
+              }
+            },
+            "token": {
+              "currency_symbol": "",
+              "token_name": ""
+            },
+            "then": "close"
+          }
+        }
+      }
+    ],
+    "timeout": 1895126399000,
+    "timeout_continuation": "close"
+  },
+  "draft": {
+    "original_prompt": "Sơn ở Hà Nội đây; bác muốn nhờ chút, đang Thảo và Uyên cùng góp 176 ADA (có người ghi 177 ADA) cho Đạt, mỗi người một nửa. Người đầu góp trước ngày 19/01/2027, người sau trước bảy ngày sau hạn đầu; đủ mức thì dự án nhận, không đủ thì hoàn lại người đã góp.\n\nThong tin bo sung tu nguoi dung:\n- Số tiền chính xác là 176 ADA hay 177 ADA? Nếu 177 ADA thì mỗi người góp bao nhiêu?\n  Tra loi: Ý mình là 176 ADA.\n- Thứ tự nộp có bắt buộc Thảo trước, Uyên sau không, hay bất kỳ ai nộp trước đều được?\n  Tra loi: À, thứ tự nộp không bắt buộc Thảo trước Uyên sau đâu bác ơi. Ai nộp trước thì người đó là \"người đầu\", nộp trước 19/01/2027. Người kia nộp sau, phải nộp trước 7 ngày kể từ hạn của người đầu. Quan trọng là mỗi người nộp một nửa (88 ADA) và đúng hạn thôi.\n- Hạn chót 19/01/2027 và 26/01/2027 có phải là 23:59:59 UTC không? Nếu không, vui lòng cung cấp timestamp POSIX milliseconds chính xác.\n  Tra loi: Tôi chưa nghĩ tới, xin chọn cách đơn giản nhất.\n- Có cho phép nộp nhiều lần (ví dụ Thảo nộp một phần trước hạn) hay phải nộp đúng 88 ADA một lần?\n  Tra loi: Mình không nhắc đến nộp nhiều lần, nên mặc định là nộp một lần 88 ADA cho gọn.",
+    "intent": "Escrow cho Đạt từ Thảo và Uyên, mỗi người góp 88 ADA, tổng 176 ADA. Người đầu góp trước 19/01/2027, người sau góp trước 26/01/2027. Đủ thì chuyển cho Đạt, không đủ hoàn lại.",
+    "parties": [
+      {
+        "role": "contributor",
+        "name": "Thảo"
+      },
+      {
+        "role": "contributor",
+        "name": "Uyên"
+      },
+      {
+        "role": "beneficiary",
+        "name": "Đạt"
+      }
+    ],
+    "amount": 176,
+    "token": "ADA",
+    "deposit_timeout": 1895126399000,
+    "decision_timeout": 1895731199000,
+    "clauses": [
+      "Mỗi người góp đúng 88 ADA (88.000.000 lovelace) một lần.",
+      "Người nộp đầu tiên phải hoàn tất trước 19/01/2027 23:59:59 UTC.",
+      "Người nộp thứ hai phải hoàn tất trước 26/01/2027 23:59:59 UTC (7 ngày sau hạn đầu).",
+      "Thứ tự nộp không cố định: ai nộp trước được xem là người đầu.",
+      "Đủ 176 ADA thì chuyển cho Đạt, thiếu thì hoàn lại cho người đã nộp."
+    ],
+    "assumptions": [
+      "Sử dụng ADA (lovelace) làm token gốc, currency_symbol rỗng, token_name rỗng.",
+      "Mốc thời gian POSIX milliseconds: 19/01/2027 23:59:59 UTC = 1895126399000, 26/01/2027 23:59:59 UTC = 1895731199000.",
+      "Các vai trò được định danh bằng tên: 'Thảo', 'Uyên', 'Đạt'.",
+      "Không có phí giao dịch hay điều kiện phụ khác."
+    ],
+    "clarification_questions": [],
+    "reasoning_summary": "Hai người cùng góp 88 ADA mỗi người, tổng 176 ADA cho Đạt. Hạn nộp đầu tiên 19/01/2027, hạn thứ hai 26/01/2027. Ai nộp trước làm người đầu. Đủ hạn thì chuyển tiền, thiếu thì hoàn lại.",
+    "reasoning_narrative": "Hợp đồng cho phép Thảo hoặc Uyên nộp 88 ADA trước 19/01/2027. Người nộp trước trở thành 'người đầu', người kia phải nộp trước 26/01/2027. Nếu cả hai nộp đúng hạn, 176 ADA được chuyển cho Đạt. Nếu người sau không nộp kịp, người đầu được hoàn tiền. Nếu không ai nộp trước 19/01, hợp đồng đóng mà không có giao dịch.",
+    "contract_plan": {
+      "nodes": [
+        {
+          "id": "start",
+          "label": "Chờ nộp đầu tiên (Thảo hoặc Uyên) trước 19/01/2027"
+        },
+        {
+          "id": "thao_first",
+          "label": "Thảo nộp trước → chờ Uyên nộp trước 26/01/2027"
+        },
+        {
+          "id": "uyen_first",
+          "label": "Uyên nộp trước → chờ Thảo nộp trước 26/01/2027"
+        },
+        {
+          "id": "both_paid",
+          "label": "Cả hai đã nộp → chuyển 88 ADA từ mỗi tài khoản cho Đạt"
+        },
+        {
+          "id": "refund_thao",
+          "label": "Uyên không nộp kịp → hoàn 88 ADA cho Thảo"
+        },
+        {
+          "id": "refund_uyen",
+          "label": "Thảo không nộp kịp → hoàn 88 ADA cho Uyên"
+        },
+        {
+          "id": "timeout_no_deposit",
+          "label": "Không ai nộp trước 19/01 → đóng hợp đồng"
+        }
+      ],
+      "edges": [
+        {
+          "from": "start",
+          "to": "thao_first",
+          "label": "Thảo nộp 88 ADA"
+        },
+        {
+          "from": "start",
+          "to": "uyen_first",
+          "label": "Uyên nộp 88 ADA"
+        },
+        {
+          "from": "start",
+          "to": "timeout_no_deposit",
+          "label": "Hết hạn 19/01 không nộp"
+        },
+        {
+          "from": "thao_first",
+          "to": "both_paid",
+          "label": "Uyên nộp 88 ADA trước 26/01"
+        },
+        {
+          "from": "thao_first",
+          "to": "refund_thao",
+          "label": "Uyên không nộp kịp 26/01"
+        },
+        {
+          "from": "uyen_first",
+          "to": "both_paid",
+          "label": "Thảo nộp 88 ADA trước 26/01"
+        },
+        {
+          "from": "uyen_first",
+          "to": "refund_uyen",
+          "label": "Thảo không nộp kịp 26/01"
+        }
+      ],
+      "notes": [
+        "Mỗi nhánh nộp tiền dùng When lồng nhau với timeout riêng.",
+        "Thanh toán cho Đạt thực hiện bằng hai lệnh Pay liên tiếp từ tài khoản của Thảo và Uyên.",
+        "Hoàn tiền dùng Pay từ tài khoản người nộp đầu về chính người đó."
+      ]
+    },
+    "marlowe_contract": {
+      "when": [
+        {
+          "case": {
+            "party": {
+              "role_token": "Thảo"
+            },
+            "deposits": 88000000,
+            "of_token": {
+              "currency_symbol": "",
+              "token_name": ""
+            },
+            "into_account": {
+              "role_token": "Thảo"
+            }
+          },
+          "then": {
+            "when": [
+              {
+                "case": {
+                  "party": {
+                    "role_token": "Uyên"
+                  },
+                  "deposits": 88000000,
+                  "of_token": {
+                    "currency_symbol": "",
+                    "token_name": ""
+                  },
+                  "into_account": {
+                    "role_token": "Uyên"
+                  }
+                },
+                "then": {
+                  "pay": 88000000,
+                  "from_account": {
+                    "role_token": "Thảo"
+                  },
+                  "to": {
+                    "party": {
+                      "role_token": "Đạt"
+                    }
+                  },
+                  "token": {
+                    "currency_symbol": "",
+                    "token_name": ""
+                  },
+                  "then": {
+                    "pay": 88000000,
+                    "from_account": {
+                      "role_token": "Uyên"
+                    },
+                    "to": {
+                      "party": {
+                        "role_token": "Đạt"
+                      }
+                    },
+                    "token": {
+                      "currency_symbol": "",
+                      "token_name": ""
+                    },
+                    "then": "close"
+                  }
+                }
+              }
+            ],
+            "timeout": 1895731199000,
+            "timeout_continuation": {
+              "pay": 88000000,
+              "from_account": {
+                "role_token": "Thảo"
+              },
+              "to": {
+                "party": {
+                  "role_token": "Thảo"
+                }
+              },
+              "token": {
+                "currency_symbol": "",
+                "token_name": ""
+              },
+              "then": "close"
+            }
+          }
+        },
+        {
+          "case": {
+            "party": {
+              "role_token": "Uyên"
+            },
+            "deposits": 88000000,
+            "of_token": {
+              "currency_symbol": "",
+              "token_name": ""
+            },
+            "into_account": {
+              "role_token": "Uyên"
+            }
+          },
+          "then": {
+            "when": [
+              {
+                "case": {
+                  "party": {
+                    "role_token": "Thảo"
+                  },
+                  "deposits": 88000000,
+                  "of_token": {
+                    "currency_symbol": "",
+                    "token_name": ""
+                  },
+                  "into_account": {
+                    "role_token": "Thảo"
+                  }
+                },
+                "then": {
+                  "pay": 88000000,
+                  "from_account": {
+                    "role_token": "Uyên"
+                  },
+                  "to": {
+                    "party": {
+                      "role_token": "Đạt"
+                    }
+                  },
+                  "token": {
+                    "currency_symbol": "",
+                    "token_name": ""
+                  },
+                  "then": {
+                    "pay": 88000000,
+                    "from_account": {
+                      "role_token": "Thảo"
+                    },
+                    "to": {
+                      "party": {
+                        "role_token": "Đạt"
+                      }
+                    },
+                    "token": {
+                      "currency_symbol": "",
+                      "token_name": ""
+                    },
+                    "then": "close"
+                  }
+                }
+              }
+            ],
+            "timeout": 1895731199000,
+            "timeout_continuation": {
+              "pay": 88000000,
+              "from_account": {
+                "role_token": "Uyên"
+              },
+              "to": {
+                "party": {
+                  "role_token": "Uyên"
+                }
+              },
+              "token": {
+                "currency_symbol": "",
+                "token_name": ""
+              },
+              "then": "close"
+            }
+          }
+        }
+      ],
+      "timeout": 1895126399000,
+      "timeout_continuation": "close"
+    },
+    "normalization_notes": []
+  },
+  "first_structural_pass_iter": 2,
+  "first_semantic_pass_iter": 2,
+  "first_logic_pass_iter": 2,
+  "wall_seconds": 317.3270119000226,
+  "agent_seconds": 275.855705199996,
+  "overhead_seconds": 0.40303600003244355,
+  "seconds_per_iteration": 137.927852599998,
+  "llm_calls": 7,
+  "prompt_tokens": 7332,
+  "completion_tokens": 12168,
+  "llm_seconds": 316.92271190008614,
+  "cost_usd": 0,
+  "cost_source": "provider",
+  "call_log": [
+    {
+      "latency_seconds": 190.55255520000355,
+      "prompt_tokens": 1420,
+      "completion_tokens": 3268,
+      "cost": 0,
+      "model": "nvidia/nemotron-3-ultra-550b-a55b:free"
+    },
+    {
+      "latency_seconds": 69.24080039997352,
+      "prompt_tokens": 1763,
+      "completion_tokens": 5522,
+      "cost": 0,
+      "model": "nvidia/nemotron-3-ultra-550b-a55b:free"
+    },
+    {
+      "latency_seconds": 15.65931359998649,
+      "prompt_tokens": 3046,
+      "completion_tokens": 1886,
+      "cost": 0,
+      "model": "nvidia/nemotron-3-ultra-550b-a55b:free"
+    },
+    {
+      "latency_seconds": 4.8933322000084445,
+      "prompt_tokens": 273,
+      "completion_tokens": 400,
+      "cost": 0,
+      "model": "nvidia/nemotron-3-ultra-550b-a55b:free"
+    },
+    {
+      "latency_seconds": 4.078404200030491,
+      "prompt_tokens": 265,
+      "completion_tokens": 326,
+      "cost": 0,
+      "model": "nvidia/nemotron-3-ultra-550b-a55b:free"
+    },
+    {
+      "latency_seconds": 9.800212800037116,
+      "prompt_tokens": 294,
+      "completion_tokens": 400,
+      "cost": 0,
+      "model": "nvidia/nemotron-3-ultra-550b-a55b:free"
+    },
+    {
+      "latency_seconds": 22.698093500046525,
+      "prompt_tokens": 271,
+      "completion_tokens": 366,
+      "cost": 0,
+      "model": "nvidia/nemotron-3-ultra-550b-a55b:free"
+    }
+  ],
+  "agent_llm_calls": 3,
+  "user_llm_calls": 4,
+  "complexity": {
+    "ast_nodes": 14,
+    "depth": 6,
+    "when_count": 3,
+    "case_count": 4,
+    "path_count": 5,
+    "party_count": 0,
+    "constructors": [
+      "close",
+      "pay",
+      "when"
+    ]
+  },
+  "evaluation": {
+    "structure_accuracy": 1.0,
+    "timing_accuracy": 1.0,
+    "scenario_accuracy": 1.0,
+    "overall_accuracy": 1.0,
+    "strict_correct": true,
+    "false_convergence": false,
+    "checks": [
+      {
+        "group": "structure",
+        "name": "party_count",
+        "passed": true
+      },
+      {
+        "group": "structure",
+        "name": "token:",
+        "passed": true
+      },
+      {
+        "group": "structure",
+        "name": "amount:88000000",
+        "passed": true
+      },
+      {
+        "group": "timing",
+        "name": "distinct_deadlines",
+        "passed": true
+      },
+      {
+        "group": "timing",
+        "name": "gap:604800000",
+        "passed": true
+      },
+      {
+        "group": "scenarios",
+        "name": "threshold_met",
+        "passed": true,
+        "reason": "ok"
+      },
+      {
+        "group": "scenarios",
+        "name": "threshold_missed",
+        "passed": true,
+        "reason": "ok"
+      }
+    ],
+    "mapping": {
+      "Thảo": "Thảo",
+      "Uyên": "Uyên",
+      "Đạt": "Đạt"
+    },
+    "diagnostics": {
+      "choice_name_fallback_count": 0
+    }
+  },
+  "judge": null,
+  "contract_description": "1. Before 1895126399000: Thảo sends 88000000 ADA base units to Thảo; Before 1895731199000: Uyên sends 88000000 ADA base units to Uyên; Pay 88000000 ADA base units from Thảo to Đạt; Pay 88000000 ADA base units from Uyên to Đạt; Close: remaining balances return to account owners.\n2. Before 1895126399000: Thảo sends 88000000 ADA base units to Thảo; At/after 1895731199000: timeout path; Pay 88000000 ADA base units from Thảo to Thảo; Close: remaining balances return to account owners.\n3. Before 1895126399000: Uyên sends 88000000 ADA base units to Uyên; Before 1895731199000: Thảo sends 88000000 ADA base units to Thảo; Pay 88000000 ADA base units from Uyên to Đạt; Pay 88000000 ADA base units from Thảo to Đạt; Close: remaining balances return to account owners.\n4. Before 1895126399000: Uyên sends 88000000 ADA base units to Uyên; At/after 1895731199000: timeout path; Pay 88000000 ADA base units from Uyên to Uyên; Close: remaining balances return to account owners.\n5. At/after 1895126399000: timeout path; Close: remaining balances return to account owners.",
+  "self_reported_semantic_score": 100.0,
+  "questions": 4,
+  "answers": 4,
+  "question_redundancy": "unknown",
+  "git_commit": "2100631516a75249765b892bac3d5ed5c0815e9e",
+  "dataset_sha256": "e05c23f43a2bd025258ad5e2fa77569874357f79173e98863a8f8d48ee9a907a",
+  "model": "nvidia/nemotron-3-ultra-550b-a55b:free",
+  "judge_model": "nvidia/nemotron-3-ultra-550b-a55b:free",
+  "user_model": "nvidia/nemotron-3-ultra-550b-a55b:free",
+  "provider": "https://openrouter.ai/api/v1",
+  "workers": 3,
+  "limits": {
+    "max_iterations": 500,
+    "max_llm_calls": 2000,
+    "wall_clock": 5400.0
+  },
+  "started_at": "2026-09-26T03:58:18.228027+00:00",
+  "error": null
+}

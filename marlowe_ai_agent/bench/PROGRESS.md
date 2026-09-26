@@ -44,3 +44,47 @@ audit are tracked in [bench/audit](audit/README.md).
 Live raw results and transcripts remain local under ignored `bench/results/`.
 The next gate for a 100-case accuracy benchmark remains a successful smoke on
 v2 with stable judge responses and observable usage, under the 50 USD ceiling.
+
+## Dataset v2 high-difficulty timing probe (n=5; not benchmark rates)
+
+On 2026-09-26, five selected L3-L4 cases ran from commit `2100631` with 500
+iterations, 2000 agent-call budget, 5400 seconds per case, and three workers.
+The judge was not called. Raw results remain local under
+`bench/results/20260926-105406-nvidia-nemotron-3-ultra-550b-a55b-free/`; full
+audit copies are tracked in [bench/audit](audit/README.md).
+
+| Case | Type / level / mode | Result | Iterations | Agent + user calls | Wall seconds | Evaluator |
+|---|---|---:|---:|---:|---:|---:|
+| `vi-escrow_3party-L4-006` | escrow_3party / L4 / complete | `done/ok` | 5 | 10 + 3 | 655.0 | 1.0, strict, fallback scenarios 2 |
+| `vi-swap-L3-010` | swap / L3 / complete | `blocked/llm_error` | 9 | 14 + 12 | 622.7 | last draft 1.0, strict |
+| `en-loan-L4-007` | loan / L4 / missing | `done/ok` | 3 | 5 + 6 | 251.6 | 1.0, strict |
+| `vi-crowdfunding-L4-004` | crowdfunding / L4 / ambiguous | `done/ok` | 2 | 3 + 4 | 317.3 | 1.0, strict |
+| `vi-cancellation_fee-L4-001` | cancellation_fee / L4 / complete | `blocked/harness_error` | 1 partial | 1 + 1 | 79.0 | no contract |
+
+The loan agent asked six questions. Its first question directly recovered the
+missing principal (164 ADA), while five follow-ups about on-chain loan flow and
+default handling were broader than the single missing fact and mostly received
+the simulated user's simplest-option fallback. It nevertheless converged to a
+strictly correct contract. The crowdfunding agent asked four questions: the
+first directly resolved the 176-versus-177 ADA conflict, and the remaining
+questions clarified contribution order, deadline timezone, and partial
+deposits. Those questions were relevant and the resulting contract was
+strictly correct, although only the first was essential to the seeded
+ambiguity.
+
+Short iteration paths were: escrow `skip -> structural fail -> structural+
+semantic pass / logic fail -> structural fail -> all pass`; swap `structural
+fail -> semantic fail -> repeated clarification/regeneration -> structural
+pass -> llm_error`; loan `clarification -> semantic fail -> all pass`;
+crowdfunding `clarification -> all pass`; cancellation fee `clarification ->
+provider rate-limit error`.
+
+The independent evaluator reported no false convergence for any available
+draft. After the choice-name evaluator fix, the earlier three-case audit also
+re-evaluates without regression: escrow remains strict at 1.0, while rental
+deposit and milestone improve from 0.4 to 1.0 and each reports two fallback
+scenarios. In this new probe, three cases converged strictly; swap's last draft
+was strict but the pipeline ended in `llm_error`, and cancellation fee produced
+no contract because OpenRouter returned an explicit HTTP 429 free-tier daily
+limit. These eight selected cases remain too small and non-random to estimate
+100-case convergence or accuracy.
