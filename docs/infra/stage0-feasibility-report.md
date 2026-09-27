@@ -202,3 +202,109 @@ Docker image: ghcr.io/intersectmbo/cardano-node:11.1.2
 
 These consume approximately 2.66 GB of ordinary files plus 1.381 GB in Docker
 image storage. They were not staged for Git.
+
+## Stage 0.5: marlowe-cli run analyze compatibility
+
+### Verdict
+
+**Blocked by a protocol/API compatibility mismatch.** The released
+`marlowe-cli 0.2.0.0` cannot decode the Conway protocol-parameter response from
+`cardano-node 11.1.2`. The failure occurs after a valid Marlowe file is decoded
+and while `run analyze` queries `GetCurrentPParams` through the live Unix
+socket:
+
+```text
+DeserialiseFailure 5 "Size mismatch when decoding Record RecD.\nExpected 31, but found 30."
+```
+
+This is not a contract-specific or raw-JSON-format failure:
+
+- The audit contract from
+  `marlowe_ai_agent/bench/audit/en-escrow_2party-L1-010-full.json` was exported
+  outside Git and embedded in a structurally valid Conway `marlowe-file`.
+- A second structurally valid file used only the minimal contract `"close"`.
+- Both files passed Aeson decoding and then failed at the same node query, with
+  the same complete error and exit code 1 in about 0.5 seconds.
+- `run initialize` failed at that same protocol-parameter query before it
+  could generate a Marlowe file, independently confirming the boundary.
+
+The complete evidence and exact commands are in
+[stage05-command-log.md](stage05-command-log.md).
+
+### Linux/node setup actually tested
+
+The exact official Linux asset
+`cardano-node-11.1.2-linux-amd64.tar.gz` was downloaded into the WSL home
+directory. Its 233,771,973-byte archive matched the published SHA-256:
+
+```text
+fd872fbeb9cc663e67088ca47ed01aa01d18a77d7dbee694e2444bb23d833759
+```
+
+The extracted binaries reported `cardano-node 11.1.2`, `cardano-cli
+11.2.3.0`, and a bundled `cardano-testnet` built against `cardano-api
+11.6.0.0`. The previously verified Marlowe binary was copied into the same WSL
+filesystem and retained SHA-256
+`464f14957aafeefc86aa868074e200f700aefc070f1ecb32466d999110e58939`.
+
+A one-pool private network used magic 42 and a 0.2-second slot length. Its
+node-to-client endpoint was verified as an actual Linux socket:
+
+```text
+/home/tohung/stage05-infra/private-testnet/socket/node1/sock: socket
+mode=socket permissions=srwxr-xr-x
+```
+
+`cardano-cli query tip` succeeded over that socket and returned Conway era and
+`syncProgress: 100.00`. Thus the failure is not caused by the earlier
+cross-OS Windows named-pipe problem. The testnet and CLI ran in the same WSL
+distribution against the same native Unix socket. The node/testnet processes
+were stopped after the experiment; the generated files remain outside Git in
+`/home/tohung/stage05-infra/`.
+
+### Marlowe file initialization and controls
+
+The v0.2.0.0 help establishes that `run analyze` requires a JSON file holding
+both state and contract, not a bare contract. `run initialize` is the supplied
+initializer, but on this node it failed before writing output because it also
+queries the current protocol parameters.
+
+For the two controlled `analyze` executions, the wrapper and validator fields
+came from the release tag's checked-in
+`marlowe-cli/doc/simple-1.marlowe`. The wrapper was set to Conway, the audit
+contract or `"close"` was substituted, and the generated template state was
+used. An initially missing `openRolesValidator` field in that older checked-in
+sample was filled from its roles validator so the v0.2.0.0 decoder would accept
+the file. The subsequent node-query failure in both cases proves that contract
+parsing completed.
+
+### Upstream release and source-build assessment
+
+GitHub's complete release listing (100 releases requested) exposed no newer
+prebuilt `marlowe-cli` than the 46,572,360-byte asset in `runtime@v1.0.0`,
+published 2024-05-05. That asset is the tested v0.2.0.0 binary. The previous
+assets were `runtime@v0.0.6`, `marlowe-cli@v0.1.0.0`, and older releases.
+
+The release-tag source pins `cardano-api ^>=8.39.2.0` and GHC 9.2.8. The
+current `main` at commit
+`99f432d8ef9dbd1b52b7fa089254de15913b490f` still labels marlowe-cli as
+0.2.0.0, pins GHC 9.2.8, and raises the dependency only to `cardano-api
+^>=9.2`. Its Cabal project also depends on the Intersect CHaP repository and
+fixed Hackage/CHaP index states. By contrast, the tested cardano-node bundle's
+`cardano-testnet` reports `cardano-api 11.6.0.0`. A source build was deliberately
+not attempted; the inspected dependency gap does not justify spending build
+time without an upstream compatibility branch or a deliberate Cardano-version
+alignment plan.
+
+### Gate for the next stage
+
+Do not integrate `marlowe-cli run analyze` from the current official binary
+with cardano-node 11.1.2. Choose and verify one aligned pair first:
+
+1. obtain an upstream Marlowe CLI build explicitly updated for the Cardano 11
+   API/ledger protocol used by node 11.1.2; or
+2. pin a separate older cardano-node/devnet version supported by Marlowe CLI
+   0.2.0.0, then rerun these same escrow and `"close"` controls.
+
+The preferred path is an updated Marlowe CLI, because downgrading the node
+would make the broader infrastructure depend on obsolete ledger tooling.
