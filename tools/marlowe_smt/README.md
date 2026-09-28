@@ -20,8 +20,8 @@ association-list representation: `accounts` is `[[[party, token], amount]]`,
 `[[valueId, value]]`, and `minTime` is an integer POSIX millisecond value.
 
 ```bash
-cabal run exe:marlowe-smt -- --solver-timeout-ms 5000 < contract.json
-python3 run_smt.py --hard-timeout 30 --solver-timeout-ms 5000 < contract.json
+cabal run exe:marlowe-smt -- --solver-timeout-ms 60000 < contract.json
+python3 run_smt.py --hard-timeout 90 --solver-timeout-ms 60000 < contract.json
 ```
 
 Stdout is exactly one JSON object with `status`, structured `warnings`,
@@ -40,5 +40,16 @@ Known limits:
   analyzer, not the separate ledger-limit check.
 - Use one subprocess per job and enforce a hard timeout. A timeout is never a
   `Valid` result.
-- The measured operating defaults are a 5-second solver timeout and a 30-second
-  hard subprocess deadline; see the Stage 0.7 report for the stress evidence.
+- The measured operating defaults are a 60-second solver timeout and a
+  90-second hard subprocess deadline. Stage 0.7b found a 42.2-second median for
+  the hardest completed n=64 Valid-side configuration; the original 5/30-second
+  limits only reflected Counterexample-side startup-dominated measurements.
+  See `bench/stress-valid-summary.csv` and the Stage 0.7b report.
+- `bench/valid-corpus/` retains canonical representatives with SHA-256 values
+  and measured statuses in `MANIFEST.csv`. Recreate it with
+  `python3 bench/select_valid_corpus.py`; `run_tests.sh` verifies byte-for-byte
+  regeneration and reruns the smallest representatives.
+- On the measured 16-logical-core, 7-GiB WSL2 host, cap execution at two jobs
+  and 2 GiB per job. `Indeterminate` and `Timeout` mean “not concluded”, not
+  “invalid”; simplify or escalate the contract instead of treating either as a
+  failed proof.
