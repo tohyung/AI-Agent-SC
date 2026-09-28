@@ -12,6 +12,7 @@ import argparse
 import copy
 import json
 from pathlib import Path
+import sys
 from typing import Any
 
 
@@ -19,6 +20,10 @@ TIMEOUT_BASE = 1_900_000_000_000
 FAMILIES = ("F1", "F2", "F3", "F4", "F5", "C1")
 ROOT = Path(__file__).resolve().parents[3]
 MILESTONE = ROOT / "marlowe_ai_agent" / "bench" / "audit" / "vi-milestone-L4-003-full.json"
+
+# F5 deliberately creates deeply sequential contracts. Python's JSON and copy
+# implementations are recursive even though the generated value is acyclic.
+sys.setrecursionlimit(max(sys.getrecursionlimit(), 10_000))
 
 
 def role(name: str) -> dict[str, str]:
@@ -280,13 +285,18 @@ def canonical_bytes(contract: Any) -> bytes:
 
 
 def count_cases(node: Any) -> int:
-    if isinstance(node, list):
-        return sum(count_cases(item) for item in node)
-    if isinstance(node, dict):
-        return (len(node.get("when", [])) if isinstance(node.get("when"), list) else 0) + sum(
-            count_cases(value) for value in node.values()
-        )
-    return 0
+    count = 0
+    stack = [node]
+    while stack:
+        current = stack.pop()
+        if isinstance(current, list):
+            stack.extend(current)
+        elif isinstance(current, dict):
+            cases = current.get("when")
+            if isinstance(cases, list):
+                count += len(cases)
+            stack.extend(current.values())
+    return count
 
 
 def main() -> None:
