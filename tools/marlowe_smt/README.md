@@ -20,8 +20,8 @@ association-list representation: `accounts` is `[[[party, token], amount]]`,
 `[[valueId, value]]`, and `minTime` is an integer POSIX millisecond value.
 
 ```bash
-cabal run exe:marlowe-smt -- --solver-timeout-ms 30000 < contract.json
-python3 run_smt.py --hard-timeout 300 --solver-timeout-ms 30000 < contract.json
+cabal run exe:marlowe-smt -- --solver-timeout-ms 5000 < contract.json
+python3 run_smt.py --hard-timeout 30 --solver-timeout-ms 5000 < contract.json
 ```
 
 Stdout is exactly one JSON object with `status`, structured `warnings`,
@@ -40,3 +40,5 @@ Known limits:
   analyzer, not the separate ledger-limit check.
 - Use one subprocess per job and enforce a hard timeout. A timeout is never a
   `Valid` result.
+- The measured operating defaults are a 5-second solver timeout and a 30-second
+  hard subprocess deadline; see the Stage 0.7 report for the stress evidence.

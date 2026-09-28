@@ -48,8 +48,8 @@ def _base(status: str) -> dict[str, Any]:
 def analyze(
     contract: dict[str, Any] | str,
     *,
-    hard_timeout_seconds: float = 300.0,
-    solver_timeout_ms: int | None = 30_000,
+    hard_timeout_seconds: float = 30.0,
+    solver_timeout_ms: int | None = 5_000,
     binary: str | None = None,
 ) -> dict[str, Any]:
     payload = contract if isinstance(contract, str) else json.dumps(contract, ensure_ascii=False)
@@ -84,8 +84,8 @@ def analyze(
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--hard-timeout", type=float, default=300.0)
-    parser.add_argument("--solver-timeout-ms", type=int, default=30_000)
+    parser.add_argument("--hard-timeout", type=float, default=30.0)
+    parser.add_argument("--solver-timeout-ms", type=int, default=5_000)
     parser.add_argument("--binary")
     args = parser.parse_args()
     output = analyze(
