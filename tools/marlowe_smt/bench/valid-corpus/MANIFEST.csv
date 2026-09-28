@@ -1,0 +1,16 @@
+filename,family,n,k,nested_if,branches,contract_bytes,sha256,expected_status,median_seconds,reason
+F1-n1-k1.json,F1,1,1,false,1,211,8365d1f011047923dd11cb5443c0d9df37217081f894f899cafb2e15b363150d,Valid,0.105,smallest
+F1-n128-k4-if.json,F1,128,4,true,512,155543,b0a41f44816c2e23e4da9c3437703eb6ef58163af88d6475533cba4698e80fe1,Valid,0.525,heaviest-valid
+F2-n1-k1.json,F2,1,1,false,1,374,92e81283ed4a10eb75752ca378f9960dbdc95a63f1fcb6dead3d5b89aacd5265,Valid,0.105,smallest
+F2-n128-k4-if.json,F2,128,4,true,1024,344615,255bd310ed6e30c5fdc112a3438afd4113435eea0339a0eb9a23bfedcf133861,Valid,0.835,heaviest-valid
+F3-n1-k1.json,F3,1,1,false,2,1533,25ae6975916cf83403d6fe24bdb49da465b2d6e37e10e3c50b6e6347280a3e8f,Valid,0.105,smallest
+F3-n12-k4-if.json,F3,12,4,true,96,78343,7d06d9e9110efc2ba8ff1ac66931fea502fe8b74c88e4db27665f9efb23ee90e,Valid,1.095,knee-1s
+F3-n48-k1-if.json,F3,48,1,true,96,81061,3e361e5d5467649185fdc275e09f9f9a33c8c25199c8b8232a432cba5ef96e68,Valid,5.924,knee-5s
+F3-n128-k1.json,F3,128,1,false,256,198255,8fd38131de4c17b1da0a1fbf2cd6a84d766a2691a36228a3ed26a6e1fba29088,Valid,85.631,heaviest-valid;knee-30s
+F4-n1-k1.json,F4,1,1,false,1,340,d247f5ee9b88a8ad92558dbe23aab5d9c7c851108d1fa201750708633b47ec67,Valid,0.157,smallest
+F4-n32-k2-if.json,F4,32,2,true,64,28619,d891be9849368734dfa96e1b74b6b9ea1c067edbdd5d9c3933fb8c6d8eefdac9,Valid,1.041,knee-1s
+F4-n64-k4-if.json,F4,64,4,true,256,110863,893e092d934bc90d5b0356e2a2a11437e92cd08465b25cfac2b526c84c5f0850,Valid,6.900,heaviest-valid;knee-5s
+F5-n1-k1.json,F5,1,1,false,10,3483,1fd1d301c4e401f29ada60b905619755220ef867ec33ee6d9fa38e40406c9133,Valid,0.157,smallest
+F5-n64-k4-if.json,F5,64,4,true,2560,915255,ab2f2582c2ae805b05787989c333795ee5e9c220e9631394ea3ed73f1c61f2fa,Valid,2.091,heaviest-valid;knee-1s
+C1-n1-k1.json,C1,1,1,false,1,374,13ad2393e9f98248935799244750713babb8d561ad3e90c0544529fab991669a,Counterexample,0.054,smallest
+C1-n64-k4-if.json,C1,64,4,true,512,172007,d7563e4af898faf7ad0632616a917a59ac937503a76b4beba93943105a2cbdf5,Counterexample,1.041,heaviest-counterexample;knee-1s

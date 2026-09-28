@@ -1,0 +1,1 @@
+{"timeout":1900000000000,"timeout_continuation":"close","when":[{"case":{"deposits":10,"into_account":{"role_token":"F2-0-0"},"of_token":{"currency_symbol":"","token_name":""},"party":{"role_token":"Depositor"}},"then":{"from_account":{"role_token":"F2-0-0"},"pay":10,"then":"close","to":{"party":{"role_token":"Receiver"}},"token":{"currency_symbol":"","token_name":""}}}]}
