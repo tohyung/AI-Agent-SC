@@ -209,3 +209,26 @@ Not verified in this stage:
   are retained as the available evidence.
 - Runtime behavior for arbitrary Shelley addresses, merkleized continuations,
   native tokens, or contracts materially larger than the current L4 audit set.
+
+## Correction (Stage 0.7)
+
+Stage 0.7 supersedes three provisional statements above. `Indeterminate` and a
+hard caller `Timeout` are now exercised by regression tests rather than merely
+represented in the design. A 48-configuration, 144-run stress grid observed a
+0.41-second maximum, so the initial 30-second normal / 300-second hard timeout
+recommendation is replaced by 5 seconds for the solver and 30 seconds for the
+hard subprocess deadline.
+
+The Route A blocker was also resolved outside Git by building official
+`supranational/blst` v0.3.11. The old command `cabal build lib:marlowe` selected
+the unrelated Hackage package `marlowe-0.1.0.1`; the correct local target is
+`lib:marlowe-cardano`. That target built successfully, and a temporary
+`SlotLength 1000` driver matched the standalone engine on all fixtures accepted
+by both parsers and all six completed audit contracts. Two coverage fixtures
+were rejected before Route A SMT because they intentionally contain a fake
+address; this confirms the documented difference between on-chain address
+validation and the standalone bridge's opaque UTF-8 identity mapping.
+
+Full evidence and remaining limits are in
+[the Stage 0.7 report](stage07-smt-packaging-report.md) and
+[command log](stage07-command-log.md).

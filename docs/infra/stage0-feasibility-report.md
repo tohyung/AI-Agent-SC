@@ -341,3 +341,4 @@ correction, so compatibility remains **not verified**.
 ## Follow-up
 
 - [Stage 0.6 — standalone Marlowe SMT analysis](stage06-smt-report.md)
+- [Stage 0.7 — packaged and verified Marlowe SMT analysis](stage07-smt-packaging-report.md)
