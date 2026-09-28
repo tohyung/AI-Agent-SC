@@ -1,0 +1,7 @@
+{
+  "assert": {
+    "both": {"value": {"in_account": {"address": "addr_test1vr8nl5"}, "amount_of_token": {"currency_symbol": "aabbcc", "token_name": "CAFE"}}, "gt": 0},
+    "and": {"not": {"chose_something_for": {"choice_name": "unset", "choice_owner": {"role_token": "Chooser"}}}}
+  },
+  "then": "close"
+}

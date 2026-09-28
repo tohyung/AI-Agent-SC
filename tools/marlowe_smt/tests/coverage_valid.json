@@ -1,0 +1,50 @@
+{
+  "let": "available",
+  "be": {"in_account": {"address": "addr_test1vr8nl5"}, "amount_of_token": {"currency_symbol": "aabbcc", "token_name": "CAFE"}},
+  "then": {
+    "let": "negative", "be": {"negate": 1}, "then": {
+      "let": "added", "be": {"add": 1, "and": 2}, "then": {
+        "let": "subtracted", "be": {"value": 4, "minus": 3}, "then": {
+          "let": "multiplied", "be": {"multiply": 2, "times": 3}, "then": {
+            "let": "divided", "be": {"divide": 8, "by": 2}, "then": {
+              "let": "choice_value", "be": {"value_of_choice": {"choice_name": "coverage", "choice_owner": {"role_token": "Chooser"}}}, "then": {
+                "let": "start", "be": "time_interval_start", "then": {
+                  "let": "end", "be": "time_interval_end", "then": {
+                    "let": "conditional", "be": {"if": {"value": {"use_value": "added"}, "equal_to": 3}, "then": {"use_value": "multiplied"}, "else": {"use_value": "divided"}}, "then": {
+                      "assert": {
+                        "both": {"either": {"not": {"chose_something_for": {"choice_name": "unset", "choice_owner": {"role_token": "Chooser"}}}}, "or": false},
+                        "and": {
+                          "both": {"value": {"use_value": "added"}, "ge_than": 3},
+                          "and": {
+                            "both": {"value": {"use_value": "multiplied"}, "gt": 5},
+                            "and": {
+                              "both": {"value": {"use_value": "negative"}, "lt": 0},
+                              "and": {"value": {"use_value": "start"}, "le_than": {"use_value": "end"}}
+                            }
+                          }
+                        }
+                      },
+                      "then": {
+                        "if": false,
+                        "then": {"pay": 1, "from_account": {"address": "addr_test1vr8nl5"}, "to": {"account": {"role_token": "Vault"}}, "token": {"currency_symbol": "aabbcc", "token_name": "CAFE"}, "then": "close"},
+                        "else": {
+                          "when": [
+                            {"case": {"party": {"address": "addr_test1vr8nl5"}, "deposits": 1, "of_token": {"currency_symbol": "aabbcc", "token_name": "CAFE"}, "into_account": {"address": "addr_test1vr8nl5"}}, "then": "close"},
+                            {"case": {"for_choice": {"choice_name": "coverage", "choice_owner": {"role_token": "Chooser"}}, "choose_between": [{"from": 0, "to": 1}]}, "then": "close"},
+                            {"case": {"notify_if": {"value": 1, "equal_to": 1}}, "then": "close"}
+                          ],
+                          "timeout": 1893456000000,
+                          "timeout_continuation": "close"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

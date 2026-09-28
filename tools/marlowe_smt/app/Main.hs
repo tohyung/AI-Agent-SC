@@ -26,14 +26,7 @@ driverVersion = "0.2.0"
 main :: IO ()
 main = do
   meta <- loadMeta
-  outcome <- try (run meta) :: IO (Either SomeException ())
-  case outcome of
-    Right () -> pure ()
-    Left exception -> do
-      let message = "internal analysis failure: " <> displayException exception
-      emit (renderInternalFailure meta message)
-      hPutStrLn stderr message
-      exitFailure
+  run meta
 
 run :: Meta -> IO ()
 run meta = do
@@ -44,11 +37,18 @@ run meta = do
   let merkleized = countMerkleizedCases contract
       notes = if merkleized == 0 then [] else
         [ show merkleized <> " MerkleizedCase continuation(s) are hashes and were not analyzed" ]
-  result <- analyzeWithTimeout timeoutMs contract initialState
-  let normalized = case result of
-        Left theorem -> Left (ThmResultLike (show theorem))
-        Right value -> Right value
-  emit (renderAnalysis meta notes normalized)
+  outcome <- try @SomeException (analyzeWithTimeout timeoutMs contract initialState)
+  case outcome of
+    Left exception -> do
+      let message = "internal analysis failure: " <> displayException exception
+      emit (renderInternalFailure meta message)
+      hPutStrLn stderr message
+      exitFailure
+    Right result -> do
+      let normalized = case result of
+            Left theorem -> Left (ThmResultLike (show theorem))
+            Right value -> Right value
+      emit (renderAnalysis meta notes normalized)
 
 parseArgs :: [String] -> Either String (Maybe Integer)
 parseArgs [] = Right Nothing

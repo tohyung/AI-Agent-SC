@@ -1,0 +1,8 @@
+{
+  "when": [{
+    "case": {"party": {"role_token": "Alice"}, "deposits": 10, "of_token": {"currency_symbol": "", "token_name": ""}, "into_account": {"role_token": "Alice"}},
+    "then": {"pay": 20, "from_account": {"role_token": "Alice"}, "to": {"party": {"role_token": "Bob"}}, "token": {"currency_symbol": "", "token_name": ""}, "then": "close"}
+  }],
+  "timeout": 1893456000000,
+  "timeout_continuation": "close"
+}

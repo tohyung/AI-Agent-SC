@@ -1,0 +1,4 @@
+{
+  "contract": {"pay": 5, "from_account": {"role_token": "Alice"}, "to": {"party": {"role_token": "Bob"}}, "token": {"currency_symbol": "", "token_name": ""}, "then": "close"},
+  "state": {"accounts": [], "choices": [], "boundValues": [], "minTime": 0}
+}

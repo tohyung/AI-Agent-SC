@@ -1,0 +1,1 @@
+{"pay": 1, "from_account": {"role_token": "A"}, "to": {"party": {"role_token": "B"}}, "then": "close"}

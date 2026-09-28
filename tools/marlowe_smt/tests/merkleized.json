@@ -1,0 +1,8 @@
+{
+  "when": [{
+    "case": {"notify_if": true},
+    "merkleized_then": "deadbeef"
+  }],
+  "timeout": 1893456000000,
+  "timeout_continuation": "close"
+}

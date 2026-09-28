@@ -1,0 +1,1 @@
+{"pay": 0, "from_account": {"role_token": "Alice"}, "to": {"party": {"role_token": "Bob"}}, "token": {"currency_symbol": "", "token_name": ""}, "then": "close"}

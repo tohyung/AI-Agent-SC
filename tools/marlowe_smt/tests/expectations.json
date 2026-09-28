@@ -1,0 +1,12 @@
+{
+  "partial_pay.json": {"status": "Counterexample", "warnings": ["TransactionPartialPay"]},
+  "nonpositive_pay.json": {"status": "Counterexample", "warnings": ["TransactionNonPositivePay"]},
+  "nonpositive_deposit.json": {"status": "Counterexample", "warnings": ["TransactionNonPositiveDeposit"]},
+  "shadowing.json": {"status": "Counterexample", "warnings": ["TransactionShadowing"]},
+  "assertion_failed.json": {"status": "Counterexample", "warnings": ["TransactionAssertionFailed"]},
+  "state_empty.json": {"status": "Counterexample", "warnings": ["TransactionPartialPay"]},
+  "state_funded.json": {"status": "Valid", "warnings": []},
+  "merkleized.json": {"status": "Valid", "warnings": []},
+  "coverage_valid.json": {"status": "Valid", "warnings": []},
+  "coverage_warning.json": {"status": "Counterexample", "warnings": ["TransactionAssertionFailed"]}
+}
