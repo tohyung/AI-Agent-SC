@@ -240,3 +240,11 @@ The generated testnet directory occupied 389,890 bytes.
 Docker Desktop was then stopped with `docker desktop stop`, restoring its
 initial stopped state. A follow-up `docker info` failed on the absent engine
 pipe as expected; the downloaded image remains cached on disk.
+
+## Stage 0.6 correction note — 2026-09-28
+
+This historical command log is unchanged above. Later source inspection found
+that `marlowe-cli run analyze` is a ledger-limit/state-precondition checker,
+not the SBV/Z3 static safety analyzer. Its node compatibility is therefore not
+a gate for node-independent SMT analysis. See “Correction (Stage 0.6)” in
+[stage0-feasibility-report.md](stage0-feasibility-report.md).

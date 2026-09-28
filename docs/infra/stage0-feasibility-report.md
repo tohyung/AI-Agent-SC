@@ -205,6 +205,34 @@ image storage. They were not staged for Git.
 
 ## Stage 0.5: marlowe-cli run analyze compatibility
 
+### Correction (Stage 0.6 — 2026-09-28)
+
+The experiment and Conway decoding error below are real, but the original
+gate overstated their scope. Source inspection at `marlowe-cardano` main commit
+`99f432d8ef9dbd1b52b7fa089254de15913b490f` shows that `marlowe-cli run
+analyze` is a **ledger-limit and state-precondition checker, not the Marlowe
+SMT safety analyzer**. Its implementation imports
+`Language.Marlowe.Analysis.Safety.{Ledger,Transaction,Types}`, queries protocol
+parameters, and checks such properties as value size, minimum UTxO, execution
+units, transaction size, role/token name length, and state preconditions. The
+`marlowe-cli` package has no `sbv` dependency.
+
+The SMT entry point is instead
+`Language.Marlowe.Analysis.FSSemantics.warningsTraceWithState` (or
+`warningsTraceCustom`), in the `marlowe` package whose Cabal file depends on
+`sbv ^>=9.2`. It accepts a slot length, Core V1 contract, and optional state,
+and invokes Z3 without a cardano-node connection. The source confirms
+`Right Nothing` means no warning and `Right (Just ...)` contains an interpreted
+counterexample. Direct callers were found in `marlowe-test` and
+`marlowe-contracts`; the claimed `marlowe-symbolic` service was not present in
+this checkout and therefore remains **not verified** here.
+
+Consequently, the v0.2.0.0/Node 11.1.2 mismatch blocks only the optional
+ledger-limit check before deployment. It does **not** block independent SMT
+safety analysis or Node 3. Whether that SMT path builds, accepts the agent's
+Core V1 JSON, and completes within the required resource limits is the subject
+of Stage 0.6.
+
 ### Verdict
 
 **Blocked by a protocol/API compatibility mismatch.** The released
@@ -298,13 +326,14 @@ alignment plan.
 
 ### Gate for the next stage
 
-Do not integrate `marlowe-cli run analyze` from the current official binary
-with cardano-node 11.1.2. Choose and verify one aligned pair first:
+Proceed to Stage 0.6 using the node-independent
+`Language.Marlowe.Analysis.FSSemantics` SMT path for Node 3. Do not wait for a
+Cardano 11-compatible `marlowe-cli`: no such released binary was found.
 
-1. obtain an upstream Marlowe CLI build explicitly updated for the Cardano 11
-   API/ledger protocol used by node 11.1.2; or
-2. pin a separate older cardano-node/devnet version supported by Marlowe CLI
-   0.2.0.0, then rerun these same escrow and `"close"` controls.
-
-The preferred path is an updated Marlowe CLI, because downgrading the node
-would make the broader infrastructure depend on obsolete ledger tooling.
+The separate ledger-limit check should be postponed until deployment work and
+run only in an isolated, version-pinned devnet. Source pins identify two
+candidates that still require testing: cardano-node 8.9.0 with the existing
+`runtime@v1.0.0` binary (`cardano-api ^>=8.39.2.0`), or cardano-node 9.1.1 with
+a CLI built from `runtime@v1.1.0-rc1`/the same commit as current main
+(`cardano-api ^>=9.2`). Neither combination was executed in Stage 0.5 or this
+correction, so compatibility remains **not verified**.

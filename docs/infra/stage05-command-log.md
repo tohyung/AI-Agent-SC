@@ -302,3 +302,13 @@ main CHaP index state:         2024-08-28T06:44:16Z
 ```
 
 No Cabal, GHC, Nix, or source build was started.
+
+## Stage 0.6 correction note — 2026-09-28
+
+The commands and failures above remain accurate historical evidence. Their
+scope was corrected after inspecting the implementation: `marlowe-cli run
+analyze` checks ledger limits and state preconditions and is not the
+SBV/Z3-based Marlowe safety analyzer. The Conway protocol-parameter decoding
+failure blocks that ledger check only; it does not block independent SMT
+analysis for Node 3. See “Correction (Stage 0.6)” in
+[stage0-feasibility-report.md](stage0-feasibility-report.md).
