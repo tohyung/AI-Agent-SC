@@ -240,3 +240,14 @@ Not verified:
 
 The next step is a separate Node 3 design/implementation stage using this
 subprocess contract and its fail-closed policy.
+
+## Correction (Stage 0.7b)
+
+The stress grid above measures only the `Counterexample`/SAT side because the
+old generator ends every contract with `Assert False`. Its 5-second solver,
+30-second process, four-job, and 256 MiB recommendations are superseded by the
+Valid/UNSAT-side measurements in
+[Stage 0.7b](stage07b-valid-side-report.md): 60 seconds solver, 90 seconds hard
+process, at most two jobs, and 2 GiB per job on the measured host. Stage 0.7b
+also retains a reproducible representative contract corpus and sums driver plus
+Z3 RSS.
