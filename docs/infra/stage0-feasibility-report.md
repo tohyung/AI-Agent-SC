@@ -337,3 +337,7 @@ candidates that still require testing: cardano-node 8.9.0 with the existing
 a CLI built from `runtime@v1.1.0-rc1`/the same commit as current main
 (`cardano-api ^>=9.2`). Neither combination was executed in Stage 0.5 or this
 correction, so compatibility remains **not verified**.
+
+## Follow-up
+
+- [Stage 0.6 — standalone Marlowe SMT analysis](stage06-smt-report.md)
