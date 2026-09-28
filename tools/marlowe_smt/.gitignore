@@ -1,0 +1,6 @@
+/dist-newstyle/
+/upstream/
+/marlowe-smt
+/bench/results/
+__pycache__/
+*.pyc
