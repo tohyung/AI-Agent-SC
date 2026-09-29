@@ -1,0 +1,1 @@
+{"timeout":1893456000000,"timeout_continuation":"close","when":[{"case":{"deposits":10,"into_account":{"role_token":"Alice"},"of_token":{"currency_symbol":"","token_name":""},"party":{"role_token":"Alice"}},"then":{"from_account":{"role_token":"Alice"},"pay":20,"then":"close","to":{"party":{"role_token":"Bob"}},"token":{"currency_symbol":"","token_name":""}}}]}

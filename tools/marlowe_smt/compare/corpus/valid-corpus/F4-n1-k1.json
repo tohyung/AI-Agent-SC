@@ -1,0 +1,1 @@
+{"timeout":1900000000000,"timeout_continuation":"close","when":[{"case":{"choose_between":[{"from":1,"to":20}],"for_choice":{"choice_name":"f4-d0-b0","choice_owner":{"role_token":"Benchmark"}}},"then":{"assert":{"ge_than":1,"value":{"value_of_choice":{"choice_name":"f4-d0-b0","choice_owner":{"role_token":"Benchmark"}}}},"then":"close"}}]}

@@ -1,0 +1,1 @@
+{"timeout":1893456000000,"timeout_continuation":"close","when":[{"case":{"notify_if":true},"then":"close"},{"case":{"notify_if":true},"then":"close"}]}

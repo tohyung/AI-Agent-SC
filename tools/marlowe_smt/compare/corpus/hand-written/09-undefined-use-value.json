@@ -1,0 +1,1 @@
+{"from_account":{"role_token":"Alice"},"pay":{"use_value":"missing"},"then":"close","to":{"party":{"role_token":"Bob"}},"token":{"currency_symbol":"","token_name":""}}
