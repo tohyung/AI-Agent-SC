@@ -12,7 +12,12 @@ def result(status: str, *, lint_errors: list[str] | None = None,
            notes: list[str] | None = None, elapsed: float = 1.0,
            fields: dict[str, object] | None = None) -> Node3Result:
     warnings = [] if status != "counterexample" else [
-        StructuredWarning("TransactionPartialPay", fields or {"paid": 5, "expected": 6})
+        StructuredWarning("TransactionPartialPay", fields or {
+            "account": {"role_token": "Alice"},
+            "payee": {"party": {"role_token": "Bob"}},
+            "paid": 5,
+            "expected": 6,
+        })
     ]
     return Node3Result(
         lint_errors or [], ["lint warning"], status, warnings,
@@ -44,9 +49,10 @@ def test_inconclusive_status_adds_note_without_fake_error() -> None:
 
 
 def test_semantic_fingerprint_is_stable_and_structured() -> None:
-    first = result("counterexample", elapsed=1.25, fields={"paid": 5, "expected": 6})
-    second = result("counterexample", elapsed=99.0, fields={"expected": 6, "paid": 5})
-    changed = result("counterexample", elapsed=1.25, fields={"paid": 4, "expected": 6})
+    base = {"account": {"role_token": "A"}, "payee": {"party": {"role_token": "B"}}}
+    first = result("counterexample", elapsed=1.25, fields={**base, "paid": 5, "expected": 6})
+    second = result("counterexample", elapsed=99.0, fields={"expected": 6, **base, "paid": 5})
+    changed = result("counterexample", elapsed=1.25, fields={**base, "paid": 4, "expected": 6})
     assert semantic_fingerprint(first) == semantic_fingerprint(second)
     assert semantic_fingerprint(first) != semantic_fingerprint(changed)
 
