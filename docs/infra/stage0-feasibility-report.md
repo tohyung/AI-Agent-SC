@@ -343,3 +343,4 @@ correction, so compatibility remains **not verified**.
 - [Stage 0.6 — standalone Marlowe SMT analysis](stage06-smt-report.md)
 - [Stage 0.7 — packaged and verified Marlowe SMT analysis](stage07-smt-packaging-report.md)
 - [Stage 0.7b — Valid-side SMT scaling and recalibrated limits](stage07b-valid-side-report.md)
+- [Stage 0.8 — Logic Graph versus SMT experimental coverage](stage08-coverage-report.md)
