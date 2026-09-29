@@ -156,7 +156,8 @@ Không tạo package con. Không file production/test/SMT có sẵn nào bị s�
 - đủ năm renderer bằng output driver thật;
 - replay toàn bộ 10 audit file, các bảng 2×2 và bảng chéo;
 - trace additive chạy qua report hiện tại;
-- toàn bộ test agent và SMT vẫn xanh, prototype chưa được import bởi pipeline.
+- toàn bộ test agent và SMT vẫn xanh; test renderer hiện chạy không cần
+  `wsl.exe`, chỉ cần `bash` có sẵn; prototype chưa được import bởi pipeline.
 
 Chưa kiểm chứng:
 

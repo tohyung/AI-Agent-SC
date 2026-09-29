@@ -14,7 +14,7 @@ REPO = Path(__file__).resolve().parents[2]
 FIXTURES = REPO / "tools" / "marlowe_smt" / "tests"
 
 
-def _wsl_path(path: Path) -> str:
+def _posix_path(path: Path) -> str:
     resolved = path.resolve()
     drive = resolved.drive.rstrip(":").lower()
     if not drive:
@@ -24,14 +24,14 @@ def _wsl_path(path: Path) -> str:
 
 
 def _real_warning(filename: str) -> StructuredWarning:
-    repo = _wsl_path(REPO)
-    fixture = _wsl_path(FIXTURES / filename)
+    repo = _posix_path(REPO)
+    fixture = _posix_path(FIXTURES / filename)
     command = (
         f"cd {repo} && python3 tools/marlowe_smt/run_smt.py "
         f"--hard-timeout 90 --solver-timeout-ms 60000 < {fixture}"
     )
     process = subprocess.run(
-        ["wsl", "bash", "-lc", command], capture_output=True, text=True,
+        ["bash", "-lc", command], capture_output=True, text=True,
         stdin=subprocess.DEVNULL, check=True, timeout=100,
     )
     output = json.loads(process.stdout)

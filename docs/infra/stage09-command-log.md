@@ -111,3 +111,12 @@ verified upstream commit 7b5b1e900ec53a8eb18747992bec73470704dfcb; no patches
 ```
 
 No LLM/API command and no `cardano-node` command was run.
+
+## Correction (Stage 0.9b)
+
+Independent acceptance on a host without `wsl.exe` found
+`FileNotFoundError: 'wsl'` in seven renderer tests. The test helper wrapped an
+already available `bash` invocation in `wsl`, which only works on Windows with
+WSL configured. The helper now invokes `bash -lc` directly; path conversion
+retains the same behavior. Commands and full regression output are recorded in
+[stage09b-command-log.md](stage09b-command-log.md).
