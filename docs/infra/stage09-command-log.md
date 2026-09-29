@@ -120,3 +120,25 @@ already available `bash` invocation in `wsl`, which only works on Windows with
 WSL configured. The helper now invokes `bash -lc` directly; path conversion
 retains the same behavior. Commands and full regression output are recorded in
 [stage09b-command-log.md](stage09b-command-log.md).
+
+## Correction — current evaluator ground truth replay
+
+Stage 0.9 originally treated persisted `record["evaluation"]["strict_correct"]`
+as current ground truth. Rental deposit and milestone audit records were created
+before the choice-name fallback evaluator patch, so their persisted `false`
+labels and `input_rejected` scenario results were stale. The correction keeps
+those labels for drift telemetry but re-evaluates each saved contract with the
+current dataset and evaluator. Base commit before this patch: `c9954f2`.
+
+The first attempt from Windows Python could not access the Linux SMT driver
+and stopped at a CP1252 console encoding error; it did not rewrite the CSV.
+The successful replay used the already-built driver inside WSL:
+
+```text
+PS D:\code\marlowe_ai_agent> bash -lc "cd /mnt/d/code/marlowe_ai_agent/marlowe_ai_agent && PYTHONIOENCODING=utf-8 python3 -m bench.node3_replay"
+{"cross":{"both_correct":7,"both_wrong":0,"new_only_pass":0,"old_only_pass":0},"dataset_path":"/mnt/d/code/marlowe_ai_agent/marlowe_ai_agent/bench/dataset/cases.jsonl","dataset_sha256":"e05c23f43a2bd025258ad5e2fa77569874357f79173e98863a8f8d48ee9a907a","ground_truth_drift":[{"audit_file":"vi-milestone-L4-003-full.json","current":true,"persisted":false},{"audit_file":"vi-rental_deposit-L3-003-full.json","current":true,"persisted":false}],"ground_truth_drift_count":2,"ground_truth_unavailable":["vi-cancellation_fee-L4-001-full.json","vi-cancellation_fee-L4-001-retry-full.json","vi-swap-L3-010-retry-full.json"],"inconclusive":["vi-cancellation_fee-L4-001-full.json","vi-cancellation_fee-L4-001-retry-full.json","vi-swap-L3-010-retry-full.json"],"logic_graph":{"false_accept":0,"false_reject":0,"true_accept":7,"true_reject":0},"node3_policy":{"false_accept":0,"false_reject":0,"true_accept":7,"true_reject":0}}
+```
+
+Both changed records now have current scenario accuracy 1.0 and
+`choice_name_fallback_count=2`; their saved contracts were not changed. No
+LLM/API or agent benchmark was run.

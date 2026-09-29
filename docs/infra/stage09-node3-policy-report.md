@@ -2,64 +2,70 @@
 
 ## Kết luận
 
-**Policy mới tốt hơn nhưng có 2 case cả hai đều sai, cần giải quyết trước khi
-tích hợp.** “Tốt hơn” ở đây là chính sách fail-closed đã phân biệt rõ
-`fail`/`inconclusive`, giữ đủ contract dữ liệu của `LogicGraphResult`, và bổ
-sung renderer/fingerprint tất định. Tuy nhiên, trên chính bộ audit có ground
-truth, bằng chứng định lượng chưa cho thấy cải thiện: false acceptance không
-giảm (2 xuống 2), false rejection không tăng (0 giữ nguyên 0), và cả hai policy
-cùng sai ở `vi-milestone-L4-003-full.json` và
-`vi-rental_deposit-L3-003-full.json`.
+**Correction (Stage 0.9c): kết luận cũ về hai false acceptance không còn
+đúng với evaluator hiện tại.** Báo cáo Stage 0.9 ban đầu dùng nhãn
+`evaluation.strict_correct` lưu trong audit và kết luận cả Logic Graph lẫn
+Node 3 cùng sai ở rental deposit và milestone (false acceptance 2/2). Hai
+record này được tạo trước bản sửa choice-name fallback; khi chấm lại chính
+contract đã lưu bằng evaluator hiện tại, cả hai đạt `strict_correct=true`.
 
-Hai contract này đều được Logic Graph cho qua và SMT trả `Valid`. Vì vậy SMT
-path reasoning không thể tự sửa khoảng cách giữa semantic Marlowe và tiêu chí
-nghiệp vụ của evaluator. **Chưa nên viết Stage 1.0 để nối dây vào `nodes.py`**
-cho đến khi hai case này có một business-ground-truth gate hoặc một quy tắc
-policy được kiểm chứng độc lập. Prototype hiện vẫn hoàn toàn chưa nối vào
-pipeline.
+Policy prototype vẫn phân biệt `fail`/`inconclusive`, giữ dữ liệu tương thích
+với `LogicGraphResult` và có renderer/fingerprint tất định. Replay hiện tại
+cho 7 true acceptance, 0 false acceptance và 0 false rejection ở cả hai
+policy. Bộ mẫu không có contract current-ground-truth `false`, nên chưa đo
+được khả năng true rejection hay chứng minh policy mới chính xác hơn. Prototype
+vẫn chưa nối vào pipeline.
 
 ## Offline replay
 
-Ground truth được đọc đúng từ `record["evaluation"]["strict_correct"]`, cùng
-trường mà `bench/evaluator.py` dùng để suy ra `false_convergence`. Có 10 file
-`*-full.json`; 7 file có cả contract và ground truth boolean, 3 file thiếu
-contract/ground truth nên được tách khỏi bảng 2×2.
+Ground truth hiện hành được tính lại bằng `evaluate(current_case,
+saved_contract, status=saved_status)` trên dataset
+`marlowe_ai_agent/bench/dataset/cases.jsonl` (SHA-256
+`e05c23f43a2bd025258ad5e2fa77569874357f79173e98863a8f8d48ee9a907a`).
+`record["evaluation"]["strict_correct"]` chỉ là nhãn persisted lịch sử để
+phát hiện evaluator drift, không tham gia confusion matrix. Có 10 file
+`*-full.json`; 7 file có contract và current ground truth boolean, 3 file
+thiếu contract nên được tách khỏi bảng 2×2.
 
 ### Logic Graph so với ground truth
 
 | Quyết định cũ | Ground truth đúng | Ground truth sai |
 |---|---:|---:|
-| Pass | 5 | 2 |
+| Pass | 7 | 0 |
 | Fail | 0 | 0 |
 
-Tương ứng: true acceptance 5, false acceptance 2, true rejection 0, false
+Tương ứng: true acceptance 7, false acceptance 0, true rejection 0, false
 rejection 0.
 
 ### Node 3 so với ground truth
 
 | Quyết định mới | Ground truth đúng | Ground truth sai |
 |---|---:|---:|
-| Pass | 5 | 2 |
+| Pass | 7 | 0 |
 | Fail | 0 | 0 |
 
-Tương ứng: true acceptance 5, false acceptance 2, true rejection 0, false
+Tương ứng: true acceptance 7, false acceptance 0, true rejection 0, false
 rejection 0. `inconclusive` không được gộp vào bảng này.
 
 ### Bảng chéo độ đúng của hai policy
 
 | Kết quả | Số case |
 |---|---:|
-| Cả hai đúng | 5 |
+| Cả hai đúng | 7 |
 | Chỉ Logic Graph đúng | 0 |
 | Chỉ Node 3 đúng | 0 |
-| Cả hai sai | 2 |
+| Cả hai sai | 0 |
 
-Hai case cả hai sai:
+Hai nhãn persisted đã đổi khi chấm bằng evaluator hiện tại:
 
-- `vi-milestone-L4-003-full.json`: ground truth `false`, Logic Graph `pass`,
-  Node 3 `pass`, SMT `valid`.
-- `vi-rental_deposit-L3-003-full.json`: ground truth `false`, Logic Graph
-  `pass`, Node 3 `pass`, SMT `valid`.
+- `vi-milestone-L4-003-full.json`: persisted `false` → current `true`;
+  scenario accuracy 1.0, choice-name fallback ở 2 scenario.
+- `vi-rental_deposit-L3-003-full.json`: persisted `false` → current `true`;
+  scenario accuracy 1.0, choice-name fallback ở 2 scenario.
+
+Milestone vẫn còn TODO về scenario tuần tự `reject_first_then_accept_second`:
+dataset/ground truth chưa định nghĩa và kiểm đủ ngữ nghĩa đó. Không coi TODO
+này là bằng chứng false acceptance của contract hiện tại.
 
 Các case `inconclusive`/không có ground truth, tách riêng:
 
@@ -77,7 +83,7 @@ Bảng từng hàng có thời gian SMT và phân loại nằm tại
 |---:|---|---|
 | 1 | Đạt | `Node3Result` có `passed`, `findings`, `errors`, `warnings`; Counterexample luôn sinh `errors` không rỗng; test policy phủ các nhánh. |
 | 2 | Đạt | `findings` là property bắt buộc và test xác nhận đúng `errors + warnings`; trace compatibility đọc trực tiếp cả ba trường. |
-| 3 | Đạt | Replay chạy độc lập Logic Graph và Node 3 trên contract đã lưu, rồi so từng kết quả với `evaluation.strict_correct`; không dùng lại `status="done"` làm dự đoán. |
+| 3 | Đạt sau correction | Replay chạy độc lập Logic Graph và Node 3 trên contract đã lưu, rồi so với `strict_correct` do evaluator hiện tại tính lại; nhãn persisted chỉ dùng để audit drift. |
 | 4 | Đạt | `next_inconclusive_state` có bộ đếm riêng, hai lần liên tiếp trả `logic_inconclusive`; pass/fail reset; không dùng `StallTracker` hay `stalled`. |
 | 5 | Đạt | Fingerprint dùng canonical JSON của contract và các warning `{type, fields}` đã sắp xếp; test chứng minh đổi elapsed không đổi hash, đổi field làm đổi hash. Raw solver output/stderr không tham gia. |
 | 6 | Đạt | Test trace giữ nguyên `findings`/`errors`/`warnings`, chỉ thêm năm field mới và chạy thật `bench.report.generate()` không crash. |
@@ -165,10 +171,8 @@ Chưa kiểm chứng:
 - chất lượng tự sửa sau khi LLM nhận renderer text;
 - timeout/indeterminate thật trên audit hiện tại (ba inconclusive là do thiếu
   contract, không phải solver timeout);
-- một business-ground-truth gate đủ để chặn hai false acceptance mà không làm
-  tăng false rejection.
+- độ nhạy với contract current-ground-truth sai: mẫu replay hiện tại không có
+  negative case trong 7 contract có thể chấm lại.
 
-Khuyến nghị: giữ prototype để làm nền, nhưng chưa viết prompt Stage 1.0. Stage
-tiếp theo nên cô lập nguyên nhân ground truth của hai case sai và thiết kế một
-gate có test đối chứng; sau đó chạy lại replay và chỉ nối dây khi false
-acceptance giảm mà false rejection vẫn bằng 0.
+Khuyến nghị: giữ prototype chưa nối dây; bổ sung negative cases và định nghĩa
+scenario tuần tự milestone trước khi dùng replay để quyết định Stage 1.0.

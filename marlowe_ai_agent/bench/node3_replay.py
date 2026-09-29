@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import csv
 from dataclasses import fields
+import hashlib
 import json
 from pathlib import Path
 import subprocess
@@ -16,6 +17,10 @@ from marlowe_agent.logic_graph import LogicGraphVerifier
 from marlowe_agent.models import ContractDraft, PartySpec
 from marlowe_agent.node3_policy import Node3Result, StructuredWarning
 
+from .cases import Case, load_cases
+from .config import DATASET
+from .evaluator import evaluate
+
 
 HERE = Path(__file__).resolve().parent
 PROJECT = HERE.parent
@@ -24,7 +29,9 @@ AUDIT = HERE / "audit"
 SMT_WRAPPER = REPO / "tools" / "marlowe_smt" / "run_smt.py"
 DEFAULT_OUTPUT = HERE / "node3-replay-results.csv"
 FIELDS = [
-    "case_id", "audit_file", "ground_truth", "old_pass", "new_decision",
+    "case_id", "audit_file", "ground_truth", "persisted_ground_truth",
+    "ground_truth_changed", "current_scenario_accuracy", "current_overall_accuracy",
+    "choice_name_fallback_count", "old_pass", "new_decision",
     "semantic_status", "smt_seconds", "old_errors", "new_errors",
     "disagreement_type",
 ]
@@ -68,10 +75,19 @@ def _warning(raw: dict[str, Any]) -> StructuredWarning:
     )
 
 
-def _truth(record: dict[str, Any]) -> bool | None:
-    """Use evaluator.py's persisted ground-truth result, never status/converged."""
+def _persisted_truth(record: dict[str, Any]) -> bool | None:
+    """Retain the historical label only for evaluator-drift telemetry."""
     value = (record.get("evaluation") or {}).get("strict_correct")
     return value if type(value) is bool else None
+
+
+def _case_index() -> dict[str, Case]:
+    cases_by_id: dict[str, Case] = {}
+    for case in load_cases():
+        if case.id in cases_by_id:
+            raise ValueError(f"Duplicate case ID in current dataset {DATASET}: {case.id}")
+        cases_by_id[case.id] = case
+    return cases_by_id
 
 
 def _disagreement(truth: bool | None, old_pass: bool | None, decision: str) -> str:
@@ -85,10 +101,12 @@ def _disagreement(truth: bool | None, old_pass: bool | None, decision: str) -> s
     return "both_correct" if old_pass == truth else "both_wrong"
 
 
-def replay(path: Path) -> tuple[dict[str, Any], dict[str, Any]]:
+def replay(path: Path, cases_by_id: dict[str, Case]) -> tuple[dict[str, Any], dict[str, Any]]:
     record = json.loads(path.read_text(encoding="utf-8"))
     contract = record.get("contract")
-    truth = _truth(record)
+    case_id = record.get("case_id", path.stem)
+    persisted_truth = _persisted_truth(record)
+    current_evaluation: dict[str, Any] | None = None
     if contract in (None, {}):
         node3 = Node3Result(
             [], [], "unavailable", [], None,
@@ -98,6 +116,11 @@ def replay(path: Path) -> tuple[dict[str, Any], dict[str, Any]]:
         old_errors: list[str] = []
         smt_seconds: float | None = None
     else:
+        if case_id not in cases_by_id:
+            raise ValueError(f"Current dataset {DATASET} has no case for {path.name}: {case_id}")
+        current_evaluation = evaluate(
+            cases_by_id[case_id], contract, status=record.get("status", "done"),
+        )
         draft = _draft(record.get("draft"), contract)
         logic = LogicGraphVerifier().verify(contract, draft)
         old_pass = logic.passed
@@ -113,11 +136,28 @@ def replay(path: Path) -> tuple[dict[str, Any], dict[str, Any]]:
             smt_elapsed_seconds=smt_seconds,
             contract=contract,
         )
+    truth = current_evaluation["strict_correct"] if current_evaluation is not None else None
+    changed = (persisted_truth != truth
+               if type(persisted_truth) is bool and type(truth) is bool else None)
     disagreement = _disagreement(truth, old_pass, node3.decision)
     row = {
-        "case_id": record.get("case_id", path.stem),
+        "case_id": case_id,
         "audit_file": path.name,
         "ground_truth": "" if truth is None else str(truth).lower(),
+        "persisted_ground_truth": "" if persisted_truth is None else str(persisted_truth).lower(),
+        "ground_truth_changed": "" if changed is None else str(changed).lower(),
+        "current_scenario_accuracy": (
+            "" if current_evaluation is None or current_evaluation.get("scenario_accuracy") is None
+            else current_evaluation["scenario_accuracy"]
+        ),
+        "current_overall_accuracy": (
+            "" if current_evaluation is None or current_evaluation.get("overall_accuracy") is None
+            else current_evaluation["overall_accuracy"]
+        ),
+        "choice_name_fallback_count": (
+            "" if current_evaluation is None else
+            current_evaluation["diagnostics"].get("choice_name_fallback_count", 0)
+        ),
         "old_pass": "" if old_pass is None else str(old_pass).lower(),
         "new_decision": node3.decision,
         "semantic_status": node3.semantic_status,
@@ -128,6 +168,7 @@ def replay(path: Path) -> tuple[dict[str, Any], dict[str, Any]]:
     }
     detail = {
         "case_id": row["case_id"], "ground_truth": truth,
+        "persisted_ground_truth": persisted_truth, "ground_truth_changed": changed,
         "old_pass": old_pass, "new_decision": node3.decision,
         "semantic_status": node3.semantic_status,
         "analysis_notes": node3.analysis_notes,
@@ -158,9 +199,10 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
     args = parser.parse_args()
+    cases_by_id = _case_index()
     rows: list[dict[str, Any]] = []
     for path in sorted(AUDIT.glob("*-full.json")):
-        row, detail = replay(path)
+        row, detail = replay(path, cases_by_id)
         rows.append(row)
         print(json.dumps(detail, ensure_ascii=False, separators=(",", ":")), flush=True)
     with args.output.open("w", encoding="utf-8", newline="") as output:
@@ -168,6 +210,8 @@ def main() -> None:
         writer.writeheader()
         writer.writerows(rows)
     summary = {
+        "dataset_path": str(DATASET),
+        "dataset_sha256": hashlib.sha256(DATASET.read_bytes()).hexdigest(),
         "logic_graph": _confusion(rows, "old_pass"),
         "node3_policy": _confusion(rows, "new_decision"),
         "cross": {
@@ -178,7 +222,14 @@ def main() -> None:
         "ground_truth_unavailable": [
             row["audit_file"] for row in rows if row["ground_truth"] == ""
         ],
+        "ground_truth_drift": [
+            {"audit_file": row["audit_file"],
+             "persisted": row["persisted_ground_truth"] == "true",
+             "current": row["ground_truth"] == "true"}
+            for row in rows if row["ground_truth_changed"] == "true"
+        ],
     }
+    summary["ground_truth_drift_count"] = len(summary["ground_truth_drift"])
     print(json.dumps(summary, ensure_ascii=False, sort_keys=True, separators=(",", ":")))
 
 
