@@ -1,0 +1,11 @@
+case_id,audit_file,ground_truth,old_pass,new_decision,semantic_status,smt_seconds,old_errors,new_errors,disagreement_type
+en-escrow_2party-L1-010,en-escrow_2party-L1-010-full.json,true,true,pass,valid,2.402039,[],[],both_correct
+en-loan-L4-007,en-loan-L4-007-full.json,true,true,pass,valid,2.248549,[],[],both_correct
+vi-cancellation_fee-L4-001,vi-cancellation_fee-L4-001-full.json,,,inconclusive,unavailable,,[],[],ground_truth_unavailable
+vi-cancellation_fee-L4-001,vi-cancellation_fee-L4-001-retry-full.json,,,inconclusive,unavailable,,[],[],ground_truth_unavailable
+vi-crowdfunding-L4-004,vi-crowdfunding-L4-004-full.json,true,true,pass,valid,2.268917,[],[],both_correct
+vi-escrow_3party-L4-006,vi-escrow_3party-L4-006-full.json,true,true,pass,valid,2.272258,[],[],both_correct
+vi-milestone-L4-003,vi-milestone-L4-003-full.json,false,true,pass,valid,2.352138,[],[],both_wrong
+vi-rental_deposit-L3-003,vi-rental_deposit-L3-003-full.json,false,true,pass,valid,2.395610,[],[],both_wrong
+vi-swap-L3-010,vi-swap-L3-010-full.json,true,true,pass,valid,2.326563,[],[],both_correct
+vi-swap-L3-010,vi-swap-L3-010-retry-full.json,,,inconclusive,unavailable,,[],[],ground_truth_unavailable
