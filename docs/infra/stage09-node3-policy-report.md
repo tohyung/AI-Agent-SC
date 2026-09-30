@@ -49,12 +49,17 @@ rejection 0. `inconclusive` không được gộp vào bảng này.
 
 ### Bảng chéo độ đúng của hai policy
 
-| Kết quả | Số case |
-|---|---:|
-| Cả hai đúng | 7 |
-| Chỉ Logic Graph đúng | 0 |
-| Chỉ Node 3 đúng | 0 |
-| Cả hai sai | 0 |
+| Kết quả | `disagreement_type` | Số case |
+|---|---|---:|
+| Cả hai đúng | `both_correct` | 7 |
+| Chỉ Logic Graph đúng | `old_only_correct` | 0 |
+| Chỉ Node 3 đúng | `new_only_correct` | 0 |
+| Cả hai sai | `both_wrong` | 0 |
+
+Correction (Stage 0.9d): nhãn cũ `old_only_pass` / `new_only_pass` chỉ mô tả
+verifier nào pass, không mô tả verifier nào đúng so với ground truth. Replay
+hiện phân loại theo correctness bằng `old_only_correct` /
+`new_only_correct`; số liệu current corpus không đổi.
 
 Hai nhãn persisted đã đổi khi chấm bằng evaluator hiện tại:
 

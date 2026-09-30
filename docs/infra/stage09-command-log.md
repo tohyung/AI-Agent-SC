@@ -142,3 +142,54 @@ PS D:\code\marlowe_ai_agent> bash -lc "cd /mnt/d/code/marlowe_ai_agent/marlowe_a
 Both changed records now have current scenario accuracy 1.0 and
 `choice_name_fallback_count=2`; their saved contracts were not changed. No
 LLM/API or agent benchmark was run.
+
+## Correction (Stage 0.9d) — disagreement labels
+
+Baseline commit: `889a4d7`. The old `old_only_pass` / `new_only_pass` labels
+described which verifier passed, not which verifier was correct relative to
+current ground truth. The implementation and current report now use
+`old_only_correct` / `new_only_correct`. Historical output above is preserved.
+
+```text
+PS D:\code\marlowe_ai_agent> python -m pytest marlowe_ai_agent/tests/test_node3_replay.py -q
+15 passed in 0.12s
+
+PS D:\code\marlowe_ai_agent> python -m pytest marlowe_ai_agent/tests/ -q
+154 passed in 17.15s
+
+PS D:\code\marlowe_ai_agent> uvx ruff check --select F401,F841
+All checks passed!
+```
+
+Before replay, the tracked CSV was copied outside the repo to
+`C:\Users\Admin\AppData\Local\Temp\node3-replay-results-before-09d.csv`.
+The actual SMT replay ran in WSL against the already-built driver:
+
+```text
+PS D:\code\marlowe_ai_agent> bash -lc "cd /mnt/d/code/marlowe_ai_agent/marlowe_ai_agent && PYTHONIOENCODING=utf-8 python3 -m bench.node3_replay"
+{"cross":{"both_correct":7,"both_wrong":0,"new_only_correct":0,"old_only_correct":0},"dataset_path":"/mnt/d/code/marlowe_ai_agent/marlowe_ai_agent/bench/dataset/cases.jsonl","dataset_sha256":"e05c23f43a2bd025258ad5e2fa77569874357f79173e98863a8f8d48ee9a907a","ground_truth_drift":[{"audit_file":"vi-milestone-L4-003-full.json","current":true,"persisted":false},{"audit_file":"vi-rental_deposit-L3-003-full.json","current":true,"persisted":false}],"ground_truth_drift_count":2,"ground_truth_unavailable":["vi-cancellation_fee-L4-001-full.json","vi-cancellation_fee-L4-001-retry-full.json","vi-swap-L3-010-retry-full.json"],"inconclusive":["vi-cancellation_fee-L4-001-full.json","vi-cancellation_fee-L4-001-retry-full.json","vi-swap-L3-010-retry-full.json"],"logic_graph":{"false_accept":0,"false_reject":0,"true_accept":7,"true_reject":0},"node3_policy":{"false_accept":0,"false_reject":0,"true_accept":7,"true_reject":0}}
+```
+
+The semantic CSV comparison used this one-off command. It compared every
+column except volatile `smt_seconds`, with row count and field names checked:
+
+```text
+PS D:\code\marlowe_ai_agent> python -c "import csv,sys; old=list(csv.DictReader(open(sys.argv[1],encoding='utf-8-sig',newline=''))); new=list(csv.DictReader(open(sys.argv[2],encoding='utf-8-sig',newline=''))); keys=[k for k in old[0] if k!='smt_seconds']; diffs=[(i,k,a.get(k),b.get(k)) for i,(a,b) in enumerate(zip(old,new),1) for k in keys if a.get(k)!=b.get(k)]; print('rows:',len(old),'->',len(new)); print('semantic fields:',len(keys)); print('semantic differences:',diffs); sys.exit(bool(diffs or len(old)!=len(new) or set(old[0])!=set(new[0])))" (Join-Path $env:TEMP 'node3-replay-results-before-09d.csv') 'marlowe_ai_agent/bench/node3-replay-results.csv'
+rows: 10 -> 10
+semantic fields: 14
+semantic differences: []
+```
+
+Seven evaluable rows remain `both_correct`; three rows without contracts
+remain `ground_truth_unavailable`. No LLM/API, contract regeneration, or
+dataset/audit/evaluator change was made.
+
+Final regression after documentation and replay:
+
+```text
+PS D:\code\marlowe_ai_agent> python -m pytest marlowe_ai_agent/tests/ -q
+154 passed in 13.60s
+
+PS D:\code\marlowe_ai_agent> uvx ruff check --select F401,F841
+All checks passed!
+```

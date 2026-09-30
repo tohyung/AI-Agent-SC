@@ -7,6 +7,27 @@ import pytest
 from bench import node3_replay
 
 
+@pytest.mark.parametrize(("truth", "old_pass", "decision", "expected"), [
+    (True, True, "pass", "both_correct"),
+    (True, True, "fail", "old_only_correct"),
+    (True, False, "pass", "new_only_correct"),
+    (True, False, "fail", "both_wrong"),
+    (False, True, "pass", "both_wrong"),
+    (False, True, "fail", "new_only_correct"),
+    (False, False, "pass", "old_only_correct"),
+    (False, False, "fail", "both_correct"),
+])
+def test_disagreement_truth_table(truth, old_pass, decision, expected):
+    assert node3_replay._disagreement(truth, old_pass, decision) == expected
+
+
+def test_disagreement_special_states():
+    assert node3_replay._disagreement(None, True, "pass") == "ground_truth_unavailable"
+    assert node3_replay._disagreement(True, None, "pass") == "ground_truth_unavailable"
+    assert node3_replay._disagreement(None, True, "inconclusive") == "ground_truth_unavailable"
+    assert node3_replay._disagreement(True, True, "inconclusive") == "inconclusive"
+
+
 @pytest.mark.parametrize("filename", [
     "vi-rental_deposit-L3-003-full.json",
     "vi-milestone-L4-003-full.json",

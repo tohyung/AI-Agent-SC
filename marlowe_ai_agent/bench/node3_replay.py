@@ -96,9 +96,15 @@ def _disagreement(truth: bool | None, old_pass: bool | None, decision: str) -> s
     if decision == "inconclusive":
         return "inconclusive"
     new_pass = decision == "pass"
-    if old_pass != new_pass:
-        return "old_only_pass" if old_pass else "new_only_pass"
-    return "both_correct" if old_pass == truth else "both_wrong"
+    old_correct = old_pass == truth
+    new_correct = new_pass == truth
+    if old_correct and new_correct:
+        return "both_correct"
+    if old_correct:
+        return "old_only_correct"
+    if new_correct:
+        return "new_only_correct"
+    return "both_wrong"
 
 
 def replay(path: Path, cases_by_id: dict[str, Case]) -> tuple[dict[str, Any], dict[str, Any]]:
@@ -216,7 +222,7 @@ def main() -> None:
         "node3_policy": _confusion(rows, "new_decision"),
         "cross": {
             label: sum(row["disagreement_type"] == label for row in rows)
-            for label in ("both_correct", "old_only_pass", "new_only_pass", "both_wrong")
+            for label in ("both_correct", "old_only_correct", "new_only_correct", "both_wrong")
         },
         "inconclusive": [row["audit_file"] for row in rows if row["new_decision"] == "inconclusive"],
         "ground_truth_unavailable": [
