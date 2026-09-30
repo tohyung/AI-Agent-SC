@@ -59,3 +59,33 @@ ground_truth_unavailable; semantic CSV fields unchanged from baseline when
 excluding volatile `smt_seconds`. Driver regression: 12 tests passed and
 upstream verification passed. Python suite and lint results are recorded in
 `stage10-command-log.md`.
+
+## Finalization — verified SMT→AST mapping
+
+SMT remains the authority for pass/fail. The new Python concrete path-aware
+replay is diagnostic-only: it starts with the driver counterexample's
+`start_time`, empty accounts/choices/bound values, and the original contract;
+it applies every transaction with pinned Marlowe `fixInterval`, reduction,
+first-match Case, and warning order. It exposes an AST path only when the
+entire trace replays and every structured warning matches the SMT warnings in
+type, order, nested fields, and values. Any mismatch revokes all paths.
+Structural candidates can classify a failed mapping as ambiguous but never
+produce a verified path. No heuristic location is presented as authoritative.
+
+The five real warning fixtures map to `root.when[0].then.pay` (PartialPay),
+`root.pay` (NonPositivePay), `root.when[0].case.deposits`
+(NonPositiveDeposit), `root.then.let` (Shadowing), and `root.assert`
+(AssertionFailed). The real symbolic PartialPay corpus item maps to
+`root.when[0].then.when[0].then.pay`. Node 1 receives structured warning
+fields, the rendered message, and a verified path when available; it receives
+neither AST fragments nor candidate subtrees. Mapping errors preserve the SMT
+Counterexample/fail verdict. Timeout/Indeterminate retry reuses the first lint
+result rather than rerunning lint.
+
+Known limits after closure: Windows Python does not bridge into WSL;
+Merkleized continuations are not fully analyzed; SMT is not ledger/on-chain
+validation; the JSON-to-Haskell bridge lacks a formal semantic-preservation
+proof; and the solver may still return Timeout or Indeterminate. These paths
+fail closed and do not block Stage 1 closure.
+
+Stage 1.0 status: CLOSED

@@ -50,3 +50,10 @@ def render_warning(warning: StructuredWarning) -> str:
     if warning.type == "TransactionAssertionFailed":
         return "Assert có thể sai trên một đường đi khả thi."
     raise ValueError(f"unsupported TransactionWarning: {warning.type}")
+
+
+def render_warning_safe(warning: StructuredWarning) -> str:
+    try:
+        return render_warning(warning)
+    except (KeyError, TypeError, ValueError):
+        return f"SMT phát hiện {warning.type}."

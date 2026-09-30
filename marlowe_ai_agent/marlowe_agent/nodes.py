@@ -8,6 +8,7 @@ from time import perf_counter, sleep
 from typing import Any, TypeVar
 
 from .logic_graph import LogicGraphVerifier
+from .node3_mapper import map_counterexample, unmapped_findings
 from .node3_policy import Node3Result, semantic_fingerprint
 from .node3_smt import MarloweSMTBackend
 from .marlowe_ast import normalize_marlowe_ast
@@ -134,14 +135,28 @@ class Node3VerificationNode:
         self.backend = backend if backend is not None else MarloweSMTBackend()
 
     def run(self, contract: Any, draft: ContractDraft | None = None) -> Node3Result:
-        lint = self.verifier.lint(contract, draft)
+        return self.analyze_with_lint(contract, self.lint(contract, draft))
+
+    def lint(self, contract: Any, draft: ContractDraft | None = None) -> LogicGraphResult:
+        return self.verifier.lint(contract, draft)
+
+    def analyze_with_lint(self, contract: Any, lint: LogicGraphResult) -> Node3Result:
         if lint.errors:
             return Node3Result(lint.errors, lint.warnings, "not_run", [], None, [], None,
                                contract=contract, graph=lint.graph, paths_explored=lint.paths_explored)
         analysis = self.backend.analyze(contract)
+        structured_findings = []
+        if analysis.status == "counterexample":
+            try:
+                structured_findings = map_counterexample(contract, analysis.warnings,
+                                                          analysis.counterexample)
+            except Exception:  # noqa: BLE001 - diagnostic mapper must not change the SMT verdict
+                structured_findings = unmapped_findings(contract, analysis.warnings,
+                                                         "mapper_internal_error")
         return Node3Result(lint.errors, lint.warnings, analysis.status, analysis.warnings,
                            analysis.counterexample, analysis.analysis_notes, analysis.elapsed_seconds,
-                           contract=contract, graph=lint.graph, paths_explored=lint.paths_explored)
+                           contract=contract, graph=lint.graph, paths_explored=lint.paths_explored,
+                           structured_findings=structured_findings)
 
     def audit_narrative(self, logic: Node3Result) -> str:
         count = len(logic.graph.get("nodes", []))
@@ -407,10 +422,11 @@ class AgentPipeline:
                 else:
                     self._record_semantic(iterations, current_prompt, draft, semantic)
 
+                lint = self.node_3.lint(draft.marlowe_contract, draft)
                 for smt_attempt in (1, 2):
                     self.track("node_3_logic_graph_verification", "start", "Đang kiểm Node 3.",
                                {"smt_attempt": smt_attempt})
-                    logic = self.node_3.run(draft.marlowe_contract, draft)
+                    logic = self.node_3.analyze_with_lint(draft.marlowe_contract, lint)
                     self.track("node_3_logic_graph_verification", logic.decision,
                                "Đã kiểm Node 3.", {
                                    **logic.to_dict(), "smt_attempt": smt_attempt,

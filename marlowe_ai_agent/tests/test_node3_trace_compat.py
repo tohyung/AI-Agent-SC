@@ -69,4 +69,5 @@ def test_actual_live_node3_trace_is_report_compatible(tmp_path) -> None:
                  and event.status == "pass")
     assert event.data["smt_status"] == "valid"
     assert {"findings", "errors", "warnings", "verification_backend", "smt_warnings",
-            "counterexample", "analysis_notes"} <= event.data.keys()
+            "counterexample", "analysis_notes", "structured_findings"} <= event.data.keys()
+    assert result.to_dict()["logic_verification"]["structured_findings"] == []

@@ -159,6 +159,7 @@
         "smt_elapsed_seconds": 0.0,
         "lint_errors": [],
         "lint_warnings": [],
+        "structured_findings": [],
         "smt_attempt": 1,
         "reasoning_narrative": "Node 3 kiểm tra 9 node bằng lint + SMT; kết quả pass, SMT=valid, 0 lỗi, 0 cảnh báo."
       }
@@ -430,7 +431,8 @@
     "analysis_notes": [],
     "smt_elapsed_seconds": 0.0,
     "lint_errors": [],
-    "lint_warnings": []
+    "lint_warnings": [],
+    "structured_findings": []
   },
   "marlowe_contract": {
     "when": [

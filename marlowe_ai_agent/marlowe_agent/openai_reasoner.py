@@ -188,14 +188,18 @@ class OpenAIReasoner:
             },
             "logic_findings": logic.findings,
         }
+        if isinstance(logic, Node3Result):
+            payload["structured_findings"] = [finding.to_dict() for finding in logic.structured_findings]
         system = (
             "You are Node 1 of a Marlowe smart-contract AI agent. "
-            "Node 3 has returned logic/AST findings. Convert them into a small number of clear Vietnamese "
+            "Node 3 has returned logic/AST findings. Explain them in clear Vietnamese. "
             "The AST uses standard Marlowe Core V1 JSON: Close is 'close', Choice uses for_choice/choose_between, "
             "amounts are lovelace and timeouts are POSIX milliseconds. "
-            "business questions only when the user truly needs to decide business behavior. "
+            "Treat ast_path as authoritative only when path_status is 'verified'. "
+            "For ambiguous or unmapped findings, the exact location is unknown; never invent an AST path. "
+            "Ask business questions only when the user truly needs to decide business behavior. "
             "Never ask the user to fix AST, JSON, constructor names, fields, graph nodes, or Marlowe internals. "
-            "If the findings are purely technical AST/JSON/constructor/schema errors, needs_user_input must be false "
+            "For technical verifier findings, needs_user_input must be false "
             "and internal_instruction must tell the draft generator how to fix the Marlowe AST while preserving the user's intent. "
             "Deduplicate repeated findings. Ask at most 4 concise questions. "
             "reasoning_narrative must be a short Vietnamese explanation of what is missing or what will be fixed, "

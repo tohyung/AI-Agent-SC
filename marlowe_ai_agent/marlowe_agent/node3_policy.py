@@ -23,6 +23,24 @@ class StructuredWarning:
 
 
 @dataclass
+class Node3Finding:
+    source: str
+    warning_type: str | None
+    fields: dict[str, Any]
+    message: str
+    ast_path: str | None
+    path_status: str
+    mapping_reason: str | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "source": self.source, "warning_type": self.warning_type,
+            "fields": self.fields, "message": self.message, "ast_path": self.ast_path,
+            "path_status": self.path_status, "mapping_reason": self.mapping_reason,
+        }
+
+
+@dataclass
 class Node3Result:
     lint_errors: list[str]
     lint_warnings: list[str]
@@ -34,6 +52,7 @@ class Node3Result:
     contract: Any = None
     graph: dict[str, Any] = field(default_factory=lambda: {"nodes": [], "edges": []})
     paths_explored: int = 0
+    structured_findings: list[Node3Finding] = field(default_factory=list)
 
     def __post_init__(self) -> None:
         self.semantic_status = self.semantic_status.lower()
@@ -62,14 +81,14 @@ class Node3Result:
     def errors(self) -> list[str]:
         errors = list(self.lint_errors)
         if self.semantic_status == "counterexample":
-            from .node3_renderer import render_warning
+            from .node3_renderer import render_warning_safe
 
-            rendered = []
-            for warning in self.semantic_warnings:
-                try:
-                    rendered.append(render_warning(warning))
-                except (KeyError, TypeError, ValueError):
-                    rendered.append(f"SMT phát hiện {warning.type}.")
+            rendered = [
+                f"Tại `{finding.ast_path}`: {finding.message}"
+                if finding.path_status == "verified" and finding.ast_path else finding.message
+                for finding in self.structured_findings
+            ] if self.structured_findings else [render_warning_safe(warning)
+                                                for warning in self.semantic_warnings]
             errors.extend(rendered or ["SMT tìm thấy phản ví dụ nhưng không trả cảnh báo có cấu trúc."])
         return errors
 
@@ -91,6 +110,7 @@ class Node3Result:
             "counterexample": self.counterexample, "analysis_notes": self.analysis_notes,
             "smt_elapsed_seconds": self.smt_elapsed_seconds,
             "lint_errors": self.lint_errors, "lint_warnings": self.lint_warnings,
+            "structured_findings": [finding.to_dict() for finding in self.structured_findings],
         }
 
 

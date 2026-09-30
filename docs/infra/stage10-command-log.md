@@ -72,3 +72,65 @@ changed or called for paid inference. Final regression follows below.
 -> `197 passed in 16.15s`.
 
 `uvx ruff check --select F401,F841` -> `All checks passed!`.
+
+## Finalization — verified SMT counterexample paths
+
+`git rev-parse HEAD` -> `7fae83bc9adde862ec80825d36e211858ac04a88`;
+`git status --short` -> clean before edits.
+
+`python -m pytest marlowe_ai_agent/tests/test_node3_mapper.py marlowe_ai_agent/tests/test_node3_policy.py marlowe_ai_agent/tests/test_node3_renderer.py marlowe_ai_agent/tests/test_pipeline.py marlowe_ai_agent/tests/test_node3_trace_compat.py marlowe_ai_agent/tests/test_node3_wired.py -q`
+-> `140 passed in 16.78s`. This includes whole-warning-sequence equivalence,
+no fabricated path, mapper exception, and lint-once/SMT-twice tests.
+
+Real mapper acceptance used `wsl --cd /mnt/d/code/marlowe_ai_agent -e env`
+with `MARLOWE_SMT_BIN` set to the built binary, `PYTHONPATH=marlowe_ai_agent`,
+and `python3 -c` invoking `Node3VerificationNode().run()` for each fixture.
+All five returned `counterexample`/fail with every finding `verified`:
+
+```text
+partial_pay.json         root.when[0].then.pay
+nonpositive_pay.json     root.pay
+nonpositive_deposit.json root.when[0].case.deposits
+shadowing.json           root.then.let
+assertion_failed.json    root.assert
+```
+
+The same real-driver command on
+`tools/marlowe_smt/compare/corpus/hand-written/04-symbolic-partial-pay.json`
+returned `counterexample`/fail and verified
+`TransactionPartialPay` at `root.when[0].then.when[0].then.pay`.
+
+Minimal real-SMT repair-loop acceptance used `AgentPipeline` with
+`FakeReasoner`, a real partial-pay fixture followed by a fixed escrow draft,
+and a captured logic-feedback call. Output: `done/ok`, 2 iterations, 2 Node 2
+semantic calls, verified `root.when[0].then.pay` in the finding and rendered
+error, and the same path in the regenerated draft prompt. No paid LLM/API call.
+
+`python -m tools.regen_sample` from `marlowe_ai_agent/` regenerated
+`marlowe_ai_agent/sample_result.json` using the existing deterministic tool.
+
+`wsl bash -lc 'cd /mnt/d/code/marlowe_ai_agent && tools/marlowe_smt/run_tests.sh'`
+-> `Ran 12 tests in 25.381s`, `OK`.
+
+`wsl bash -lc 'cd /mnt/d/code/marlowe_ai_agent && tools/marlowe_smt/verify_upstream.sh'`
+-> `verified upstream commit 7b5b1e900ec53a8eb18747992bec73470704dfcb; no patches`.
+
+`wsl --cd /mnt/d/code/marlowe_ai_agent/marlowe_ai_agent -e env MARLOWE_SMT_BIN=<built binary> python3 -m bench.node3_replay --output /tmp/stage10-final-replay.csv`
+-> `both_correct=7`, `ground_truth_unavailable=3`, no new disagreement.
+The CSV output was outside the tracked repository because the schema and
+semantic results did not change; `smt_seconds` remains volatile telemetry.
+
+`python -m pytest marlowe_ai_agent/tests/ -q` -> `227 passed in 15.34s`.
+
+`uvx ruff check --select F401,F841` -> `All checks passed!`.
+
+No `tools/marlowe_smt/**` source, evaluator, dataset, or audit file was edited.
+
+Final pre-commit regression after documentation updates:
+
+`python -m pytest marlowe_ai_agent/tests/test_node3_mapper.py marlowe_ai_agent/tests/test_node3_policy.py marlowe_ai_agent/tests/test_node3_renderer.py marlowe_ai_agent/tests/test_pipeline.py marlowe_ai_agent/tests/test_node3_trace_compat.py marlowe_ai_agent/tests/test_node3_wired.py -q`
+-> `140 passed in 19.34s`.
+
+`python -m pytest marlowe_ai_agent/tests/ -q` -> `227 passed in 15.21s`.
+
+`uvx ruff check --select F401,F841` -> `All checks passed!`.

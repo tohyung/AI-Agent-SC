@@ -906,3 +906,111 @@ def test_cli_trace_only_success_with_live_node3_result(monkeypatch, capsys) -> N
     output = capsys.readouterr().out
     assert "Node 3 - Verification" in output
     assert "logic_passed: True" in output
+
+
+def test_timeout_retry_reuses_lint_result(monkeypatch) -> None:
+    backend = FakeSMTBackend(["timeout", "valid"])
+    reasoner = FakeReasoner([make_draft()])
+    pipeline = AgentPipeline(reasoner, node3_backend=backend)
+    lint_calls = []
+    original = pipeline.node_3.verifier.lint
+
+    def count_lint(*args, **kwargs):
+        lint_calls.append(1)
+        return original(*args, **kwargs)
+
+    monkeypatch.setattr(pipeline.node_3.verifier, "lint", count_lint)
+    result = pipeline.run("escrow")
+    assert result.status == "done"
+    assert result.iterations == 1
+    assert reasoner.calls == ["draft", "semantic"]
+    assert backend.call_count == 2
+    assert len(lint_calls) == 1
+
+
+def test_mapper_exception_keeps_counterexample_failure(monkeypatch) -> None:
+    from marlowe_agent import nodes
+
+    monkeypatch.setattr(nodes, "map_counterexample", lambda *_args: (_ for _ in ()).throw(RuntimeError("bad")))
+    backend = FakeSMTBackend(["counterexample"])
+    reasoner = FakeReasoner([make_draft(pay("Alice", "Bob", 10))])
+    result = AgentPipeline(reasoner, node3_backend=backend, max_iterations=1).run("escrow")
+    assert result.logic_verification.decision == "fail"
+    assert result.logic_verification.errors
+    assert result.logic_verification.structured_findings[0].path_status == "unmapped"
+    assert result.logic_verification.structured_findings[0].mapping_reason == "mapper_internal_error"
+    assert result.stop_reason == "max_iterations"
+
+
+def test_node1_feedback_gets_verified_path_without_ast_fragments(monkeypatch) -> None:
+    from pathlib import Path
+
+    contract = json.loads((Path(__file__).resolve().parents[2] / "tools" / "marlowe_smt" /
+                           "tests" / "partial_pay.json").read_text(encoding="utf-8"))
+    counterexample = {"start_time": "0", "transactions": [{
+        "interval": {"from": "0", "to": "0"},
+        "inputs": [{"type": "Deposit", "account": {"role_token": "Alice"},
+                    "party": {"role_token": "Alice"},
+                    "token": {"currency_symbol": "", "token_name": ""}, "amount": 10}],
+    }]}
+    analysis = SMTAnalysis("counterexample", [StructuredWarning("TransactionPartialPay", {
+        "account": {"role_token": "Alice"}, "payee": {"party": {"role_token": "Bob"}},
+        "paid": 10, "expected": 20,
+    })], counterexample, [], 0.01)
+    backend = FakeSMTBackend([analysis, "valid"])
+    reasoner = FakeReasoner([make_draft(contract), make_draft()])
+    model = OpenAIReasoner.__new__(OpenAIReasoner)
+    captured = {}
+
+    def capture_response(system, user):
+        captured["system"] = system
+        captured["payload"] = json.loads(user.split("Input:\n", 1)[1])
+        return {"needs_user_input": False, "questions": [],
+                "internal_instruction": "Sửa Pay dựa trên path đã kiểm chứng."}
+
+    monkeypatch.setattr(model, "_json_response", capture_response)
+    monkeypatch.setattr(reasoner, "logic_feedback_to_clarification",
+                        lambda prompt, draft, logic: model.logic_feedback_to_clarification(prompt, draft, logic))
+    result = AgentPipeline(reasoner, node3_backend=backend).run("escrow")
+    assert result.status == "done"
+    first = next(event for event in result.trace if event.node == "node_3_logic_graph_verification"
+                 and event.status == "fail")
+    finding = first.data["structured_findings"][0]
+    assert finding["path_status"] == "verified"
+    assert finding["ast_path"] == "root.when[0].then.pay"
+    assert finding["ast_path"] in first.data["errors"][0]
+    assert captured["payload"]["structured_findings"][0]["ast_path"] == finding["ast_path"]
+    assert {"marlowe_contract", "ast_fragment", "candidate_paths"}.isdisjoint(captured["payload"])
+    assert finding["ast_path"] in result.draft.original_prompt
+    assert "never invent an AST path" in captured["system"]
+
+
+def test_timeout_then_counterexample_runs_mapper_only_on_second_attempt(monkeypatch) -> None:
+    from marlowe_agent import nodes
+
+    backend = FakeSMTBackend(["timeout", "counterexample", "valid"])
+    reasoner = FakeReasoner([make_draft(pay("Alice", "Bob", 10)), make_draft()], clarifications=[{
+        "needs_user_input": False, "questions": [], "internal_instruction": "Sửa Pay.",
+    }])
+    pipeline = AgentPipeline(reasoner, node3_backend=backend)
+    mapping_calls = []
+    lint_calls = []
+    original_map = nodes.map_counterexample
+    original_lint = pipeline.node_3.verifier.lint
+
+    def count_map(*args):
+        mapping_calls.append(1)
+        return original_map(*args)
+
+    def count_lint(*args):
+        lint_calls.append(1)
+        return original_lint(*args)
+
+    monkeypatch.setattr(nodes, "map_counterexample", count_map)
+    monkeypatch.setattr(pipeline.node_3.verifier, "lint", count_lint)
+    result = pipeline.run("escrow")
+    assert result.status == "done"
+    assert reasoner.calls == ["draft", "semantic", "clarification", "draft", "semantic"]
+    assert backend.call_count == 3
+    assert len(mapping_calls) == 1
+    assert len(lint_calls) == 2

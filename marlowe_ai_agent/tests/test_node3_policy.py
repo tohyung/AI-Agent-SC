@@ -3,6 +3,7 @@ from __future__ import annotations
 import pytest
 
 from marlowe_agent.node3_policy import (
+    Node3Finding,
     Node3Result,
     StructuredWarning,
     next_inconclusive_state,
@@ -108,3 +109,27 @@ def test_node3_result_serializes_compatible_fields_without_contract() -> None:
     assert "contract" not in payload
     assert payload["smt_warnings"][0]["type"] == "TransactionPartialPay"
     assert payload["paths_explored"] == 2
+    assert payload["structured_findings"] == []
+
+
+def test_path_aware_error_only_uses_verified_location() -> None:
+    value = result("counterexample")
+    value.structured_findings = [Node3Finding(
+        "smt", "TransactionPartialPay", {}, "partial payment", "root.pay", "verified",
+        "counterexample_replay",
+    )]
+    assert value.errors == ["Tại `root.pay`: partial payment"]
+    assert value.to_dict()["structured_findings"][0]["ast_path"] == "root.pay"
+    value.structured_findings[0].path_status = "unmapped"
+    assert value.errors == ["partial payment"]
+
+
+def test_fingerprint_does_not_depend_on_mapper_metadata() -> None:
+    first, second = result("counterexample", elapsed=1.0), result("counterexample", elapsed=99.0)
+    first.structured_findings = [Node3Finding(
+        "smt", "TransactionPartialPay", {}, "one", "root.pay", "verified", "counterexample_replay",
+    )]
+    second.structured_findings = [Node3Finding(
+        "smt", "TransactionPartialPay", {}, "two", None, "unmapped", "replay_invalid",
+    )]
+    assert semantic_fingerprint(first) == semantic_fingerprint(second)
