@@ -7,6 +7,7 @@ from copy import deepcopy
 import pytest
 
 from research.stage2b import scoring
+from research.stage2b.test_intent_spec import simple_payment
 
 
 HISTORY = [{"version": 1, "messages": ["Bob nhận 2 ADA; Alice nhận 2 ADA."]}]
@@ -43,8 +44,7 @@ def metric(result, name):
 
 
 def score(predictions, candidates):
-    # Metric fixtures are deliberately minimal; production calls validate by default.
-    return scoring.score_predictions(predictions, candidates, validate_predictions=False)
+    return scoring.score_predictions(predictions, candidates)
 
 
 def test_exact_claim_match_ignores_claim_id_and_reports_exploratory_labels():
@@ -153,6 +153,49 @@ def test_mutations_cannot_be_scored_as_independent_intent_examples():
         score({"c1": prediction()}, [mutated])
 
 
-def test_scoring_rejects_invalid_prediction_by_default():
+def test_invalid_prediction_is_scored_and_reported_by_default():
+    result = score({"c1": prediction()}, [candidate()])
+    assert result["validation_errors"]["c1"]
+    assert metric(result, "structural_validity_rate") == {
+        "numerator": 0, "denominator": 1, "value": 0.0}
+    assert metric(result, "critical_claim_precision")["numerator"] == 1
     with pytest.raises(ValueError, match="invalid prediction"):
-        scoring.score_predictions({"c1": prediction()}, [candidate()])
+        scoring.score_predictions({"c1": prediction()}, [candidate()],
+                                  strict_validation=True)
+
+
+def test_malformed_prediction_remains_in_report_without_crashing():
+    result = score({"c1": {"claims": "not a list", "predicted_resolution": []}},
+                   [candidate()])
+    assert result["validation_errors"]["c1"]
+    assert metric(result, "structural_validity_rate")["numerator"] == 0
+    assert metric(result, "critical_claim_recall")["denominator"] == 1
+
+
+def test_unsafe_accepted_assumption_survives_validation_failure_in_metrics():
+    assumed = claim()
+    assumed.update(status="assumed", evidence=[], assumption_reason="recipient guessed")
+    result = score({"c1": prediction(claims=[assumed])}, [candidate()])
+    assert any("invalid" in error or "unsafe" in error
+               for error in result["validation_errors"]["c1"])
+    assert metric(result, "unsafe_assumption_rate") == {
+        "numerator": 1, "denominator": 1, "value": 1.0}
+    assert metric(result, "structural_validity_rate")["numerator"] == 0
+
+
+def test_derived_amount_uses_direct_span_not_fake_asset_source():
+    spec = simple_payment()
+    reference = {"case_id": "derived", "mutation": None, "split": "development",
+                 "claims": deepcopy(spec["claims"]),
+                 "requirement_history": deepcopy(spec["requirement_history"]),
+                 "expected_resolution": "accepted_interpretation", "required_clarifications": []}
+    result = score({"derived": spec}, [reference])
+    assert result["validation_errors"]["derived"] == []
+    assert metric(result, "structural_validity_rate")["numerator"] == 1
+    assert metric(result, "provenance_completeness") == {
+        "numerator": 5, "denominator": 5, "value": 1.0}
+
+    spec["claims"][3]["derived_from"] = "asset"
+    result = score({"derived": spec}, [reference])
+    assert any("invalid derived_from" in error for error in result["validation_errors"]["derived"])
+    assert metric(result, "provenance_completeness")["numerator"] == 4

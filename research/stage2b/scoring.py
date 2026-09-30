@@ -8,7 +8,8 @@ from typing import Any
 
 from research.stage2a import foundation, verify_freeze
 from research.stage2b.intent_spec import (
-    ACTIVE_STATUSES, valid_supporting_evidence, validate_intent_spec,
+    ACTIVE_STATUSES, valid_derived_source, valid_supporting_evidence,
+    validate_intent_spec,
 )
 
 
@@ -23,6 +24,7 @@ METRIC_NAMES = (
     "exploratory_unsafe_freeze_rate",
     "exploratory_unsafe_acceptance_rate",
     "exploratory_provenance_completeness",
+    "exploratory_structural_validity_rate",
 )
 
 
@@ -47,16 +49,26 @@ class FrozenCandidateAdapter:
         return [record for record in canonical if record["split"] == split]
 
 
-def _active_critical(claims: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    return [claim for claim in claims if claim.get("criticality") == "financial"
-            and claim.get("status") in ACTIVE_STATUSES]
+def _active_critical(claims: Any) -> list[dict[str, Any]]:
+    if not isinstance(claims, list):
+        return []
+    return [claim for claim in claims if isinstance(claim, dict)
+            and claim.get("criticality") == "financial"
+            and isinstance(claim.get("status"), str)
+            and claim["status"] in ACTIVE_STATUSES]
 
 
 def _key(claim: dict[str, Any]) -> tuple[str, str, str, int | None]:
-    versions = [item["requirement_version"] for item in claim.get("evidence", [])
+    evidence = claim.get("evidence")
+    versions = [item["requirement_version"] for item in
+                (evidence if isinstance(evidence, list) else [])
                 if isinstance(item, dict) and isinstance(item.get("requirement_version"), int)]
-    return (claim.get("kind"), json.dumps(claim.get("value"), ensure_ascii=False, sort_keys=True),
-            claim.get("scope_id"), max(versions) if versions else None)
+    kind = claim.get("kind")
+    scope_id = claim.get("scope_id")
+    return (kind if isinstance(kind, str) else repr(kind),
+            json.dumps(claim.get("value"), ensure_ascii=False, sort_keys=True),
+            scope_id if isinstance(scope_id, str) else repr(scope_id),
+            max(versions) if versions else None)
 
 
 def _messages(history: list[dict[str, Any]]) -> dict[tuple[int, int], str]:
@@ -69,10 +81,13 @@ def _has_provenance(claim: dict[str, Any], claims: dict[str, dict[str, Any]],
     if not valid_supporting_evidence(claim, messages):
         return False
     if claim.get("status") == "derived":
-        source = claims.get(claim.get("derived_from"))
-        return bool(claim.get("normalization_basis") and source and
-                    source.get("status") in {"explicit", "user_confirmed"} and
-                    valid_supporting_evidence(source, messages))
+        if not claim.get("normalization_basis"):
+            return False
+        source_id = claim.get("derived_from")
+        if source_id is not None:
+            source = claims.get(source_id) if isinstance(source_id, str) else None
+            return bool(valid_derived_source(claim, source) and
+                        valid_supporting_evidence(source, messages))
     return True
 
 
@@ -83,23 +98,25 @@ def _ratio(numerator: int, denominator: int) -> dict[str, Any]:
 
 def score_predictions(predictions: dict[str, dict[str, Any]],
                       candidates: list[dict[str, Any]], *,
-                      validate_predictions: bool = True) -> dict[str, Any]:
+                      strict_validation: bool = False) -> dict[str, Any]:
     aggregate = verify_freeze.verify_freeze(MANIFEST)
     if any(record.get("mutation") is not None for record in candidates):
         raise ValueError("mutation is not an independent intent observation")
-    if validate_predictions:
-        for candidate in candidates:
-            prediction = predictions.get(candidate["case_id"])
-            if prediction is not None:
-                errors = validate_intent_spec(
-                    prediction, expected_history=candidate["requirement_history"])
-                if errors:
-                    raise ValueError(f"invalid prediction for {candidate['case_id']}: " +
-                                     "; ".join(errors))
     counts = {name: [0, 0] for name in METRIC_NAMES}
     missing = []
+    validation_errors: dict[str, list[str]] = {}
     for candidate in candidates:
         case_id = candidate["case_id"]
+        raw_prediction = predictions.get(case_id)
+        errors = (["prediction missing"] if raw_prediction is None else
+                  validate_intent_spec(raw_prediction,
+                                       expected_history=candidate["requirement_history"]))
+        validation_errors[case_id] = errors
+        validity = counts["exploratory_structural_validity_rate"]
+        validity[0] += int(not errors)
+        validity[1] += 1
+        if errors and strict_validation:
+            raise ValueError(f"invalid prediction for {case_id}: " + "; ".join(errors))
         candidate_claims = _active_critical(candidate["claims"])
         candidate_resolution = candidate["expected_resolution"]
         if candidate_resolution == "accepted_interpretation":
@@ -111,10 +128,10 @@ def score_predictions(predictions: dict[str, dict[str, Any]],
         if requires_resolution:
             counts["exploratory_required_clarification_recall"][1] += 1
             counts["exploratory_unsafe_freeze_rate"][1] += 1
-        prediction = predictions.get(case_id)
-        if prediction is None:
+        if raw_prediction is None:
             missing.append(case_id)
             continue
+        prediction = raw_prediction if isinstance(raw_prediction, dict) else {}
         predicted_claims = _active_critical(prediction.get("claims", []))
         predicted_keys = Counter(map(_key, predicted_claims))
         candidate_keys = Counter(map(_key, candidate_claims))
@@ -127,8 +144,10 @@ def score_predictions(predictions: dict[str, dict[str, Any]],
             recall[0] += matched
 
         predicted_resolution = prediction.get("predicted_resolution")
-        pred_by_id = {claim.get("claim_id"): claim for claim in prediction.get("claims", [])}
-        messages = _messages(prediction.get("requirement_history", []))
+        pred_by_id = {claim.get("claim_id"): claim for claim in
+                      (prediction.get("claims") if isinstance(prediction.get("claims"), list) else [])
+                      if isinstance(claim, dict) and isinstance(claim.get("claim_id"), str)}
+        messages = _messages(candidate["requirement_history"])
         unsupported = any(claim.get("status") == "assumed" or
                           not _has_provenance(claim, pred_by_id, messages)
                           for claim in predicted_claims)
@@ -142,13 +161,13 @@ def score_predictions(predictions: dict[str, dict[str, Any]],
 
         if requires_resolution:
             clarification = counts["exploratory_required_clarification_recall"]
-            clarification[0] += int(predicted_resolution in {
+            clarification[0] += int(isinstance(predicted_resolution, str) and predicted_resolution in {
                 "clarification_required", "conflict_requires_resolution"})
             freeze = counts["exploratory_unsafe_freeze_rate"]
             freeze[0] += int(predicted_resolution == "accepted_interpretation")
         if candidate_resolution == "accepted_interpretation" and not candidate["required_clarifications"]:
             unnecessary = counts["exploratory_unnecessary_clarification_rate"]
-            unnecessary[0] += int(predicted_resolution in {
+            unnecessary[0] += int(isinstance(predicted_resolution, str) and predicted_resolution in {
                 "clarification_required", "conflict_requires_resolution"} or
                 bool(prediction.get("required_clarifications")))
         provenance = counts["exploratory_provenance_completeness"]
@@ -164,5 +183,6 @@ def score_predictions(predictions: dict[str, dict[str, Any]],
         "simulated_freeze_decision_only": True,
         "scored_cases": len(candidates) - len(missing),
         "missing_predictions": missing,
+        "validation_errors": validation_errors,
         "exploratory_metrics": {name: _ratio(*counts[name]) for name in METRIC_NAMES},
     }

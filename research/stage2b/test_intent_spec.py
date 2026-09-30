@@ -51,7 +51,7 @@ def simple_payment():
              "evidence": evidence("10 ADA")},
             {"claim_id": "amount", "kind": "amount_lovelace", "value": 10000000,
              "criticality": "financial", "status": "derived", "scope_id": "deposit-1",
-             "evidence": evidence("10 ADA"), "derived_from": "asset",
+             "evidence": evidence("10 ADA"),
              "normalization_basis": "1 ADA = 1000000 lovelace"},
             {"claim_id": "recipient", "kind": "payment_recipient", "value": "Bob",
              "criticality": "financial", "status": "explicit", "scope_id": "payout-1",
@@ -122,7 +122,14 @@ def test_scoped_conflict_requires_resolution():
     other.update(claim_id="other", value="Alice")
     other["evidence"][0]["span"] = "Alice"
     spec["claims"].append(other)
+    spec["participants"].pop()
+    spec["obligations_and_outcomes"] = []
+    spec["conflicts"] = [{"conflict_id": "recipient-conflict", "kind": "payment_recipient",
+                          "scope_id": "payout-1", "claim_refs": ["recipient", "other"]}]
     assert validate_intent_spec(spec) == []
+    spec["conflicts"][0]["claim_refs"] = ["recipient", "depositor"]
+    errors_with(spec, "conflict object must reference distinct conflicted claims")
+    spec["conflicts"][0]["claim_refs"] = ["recipient", "other"]
     spec["predicted_resolution"] = "accepted_interpretation"
     errors_with(spec, "active claim conflict")
 
@@ -174,8 +181,8 @@ def test_invalid_evidence_kind_and_normalization_rejected():
     spec["claims"][3].pop("normalization_basis")
     errors_with(spec, "normalization_basis required")
     spec = simple_payment()
-    spec["claims"][3]["derived_from"] = "depositor"
-    errors_with(spec, "derivation source evidence must overlap")
+    spec["claims"][3]["derived_from"] = "asset"
+    errors_with(spec, "invalid derived_from source claim")
 
 
 def test_assumed_financial_claim_has_no_fake_provenance_and_is_unsafe():
@@ -213,6 +220,91 @@ def test_unknown_rich_field_cannot_hide_new_financial_fact():
     spec = simple_payment()
     spec["obligations_and_outcomes"][0]["kind"] = "refund"
     errors_with(spec, "outcome recipient lacks matching scoped claim_ref")
+
+
+def test_closed_schema_rejects_hidden_top_level_and_account_fields():
+    spec = simple_payment()
+    spec["secret_payment"] = {"recipient": "Mallory", "amount": 999999999}
+    errors_with(spec, "unknown top-level fields")
+    spec = simple_payment()
+    spec["assets_and_accounts"]["secret_account"] = {"owner": "Mallory"}
+    errors_with(spec, "assets_and_accounts: unknown fields")
+    spec = simple_payment()
+    spec["behavior_scopes"][0]["secret_recipient"] = "Mallory"
+    errors_with(spec, "unsupported scope fields")
+    spec = simple_payment()
+    spec["claims"][0]["secret_amount"] = 999999999
+    errors_with(spec, "unsupported claim fields")
+
+
+def test_state_cannot_assert_unbacked_free_text_payment():
+    spec = simple_payment()
+    spec["states"][1] = {"state_id": "paid", "label": "Bob đã nhận 999 ADA",
+                         "claim_refs": ["depositor"]}
+    errors_with(spec, "unsupported rich fields")
+    errors_with(spec, "business state lacks matching claim_ref")
+    spec["states"][1].pop("label")
+    errors_with(spec, "business state lacks matching claim_ref")
+
+
+def test_transition_kind_actor_and_deadline_bind_to_same_scope():
+    spec = simple_payment()
+    spec["transitions"][0]["kind"] = "choice"
+    errors_with(spec, "transition.kind differs from scope.transition_kind")
+    spec = simple_payment()
+    spec["behavior_scopes"].append({"scope_id": "decision-1", "scope_type": "transition",
+                                    "transition_kind": "choice"})
+    spec["claims"].append({
+        "claim_id": "other-depositor", "kind": "depositing_party", "value": "Bob",
+        "criticality": "financial", "status": "explicit", "scope_id": "decision-1",
+        "evidence": [{"requirement_version": 1, "message_index": 0,
+                      "span": "Bob nhận", "relation": "supports"}],
+    })
+    spec["transitions"][0]["actor"] = "Bob"
+    spec["transitions"][0]["claim_refs"] = ["other-depositor"]
+    errors_with(spec, "transition actor lacks matching claim_ref")
+
+    spec = simple_payment()
+    spec["transitions"][0]["deadline_parameter_id"] = "amount-1"
+    errors_with(spec, "deadline_parameter_id must reference deadline")
+    spec["requirement_history"][0]["messages"][0] += " Trước POSIX 1000 ms."
+    spec["claims"].append({
+        "claim_id": "deadline", "kind": "deposit_deadline_ms", "value": 1000,
+        "criticality": "financial", "status": "explicit", "scope_id": "deposit-1",
+        "evidence": [{"requirement_version": 1, "message_index": 0,
+                      "span": "POSIX 1000 ms", "relation": "supports"}],
+    })
+    spec["parameters"].append({"parameter_id": "deadline-1", "kind": "deadline",
+                               "normalized_value": 1000, "unit": "ms",
+                               "claim_refs": ["deadline"]})
+    spec["transitions"][0]["deadline_parameter_id"] = "deadline-1"
+    spec["transitions"][0]["claim_refs"].append("deadline")
+    assert validate_intent_spec(spec) == []
+    spec["transitions"][0]["claim_refs"].remove("deadline")
+    errors_with(spec, "transition deadline lacks matching scoped claim_ref")
+    spec["transitions"][0]["claim_refs"].append("deadline")
+    spec["claims"][-1]["kind"] = "choice_deadline_ms"
+    errors_with(spec, "transition deadline lacks matching scoped claim_ref")
+
+
+def test_funding_relation_requires_scope_and_existing_backed_asset():
+    spec = simple_payment()
+    relation = {"relation_id": "funding-1", "scope_id": "deposit-1",
+                "party": "Alice", "account_owner": "Alice", "asset_id": "asset:ADA",
+                "claim_refs": ["depositor", "account", "asset"]}
+    spec["assets_and_accounts"]["funding_relations"] = [relation]
+    assert validate_intent_spec(spec) == []
+    relation["asset_id"] = "asset:UNKNOWN"
+    errors_with(spec, "funding asset_id lacks matching asset")
+    relation["asset_id"] = "asset:ADA"
+    relation["scope_id"] = "payout-1"
+    errors_with(spec, "funding party lacks matching claim_ref")
+
+
+def test_outcome_kind_must_be_supported():
+    spec = simple_payment()
+    spec["obligations_and_outcomes"][0]["kind"] = "magic_release"
+    errors_with(spec, "outcome kind is unsupported")
 
 
 def test_model_cannot_rewrite_requirement_history():

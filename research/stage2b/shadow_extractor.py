@@ -16,8 +16,10 @@ class ShadowModel(Protocol):
 SYSTEM_PROMPT = """Extract user intent only as one JSON IntentSpec object.
 Do NOT generate Marlowe AST, compile, or invent missing business facts.
 Preserve requirement chronology and explicit corrections. Every financial claim
-must have exact source provenance; deterministic derivations need a source claim
-and normalization basis. An assumption is not evidence. Use only the supplied
+must have exact source provenance; deterministic financial derivations need
+exact source evidence and a normalization basis. `derived_from` is optional;
+never point an amount to `asset=ADA` as if the asset claim proved quantity.
+An assumption is not evidence. Use only the supplied
 claim taxonomy. If a fact is outside it, record a non-authoritative
 unscored_observation, never an authoritative rich field.
 Use case-local business scopes: global, deposit-1, payout-1, decision-1,
@@ -55,8 +57,9 @@ def build_prompt(requirement_history: list[dict[str, Any]]) -> tuple[str, str]:
         + "\nOutput all fields in this JSON shape (replace example values):\n"
         + json.dumps(template, ensure_ascii=False)
         + "\nClaim fields: claim_id, kind, value, criticality, status, scope_id, "
-          "evidence; derived claims also need derived_from and financial "
-          "normalization_basis; assumed claims need assumption_reason. "
+          "evidence; financial derived claims need normalization_basis, while "
+          "derived_from is optional and must prove the same kind of fact; "
+          "assumed claims need assumption_reason. "
           "Evidence items use requirement_version, message_index, exact span, "
           "and relation. Use value=null for unresolved facts."
     )
