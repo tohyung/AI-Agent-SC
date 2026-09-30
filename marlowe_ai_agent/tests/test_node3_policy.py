@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import pytest
+
 from marlowe_agent.node3_policy import (
     Node3Result,
     StructuredWarning,
@@ -64,3 +66,45 @@ def test_inconclusive_counter_is_not_stall_tracker() -> None:
     assert (count, reason) == (2, "logic_inconclusive")
     assert next_inconclusive_state(count, "pass") == (0, "")
     assert next_inconclusive_state(1, "fail") == (0, "")
+
+
+@pytest.mark.parametrize(("status", "expected"), [
+    ("valid", "pass"), ("counterexample", "fail"),
+    ("indeterminate", "inconclusive"), ("timeout", "inconclusive"),
+    ("invalid_input", "inconclusive"), ("unavailable", "inconclusive"),
+])
+def test_production_policy_statuses(status: str, expected: str) -> None:
+    value = result(status)
+    assert value.decision == expected
+    assert value.findings == value.errors + value.warnings
+
+
+def test_not_run_lint_failure_and_valid_with_notes() -> None:
+    assert result("not_run", lint_errors=["bad lint"]).decision == "fail"
+    assert result("not_run", lint_errors=["bad lint"]).analysis_notes == []
+    assert result("valid", notes=["incomplete"]).decision == "inconclusive"
+
+
+@pytest.mark.parametrize("warnings", [
+    [], [StructuredWarning("FutureWarning", {})],
+    [StructuredWarning("TransactionPartialPay", {"expected": 20})],
+])
+def test_counterexample_renderer_fallback_never_crashes(warnings) -> None:
+    value = result("counterexample")
+    value.semantic_warnings = warnings
+    assert value.decision == "fail"
+    assert value.errors
+    assert value.findings == value.errors + value.warnings
+
+
+def test_node3_result_serializes_compatible_fields_without_contract() -> None:
+    value = result("counterexample")
+    value.graph = {"nodes": [{"id": "root"}], "edges": []}
+    value.paths_explored = 2
+    payload = value.to_dict()
+    assert {"passed", "findings", "graph", "errors", "warnings", "paths_explored",
+            "verification_backend", "smt_status", "smt_warnings", "counterexample",
+            "analysis_notes", "smt_elapsed_seconds", "lint_errors", "lint_warnings"} <= payload.keys()
+    assert "contract" not in payload
+    assert payload["smt_warnings"][0]["type"] == "TransactionPartialPay"
+    assert payload["paths_explored"] == 2

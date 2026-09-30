@@ -23,6 +23,17 @@ class PathState:
                          self.chosen_ids.copy(), self.deadline_stack.copy())
 
 
+@dataclass
+class LintState:
+    bound_values: set[str] = field(default_factory=set)
+    chosen_ids: set[str] = field(default_factory=set)
+    deadline_stack: list[int] = field(default_factory=list)
+
+    def copy(self) -> LintState:
+        return LintState(self.bound_values.copy(), self.chosen_ids.copy(),
+                         self.deadline_stack.copy())
+
+
 def _key(account: Any, token: Any) -> tuple[str, str]:
     return canonical_json(account), canonical_json(token)
 
@@ -44,7 +55,7 @@ def _evaluate(value: Any, state: PathState) -> int | None:
     return None
 
 
-def _inspect_refs(expr: Any, state: PathState, path: str,
+def _inspect_refs(expr: Any, state: PathState | LintState, path: str,
                   errors: list[str], warnings: list[str]) -> None:
     if isinstance(expr, list):
         for index, item in enumerate(expr):
@@ -99,6 +110,82 @@ def check_draft_consistency(draft: ContractDraft) -> tuple[list[str], list[str]]
 
 
 class LogicGraphVerifier:
+    def lint(self, contract: Any, draft: ContractDraft | None = None) -> LogicGraphResult:
+        """Retain structural/path lints without the old balance feasibility model."""
+        validation_errors = validate_contract(contract)
+        if validation_errors:
+            return LogicGraphResult(False, validation_errors, {"nodes": [], "edges": []},
+                                    errors=validation_errors)
+
+        graph = self._build_graph(contract)
+        errors: list[str] = []
+        warnings: list[str] = []
+        paths_explored = 0
+        truncated = False
+
+        def visit(node: Any, path: str, state: LintState) -> None:
+            nonlocal paths_explored, truncated
+            if paths_explored >= MAX_PATHS:
+                truncated = True
+                return
+            if is_close(node):
+                paths_explored += 1
+                return
+            if "when" in node:
+                timeout = node["timeout"]
+                if state.deadline_stack and timeout <= state.deadline_stack[-1]:
+                    # TODO(spec): Case and timeout continuations need distinct entry-time bounds.
+                    warnings.append(
+                        f"{path}.timeout: timeout bên trong {timeout} <= timeout scope ngoài "
+                        f"{state.deadline_stack[-1]}; chưa mô hình hóa riêng thời điểm vào nhánh Case "
+                        "và timeout continuation, không thể kết luận nhánh không thể thực thi."
+                    )
+                if not node["when"]:
+                    warnings.append(f"{path}.when: When rỗng, chỉ chờ timeout.")
+                self._check_case_overlap(node["when"], path, errors)
+                for index, item in enumerate(node["when"]):
+                    action = item["case"]
+                    branch = state.copy()
+                    branch.deadline_stack.append(timeout)
+                    _inspect_refs(action, branch, f"{path}.when[{index}].case", errors, warnings)
+                    if "for_choice" in action:
+                        branch.chosen_ids.add(canonical_json(action["for_choice"]))
+                    visit(item["then"], f"{path}.when[{index}].then", branch)
+                timeout_branch = state.copy()
+                timeout_branch.deadline_stack.append(timeout)
+                visit(node["timeout_continuation"], f"{path}.timeout_continuation", timeout_branch)
+            elif "pay" in node:
+                _inspect_refs(node["pay"], state, f"{path}.pay", errors, warnings)
+                visit(node["then"], f"{path}.then", state)
+            elif "let" in node:
+                _inspect_refs(node["be"], state, f"{path}.be", errors, warnings)
+                state.bound_values.add(node["let"])
+                visit(node["then"], f"{path}.then", state)
+            elif "if" in node:
+                _inspect_refs(node["if"], state, f"{path}.if", errors, warnings)
+                if type(node["if"]) is bool:
+                    dead = "else" if node["if"] else "then"
+                    live = "then" if node["if"] else "else"
+                    warnings.append(f"{path}.{dead}: nhánh chết vì điều kiện hằng.")
+                    visit(node[live], f"{path}.{live}", state)
+                else:
+                    visit(node["then"], f"{path}.then", state.copy())
+                    visit(node["else"], f"{path}.else", state.copy())
+            else:
+                _inspect_refs(node["assert"], state, f"{path}.assert", errors, warnings)
+                visit(node["then"], f"{path}.then", state)
+
+        visit(contract, "root", LintState())
+        if truncated:
+            warnings.append("root: đã cắt bớt phân tích vì vượt MAX_PATHS.")
+        if draft:
+            draft_errors, draft_warnings = check_draft_consistency(draft)
+            errors.extend(draft_errors)
+            warnings.extend(draft_warnings)
+        errors = unique_strings(errors)
+        warnings = unique_strings(warnings)
+        return LogicGraphResult(not errors, errors + warnings, graph, errors, warnings, paths_explored)
+
     def verify(self, contract: Any, draft: ContractDraft | None = None) -> LogicGraphResult:
         validation_errors = validate_contract(contract)
         if validation_errors:

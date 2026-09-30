@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+import json
+from pathlib import Path
+
 from conftest import AMOUNT, DECISION_TIMEOUT, DEPOSIT_TIMEOUT, make_draft
 from marlowe_agent import logic_graph
 from marlowe_agent.logic_graph import LogicGraphVerifier
-from marlowe_agent.marlowe_ast import choice_action, deposit, escrow_contract, pay, when
+from marlowe_agent.marlowe_ast import assert_, choice_action, deposit, escrow_contract, if_, let, pay, when
 
 
 def verify(contract, draft=None):
@@ -105,3 +108,52 @@ def test_valid_escrow_passes_with_zero_errors() -> None:
     assert result.errors == []
     assert result.warnings == []
     assert result.paths_explored == 4
+
+
+def test_lint_only_retains_blocking_structural_checks() -> None:
+    verifier = LogicGraphVerifier()
+    action = choice_action("approve", "Alice", 1, 1)
+    duplicate = when([{"case": action, "then": "close"},
+                      {"case": action, "then": "close"}], DEPOSIT_TIMEOUT)
+    assert any("trùng hệt" in error for error in verifier.lint(duplicate).errors)
+    overlap = when([{"case": choice_action("approve", "Alice", 1, 2), "then": "close"},
+                    {"case": choice_action("approve", "Alice", 2, 3), "then": "close"}], DEPOSIT_TIMEOUT)
+    assert any("chồng lấn" in error for error in verifier.lint(overlap).errors)
+    undefined = let("x", {"use_value": "missing"}, "close")
+    assert any("chưa được Let" in error for error in verifier.lint(undefined).errors)
+    wrong_role = when([{"case": deposit("Carol", "Carol", 10), "then": "close"}], DEPOSIT_TIMEOUT)
+    assert any("Carol" in error for error in verifier.lint(wrong_role, make_draft(wrong_role)).errors)
+
+
+def test_lint_only_retains_nonblocking_warnings() -> None:
+    verifier = LogicGraphVerifier()
+    small = when([{"case": deposit("Alice", "Alice", 10), "then": "close"}], DEPOSIT_TIMEOUT)
+    result = verifier.lint(small, make_draft(small))
+    assert result.passed
+    assert any("lovelace" in warning for warning in result.warnings)
+    assert any("decision_timeout" in warning for warning in result.warnings)
+    assert any("When rỗng" in warning for warning in verifier.lint(when([], DEPOSIT_TIMEOUT)).warnings)
+    assert any("nhánh chết" in warning for warning in verifier.lint(if_(True, "close", "close")).warnings)
+
+
+def test_lint_only_does_not_block_smt_semantic_checks() -> None:
+    verifier = LogicGraphVerifier()
+    contracts = [
+        pay("Alice", "Bob", 0),
+        pay("Alice", "Bob", 10),
+        when([{"case": deposit("Alice", "Alice", 0), "then": "close"}], DEPOSIT_TIMEOUT),
+        let("x", 1, let("x", 2, "close")),
+        assert_(False, "close"),
+    ]
+    for contract in contracts:
+        result = verifier.lint(contract)
+        assert result.passed, result.errors
+
+
+def test_infeasible_symbolic_if_is_lint_clean_but_old_verifier_fails() -> None:
+    path = (Path(__file__).resolve().parents[2] / "tools" / "marlowe_smt" / "compare"
+            / "corpus" / "hand-written" / "11-infeasible-if-partial-pay.json")
+    contract = json.loads(path.read_text(encoding="utf-8"))
+    verifier = LogicGraphVerifier()
+    assert not verifier.verify(contract).passed
+    assert verifier.lint(contract).passed

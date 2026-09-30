@@ -1,7 +1,4 @@
-"""Unwired Node 3 decision-policy prototype.
-
-No production pipeline module imports this file in Stage 0.9.
-"""
+"""Decision policy for deterministic Node 3 lints and Marlowe SMT analysis."""
 
 from __future__ import annotations
 
@@ -11,14 +8,18 @@ import json
 from typing import Any
 
 
-SEMANTIC_STATUSES = {"valid", "counterexample", "indeterminate", "timeout", "unavailable"}
-INCONCLUSIVE_STATUSES = {"indeterminate", "timeout", "unavailable"}
+SEMANTIC_STATUSES = {"valid", "counterexample", "indeterminate", "timeout",
+                     "invalid_input", "unavailable", "not_run"}
+INCONCLUSIVE_STATUSES = {"indeterminate", "timeout", "invalid_input", "unavailable"}
 
 
 @dataclass
 class StructuredWarning:
     type: str
     fields: dict[str, Any] = field(default_factory=dict)
+
+    def to_dict(self) -> dict[str, Any]:
+        return {"type": self.type, **self.fields}
 
 
 @dataclass
@@ -31,6 +32,8 @@ class Node3Result:
     analysis_notes: list[str]
     smt_elapsed_seconds: float | None
     contract: Any = None
+    graph: dict[str, Any] = field(default_factory=lambda: {"nodes": [], "edges": []})
+    paths_explored: int = 0
 
     def __post_init__(self) -> None:
         self.semantic_status = self.semantic_status.lower()
@@ -59,12 +62,14 @@ class Node3Result:
     def errors(self) -> list[str]:
         errors = list(self.lint_errors)
         if self.semantic_status == "counterexample":
-            try:
-                from .node3_renderer import render_warning
-            except ImportError:  # The policy commit intentionally precedes the renderer commit.
-                rendered = [f"SMT phát hiện {warning.type}." for warning in self.semantic_warnings]
-            else:
-                rendered = [render_warning(warning) for warning in self.semantic_warnings]
+            from .node3_renderer import render_warning
+
+            rendered = []
+            for warning in self.semantic_warnings:
+                try:
+                    rendered.append(render_warning(warning))
+                except (KeyError, TypeError, ValueError):
+                    rendered.append(f"SMT phát hiện {warning.type}.")
             errors.extend(rendered or ["SMT tìm thấy phản ví dụ nhưng không trả cảnh báo có cấu trúc."])
         return errors
 
@@ -75,6 +80,18 @@ class Node3Result:
     @property
     def findings(self) -> list[str]:
         return self.errors + self.warnings
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "passed": self.passed, "findings": self.findings,
+            "graph": self.graph, "errors": self.errors, "warnings": self.warnings,
+            "paths_explored": self.paths_explored,
+            "verification_backend": "marlowe-smt", "smt_status": self.semantic_status,
+            "smt_warnings": [warning.to_dict() for warning in self.semantic_warnings],
+            "counterexample": self.counterexample, "analysis_notes": self.analysis_notes,
+            "smt_elapsed_seconds": self.smt_elapsed_seconds,
+            "lint_errors": self.lint_errors, "lint_warnings": self.lint_warnings,
+        }
 
 
 def _canonical(value: Any) -> str:
