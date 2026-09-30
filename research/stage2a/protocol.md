@@ -39,7 +39,13 @@ history; it is not approval of the annotation by this project's user.
   successor. Critical roles distinguish Choice owner, depositing party,
   destination account owner, payment source account owner, recipient and
   transaction submitter; an unspecified submitter is valid and must not be
-  inferred from the Choice or Deposit party.
+  inferred from the Choice or Deposit party. Claim kinds are restricted by
+  `CLAIM_KINDS` in the validator; a new kind requires an intentional schema
+  change. `payment_recipient` denotes a generic payment, including a Notify
+  success payment when its scope is `notify-1:success`; `release_recipient`
+  denotes a release from escrow. `asset=ADA` at `global` records only that
+  the requirement explicitly names ADA for a monetary obligation. It does
+  not resolve funding, account ownership, or unspecified branches.
 - `required_clarifications` and `forbidden_assumptions`: what cannot be silently
   decided. Contradictory statements require user resolution, not a tie-breaker.
 - `behavior_expectations`: proposed accepted/rejected abstract traces and
@@ -97,6 +103,27 @@ successful step. `minTime` and each transaction interval are explicit. Before,
 after and straddling-timeout interval classes are distinct; no wall-clock
 timeout causes autonomous execution. The harness rejects Merkleized contracts
 or inputs as `Unsupported` rather than guessing continuation bodies.
+
+The pinned Marlowe reference (`7b5b1e900ec53a8eb18747992bec73470704dfcb`,
+`Language.Marlowe.Semantics.fixInterval` and `reduceContractStep` for `When`)
+starts with transaction interval `[low, high]`. `fixInterval` sets
+`effectiveLow = max(low, state.minTime)`, uses `[effectiveLow, high]`, and sets
+the new `state.minTime` to `effectiveLow` (invalid or past intervals are rejected
+first). All comparisons below refer to this effective interval. When execution
+actually reduces a `When` with timeout `T`:
+
+- `high < T`: timeout is in the future; the `When` does not reduce to its
+  timeout continuation.
+- `T <= effectiveLow`: the `When` reduces to its timeout continuation.
+- `effectiveLow < T <= high`: that `When` raises
+  `AmbiguousTimeIntervalReductionError`.
+
+Thus `before T` means effective interval `high < T`, and `timeout/post-T`
+means `effectiveLow >= T`. A straddling interval is ambiguous only when
+execution reaches the relevant `When`; it is not a universal transaction error.
+These are shorthand for reference contract semantics, not ledger-validation
+rules. A timeout also does not run merely because wall-clock time passes: a
+valid transaction must drive execution through the semantics.
 
 The authority is the pinned executable Core V1 semantics for **these explicit
 traces**, not a universal proof, a signer/role-token authorization check, a

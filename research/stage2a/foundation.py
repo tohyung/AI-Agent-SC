@@ -29,10 +29,16 @@ SOURCE_BY_STATUS = {
     "user_confirmed": "user_confirmed",
 }
 SCOPE_TYPES = {"global", "transition", "branch", "timeout", "terminal_outcome"}
+CLAIM_KINDS = {
+    "amount_lovelace", "asset", "autonomous_execution", "choice_deadline_ms",
+    "choice_owner", "deposit_deadline_ms", "depositing_party",
+    "destination_account_owner", "payment_recipient", "payment_source_account_owner",
+    "refund_deadline_ms", "refund_recipient", "release_recipient", "timeout_ms",
+}
 LOCAL_CLAIM_KINDS = {
     "amount_lovelace", "autonomous_execution", "choice_deadline_ms", "choice_owner",
     "deposit_deadline_ms", "depositing_party", "destination_account_owner",
-    "notify_success_recipient", "payment_recipient", "payment_source_account_owner",
+    "payment_recipient", "payment_source_account_owner",
     "refund_deadline_ms", "refund_recipient", "release_recipient", "timeout_ms",
 }
 MUTATIONS = {
@@ -242,8 +248,8 @@ def validate(records: list[dict[str, Any]]) -> list[str]:
                          f"duplicate claim_id {claim_id}", errors)
                 claim_ids[claim_id] = claim
                 kind = claim.get("kind")
-                _require(isinstance(kind, str) and bool(kind), loc,
-                         f"claim {claim_id}: kind is required", errors)
+                _require(isinstance(kind, str) and kind in CLAIM_KINDS, loc,
+                         f"claim {claim_id}: invalid/unknown claim kind {kind!r}", errors)
                 scope_id = claim.get("scope_id")
                 _require(isinstance(scope_id, str) and scope_id in scope_ids, loc,
                          f"claim {claim_id}: scope_id not found", errors)

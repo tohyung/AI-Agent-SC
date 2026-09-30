@@ -6,8 +6,8 @@ All annotations below are drafts. A human must approve, edit, or reject each cas
 
 - Requirement v1: Alice nạp 12 ADA vào tài khoản Alice. Trước mốc POSIX 4000 ms, Bob chọn approve để Bob nhận 12 ADA hoặc reject để Alice được hoàn 12 ADA.
 - Proposed resolution: `clarification_required`
-- Critical claims: depositing_party=Alice [explicit; scope=deposit-1]; destination_account_owner=Alice [explicit; scope=deposit-1]; choice_owner=Bob [explicit; scope=decision-1]; release_recipient=Bob [explicit; scope=decision-1:approve]; refund_recipient=Alice [explicit; scope=decision-1:reject]; amount_lovelace=12000000 [derived; scope=deposit-1]; choice_deadline_ms=4000 [explicit; scope=decision-1]
-- Behavior scopes: [{"scope_id": "deposit-1", "scope_type": "transition", "transition_kind": "deposit"}, {"scope_id": "decision-1", "scope_type": "transition", "transition_kind": "choice"}, {"branch_id": "approve", "decision_id": "decision-1", "scope_id": "decision-1:approve", "scope_type": "branch"}, {"branch_id": "reject", "decision_id": "decision-1", "scope_id": "decision-1:reject", "scope_type": "branch"}]
+- Critical claims: depositing_party=Alice [explicit; scope=deposit-1]; destination_account_owner=Alice [explicit; scope=deposit-1]; choice_owner=Bob [explicit; scope=decision-1]; release_recipient=Bob [explicit; scope=decision-1:approve]; refund_recipient=Alice [explicit; scope=decision-1:reject]; amount_lovelace=12000000 [derived; scope=deposit-1]; choice_deadline_ms=4000 [explicit; scope=decision-1]; asset=ADA [explicit; scope=global]
+- Behavior scopes: [{"scope_id": "deposit-1", "scope_type": "transition", "transition_kind": "deposit"}, {"scope_id": "decision-1", "scope_type": "transition", "transition_kind": "choice"}, {"branch_id": "approve", "decision_id": "decision-1", "scope_id": "decision-1:approve", "scope_type": "branch"}, {"branch_id": "reject", "decision_id": "decision-1", "scope_id": "decision-1:reject", "scope_type": "branch"}, {"scope_id": "global", "scope_type": "global"}]
 - Assumptions/derivations: amount_lovelace=12000000 [scope=deposit-1]
 - Required clarifications: Nếu Bob không approve hoặc reject trước POSIX 4000 ms, 12 ADA phải được xử lý thế nào?
 - Forbidden assumptions: transaction_submitter = Bob
@@ -21,8 +21,8 @@ All annotations below are drafts. A human must approve, edit, or reject each cas
 
 - Requirement v1: Alice nạp 12 ADA vào tài khoản Alice. Trước mốc POSIX 4000 ms, Bob chọn approve để Bob nhận 12 ADA hoặc reject để Alice được hoàn 12 ADA.
 - Proposed resolution: `clarification_required`
-- Critical claims (inherited from choice-d1): depositing_party=Alice [explicit; scope=deposit-1]; destination_account_owner=Alice [explicit; scope=deposit-1]; choice_owner=Bob [explicit; scope=decision-1]; release_recipient=Bob [explicit; scope=decision-1:approve]; refund_recipient=Alice [explicit; scope=decision-1:reject]; amount_lovelace=12000000 [derived; scope=deposit-1]; choice_deadline_ms=4000 [explicit; scope=decision-1]
-- Behavior scopes (inherited from choice-d1): [{"scope_id": "deposit-1", "scope_type": "transition", "transition_kind": "deposit"}, {"scope_id": "decision-1", "scope_type": "transition", "transition_kind": "choice"}, {"branch_id": "approve", "decision_id": "decision-1", "scope_id": "decision-1:approve", "scope_type": "branch"}, {"branch_id": "reject", "decision_id": "decision-1", "scope_id": "decision-1:reject", "scope_type": "branch"}]
+- Critical claims (inherited from choice-d1): depositing_party=Alice [explicit; scope=deposit-1]; destination_account_owner=Alice [explicit; scope=deposit-1]; choice_owner=Bob [explicit; scope=decision-1]; release_recipient=Bob [explicit; scope=decision-1:approve]; refund_recipient=Alice [explicit; scope=decision-1:reject]; amount_lovelace=12000000 [derived; scope=deposit-1]; choice_deadline_ms=4000 [explicit; scope=decision-1]; asset=ADA [explicit; scope=global]
+- Behavior scopes (inherited from choice-d1): [{"scope_id": "deposit-1", "scope_type": "transition", "transition_kind": "deposit"}, {"scope_id": "decision-1", "scope_type": "transition", "transition_kind": "choice"}, {"branch_id": "approve", "decision_id": "decision-1", "scope_id": "decision-1:approve", "scope_type": "branch"}, {"branch_id": "reject", "decision_id": "decision-1", "scope_id": "decision-1:reject", "scope_type": "branch"}, {"scope_id": "global", "scope_type": "global"}]
 - Inherits canonical interpretation from: `choice-d1`
 - Assumptions/derivations (inherited from choice-d1): amount_lovelace=12000000 [scope=deposit-1]
 - Required clarifications: Nếu Bob không approve hoặc reject trước POSIX 4000 ms, 12 ADA phải được xử lý thế nào?
@@ -37,8 +37,8 @@ All annotations below are drafts. A human must approve, edit, or reject each cas
 - Requirement v1: Bob quyết định approve để trả 2 ADA cho Linh.
 - Requirement v2: Tôi sửa lại: Alice mới là người quyết định approve; Linh vẫn nhận 2 ADA.
 - Proposed resolution: `clarification_required`
-- Critical claims: choice_owner=Bob [superseded; scope=decision-1]; choice_owner=Alice [user_confirmed; scope=decision-1]; payment_recipient=Linh [explicit; scope=decision-1:approve]; amount_lovelace=2000000 [derived; scope=decision-1:approve]
-- Behavior scopes: [{"scope_id": "decision-1", "scope_type": "transition", "transition_kind": "choice"}, {"branch_id": "approve", "decision_id": "decision-1", "scope_id": "decision-1:approve", "scope_type": "branch"}]
+- Critical claims: choice_owner=Bob [superseded; scope=decision-1]; choice_owner=Alice [user_confirmed; scope=decision-1]; payment_recipient=Linh [explicit; scope=decision-1:approve]; amount_lovelace=2000000 [derived; scope=decision-1:approve]; asset=ADA [explicit; scope=global]
+- Behavior scopes: [{"scope_id": "decision-1", "scope_type": "transition", "transition_kind": "choice"}, {"branch_id": "approve", "decision_id": "decision-1", "scope_id": "decision-1:approve", "scope_type": "branch"}, {"scope_id": "global", "scope_type": "global"}]
 - Assumptions/derivations: amount_lovelace=2000000 [scope=decision-1:approve]
 - Required clarifications: 2 ADA được lấy từ account/source nào và ai funding/deposit nếu cần?; Choice approve của Alice có deadline nào?; Nếu Alice không approve, hợp đồng phải xử lý 2 ADA thế nào?
 - Forbidden assumptions: Bob remains current choice owner
@@ -82,8 +82,8 @@ All annotations below are drafts. A human must approve, edit, or reject each cas
 
 - Requirement v1: Alice nạp 7 ADA vào tài khoản Alice trước mốc POSIX 7000 ms. Nếu đã nạp, Bob chọn approve trước mốc POSIX 8000 ms để nhận 7 ADA; nếu Bob không chọn, giao dịch sau hạn hoàn tiền cho Alice.
 - Proposed resolution: `accepted_interpretation`
-- Critical claims: depositing_party=Alice [explicit; scope=deposit-1]; choice_owner=Bob [explicit; scope=decision-1]; deposit_deadline_ms=7000 [explicit; scope=deposit-1]; choice_deadline_ms=8000 [explicit; scope=decision-1]; refund_recipient=Alice [explicit; scope=decision-1:timeout]; destination_account_owner=Alice [explicit; scope=deposit-1]; amount_lovelace=7000000 [derived; scope=deposit-1]; release_recipient=Bob [explicit; scope=decision-1:approve]
-- Behavior scopes: [{"scope_id": "deposit-1", "scope_type": "transition", "transition_kind": "deposit"}, {"scope_id": "decision-1", "scope_type": "transition", "transition_kind": "choice"}, {"deadline_claim_id": "c4", "decision_id": "decision-1", "scope_id": "decision-1:timeout", "scope_type": "timeout", "timeout_id": "choice-deadline-1"}, {"branch_id": "approve", "decision_id": "decision-1", "scope_id": "decision-1:approve", "scope_type": "branch"}]
+- Critical claims: depositing_party=Alice [explicit; scope=deposit-1]; choice_owner=Bob [explicit; scope=decision-1]; deposit_deadline_ms=7000 [explicit; scope=deposit-1]; choice_deadline_ms=8000 [explicit; scope=decision-1]; refund_recipient=Alice [explicit; scope=decision-1:timeout]; destination_account_owner=Alice [explicit; scope=deposit-1]; amount_lovelace=7000000 [derived; scope=deposit-1]; release_recipient=Bob [explicit; scope=decision-1:approve]; asset=ADA [explicit; scope=global]
+- Behavior scopes: [{"scope_id": "deposit-1", "scope_type": "transition", "transition_kind": "deposit"}, {"scope_id": "decision-1", "scope_type": "transition", "transition_kind": "choice"}, {"deadline_claim_id": "c4", "decision_id": "decision-1", "scope_id": "decision-1:timeout", "scope_type": "timeout", "timeout_id": "choice-deadline-1"}, {"branch_id": "approve", "decision_id": "decision-1", "scope_id": "decision-1:approve", "scope_type": "branch"}, {"scope_id": "global", "scope_type": "global"}]
 - Assumptions/derivations: amount_lovelace=7000000 [scope=deposit-1]
 - Required clarifications: none
 - Forbidden assumptions: decision deadline precedes deposit deadline
@@ -96,8 +96,8 @@ All annotations below are drafts. A human must approve, edit, or reject each cas
 
 - Requirement v1: Alice nạp 7 ADA vào tài khoản Alice trước mốc POSIX 7000 ms. Nếu đã nạp, Bob chọn approve trước mốc POSIX 8000 ms để nhận 7 ADA; nếu Bob không chọn, giao dịch sau hạn hoàn tiền cho Alice.
 - Proposed resolution: `accepted_interpretation`
-- Critical claims (inherited from double-d1): depositing_party=Alice [explicit; scope=deposit-1]; choice_owner=Bob [explicit; scope=decision-1]; deposit_deadline_ms=7000 [explicit; scope=deposit-1]; choice_deadline_ms=8000 [explicit; scope=decision-1]; refund_recipient=Alice [explicit; scope=decision-1:timeout]; destination_account_owner=Alice [explicit; scope=deposit-1]; amount_lovelace=7000000 [derived; scope=deposit-1]; release_recipient=Bob [explicit; scope=decision-1:approve]
-- Behavior scopes (inherited from double-d1): [{"scope_id": "deposit-1", "scope_type": "transition", "transition_kind": "deposit"}, {"scope_id": "decision-1", "scope_type": "transition", "transition_kind": "choice"}, {"deadline_claim_id": "c4", "decision_id": "decision-1", "scope_id": "decision-1:timeout", "scope_type": "timeout", "timeout_id": "choice-deadline-1"}, {"branch_id": "approve", "decision_id": "decision-1", "scope_id": "decision-1:approve", "scope_type": "branch"}]
+- Critical claims (inherited from double-d1): depositing_party=Alice [explicit; scope=deposit-1]; choice_owner=Bob [explicit; scope=decision-1]; deposit_deadline_ms=7000 [explicit; scope=deposit-1]; choice_deadline_ms=8000 [explicit; scope=decision-1]; refund_recipient=Alice [explicit; scope=decision-1:timeout]; destination_account_owner=Alice [explicit; scope=deposit-1]; amount_lovelace=7000000 [derived; scope=deposit-1]; release_recipient=Bob [explicit; scope=decision-1:approve]; asset=ADA [explicit; scope=global]
+- Behavior scopes (inherited from double-d1): [{"scope_id": "deposit-1", "scope_type": "transition", "transition_kind": "deposit"}, {"scope_id": "decision-1", "scope_type": "transition", "transition_kind": "choice"}, {"deadline_claim_id": "c4", "decision_id": "decision-1", "scope_id": "decision-1:timeout", "scope_type": "timeout", "timeout_id": "choice-deadline-1"}, {"branch_id": "approve", "decision_id": "decision-1", "scope_id": "decision-1:approve", "scope_type": "branch"}, {"scope_id": "global", "scope_type": "global"}]
 - Inherits canonical interpretation from: `double-d1`
 - Assumptions/derivations (inherited from double-d1): amount_lovelace=7000000 [scope=deposit-1]
 - Required clarifications: none
@@ -125,8 +125,8 @@ All annotations below are drafts. A human must approve, edit, or reject each cas
 
 - Requirement v1: Alice đặt cọc 5 ADA vào tài khoản Alice. Bob có thể approve trước mốc POSIX 6000 ms để nhận 5 ADA; sau hạn một giao dịch hợp lệ đóng hợp đồng và hoàn tiền cho Alice.
 - Proposed resolution: `clarification_required`
-- Critical claims: depositing_party=Alice [explicit; scope=deposit-1]; destination_account_owner=Alice [explicit; scope=deposit-1]; choice_owner=Bob [explicit; scope=decision-1]; release_recipient=Bob [explicit; scope=decision-1:approve]; refund_recipient=Alice [explicit; scope=decision-1:timeout]; amount_lovelace=5000000 [derived; scope=deposit-1]; choice_deadline_ms=6000 [explicit; scope=decision-1]
-- Behavior scopes: [{"scope_id": "deposit-1", "scope_type": "transition", "transition_kind": "deposit"}, {"scope_id": "decision-1", "scope_type": "transition", "transition_kind": "choice"}, {"branch_id": "approve", "decision_id": "decision-1", "scope_id": "decision-1:approve", "scope_type": "branch"}, {"deadline_claim_id": "choice-deadline", "decision_id": "decision-1", "scope_id": "decision-1:timeout", "scope_type": "timeout", "timeout_id": "approval-deadline-1"}]
+- Critical claims: depositing_party=Alice [explicit; scope=deposit-1]; destination_account_owner=Alice [explicit; scope=deposit-1]; choice_owner=Bob [explicit; scope=decision-1]; release_recipient=Bob [explicit; scope=decision-1:approve]; refund_recipient=Alice [explicit; scope=decision-1:timeout]; amount_lovelace=5000000 [derived; scope=deposit-1]; choice_deadline_ms=6000 [explicit; scope=decision-1]; asset=ADA [explicit; scope=global]
+- Behavior scopes: [{"scope_id": "deposit-1", "scope_type": "transition", "transition_kind": "deposit"}, {"scope_id": "decision-1", "scope_type": "transition", "transition_kind": "choice"}, {"branch_id": "approve", "decision_id": "decision-1", "scope_id": "decision-1:approve", "scope_type": "branch"}, {"deadline_claim_id": "choice-deadline", "decision_id": "decision-1", "scope_id": "decision-1:timeout", "scope_type": "timeout", "timeout_id": "approval-deadline-1"}, {"scope_id": "global", "scope_type": "global"}]
 - Assumptions/derivations: amount_lovelace=5000000 [scope=deposit-1]
 - Required clarifications: Alice phải nạp tiền trước thời điểm nào? Hạn approve 6000 ms không tự xác định hạn nạp.
 - Forbidden assumptions: timeout triggers autonomous refund
@@ -140,8 +140,8 @@ All annotations below are drafts. A human must approve, edit, or reject each cas
 
 - Requirement v1: Alice đặt cọc 5 ADA vào tài khoản Alice. Bob có thể approve trước mốc POSIX 6000 ms để nhận 5 ADA; sau hạn một giao dịch hợp lệ đóng hợp đồng và hoàn tiền cho Alice.
 - Proposed resolution: `clarification_required`
-- Critical claims (inherited from escrow-d1): depositing_party=Alice [explicit; scope=deposit-1]; destination_account_owner=Alice [explicit; scope=deposit-1]; choice_owner=Bob [explicit; scope=decision-1]; release_recipient=Bob [explicit; scope=decision-1:approve]; refund_recipient=Alice [explicit; scope=decision-1:timeout]; amount_lovelace=5000000 [derived; scope=deposit-1]; choice_deadline_ms=6000 [explicit; scope=decision-1]
-- Behavior scopes (inherited from escrow-d1): [{"scope_id": "deposit-1", "scope_type": "transition", "transition_kind": "deposit"}, {"scope_id": "decision-1", "scope_type": "transition", "transition_kind": "choice"}, {"branch_id": "approve", "decision_id": "decision-1", "scope_id": "decision-1:approve", "scope_type": "branch"}, {"deadline_claim_id": "choice-deadline", "decision_id": "decision-1", "scope_id": "decision-1:timeout", "scope_type": "timeout", "timeout_id": "approval-deadline-1"}]
+- Critical claims (inherited from escrow-d1): depositing_party=Alice [explicit; scope=deposit-1]; destination_account_owner=Alice [explicit; scope=deposit-1]; choice_owner=Bob [explicit; scope=decision-1]; release_recipient=Bob [explicit; scope=decision-1:approve]; refund_recipient=Alice [explicit; scope=decision-1:timeout]; amount_lovelace=5000000 [derived; scope=deposit-1]; choice_deadline_ms=6000 [explicit; scope=decision-1]; asset=ADA [explicit; scope=global]
+- Behavior scopes (inherited from escrow-d1): [{"scope_id": "deposit-1", "scope_type": "transition", "transition_kind": "deposit"}, {"scope_id": "decision-1", "scope_type": "transition", "transition_kind": "choice"}, {"branch_id": "approve", "decision_id": "decision-1", "scope_id": "decision-1:approve", "scope_type": "branch"}, {"deadline_claim_id": "choice-deadline", "decision_id": "decision-1", "scope_id": "decision-1:timeout", "scope_type": "timeout", "timeout_id": "approval-deadline-1"}, {"scope_id": "global", "scope_type": "global"}]
 - Inherits canonical interpretation from: `escrow-d1`
 - Assumptions/derivations (inherited from escrow-d1): amount_lovelace=5000000 [scope=deposit-1]
 - Required clarifications: Alice phải nạp tiền trước thời điểm nào? Hạn approve 6000 ms không tự xác định hạn nạp.
@@ -155,8 +155,8 @@ All annotations below are drafts. A human must approve, edit, or reject each cas
 
 - Requirement v1: Lan ký quỹ 15 ADA. Trước mốc POSIX 23000 ms, một trong Lan hoặc Minh được phép chọn release để Minh nhận tiền; sau hạn Lan được hoàn.
 - Proposed resolution: `clarification_required`
-- Critical claims: choice_owner=None [unresolved; scope=decision-1]; release_recipient=Minh [explicit; scope=decision-1:release]; depositing_party=Lan [explicit; scope=deposit-1]; amount_lovelace=15000000 [derived; scope=deposit-1]; choice_deadline_ms=23000 [explicit; scope=decision-1]; refund_recipient=Lan [explicit; scope=decision-1:timeout]
-- Behavior scopes: [{"scope_id": "decision-1", "scope_type": "transition", "transition_kind": "choice"}, {"branch_id": "release", "decision_id": "decision-1", "scope_id": "decision-1:release", "scope_type": "branch"}, {"scope_id": "deposit-1", "scope_type": "transition", "transition_kind": "deposit"}, {"deadline_claim_id": "choice-deadline", "decision_id": "decision-1", "scope_id": "decision-1:timeout", "scope_type": "timeout", "timeout_id": "choice-deadline-1"}]
+- Critical claims: choice_owner=None [unresolved; scope=decision-1]; release_recipient=Minh [explicit; scope=decision-1:release]; depositing_party=Lan [explicit; scope=deposit-1]; amount_lovelace=15000000 [derived; scope=deposit-1]; choice_deadline_ms=23000 [explicit; scope=decision-1]; refund_recipient=Lan [explicit; scope=decision-1:timeout]; asset=ADA [explicit; scope=global]
+- Behavior scopes: [{"scope_id": "decision-1", "scope_type": "transition", "transition_kind": "choice"}, {"branch_id": "release", "decision_id": "decision-1", "scope_id": "decision-1:release", "scope_type": "branch"}, {"scope_id": "deposit-1", "scope_type": "transition", "transition_kind": "deposit"}, {"deadline_claim_id": "choice-deadline", "decision_id": "decision-1", "scope_id": "decision-1:timeout", "scope_type": "timeout", "timeout_id": "choice-deadline-1"}, {"scope_id": "global", "scope_type": "global"}]
 - Assumptions/derivations: amount_lovelace=15000000 [scope=deposit-1]
 - Required clarifications: Ai chính xác là chủ Choice release: Lan hay Minh?; 15 ADA được ký quỹ vào account nào và ai là chủ account đó?
 - Forbidden assumptions: the depositor necessarily controls release
@@ -169,8 +169,8 @@ All annotations below are drafts. A human must approve, edit, or reject each cas
 
 - Requirement v1: Alice nạp 10 ADA vào tài khoản Alice trước mốc POSIX 1000 ms; khi nạp hợp lệ, Bob nhận 10 ADA.
 - Proposed resolution: `accepted_interpretation`
-- Critical claims: depositing_party=Alice [explicit; scope=deposit-1]; destination_account_owner=Alice [explicit; scope=deposit-1]; amount_lovelace=10000000 [derived; scope=deposit-1]; payment_recipient=Bob [explicit; scope=payout-1]; deposit_deadline_ms=1000 [explicit; scope=deposit-1]
-- Behavior scopes: [{"scope_id": "deposit-1", "scope_type": "transition", "transition_kind": "deposit"}, {"scope_id": "payout-1", "scope_type": "transition", "transition_kind": "payment"}]
+- Critical claims: depositing_party=Alice [explicit; scope=deposit-1]; destination_account_owner=Alice [explicit; scope=deposit-1]; amount_lovelace=10000000 [derived; scope=deposit-1]; payment_recipient=Bob [explicit; scope=payout-1]; deposit_deadline_ms=1000 [explicit; scope=deposit-1]; asset=ADA [explicit; scope=global]
+- Behavior scopes: [{"scope_id": "deposit-1", "scope_type": "transition", "transition_kind": "deposit"}, {"scope_id": "payout-1", "scope_type": "transition", "transition_kind": "payment"}, {"scope_id": "global", "scope_type": "global"}]
 - Assumptions/derivations: amount_lovelace=10000000 [scope=deposit-1]
 - Required clarifications: none
 - Forbidden assumptions: transaction_submitter = Alice
@@ -183,8 +183,8 @@ All annotations below are drafts. A human must approve, edit, or reject each cas
 
 - Requirement v1: Alice nạp 10 ADA vào tài khoản Alice trước mốc POSIX 1000 ms; khi nạp hợp lệ, Bob nhận 10 ADA.
 - Proposed resolution: `accepted_interpretation`
-- Critical claims (inherited from pay-d1): depositing_party=Alice [explicit; scope=deposit-1]; destination_account_owner=Alice [explicit; scope=deposit-1]; amount_lovelace=10000000 [derived; scope=deposit-1]; payment_recipient=Bob [explicit; scope=payout-1]; deposit_deadline_ms=1000 [explicit; scope=deposit-1]
-- Behavior scopes (inherited from pay-d1): [{"scope_id": "deposit-1", "scope_type": "transition", "transition_kind": "deposit"}, {"scope_id": "payout-1", "scope_type": "transition", "transition_kind": "payment"}]
+- Critical claims (inherited from pay-d1): depositing_party=Alice [explicit; scope=deposit-1]; destination_account_owner=Alice [explicit; scope=deposit-1]; amount_lovelace=10000000 [derived; scope=deposit-1]; payment_recipient=Bob [explicit; scope=payout-1]; deposit_deadline_ms=1000 [explicit; scope=deposit-1]; asset=ADA [explicit; scope=global]
+- Behavior scopes (inherited from pay-d1): [{"scope_id": "deposit-1", "scope_type": "transition", "transition_kind": "deposit"}, {"scope_id": "payout-1", "scope_type": "transition", "transition_kind": "payment"}, {"scope_id": "global", "scope_type": "global"}]
 - Inherits canonical interpretation from: `pay-d1`
 - Assumptions/derivations (inherited from pay-d1): amount_lovelace=10000000 [scope=deposit-1]
 - Required clarifications: none
@@ -198,8 +198,8 @@ All annotations below are drafts. A human must approve, edit, or reject each cas
 
 - Requirement v1: Alice gửi 3 ADA trước mốc POSIX 1100 ms rồi trả cho người nhận.
 - Proposed resolution: `clarification_required`
-- Critical claims: amount_lovelace=3000000 [derived; scope=deposit-1]; payment_recipient=None [unresolved; scope=payout-1]; deposit_deadline_ms=1100 [explicit; scope=deposit-1]
-- Behavior scopes: [{"scope_id": "deposit-1", "scope_type": "transition", "transition_kind": "deposit"}, {"scope_id": "payout-1", "scope_type": "transition", "transition_kind": "payment"}]
+- Critical claims: amount_lovelace=3000000 [derived; scope=deposit-1]; payment_recipient=None [unresolved; scope=payout-1]; deposit_deadline_ms=1100 [explicit; scope=deposit-1]; asset=ADA [explicit; scope=global]
+- Behavior scopes: [{"scope_id": "deposit-1", "scope_type": "transition", "transition_kind": "deposit"}, {"scope_id": "payout-1", "scope_type": "transition", "transition_kind": "payment"}, {"scope_id": "global", "scope_type": "global"}]
 - Assumptions/derivations: amount_lovelace=3000000 [scope=deposit-1]
 - Required clarifications: Ai là người nhận 3 ADA?; Nguồn tiền/account nhận khoản gửi 3 ADA là gì, và ai sở hữu account đó?
 - Forbidden assumptions: Alice is the payment recipient
@@ -212,8 +212,8 @@ All annotations below are drafts. A human must approve, edit, or reject each cas
 
 - Requirement v1: Alice nạp 8 ADA vào tài khoản Alice trước mốc POSIX 2000 ms. Nếu chưa giải ngân đến mốc POSIX 3000 ms, một giao dịch hợp lệ sau hạn cho phép hoàn 8 ADA cho Alice.
 - Proposed resolution: `clarification_required`
-- Critical claims: depositing_party=Alice [explicit; scope=deposit-1]; destination_account_owner=Alice [explicit; scope=deposit-1]; amount_lovelace=8000000 [derived; scope=deposit-1]; refund_recipient=Alice [explicit; scope=deposit-1:refund-timeout]; refund_deadline_ms=3000 [explicit; scope=deposit-1:refund-timeout]
-- Behavior scopes: [{"scope_id": "deposit-1", "scope_type": "transition", "transition_kind": "deposit"}, {"deadline_claim_id": "c5", "decision_id": "deposit-1", "scope_id": "deposit-1:refund-timeout", "scope_type": "timeout", "timeout_id": "refund-deadline-1"}]
+- Critical claims: depositing_party=Alice [explicit; scope=deposit-1]; destination_account_owner=Alice [explicit; scope=deposit-1]; amount_lovelace=8000000 [derived; scope=deposit-1]; refund_recipient=Alice [explicit; scope=refund-timeout-1]; refund_deadline_ms=3000 [explicit; scope=refund-timeout-1]; asset=ADA [explicit; scope=global]
+- Behavior scopes: [{"scope_id": "deposit-1", "scope_type": "transition", "transition_kind": "deposit"}, {"deadline_claim_id": "c5", "scope_id": "refund-timeout-1", "scope_type": "timeout", "timeout_id": "refund-deadline-1"}, {"scope_id": "global", "scope_type": "global"}]
 - Assumptions/derivations: amount_lovelace=8000000 [scope=deposit-1]
 - Required clarifications: 'Chưa giải ngân' được xác định bằng sự kiện/trạng thái nào?; Nếu đã giải ngân hoặc nhánh thành công xảy ra, hợp đồng phải xử lý thế nào?
 - Forbidden assumptions: refund happens without a transaction
@@ -227,8 +227,8 @@ All annotations below are drafts. A human must approve, edit, or reject each cas
 
 - Requirement v1: Alice nạp 8 ADA vào tài khoản Alice trước mốc POSIX 2000 ms. Nếu chưa giải ngân đến mốc POSIX 3000 ms, một giao dịch hợp lệ sau hạn cho phép hoàn 8 ADA cho Alice.
 - Proposed resolution: `clarification_required`
-- Critical claims (inherited from refund-d1): depositing_party=Alice [explicit; scope=deposit-1]; destination_account_owner=Alice [explicit; scope=deposit-1]; amount_lovelace=8000000 [derived; scope=deposit-1]; refund_recipient=Alice [explicit; scope=deposit-1:refund-timeout]; refund_deadline_ms=3000 [explicit; scope=deposit-1:refund-timeout]
-- Behavior scopes (inherited from refund-d1): [{"scope_id": "deposit-1", "scope_type": "transition", "transition_kind": "deposit"}, {"deadline_claim_id": "c5", "decision_id": "deposit-1", "scope_id": "deposit-1:refund-timeout", "scope_type": "timeout", "timeout_id": "refund-deadline-1"}]
+- Critical claims (inherited from refund-d1): depositing_party=Alice [explicit; scope=deposit-1]; destination_account_owner=Alice [explicit; scope=deposit-1]; amount_lovelace=8000000 [derived; scope=deposit-1]; refund_recipient=Alice [explicit; scope=refund-timeout-1]; refund_deadline_ms=3000 [explicit; scope=refund-timeout-1]; asset=ADA [explicit; scope=global]
+- Behavior scopes (inherited from refund-d1): [{"scope_id": "deposit-1", "scope_type": "transition", "transition_kind": "deposit"}, {"deadline_claim_id": "c5", "scope_id": "refund-timeout-1", "scope_type": "timeout", "timeout_id": "refund-deadline-1"}, {"scope_id": "global", "scope_type": "global"}]
 - Inherits canonical interpretation from: `refund-d1`
 - Assumptions/derivations (inherited from refund-d1): amount_lovelace=8000000 [scope=deposit-1]
 - Required clarifications: 'Chưa giải ngân' được xác định bằng sự kiện/trạng thái nào?; Nếu đã giải ngân hoặc nhánh thành công xảy ra, hợp đồng phải xử lý thế nào?
@@ -242,8 +242,8 @@ All annotations below are drafts. A human must approve, edit, or reject each cas
 
 - Requirement v1: An ký quỹ 9 ADA trong tài khoản An. Vy là chủ Choice accept hoặc reject trước mốc POSIX 15000 ms; accept trả 9 ADA cho Vy, reject hoàn 9 ADA cho An. Nếu không chọn trước hạn, giao dịch sau hạn hoàn 9 ADA cho An.
 - Proposed resolution: `accepted_interpretation`
-- Critical claims: destination_account_owner=An [explicit; scope=deposit-1]; choice_owner=Vy [explicit; scope=decision-1]; release_recipient=Vy [explicit; scope=decision-1:accept]; refund_recipient=An [explicit; scope=decision-1:reject]; choice_deadline_ms=15000 [explicit; scope=decision-1]; refund_recipient=An [explicit; scope=decision-1:timeout]; depositing_party=An [explicit; scope=deposit-1]; amount_lovelace=9000000 [derived; scope=deposit-1]
-- Behavior scopes: [{"scope_id": "deposit-1", "scope_type": "transition", "transition_kind": "deposit"}, {"scope_id": "decision-1", "scope_type": "transition", "transition_kind": "choice"}, {"branch_id": "accept", "decision_id": "decision-1", "scope_id": "decision-1:accept", "scope_type": "branch"}, {"branch_id": "reject", "decision_id": "decision-1", "scope_id": "decision-1:reject", "scope_type": "branch"}, {"deadline_claim_id": "c5", "decision_id": "decision-1", "scope_id": "decision-1:timeout", "scope_type": "timeout", "timeout_id": "choice-deadline-1"}]
+- Critical claims: destination_account_owner=An [explicit; scope=deposit-1]; choice_owner=Vy [explicit; scope=decision-1]; release_recipient=Vy [explicit; scope=decision-1:accept]; refund_recipient=An [explicit; scope=decision-1:reject]; choice_deadline_ms=15000 [explicit; scope=decision-1]; refund_recipient=An [explicit; scope=decision-1:timeout]; depositing_party=An [explicit; scope=deposit-1]; amount_lovelace=9000000 [derived; scope=deposit-1]; asset=ADA [explicit; scope=global]
+- Behavior scopes: [{"scope_id": "deposit-1", "scope_type": "transition", "transition_kind": "deposit"}, {"scope_id": "decision-1", "scope_type": "transition", "transition_kind": "choice"}, {"branch_id": "accept", "decision_id": "decision-1", "scope_id": "decision-1:accept", "scope_type": "branch"}, {"branch_id": "reject", "decision_id": "decision-1", "scope_id": "decision-1:reject", "scope_type": "branch"}, {"deadline_claim_id": "c5", "decision_id": "decision-1", "scope_id": "decision-1:timeout", "scope_type": "timeout", "timeout_id": "choice-deadline-1"}, {"scope_id": "global", "scope_type": "global"}]
 - Assumptions/derivations: amount_lovelace=9000000 [scope=deposit-1]
 - Required clarifications: none
 - Forbidden assumptions: transaction_submitter = Vy
@@ -256,8 +256,8 @@ All annotations below are drafts. A human must approve, edit, or reject each cas
 
 - Requirement v1: An ký quỹ 9 ADA trong tài khoản An. Vy là chủ Choice accept hoặc reject trước mốc POSIX 15000 ms; accept trả 9 ADA cho Vy, reject hoàn 9 ADA cho An. Nếu không chọn trước hạn, giao dịch sau hạn hoàn 9 ADA cho An.
 - Proposed resolution: `accepted_interpretation`
-- Critical claims (inherited from choice-e1): destination_account_owner=An [explicit; scope=deposit-1]; choice_owner=Vy [explicit; scope=decision-1]; release_recipient=Vy [explicit; scope=decision-1:accept]; refund_recipient=An [explicit; scope=decision-1:reject]; choice_deadline_ms=15000 [explicit; scope=decision-1]; refund_recipient=An [explicit; scope=decision-1:timeout]; depositing_party=An [explicit; scope=deposit-1]; amount_lovelace=9000000 [derived; scope=deposit-1]
-- Behavior scopes (inherited from choice-e1): [{"scope_id": "deposit-1", "scope_type": "transition", "transition_kind": "deposit"}, {"scope_id": "decision-1", "scope_type": "transition", "transition_kind": "choice"}, {"branch_id": "accept", "decision_id": "decision-1", "scope_id": "decision-1:accept", "scope_type": "branch"}, {"branch_id": "reject", "decision_id": "decision-1", "scope_id": "decision-1:reject", "scope_type": "branch"}, {"deadline_claim_id": "c5", "decision_id": "decision-1", "scope_id": "decision-1:timeout", "scope_type": "timeout", "timeout_id": "choice-deadline-1"}]
+- Critical claims (inherited from choice-e1): destination_account_owner=An [explicit; scope=deposit-1]; choice_owner=Vy [explicit; scope=decision-1]; release_recipient=Vy [explicit; scope=decision-1:accept]; refund_recipient=An [explicit; scope=decision-1:reject]; choice_deadline_ms=15000 [explicit; scope=decision-1]; refund_recipient=An [explicit; scope=decision-1:timeout]; depositing_party=An [explicit; scope=deposit-1]; amount_lovelace=9000000 [derived; scope=deposit-1]; asset=ADA [explicit; scope=global]
+- Behavior scopes (inherited from choice-e1): [{"scope_id": "deposit-1", "scope_type": "transition", "transition_kind": "deposit"}, {"scope_id": "decision-1", "scope_type": "transition", "transition_kind": "choice"}, {"branch_id": "accept", "decision_id": "decision-1", "scope_id": "decision-1:accept", "scope_type": "branch"}, {"branch_id": "reject", "decision_id": "decision-1", "scope_id": "decision-1:reject", "scope_type": "branch"}, {"deadline_claim_id": "c5", "decision_id": "decision-1", "scope_id": "decision-1:timeout", "scope_type": "timeout", "timeout_id": "choice-deadline-1"}, {"scope_id": "global", "scope_type": "global"}]
 - Inherits canonical interpretation from: `choice-e1`
 - Assumptions/derivations (inherited from choice-e1): amount_lovelace=9000000 [scope=deposit-1]
 - Required clarifications: none
@@ -271,8 +271,8 @@ All annotations below are drafts. A human must approve, edit, or reject each cas
 
 - Requirement v1: Mai nạp 16 ADA. Một bên sẽ chọn approve trước mốc POSIX 26000 ms để Nam nhận tiền; nếu không thì Mai nhận lại.
 - Proposed resolution: `clarification_required`
-- Critical claims: choice_owner=None [unresolved; scope=decision-1]; release_recipient=Nam [explicit; scope=decision-1:approve]; depositing_party=Mai [explicit; scope=deposit-1]; amount_lovelace=16000000 [derived; scope=deposit-1]; choice_deadline_ms=26000 [explicit; scope=decision-1]; refund_recipient=Mai [explicit; scope=decision-1:timeout]
-- Behavior scopes: [{"scope_id": "decision-1", "scope_type": "transition", "transition_kind": "choice"}, {"branch_id": "approve", "decision_id": "decision-1", "scope_id": "decision-1:approve", "scope_type": "branch"}, {"scope_id": "deposit-1", "scope_type": "transition", "transition_kind": "deposit"}, {"deadline_claim_id": "choice-deadline", "decision_id": "decision-1", "scope_id": "decision-1:timeout", "scope_type": "timeout", "timeout_id": "choice-deadline-1"}]
+- Critical claims: choice_owner=None [unresolved; scope=decision-1]; release_recipient=Nam [explicit; scope=decision-1:approve]; depositing_party=Mai [explicit; scope=deposit-1]; amount_lovelace=16000000 [derived; scope=deposit-1]; choice_deadline_ms=26000 [explicit; scope=decision-1]; refund_recipient=Mai [explicit; scope=decision-1:timeout]; asset=ADA [explicit; scope=global]
+- Behavior scopes: [{"scope_id": "decision-1", "scope_type": "transition", "transition_kind": "choice"}, {"branch_id": "approve", "decision_id": "decision-1", "scope_id": "decision-1:approve", "scope_type": "branch"}, {"scope_id": "deposit-1", "scope_type": "transition", "transition_kind": "deposit"}, {"deadline_claim_id": "choice-deadline", "decision_id": "decision-1", "scope_id": "decision-1:timeout", "scope_type": "timeout", "timeout_id": "choice-deadline-1"}, {"scope_id": "global", "scope_type": "global"}]
 - Assumptions/derivations: amount_lovelace=16000000 [scope=deposit-1]
 - Required clarifications: Bên nào sở hữu Choice approve?; 16 ADA được nạp vào account nào và ai là chủ account đó?
 - Forbidden assumptions: Nam automatically owns the Choice
@@ -285,8 +285,8 @@ All annotations below are drafts. A human must approve, edit, or reject each cas
 
 - Requirement v1: Tú nạp 14 ADA vào tài khoản Tú. Nếu Notify về giao hàng đúng trước mốc POSIX 21000 ms, Hòa nhận một lần 14 ADA; nếu không, giao dịch sau hạn hoàn 14 ADA cho Tú.
 - Proposed resolution: `clarification_required`
-- Critical claims: depositing_party=Tú [explicit; scope=deposit-1]; destination_account_owner=Tú [explicit; scope=deposit-1]; payment_recipient=Hòa [explicit; scope=notify-1:success]; refund_recipient=Tú [explicit; scope=notify-1:timeout]; timeout_ms=21000 [explicit; scope=notify-1]; amount_lovelace=14000000 [derived; scope=deposit-1]
-- Behavior scopes: [{"scope_id": "deposit-1", "scope_type": "transition", "transition_kind": "deposit"}, {"scope_id": "notify-1", "scope_type": "transition", "transition_kind": "notify"}, {"branch_id": "success", "decision_id": "notify-1", "scope_id": "notify-1:success", "scope_type": "branch"}, {"deadline_claim_id": "c5", "decision_id": "notify-1", "scope_id": "notify-1:timeout", "scope_type": "timeout", "timeout_id": "notify-deadline-1"}]
+- Critical claims: depositing_party=Tú [explicit; scope=deposit-1]; destination_account_owner=Tú [explicit; scope=deposit-1]; payment_recipient=Hòa [explicit; scope=notify-1:success]; refund_recipient=Tú [explicit; scope=notify-1:timeout]; timeout_ms=21000 [explicit; scope=notify-1]; amount_lovelace=14000000 [derived; scope=deposit-1]; asset=ADA [explicit; scope=global]
+- Behavior scopes: [{"scope_id": "deposit-1", "scope_type": "transition", "transition_kind": "deposit"}, {"scope_id": "notify-1", "scope_type": "transition", "transition_kind": "notify"}, {"branch_id": "success", "decision_id": "notify-1", "scope_id": "notify-1:success", "scope_type": "branch"}, {"deadline_claim_id": "c5", "decision_id": "notify-1", "scope_id": "notify-1:timeout", "scope_type": "timeout", "timeout_id": "notify-deadline-1"}, {"scope_id": "global", "scope_type": "global"}]
 - Assumptions/derivations: amount_lovelace=14000000 [scope=deposit-1]
 - Required clarifications: Observation Marlowe nào xác định 'giao hàng đúng' là true để Notify được chấp nhận?
 - Forbidden assumptions: second payment to Hòa is allowed
@@ -300,8 +300,8 @@ All annotations below are drafts. A human must approve, edit, or reject each cas
 
 - Requirement v1: Tú nạp 14 ADA vào tài khoản Tú. Nếu Notify về giao hàng đúng trước mốc POSIX 21000 ms, Hòa nhận một lần 14 ADA; nếu không, giao dịch sau hạn hoàn 14 ADA cho Tú.
 - Proposed resolution: `clarification_required`
-- Critical claims (inherited from conditional-e1): depositing_party=Tú [explicit; scope=deposit-1]; destination_account_owner=Tú [explicit; scope=deposit-1]; payment_recipient=Hòa [explicit; scope=notify-1:success]; refund_recipient=Tú [explicit; scope=notify-1:timeout]; timeout_ms=21000 [explicit; scope=notify-1]; amount_lovelace=14000000 [derived; scope=deposit-1]
-- Behavior scopes (inherited from conditional-e1): [{"scope_id": "deposit-1", "scope_type": "transition", "transition_kind": "deposit"}, {"scope_id": "notify-1", "scope_type": "transition", "transition_kind": "notify"}, {"branch_id": "success", "decision_id": "notify-1", "scope_id": "notify-1:success", "scope_type": "branch"}, {"deadline_claim_id": "c5", "decision_id": "notify-1", "scope_id": "notify-1:timeout", "scope_type": "timeout", "timeout_id": "notify-deadline-1"}]
+- Critical claims (inherited from conditional-e1): depositing_party=Tú [explicit; scope=deposit-1]; destination_account_owner=Tú [explicit; scope=deposit-1]; payment_recipient=Hòa [explicit; scope=notify-1:success]; refund_recipient=Tú [explicit; scope=notify-1:timeout]; timeout_ms=21000 [explicit; scope=notify-1]; amount_lovelace=14000000 [derived; scope=deposit-1]; asset=ADA [explicit; scope=global]
+- Behavior scopes (inherited from conditional-e1): [{"scope_id": "deposit-1", "scope_type": "transition", "transition_kind": "deposit"}, {"scope_id": "notify-1", "scope_type": "transition", "transition_kind": "notify"}, {"branch_id": "success", "decision_id": "notify-1", "scope_id": "notify-1:success", "scope_type": "branch"}, {"deadline_claim_id": "c5", "decision_id": "notify-1", "scope_id": "notify-1:timeout", "scope_type": "timeout", "timeout_id": "notify-deadline-1"}, {"scope_id": "global", "scope_type": "global"}]
 - Inherits canonical interpretation from: `conditional-e1`
 - Assumptions/derivations (inherited from conditional-e1): amount_lovelace=14000000 [scope=deposit-1]
 - Required clarifications: Observation Marlowe nào xác định 'giao hàng đúng' là true để Notify được chấp nhận?
@@ -315,8 +315,8 @@ All annotations below are drafts. A human must approve, edit, or reject each cas
 
 - Requirement v1: Nếu Notify giao hàng đúng, chỉ Bob nhận 17 ADA; cũng trong trường hợp Notify giao hàng đúng, chỉ Alice nhận cùng 17 ADA.
 - Proposed resolution: `conflict_requires_resolution`
-- Critical claims: notify_success_recipient=Bob [conflicted; scope=notify-1:success]; notify_success_recipient=Alice [conflicted; scope=notify-1:success]; amount_lovelace=17000000 [derived; scope=notify-1:success]
-- Behavior scopes: [{"scope_id": "notify-1", "scope_type": "transition", "transition_kind": "notify"}, {"branch_id": "success", "decision_id": "notify-1", "scope_id": "notify-1:success", "scope_type": "branch"}]
+- Critical claims: payment_recipient=Bob [conflicted; scope=notify-1:success]; payment_recipient=Alice [conflicted; scope=notify-1:success]; amount_lovelace=17000000 [derived; scope=notify-1:success]; asset=ADA [explicit; scope=global]
+- Behavior scopes: [{"scope_id": "notify-1", "scope_type": "transition", "transition_kind": "notify"}, {"branch_id": "success", "decision_id": "notify-1", "scope_id": "notify-1:success", "scope_type": "branch"}, {"scope_id": "global", "scope_type": "global"}]
 - Assumptions/derivations: amount_lovelace=17000000 [scope=notify-1:success]
 - Required clarifications: Khi Notify giao hàng đúng, ai là người nhận duy nhất: Bob hay Alice?
 - Forbidden assumptions: pay both parties despite only-one language
@@ -329,8 +329,8 @@ All annotations below are drafts. A human must approve, edit, or reject each cas
 
 - Requirement v1: Nhi nạp 13 ADA vào tài khoản Nhi trước mốc POSIX 17000 ms. Sau khoản nạp, Quân chọn approve trước mốc POSIX 19000 ms để nhận đúng 13 ADA; quá hạn quyết định, giao dịch sau hạn hoàn cho Nhi.
 - Proposed resolution: `accepted_interpretation`
-- Critical claims: depositing_party=Nhi [explicit; scope=deposit-1]; choice_owner=Quân [explicit; scope=decision-1]; amount_lovelace=13000000 [derived; scope=deposit-1]; deposit_deadline_ms=17000 [explicit; scope=deposit-1]; choice_deadline_ms=19000 [explicit; scope=decision-1]; refund_recipient=Nhi [explicit; scope=decision-1:timeout]; destination_account_owner=Nhi [explicit; scope=deposit-1]; release_recipient=Quân [explicit; scope=decision-1:approve]
-- Behavior scopes: [{"scope_id": "deposit-1", "scope_type": "transition", "transition_kind": "deposit"}, {"scope_id": "decision-1", "scope_type": "transition", "transition_kind": "choice"}, {"deadline_claim_id": "c5", "decision_id": "decision-1", "scope_id": "decision-1:timeout", "scope_type": "timeout", "timeout_id": "choice-deadline-1"}, {"branch_id": "approve", "decision_id": "decision-1", "scope_id": "decision-1:approve", "scope_type": "branch"}]
+- Critical claims: depositing_party=Nhi [explicit; scope=deposit-1]; choice_owner=Quân [explicit; scope=decision-1]; amount_lovelace=13000000 [derived; scope=deposit-1]; deposit_deadline_ms=17000 [explicit; scope=deposit-1]; choice_deadline_ms=19000 [explicit; scope=decision-1]; refund_recipient=Nhi [explicit; scope=decision-1:timeout]; destination_account_owner=Nhi [explicit; scope=deposit-1]; release_recipient=Quân [explicit; scope=decision-1:approve]; asset=ADA [explicit; scope=global]
+- Behavior scopes: [{"scope_id": "deposit-1", "scope_type": "transition", "transition_kind": "deposit"}, {"scope_id": "decision-1", "scope_type": "transition", "transition_kind": "choice"}, {"deadline_claim_id": "c5", "decision_id": "decision-1", "scope_id": "decision-1:timeout", "scope_type": "timeout", "timeout_id": "choice-deadline-1"}, {"branch_id": "approve", "decision_id": "decision-1", "scope_id": "decision-1:approve", "scope_type": "branch"}, {"scope_id": "global", "scope_type": "global"}]
 - Assumptions/derivations: amount_lovelace=13000000 [scope=deposit-1]
 - Required clarifications: none
 - Forbidden assumptions: payment amount = 1300000 lovelace
@@ -343,8 +343,8 @@ All annotations below are drafts. A human must approve, edit, or reject each cas
 
 - Requirement v1: Nhi nạp 13 ADA vào tài khoản Nhi trước mốc POSIX 17000 ms. Sau khoản nạp, Quân chọn approve trước mốc POSIX 19000 ms để nhận đúng 13 ADA; quá hạn quyết định, giao dịch sau hạn hoàn cho Nhi.
 - Proposed resolution: `accepted_interpretation`
-- Critical claims (inherited from double-e1): depositing_party=Nhi [explicit; scope=deposit-1]; choice_owner=Quân [explicit; scope=decision-1]; amount_lovelace=13000000 [derived; scope=deposit-1]; deposit_deadline_ms=17000 [explicit; scope=deposit-1]; choice_deadline_ms=19000 [explicit; scope=decision-1]; refund_recipient=Nhi [explicit; scope=decision-1:timeout]; destination_account_owner=Nhi [explicit; scope=deposit-1]; release_recipient=Quân [explicit; scope=decision-1:approve]
-- Behavior scopes (inherited from double-e1): [{"scope_id": "deposit-1", "scope_type": "transition", "transition_kind": "deposit"}, {"scope_id": "decision-1", "scope_type": "transition", "transition_kind": "choice"}, {"deadline_claim_id": "c5", "decision_id": "decision-1", "scope_id": "decision-1:timeout", "scope_type": "timeout", "timeout_id": "choice-deadline-1"}, {"branch_id": "approve", "decision_id": "decision-1", "scope_id": "decision-1:approve", "scope_type": "branch"}]
+- Critical claims (inherited from double-e1): depositing_party=Nhi [explicit; scope=deposit-1]; choice_owner=Quân [explicit; scope=decision-1]; amount_lovelace=13000000 [derived; scope=deposit-1]; deposit_deadline_ms=17000 [explicit; scope=deposit-1]; choice_deadline_ms=19000 [explicit; scope=decision-1]; refund_recipient=Nhi [explicit; scope=decision-1:timeout]; destination_account_owner=Nhi [explicit; scope=deposit-1]; release_recipient=Quân [explicit; scope=decision-1:approve]; asset=ADA [explicit; scope=global]
+- Behavior scopes (inherited from double-e1): [{"scope_id": "deposit-1", "scope_type": "transition", "transition_kind": "deposit"}, {"scope_id": "decision-1", "scope_type": "transition", "transition_kind": "choice"}, {"deadline_claim_id": "c5", "decision_id": "decision-1", "scope_id": "decision-1:timeout", "scope_type": "timeout", "timeout_id": "choice-deadline-1"}, {"branch_id": "approve", "decision_id": "decision-1", "scope_id": "decision-1:approve", "scope_type": "branch"}, {"scope_id": "global", "scope_type": "global"}]
 - Inherits canonical interpretation from: `double-e1`
 - Assumptions/derivations (inherited from double-e1): amount_lovelace=13000000 [scope=deposit-1]
 - Required clarifications: none
@@ -358,8 +358,8 @@ All annotations below are drafts. A human must approve, edit, or reject each cas
 
 - Requirement v1: Lan nạp 11 ADA vào tài khoản Lan trước mốc POSIX 16000 ms. Minh được chọn release trước cùng mốc để nhận 11 ADA; nếu chưa release đến hạn, một giao dịch sau hạn hoàn 11 ADA cho Lan.
 - Proposed resolution: `accepted_interpretation`
-- Critical claims: depositing_party=Lan [explicit; scope=deposit-1]; destination_account_owner=Lan [explicit; scope=deposit-1]; choice_owner=Minh [explicit; scope=decision-1]; release_recipient=Minh [explicit; scope=decision-1:release]; refund_recipient=Lan [explicit; scope=decision-1:timeout]; amount_lovelace=11000000 [derived; scope=deposit-1]; deposit_deadline_ms=16000 [explicit; scope=deposit-1]; choice_deadline_ms=16000 [derived; scope=decision-1]
-- Behavior scopes: [{"scope_id": "deposit-1", "scope_type": "transition", "transition_kind": "deposit"}, {"scope_id": "decision-1", "scope_type": "transition", "transition_kind": "choice"}, {"branch_id": "release", "decision_id": "decision-1", "scope_id": "decision-1:release", "scope_type": "branch"}, {"deadline_claim_id": "choice-deadline", "decision_id": "decision-1", "scope_id": "decision-1:timeout", "scope_type": "timeout", "timeout_id": "choice-deadline-1"}]
+- Critical claims: depositing_party=Lan [explicit; scope=deposit-1]; destination_account_owner=Lan [explicit; scope=deposit-1]; choice_owner=Minh [explicit; scope=decision-1]; release_recipient=Minh [explicit; scope=decision-1:release]; refund_recipient=Lan [explicit; scope=decision-1:timeout]; amount_lovelace=11000000 [derived; scope=deposit-1]; deposit_deadline_ms=16000 [explicit; scope=deposit-1]; choice_deadline_ms=16000 [derived; scope=decision-1]; asset=ADA [explicit; scope=global]
+- Behavior scopes: [{"scope_id": "deposit-1", "scope_type": "transition", "transition_kind": "deposit"}, {"scope_id": "decision-1", "scope_type": "transition", "transition_kind": "choice"}, {"branch_id": "release", "decision_id": "decision-1", "scope_id": "decision-1:release", "scope_type": "branch"}, {"deadline_claim_id": "choice-deadline", "decision_id": "decision-1", "scope_id": "decision-1:timeout", "scope_type": "timeout", "timeout_id": "choice-deadline-1"}, {"scope_id": "global", "scope_type": "global"}]
 - Assumptions/derivations: amount_lovelace=11000000 [scope=deposit-1]; choice_deadline_ms=16000 [scope=decision-1]
 - Required clarifications: none
 - Forbidden assumptions: timeout path releases to Minh
@@ -372,8 +372,8 @@ All annotations below are drafts. A human must approve, edit, or reject each cas
 
 - Requirement v1: Lan nạp 11 ADA vào tài khoản Lan trước mốc POSIX 16000 ms. Minh được chọn release trước cùng mốc để nhận 11 ADA; nếu chưa release đến hạn, một giao dịch sau hạn hoàn 11 ADA cho Lan.
 - Proposed resolution: `accepted_interpretation`
-- Critical claims (inherited from escrow-e1): depositing_party=Lan [explicit; scope=deposit-1]; destination_account_owner=Lan [explicit; scope=deposit-1]; choice_owner=Minh [explicit; scope=decision-1]; release_recipient=Minh [explicit; scope=decision-1:release]; refund_recipient=Lan [explicit; scope=decision-1:timeout]; amount_lovelace=11000000 [derived; scope=deposit-1]; deposit_deadline_ms=16000 [explicit; scope=deposit-1]; choice_deadline_ms=16000 [derived; scope=decision-1]
-- Behavior scopes (inherited from escrow-e1): [{"scope_id": "deposit-1", "scope_type": "transition", "transition_kind": "deposit"}, {"scope_id": "decision-1", "scope_type": "transition", "transition_kind": "choice"}, {"branch_id": "release", "decision_id": "decision-1", "scope_id": "decision-1:release", "scope_type": "branch"}, {"deadline_claim_id": "choice-deadline", "decision_id": "decision-1", "scope_id": "decision-1:timeout", "scope_type": "timeout", "timeout_id": "choice-deadline-1"}]
+- Critical claims (inherited from escrow-e1): depositing_party=Lan [explicit; scope=deposit-1]; destination_account_owner=Lan [explicit; scope=deposit-1]; choice_owner=Minh [explicit; scope=decision-1]; release_recipient=Minh [explicit; scope=decision-1:release]; refund_recipient=Lan [explicit; scope=decision-1:timeout]; amount_lovelace=11000000 [derived; scope=deposit-1]; deposit_deadline_ms=16000 [explicit; scope=deposit-1]; choice_deadline_ms=16000 [derived; scope=decision-1]; asset=ADA [explicit; scope=global]
+- Behavior scopes (inherited from escrow-e1): [{"scope_id": "deposit-1", "scope_type": "transition", "transition_kind": "deposit"}, {"scope_id": "decision-1", "scope_type": "transition", "transition_kind": "choice"}, {"branch_id": "release", "decision_id": "decision-1", "scope_id": "decision-1:release", "scope_type": "branch"}, {"deadline_claim_id": "choice-deadline", "decision_id": "decision-1", "scope_id": "decision-1:timeout", "scope_type": "timeout", "timeout_id": "choice-deadline-1"}, {"scope_id": "global", "scope_type": "global"}]
 - Inherits canonical interpretation from: `escrow-e1`
 - Assumptions/derivations (inherited from escrow-e1): amount_lovelace=11000000 [scope=deposit-1]; choice_deadline_ms=16000 [scope=decision-1]
 - Required clarifications: none
@@ -387,8 +387,8 @@ All annotations below are drafts. A human must approve, edit, or reject each cas
 
 - Requirement v1: Đúng mốc POSIX 22000 ms, hợp đồng phải tự động hoàn 3 ADA cho Lan dù không ai gửi giao dịch và không có dịch vụ ngoài chuỗi.
 - Proposed resolution: `unsupported_for_current_study`
-- Critical claims: timeout_ms=22000 [explicit; scope=auto-refund-timeout-1]; autonomous_execution=True [explicit; scope=auto-refund-timeout-1]; amount_lovelace=3000000 [derived; scope=auto-refund-timeout-1]; refund_recipient=Lan [explicit; scope=auto-refund-timeout-1]
-- Behavior scopes: [{"scope_id": "auto-refund-timeout-1", "scope_type": "timeout", "timeout_id": "auto-refund-deadline-1"}]
+- Critical claims: timeout_ms=22000 [explicit; scope=auto-refund-timeout-1]; autonomous_execution=True [explicit; scope=auto-refund-timeout-1]; amount_lovelace=3000000 [derived; scope=auto-refund-timeout-1]; refund_recipient=Lan [explicit; scope=auto-refund-timeout-1]; asset=ADA [explicit; scope=global]
+- Behavior scopes: [{"scope_id": "auto-refund-timeout-1", "scope_type": "timeout", "timeout_id": "auto-refund-deadline-1"}, {"scope_id": "global", "scope_type": "global"}]
 - Assumptions/derivations: amount_lovelace=3000000 [scope=auto-refund-timeout-1]
 - Required clarifications: none
 - Forbidden assumptions: Marlowe executes without a transaction
@@ -401,8 +401,8 @@ All annotations below are drafts. A human must approve, edit, or reject each cas
 
 - Requirement v1: Mai nạp 250 ADA vào tài khoản Mai trước mốc POSIX 12000 ms; sau khoản nạp hợp lệ, Nam nhận đúng 250 ADA.
 - Proposed resolution: `accepted_interpretation`
-- Critical claims: depositing_party=Mai [explicit; scope=deposit-1]; destination_account_owner=Mai [explicit; scope=deposit-1]; amount_lovelace=250000000 [derived; scope=deposit-1]; payment_recipient=Nam [explicit; scope=payout-1]; deposit_deadline_ms=12000 [explicit; scope=deposit-1]
-- Behavior scopes: [{"scope_id": "deposit-1", "scope_type": "transition", "transition_kind": "deposit"}, {"scope_id": "payout-1", "scope_type": "transition", "transition_kind": "payment"}]
+- Critical claims: depositing_party=Mai [explicit; scope=deposit-1]; destination_account_owner=Mai [explicit; scope=deposit-1]; amount_lovelace=250000000 [derived; scope=deposit-1]; payment_recipient=Nam [explicit; scope=payout-1]; deposit_deadline_ms=12000 [explicit; scope=deposit-1]; asset=ADA [explicit; scope=global]
+- Behavior scopes: [{"scope_id": "deposit-1", "scope_type": "transition", "transition_kind": "deposit"}, {"scope_id": "payout-1", "scope_type": "transition", "transition_kind": "payment"}, {"scope_id": "global", "scope_type": "global"}]
 - Assumptions/derivations: amount_lovelace=250000000 [scope=deposit-1]
 - Required clarifications: none
 - Forbidden assumptions: 250 ADA = 250 lovelace
@@ -415,8 +415,8 @@ All annotations below are drafts. A human must approve, edit, or reject each cas
 
 - Requirement v1: Mai nạp 250 ADA vào tài khoản Mai trước mốc POSIX 12000 ms; sau khoản nạp hợp lệ, Nam nhận đúng 250 ADA.
 - Proposed resolution: `accepted_interpretation`
-- Critical claims (inherited from pay-e1): depositing_party=Mai [explicit; scope=deposit-1]; destination_account_owner=Mai [explicit; scope=deposit-1]; amount_lovelace=250000000 [derived; scope=deposit-1]; payment_recipient=Nam [explicit; scope=payout-1]; deposit_deadline_ms=12000 [explicit; scope=deposit-1]
-- Behavior scopes (inherited from pay-e1): [{"scope_id": "deposit-1", "scope_type": "transition", "transition_kind": "deposit"}, {"scope_id": "payout-1", "scope_type": "transition", "transition_kind": "payment"}]
+- Critical claims (inherited from pay-e1): depositing_party=Mai [explicit; scope=deposit-1]; destination_account_owner=Mai [explicit; scope=deposit-1]; amount_lovelace=250000000 [derived; scope=deposit-1]; payment_recipient=Nam [explicit; scope=payout-1]; deposit_deadline_ms=12000 [explicit; scope=deposit-1]; asset=ADA [explicit; scope=global]
+- Behavior scopes (inherited from pay-e1): [{"scope_id": "deposit-1", "scope_type": "transition", "transition_kind": "deposit"}, {"scope_id": "payout-1", "scope_type": "transition", "transition_kind": "payment"}, {"scope_id": "global", "scope_type": "global"}]
 - Inherits canonical interpretation from: `pay-e1`
 - Assumptions/derivations (inherited from pay-e1): amount_lovelace=250000000 [scope=deposit-1]
 - Required clarifications: none
@@ -430,8 +430,8 @@ All annotations below are drafts. A human must approve, edit, or reject each cas
 
 - Requirement v1: Hà nạp 6 ADA vào tài khoản Hà trước mốc POSIX 13000 ms. Nếu điều kiện hoàn tất không được Notify trước mốc POSIX 14000 ms, giao dịch sau hạn đóng hợp đồng và hoàn 6 ADA cho Hà.
 - Proposed resolution: `clarification_required`
-- Critical claims: depositing_party=Hà [explicit; scope=deposit-1]; destination_account_owner=Hà [explicit; scope=deposit-1]; amount_lovelace=6000000 [derived; scope=deposit-1]; refund_recipient=Hà [explicit; scope=deposit-1:refund-timeout]; refund_deadline_ms=14000 [explicit; scope=deposit-1:refund-timeout]
-- Behavior scopes: [{"scope_id": "deposit-1", "scope_type": "transition", "transition_kind": "deposit"}, {"deadline_claim_id": "c5", "decision_id": "deposit-1", "scope_id": "deposit-1:refund-timeout", "scope_type": "timeout", "timeout_id": "refund-deadline-1"}]
+- Critical claims: depositing_party=Hà [explicit; scope=deposit-1]; destination_account_owner=Hà [explicit; scope=deposit-1]; amount_lovelace=6000000 [derived; scope=deposit-1]; refund_recipient=Hà [explicit; scope=notify-1:timeout]; refund_deadline_ms=14000 [explicit; scope=notify-1:timeout]; asset=ADA [explicit; scope=global]
+- Behavior scopes: [{"scope_id": "deposit-1", "scope_type": "transition", "transition_kind": "deposit"}, {"scope_id": "notify-1", "scope_type": "transition", "transition_kind": "notify"}, {"deadline_claim_id": "c5", "decision_id": "notify-1", "scope_id": "notify-1:timeout", "scope_type": "timeout", "timeout_id": "notify-deadline-1"}, {"scope_id": "global", "scope_type": "global"}]
 - Assumptions/derivations: amount_lovelace=6000000 [scope=deposit-1]
 - Required clarifications: Nếu completion Notify thành công trước POSIX 14000 ms, continuation của hợp đồng phải làm gì?
 - Forbidden assumptions: Notify false is a completed condition
@@ -445,8 +445,8 @@ All annotations below are drafts. A human must approve, edit, or reject each cas
 
 - Requirement v1: Hà nạp 6 ADA vào tài khoản Hà trước mốc POSIX 13000 ms. Nếu điều kiện hoàn tất không được Notify trước mốc POSIX 14000 ms, giao dịch sau hạn đóng hợp đồng và hoàn 6 ADA cho Hà.
 - Proposed resolution: `clarification_required`
-- Critical claims (inherited from refund-e1): depositing_party=Hà [explicit; scope=deposit-1]; destination_account_owner=Hà [explicit; scope=deposit-1]; amount_lovelace=6000000 [derived; scope=deposit-1]; refund_recipient=Hà [explicit; scope=deposit-1:refund-timeout]; refund_deadline_ms=14000 [explicit; scope=deposit-1:refund-timeout]
-- Behavior scopes (inherited from refund-e1): [{"scope_id": "deposit-1", "scope_type": "transition", "transition_kind": "deposit"}, {"deadline_claim_id": "c5", "decision_id": "deposit-1", "scope_id": "deposit-1:refund-timeout", "scope_type": "timeout", "timeout_id": "refund-deadline-1"}]
+- Critical claims (inherited from refund-e1): depositing_party=Hà [explicit; scope=deposit-1]; destination_account_owner=Hà [explicit; scope=deposit-1]; amount_lovelace=6000000 [derived; scope=deposit-1]; refund_recipient=Hà [explicit; scope=notify-1:timeout]; refund_deadline_ms=14000 [explicit; scope=notify-1:timeout]; asset=ADA [explicit; scope=global]
+- Behavior scopes (inherited from refund-e1): [{"scope_id": "deposit-1", "scope_type": "transition", "transition_kind": "deposit"}, {"scope_id": "notify-1", "scope_type": "transition", "transition_kind": "notify"}, {"deadline_claim_id": "c5", "decision_id": "notify-1", "scope_id": "notify-1:timeout", "scope_type": "timeout", "timeout_id": "notify-deadline-1"}, {"scope_id": "global", "scope_type": "global"}]
 - Inherits canonical interpretation from: `refund-e1`
 - Assumptions/derivations (inherited from refund-e1): amount_lovelace=6000000 [scope=deposit-1]
 - Required clarifications: Nếu completion Notify thành công trước POSIX 14000 ms, continuation của hợp đồng phải làm gì?
@@ -460,8 +460,8 @@ All annotations below are drafts. A human must approve, edit, or reject each cas
 
 - Requirement v1: Nếu hết hạn, chỉ Alice được nhận lại 4 ADA; đồng thời chỉ Bob được nhận lại cùng 4 ADA.
 - Proposed resolution: `conflict_requires_resolution`
-- Critical claims: refund_recipient=Alice [conflicted; scope=refund-timeout-1]; refund_recipient=Bob [conflicted; scope=refund-timeout-1]; amount_lovelace=4000000 [derived; scope=refund-timeout-1]
-- Behavior scopes: [{"scope_id": "refund-timeout-1", "scope_type": "timeout", "timeout_id": "unspecified-refund-deadline-1"}]
+- Critical claims: refund_recipient=Alice [conflicted; scope=refund-timeout-1]; refund_recipient=Bob [conflicted; scope=refund-timeout-1]; amount_lovelace=4000000 [derived; scope=refund-timeout-1]; asset=ADA [explicit; scope=global]
+- Behavior scopes: [{"scope_id": "refund-timeout-1", "scope_type": "timeout", "timeout_id": "unspecified-refund-deadline-1"}, {"scope_id": "global", "scope_type": "global"}]
 - Assumptions/derivations: amount_lovelace=4000000 [scope=refund-timeout-1]
 - Required clarifications: Xác nhận người nhận hoàn tiền duy nhất: Alice hay Bob?
 - Forbidden assumptions: prefer the first recipient automatically

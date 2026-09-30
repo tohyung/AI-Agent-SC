@@ -46,6 +46,115 @@ def test_candidate_corpus_validates_without_claiming_gold():
     assert all(record["annotation"]["adjudicated_by"] is None for record in records)
 
 
+def test_claim_kind_taxonomy_rejects_unknown_and_non_string_kinds():
+    records = corpus()
+    kinds = {claim["kind"] for record in records for claim in record["claims"]}
+    assert kinds <= foundation.CLAIM_KINDS
+    assert "notify_success_recipient" not in kinds
+    assert "notify_success_recipient" not in foundation.CLAIM_KINDS
+    assert foundation.LOCAL_CLAIM_KINDS <= foundation.CLAIM_KINDS
+    assert "asset" not in foundation.LOCAL_CLAIM_KINDS
+    claim = by_id(records, "pay-d1")["claims"][0]
+    claim["kind"] = "typo_recipient"
+    error_with(records, "invalid/unknown claim kind 'typo_recipient'")
+    claim["kind"] = None
+    error_with(records, "invalid/unknown claim kind None")
+
+
+def test_conditional_e2_conflict_uses_scoped_payment_recipient():
+    record = by_id(corpus(), "conditional-e2-conflict")
+    recipients = [claim for claim in record["claims"]
+                  if claim["kind"] == "payment_recipient"]
+    assert len(recipients) == 2
+    assert {(claim["value"], claim["status"], claim["scope_id"])
+            for claim in recipients} == {
+                ("Bob", "conflicted", "notify-1:success"),
+                ("Alice", "conflicted", "notify-1:success"),
+            }
+    assert not any(claim["kind"] == "notify_success_recipient"
+                   for claim in record["claims"])
+
+
+def test_refund_d1_timeout_is_not_tied_to_invented_disbursement():
+    record = by_id(corpus(), "refund-d1")
+    scopes = {scope["scope_id"]: scope for scope in record["behavior_scopes"]}
+    assert scopes["refund-timeout-1"] == {
+        "scope_id": "refund-timeout-1", "scope_type": "timeout",
+        "timeout_id": "refund-deadline-1", "deadline_claim_id": "c5",
+    }
+    assert scopes["deposit-1"]["transition_kind"] == "deposit"
+    assert not any(scope.get("transition_kind") == "disbursement"
+                   for scope in scopes.values())
+    claims = {claim["kind"]: claim for claim in record["claims"]}
+    assert claims["refund_recipient"]["value"] == "Alice"
+    assert claims["refund_deadline_ms"]["value"] == 3000
+    assert all(claims[kind]["scope_id"] == "refund-timeout-1"
+               for kind in ("refund_recipient", "refund_deadline_ms"))
+    assert record["expected_resolution"] == "clarification_required"
+    assert any("giải ngân" in question for question in record["required_clarifications"])
+
+
+def test_refund_e1_timeout_is_tied_to_notify_not_deposit():
+    record = by_id(corpus(), "refund-e1")
+    scopes = {scope["scope_id"]: scope for scope in record["behavior_scopes"]}
+    assert scopes["deposit-1"]["transition_kind"] == "deposit"
+    assert scopes["notify-1"] == {
+        "scope_id": "notify-1", "scope_type": "transition",
+        "transition_kind": "notify",
+    }
+    assert scopes["notify-1:timeout"] == {
+        "scope_id": "notify-1:timeout", "scope_type": "timeout",
+        "timeout_id": "notify-deadline-1", "decision_id": "notify-1",
+        "deadline_claim_id": "c5",
+    }
+    assert "notify-1:success" not in scopes
+    claims = {claim["kind"]: claim for claim in record["claims"]}
+    assert claims["refund_recipient"]["value"] == "Hà"
+    assert claims["refund_deadline_ms"]["value"] == 14000
+    assert all(claims[kind]["scope_id"] == "notify-1:timeout"
+               for kind in ("refund_recipient", "refund_deadline_ms"))
+    assert record["expected_resolution"] == "clarification_required"
+    assert any("Notify" in question for question in record["required_clarifications"])
+
+
+def test_explicit_ada_asset_coverage_and_mutation_inheritance():
+    records = corpus()
+    by_case = {record["case_id"]: record for record in records}
+    canonical = [record for record in records if record["mutation"] is None]
+    assert len(canonical) == 20
+    for record in canonical:
+        messages = {(version["version"], index): message
+                    for version in record["requirement_history"]
+                    for index, message in enumerate(version["messages"])}
+        has_ada = any("ADA" in message for message in messages.values())
+        assets = [claim for claim in record["claims"] if claim["kind"] == "asset"]
+        if has_ada:
+            assert len(assets) == 1, record["case_id"]
+            assert {"scope_id": "global", "scope_type": "global"} in record["behavior_scopes"]
+            asset = assets[0]
+            assert (asset["value"], asset["status"], asset["criticality"],
+                    asset["scope_id"]) == ("ADA", "explicit", "financial", "global")
+            assert asset["evidence"]
+            for evidence in asset["evidence"]:
+                source = messages[(evidence["requirement_version"],
+                                   evidence["message_index"])]
+                assert "ADA" in evidence["span"]
+                assert evidence["span"] in source
+        else:
+            assert not assets, record["case_id"]
+    assert sum(any(claim["kind"] == "asset" for claim in record["claims"])
+               for record in canonical) == 19
+    assert not any(claim["kind"] == "asset"
+                   for claim in by_case["double-d2-conflict"]["claims"])
+    for record in records:
+        if record["mutation"] is not None:
+            parent = by_case[record["mutation"]["parent_case_id"]]
+            assert record["claims"] == []
+            assert record["behavior_scopes"] == []
+            assert foundation.effective_claims(record, by_case) == parent["claims"]
+            assert foundation.effective_scopes(record, by_case) == parent["behavior_scopes"]
+
+
 def test_duplicate_case_id_fails():
     records = corpus()
     records[1]["case_id"] = records[0]["case_id"]
@@ -352,12 +461,26 @@ def test_new_timeout_refund_scopes_and_exact_evidence():
 
 def test_missing_account_owner_and_notify_observation_are_not_invented():
     records = corpus()
+    correction = by_id(records, "choice-d2-correction")
+    assert correction["expected_resolution"] == "clarification_required"
+    assert not any(c["kind"] == "destination_account_owner"
+                   for c in correction["claims"])
+    assert any("account/source" in q for q in correction["required_clarifications"])
     for case_id in ("pay-d2-clarify", "escrow-d2-clarify", "choice-e2-clarify"):
         record = by_id(records, case_id)
         assert not any(c["kind"] == "destination_account_owner" for c in record["claims"])
         assert any("account" in q for q in record["required_clarifications"])
-    assert not any(c["kind"] == "depositing_party"
-                   for c in by_id(records, "pay-d2-clarify")["claims"])
+    pay = by_id(records, "pay-d2-clarify")
+    assert pay["expected_resolution"] == "clarification_required"
+    assert not any(c["kind"] == "depositing_party" for c in pay["claims"])
+    assert any(c["kind"] == "payment_recipient" and c["status"] == "unresolved"
+               for c in pay["claims"])
+    for case_id in ("escrow-d2-clarify", "choice-e2-clarify"):
+        record = by_id(records, case_id)
+        assert any(c["kind"] == "choice_owner" and c["status"] == "unresolved"
+                   for c in record["claims"])
+    assert all(by_id(records, case_id)["expected_resolution"] == "clarification_required"
+               for case_id in ("escrow-d2-clarify", "choice-e2-clarify"))
     for case_id in ("conditional-d1", "conditional-e1"):
         record = by_id(records, case_id)
         assert not any("observation" in c["kind"].lower() for c in record["claims"])
