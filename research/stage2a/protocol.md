@@ -19,12 +19,22 @@ history; it is not approval of the annotation by this project's user.
 - `case_id`, `split`, `family`, `group_id`: identity and leakage control.
 - `requirement_history`: consecutive versions starting at 1. Each version has
   ordered messages. Later explicit corrections can supersede earlier claims.
+- `behavior_scopes`: canonical-case registry of stable, case-local business
+  scopes. Types are `global`, `transition`, `branch`, `timeout`, and
+  `terminal_outcome`. Branches identify their decision and branch; timeouts
+  have a distinct timeout identity and may reference a deadline claim. A scope
+  ID is not a Marlowe AST path or a future compiler node ID. `global` is for
+  genuinely branch-independent facts, not a default for missing context.
 - `expected_resolution`: `accepted_interpretation`,
   `clarification_required`, `conflict_requires_resolution`, or
   `unsupported_for_current_study`. Ambiguity is a valid answer.
 - `claims`: proposed normalized semantic facts. `evidence` names a version,
   message index and exact source span, but lexical grounding alone does not
-  prove the interpretation. Derived financial values also require a
+  prove the interpretation. Each claim references one `scope_id` in its
+  canonical case; two equal values in different branches remain two distinct
+  claims. Active-value conflicts are keyed by `(kind, scope_id)`, while
+  supersession also requires the same scope and later requirement evidence.
+  Derived financial values also require a
   `normalization_basis`. `superseded_by` links an old claim to its later current
   successor. Critical roles distinguish Choice owner, depositing party,
   destination account owner, payment source account owner, recipient and
@@ -36,9 +46,16 @@ history; it is not approval of the annotation by this project's user.
   terminal outcomes. They are not machine-checked gold until reviewed and
   executed against the pinned reference semantics where expressible.
 - `mutation`: a controlled candidate implementation deviation. A mutation
-  shares its parent's requirement, group, split and interpretation, and records
-  the expected behavioral difference. It does not create a new user intent.
+  shares its parent's exact requirement history, family, group, split,
+  resolution and required clarifications. Its own claims and scopes are empty;
+  effective claims/scopes come from its canonical parent. It records an
+  expected behavioral difference, not a new user intent. Behavior expectations,
+  forbidden assumptions and review notes may differ.
 - `annotation`: author and review status. All records in this seed are `draft`.
+  `ground_truth_source` is coupled to status: `draft` to
+  `candidate_research_annotation`, `reviewed` to
+  `reviewed_research_annotation`, `adjudicated` to `expert_adjudicated`, and
+  `user_confirmed` to `user_confirmed`. Drafts cannot claim human review.
 
 The validator rejects duplicate identifiers, split/group leakage, invalid
 versions, broken evidence references/spans, unsuperseded conflicting active
@@ -47,16 +64,28 @@ conflict evidence, invalid mutation parents, and unsupported annotation status.
 It checks structure and internal consistency; it **cannot** certify that the
 proposed interpretation is what a human meant.
 
-## Development/evaluation split
+## Development/public-validation split
 
 Canonical case and its controlled mutations remain in the same `group_id` and
-split. Distinct development and evaluation groups use different requirement
+split. Distinct development and validation groups use different requirement
 texts, parties, amounts and deadlines. Identical requirement histories crossing
-splits are rejected. This seed's evaluation cases are only *provisionally*
-reserved: they are not a true held-out set until human review approves and
-freezes the set. Prompt/schema tuning must then use development only; any
-evaluation exposure requires a new version and disclosure. The 32 cases are a
-schema/protocol seed, not a statistically adequate production benchmark.
+splits are rejected. The former public `evaluation` split is now `validation`:
+it has already been exposed during schema development. It is useful for
+debugging, regression and model selection, but is **not** a blind or
+independent test set. Freezing and versioning this public set cannot reverse
+prior exposure. The 32 cases remain a schema/protocol seed, not a statistically
+adequate production benchmark.
+
+A future hidden evaluation set must be created after the schema stabilizes,
+reviewed/adjudicated by humans, versioned independently, and kept outside the
+development/tuning agent's context (preferably outside its ordinary repo
+visibility). Do not place a supposedly hidden JSONL in this public repo.
+Schema hardening plus genuine human review of a meaningful candidate subset
+and a sufficiently frozen development/public-validation protocol are required
+before Stage 2B shadow experiments begin. A hidden set is not necessary for
+every shadow experiment; it **is** required before accuracy/quality metrics
+support production promotion. No reviewed-case count or promotion threshold is
+invented in this patch.
 
 ## Reference execution and coverage
 
@@ -81,7 +110,8 @@ research lead, not a current completeness guarantee.
 
 Metrics below apply only to human-reviewed, frozen cases with a versioned
 prediction format. A critical claim match requires the same normalized kind,
-value, branch/temporal scope and active requirement version. Mutations are
+value, `scope_id`/semantic scope and active requirement version. The referenced
+scope carries branch or timing identity, so claims do not duplicate it. Mutations are
 grouped with their parent when scoring, not counted as independent user-intent
 observations. A zero denominator is reported as `N/A`, never as perfect score.
 
@@ -108,7 +138,10 @@ observations. A zero denominator is reported as `N/A`, never as perfect score.
   imply semantic correctness.
 
 Promotion thresholds will be set after baseline measurement, not invented from
-this seed. Reporting must include denominators and confidence/coverage limits.
+this seed. Development/public-validation scores can guide research iteration,
+but cannot alone substantiate production promotion. Reporting must include
+denominators and confidence/coverage limits; promotion evidence needs an
+independent hidden-evaluation protocol.
 
 ## Future assurance records
 

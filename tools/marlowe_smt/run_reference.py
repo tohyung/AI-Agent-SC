@@ -71,8 +71,11 @@ def execute(
         return _failure("InternalError", "reference driver emitted invalid JSON")
     if not isinstance(output, dict):
         return _failure("InternalError", "reference driver did not return a JSON object")
-    if output.get("meta", {}).get("upstream_commit") != UPSTREAM_COMMIT:
+    meta = output.get("meta")
+    if not isinstance(meta, dict) or meta.get("upstream_commit") != UPSTREAM_COMMIT:
         return _failure("InternalError", "reference driver upstream commit mismatch")
+    if meta.get("reference_driver_version") != DRIVER_VERSION:
+        return _failure("InternalError", "reference driver version mismatch")
     if result.returncode and output.get("status") not in {"InvalidInput"}:
         return _failure("InternalError", f"reference driver exited with code {result.returncode}")
     return output

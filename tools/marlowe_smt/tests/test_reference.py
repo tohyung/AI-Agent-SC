@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import importlib.util
+import json
 from pathlib import Path
 import subprocess
 import unittest
+from unittest.mock import patch
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -50,6 +52,37 @@ def deposit_input(amount: int) -> dict:
 
 CHOICE_ID = {"choice_name": "approve", "choice_owner": BOB}
 CHOICE = {"for_choice": CHOICE_ID, "choose_between": [{"from": 1, "to": 2}]}
+
+
+class ReferenceWrapperTests(unittest.TestCase):
+    def test_rejects_mismatched_driver_version(self) -> None:
+        response = {"status": "Success", "meta": {
+            "upstream_commit": reference.UPSTREAM_COMMIT,
+            "reference_driver_version": "WRONG"}, "steps": []}
+        with patch.object(reference.subprocess, "run", return_value=subprocess.CompletedProcess(
+                ["fake"], 0, json.dumps(response), "")):
+            result = reference.execute({}, binary="fake")
+        self.assertEqual(result["status"], "InternalError")
+        self.assertEqual(result["detail"]["reason"], "reference driver version mismatch")
+
+    def test_accepts_matching_driver_identity(self) -> None:
+        response = {"status": "Success", "meta": {
+            "upstream_commit": reference.UPSTREAM_COMMIT,
+            "reference_driver_version": reference.DRIVER_VERSION}, "steps": []}
+        with patch.object(reference.subprocess, "run", return_value=subprocess.CompletedProcess(
+                ["fake"], 0, json.dumps(response), "")):
+            result = reference.execute({}, binary="fake")
+        self.assertEqual(result, response)
+
+    def test_rejects_mismatched_upstream_commit(self) -> None:
+        response = {"status": "Success", "meta": {
+            "upstream_commit": "WRONG",
+            "reference_driver_version": reference.DRIVER_VERSION}, "steps": []}
+        with patch.object(reference.subprocess, "run", return_value=subprocess.CompletedProcess(
+                ["fake"], 0, json.dumps(response), "")):
+            result = reference.execute({}, binary="fake")
+        self.assertEqual(result["status"], "InternalError")
+        self.assertEqual(result["detail"]["reason"], "reference driver upstream commit mismatch")
 
 
 class ReferenceSemanticsTests(unittest.TestCase):

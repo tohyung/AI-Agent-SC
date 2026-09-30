@@ -25,8 +25,8 @@ architecture correct.
 
 ## Corpus and annotation protocol
 
-`research/stage2a/corpus/{development,evaluation}.jsonl` contains 32
-**candidate** cases, 16 in each provisional split. All 32 have annotation
+`research/stage2a/corpus/{development,validation}.jsonl` contains 32
+**candidate** cases, 16 in each public split. All 32 have annotation
 status `draft`, author `codex`, and no reviewer or adjudicator. The 12
 controlled mutation records inherit a parent interpretation in the same split
 and test a specified behavioral deviation, not a new user intent. There are
@@ -42,24 +42,26 @@ timeout branch, swapped deadline, unauthorized choice, wrong account owner,
 wrong amount, wrong Choice owner, wrong depositing party, wrong recipient,
 wrong token and wrong unit scaling (one each).
 
-Records keep versioned requirement history, claims with source spans and
+Records keep versioned requirement history, scoped claims with source spans and
 normalization bases, supersession links, required clarifications, forbidden
 assumptions, abstract behavior expectations, mutation provenance and annotation
-metadata. Choice owner, depositing party, account owner, payment source and
+metadata. Scope IDs identify case-local business transitions, branches,
+timeouts or outcomes, not AST paths. Choice owner, depositing party, account owner, payment source and
 recipient are distinct concepts; a transaction submitter is not inferred from
 Core V1 inputs. A later correction can supersede an older explicit claim.
-Behavior expectations do not use exact AST equality. The provisional split
+Behavior expectations do not use exact AST equality. The public split
 keeps parent/mutations together and rejects exact cross-split requirement
-duplicates; it is **not** truly held out until reviewed and frozen. These
+duplicates; it is **not** a blind evaluation set even if later frozen. These
 32 cases seed schema/protocol development, not production-accuracy claims.
 
 The human queue is `research/stage2a/review_queue.md` with approve/edit/reject
 for every case. In particular, reviewers should inspect whether these proposed
 `accepted_interpretation` labels need additional clarification or edits:
-`choice-d1` (timeout/no-choice outcome), `choice-d2-correction` (funding and
-deadline), `refund-d1` (what constitutes disbursement), `escrow-d1` (deposit
-timing), and `conditional-d1`/`conditional-e1` (source and enforceability of
-the Notify condition). These are **review flags**, not resolved conclusions.
+`choice-d1` (no-choice timeout outcome), `choice-d2-correction` (funding/account
+and Choice deadline), `refund-d1` (meaning of disbursement and success path),
+`refund-e1` (Notify-success continuation), `escrow-d1` (deposit deadline), and
+`conditional-d1`/`conditional-e1` (which Marlowe Observation establishes
+completion/delivery). These are **review flags**, not resolved conclusions.
 The remaining cases and all mutations also require review. Approval must
 include each claim, normalized value, abstract trace and mutation relation.
 
@@ -69,6 +71,33 @@ not set a numeric promotion threshold before baseline data exists. Future
 assurance records separate verdict, method, scope, coverage, evidence and
 assumptions; `tested` is not a verdict and `exhaustive` requires a completeness
 argument.
+
+## Pre-adjudication hardening
+
+The former public `evaluation` split was renamed/reclassified as `validation`.
+It was exposed during schema development, so freezing or versioning it cannot
+make it an independent blind test. A future hidden set must be generated after
+schema stabilization, human-reviewed, independently versioned and kept outside
+the development agent's context. Public development/validation scores can
+inform debugging and model selection, not production-promotion accuracy claims.
+
+Each canonical case now defines `behavior_scopes`; each claim references one
+`scope_id`. The validator checks scope identity and references, conflicts by
+`(kind, scope_id)`, and requires supersession to stay in the same scope.
+Mutations must share exact requirement history, family, group, split,
+resolution and clarifications with a canonical parent; they have no local
+claims or scopes. The review queue renders inherited claims, derived values and
+scope IDs. `choice-e1` previously used one refund claim for reject and timeout;
+the migration represented the same stated recipient as two separately scoped
+draft claims with distinct source spans. No resolution or claim value was
+changed. Annotation status now strictly determines `ground_truth_source`, and
+the reference wrapper checks both pinned upstream SHA and driver version.
+
+These changes were made by the development agent. The prior external review
+was a source/design assessment, not an independent Haskell rerun of this HEAD.
+The reference-test counts below are local/WSL execution evidence, not an
+independent reviewer CI result. The current draft annotations are still not
+gold.
 
 ## Pinned reference executor
 
@@ -137,8 +166,32 @@ have **not** been reference-verified or human adjudicated as a set.
 - `uvx ruff check --select F401,F841`: all checks passed.
 - LLM/API calls: 0. Ledger/testnet/deployment changes: 0.
 
-Ground-truth review is required before Stage 2B promotion. The researcher
-must approve, edit or reject each proposed case/claim, then separately freeze
-the approved development/evaluation sets, corpus version and SHA-256. Until
-then: **Stage 2A infrastructure: IMPLEMENTED; ground-truth corpus: DRAFT /
-HUMAN REVIEW PENDING; Stage 2B promotion: BLOCKED.**
+Ground-truth review is required before Stage 2B. A meaningful subset must be
+genuinely reviewed and the development/public-validation protocol sufficiently
+frozen before shadow experiments begin; no hidden set is required merely for
+those experiments. Before accuracy supports production promotion, an
+independent hidden evaluation protocol is mandatory. The researcher must
+approve, edit or reject each proposed case/claim, then separately version and
+hash approved sets. Until then: **Stage 2A infrastructure/schema: HARDENED;
+candidate corpus: DRAFT / HUMAN REVIEW PENDING; public validation:
+PROVISIONAL; Stage 2B: BLOCKED pending human adjudication; production-promotion
+metrics: BLOCKED pending future independent hidden evaluation.**
+
+## Hardening verification
+
+At baseline HEAD `9095f85350901cdaf32ad18b587e0d9e5fc013b6`, only the
+pre-existing ZIP was untracked. The migration preserved all 32 requirement
+histories, resolutions, original claim kinds/values/statuses, and draft
+annotation statuses. The one additional `choice-e1` refund claim is a
+scope-specific representation of the already stated timeout refund, not a new
+recipient or adjudicated fact. Seven case-specific concerns are review notes,
+not changed labels. The public split is 16 development / 16 validation.
+
+Current local evidence: corpus validation 32/32; Stage 2A foundation tests
+24 passed; reference suite in WSL 20 passed (17 semantic + 3 wrapper identity);
+SMT package regression 32 passed; production Python suite 228 passed,
+7 skipped; Ruff F401/F841 clean. `verify_upstream.sh` confirmed the pinned
+commit with no patches. Two review-queue regenerations produced identical
+SHA-256 `6d2efe5aebaaab0cb83ed9867644913db7d07ec6a2e363358d91391f3979d93`.
+No independent reviewer rerun is claimed. LLM/API calls: 0; production and
+ledger/deployment files changed: 0.

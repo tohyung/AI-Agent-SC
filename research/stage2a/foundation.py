@@ -12,7 +12,7 @@ from typing import Any
 
 
 ROOT = Path(__file__).resolve().parent
-SPLITS = ("development", "evaluation")
+SPLITS = ("development", "validation")
 RESOLUTIONS = {
     "accepted_interpretation", "clarification_required",
     "conflict_requires_resolution", "unsupported_for_current_study",
@@ -22,6 +22,19 @@ CLAIM_STATUSES = {
     "conflicted", "unresolved", "superseded",
 }
 ANNOTATION_STATUSES = {"draft", "reviewed", "adjudicated", "user_confirmed"}
+SOURCE_BY_STATUS = {
+    "draft": "candidate_research_annotation",
+    "reviewed": "reviewed_research_annotation",
+    "adjudicated": "expert_adjudicated",
+    "user_confirmed": "user_confirmed",
+}
+SCOPE_TYPES = {"global", "transition", "branch", "timeout", "terminal_outcome"}
+LOCAL_CLAIM_KINDS = {
+    "amount_lovelace", "autonomous_execution", "choice_deadline_ms", "choice_owner",
+    "deposit_deadline_ms", "depositing_party", "destination_account_owner",
+    "notify_success_recipient", "payment_recipient", "payment_source_account_owner",
+    "refund_deadline_ms", "refund_recipient", "release_recipient", "timeout_ms",
+}
 MUTATIONS = {
     "wrong_choice_owner", "wrong_depositing_party", "wrong_account_owner",
     "wrong_payment_recipient", "wrong_token", "wrong_unit_scaling",
@@ -31,7 +44,7 @@ MUTATIONS = {
 }
 REQUIRED = {
     "case_id", "split", "family", "group_id", "requirement_history",
-    "expected_resolution", "claims", "required_clarifications",
+    "expected_resolution", "behavior_scopes", "claims", "required_clarifications",
     "forbidden_assumptions", "behavior_expectations", "mutation", "annotation",
 }
 
@@ -59,6 +72,26 @@ def load_corpus(directory: Path = ROOT / "corpus") -> list[dict[str, Any]]:
 def _require(condition: bool, location: str, message: str, errors: list[str]) -> None:
     if not condition:
         errors.append(f"{location}: {message}")
+
+
+def effective_claims(record: dict[str, Any], by_id: dict[str, dict[str, Any]]) -> list[dict[str, Any]]:
+    mutation = record["mutation"]
+    if mutation is None:
+        return record["claims"]
+    parent = by_id[mutation["parent_case_id"]]
+    if parent["mutation"] is not None:
+        raise ValueError("mutation parent must be canonical")
+    return parent["claims"]
+
+
+def effective_scopes(record: dict[str, Any], by_id: dict[str, dict[str, Any]]) -> list[dict[str, Any]]:
+    mutation = record["mutation"]
+    if mutation is None:
+        return record["behavior_scopes"]
+    parent = by_id[mutation["parent_case_id"]]
+    if parent["mutation"] is not None:
+        raise ValueError("mutation parent must be canonical")
+    return parent["behavior_scopes"]
 
 
 def validate(records: list[dict[str, Any]]) -> list[str]:
@@ -118,10 +151,84 @@ def validate(records: list[dict[str, Any]]) -> list[str]:
             earlier = requirements.setdefault(fingerprint, split)
             _require(earlier == split, loc, "identical requirement leaks across splits", errors)
 
+        mutation = record["mutation"]
+        scopes = record["behavior_scopes"]
+        _require(isinstance(scopes, list), loc, "behavior_scopes must be a list", errors)
+        scope_ids: dict[str, dict[str, Any]] = {}
+        branch_keys: set[tuple[str, str]] = set()
+        timeout_ids: set[str] = set()
+        if isinstance(scopes, list):
+            for scope in scopes:
+                if not isinstance(scope, dict):
+                    errors.append(f"{loc}: invalid behavior scope")
+                    continue
+                scope_id = scope.get("scope_id")
+                if not isinstance(scope_id, str) or not scope_id.strip():
+                    errors.append(f"{loc}: scope_id is required")
+                    continue
+                _require(scope_id not in scope_ids, loc,
+                         f"duplicate scope_id {scope_id}", errors)
+                scope_ids[scope_id] = scope
+                scope_type = scope.get("scope_type")
+                _require(isinstance(scope_type, str) and scope_type in SCOPE_TYPES, loc,
+                         f"scope {scope_id}: invalid scope_type", errors)
+                if scope_type == "global":
+                    _require(scope_id == "global", loc,
+                             "global scope_id must be global", errors)
+                if scope_type == "transition":
+                    _require(isinstance(scope.get("transition_kind"), str) and
+                             bool(scope["transition_kind"].strip()), loc,
+                             f"scope {scope_id}: transition_kind is required", errors)
+                if scope_type == "branch":
+                    decision_id = scope.get("decision_id")
+                    branch_id = scope.get("branch_id")
+                    valid_branch = (isinstance(decision_id, str) and bool(decision_id.strip())
+                                    and isinstance(branch_id, str) and bool(branch_id.strip()))
+                    _require(valid_branch, loc,
+                             f"scope {scope_id}: branch requires decision_id and branch_id", errors)
+                    if valid_branch:
+                        key = (decision_id, branch_id)
+                        _require(key not in branch_keys, loc,
+                                 f"duplicate branch identity {key}", errors)
+                        branch_keys.add(key)
+                if scope_type == "timeout":
+                    timeout_id = scope.get("timeout_id")
+                    valid_timeout = isinstance(timeout_id, str) and bool(timeout_id.strip())
+                    _require(valid_timeout, loc,
+                             f"scope {scope_id}: timeout_id is required", errors)
+                    if valid_timeout:
+                        _require(timeout_id not in timeout_ids, loc,
+                                 f"duplicate timeout_id {timeout_id}", errors)
+                        timeout_ids.add(timeout_id)
+                if scope_type == "terminal_outcome":
+                    _require(isinstance(scope.get("outcome_id"), str) and
+                             bool(scope["outcome_id"].strip()), loc,
+                             f"scope {scope_id}: outcome_id is required", errors)
+            for scope_id, scope in scope_ids.items():
+                decision_id = scope.get("decision_id")
+                if scope.get("scope_type") == "branch" or decision_id is not None:
+                    _require(isinstance(decision_id, str) and
+                             decision_id in scope_ids and
+                             scope_ids[decision_id].get("scope_type") == "transition", loc,
+                             f"scope {scope_id}: decision_id does not reference a transition", errors)
+                deadline_claim_id = scope.get("deadline_claim_id")
+                if deadline_claim_id is not None:
+                    deadline_claims = (record["claims"] if isinstance(record["claims"], list)
+                                       else [])
+                    _require(isinstance(deadline_claim_id, str) and
+                             any(isinstance(c, dict) and c.get("claim_id") == deadline_claim_id
+                                 and isinstance(c.get("kind"), str)
+                                 and c["kind"].endswith("_ms") for c in deadline_claims), loc,
+                             f"scope {scope_id}: deadline_claim_id does not reference a claim", errors)
+        if isinstance(mutation, dict):
+            _require(scopes == [], loc, "mutation must not define behavior_scopes", errors)
+        else:
+            _require(bool(scopes), loc, "canonical case requires behavior_scopes", errors)
+
         claims = record["claims"]
         _require(isinstance(claims, list), loc, "claims must be a list", errors)
         claim_ids: dict[str, dict[str, Any]] = {}
-        current_by_kind: dict[str, set[str]] = {}
+        current_by_scope: dict[tuple[str, str], set[str]] = {}
         if isinstance(claims, list):
             for claim in claims:
                 if not isinstance(claim, dict):
@@ -137,6 +244,12 @@ def validate(records: list[dict[str, Any]]) -> list[str]:
                 kind = claim.get("kind")
                 _require(isinstance(kind, str) and bool(kind), loc,
                          f"claim {claim_id}: kind is required", errors)
+                scope_id = claim.get("scope_id")
+                _require(isinstance(scope_id, str) and scope_id in scope_ids, loc,
+                         f"claim {claim_id}: scope_id not found", errors)
+                _require(not (scope_id == "global" and isinstance(kind, str) and
+                              kind in LOCAL_CLAIM_KINDS), loc,
+                         f"claim {claim_id}: branch/transition fact cannot be global", errors)
                 status = claim.get("status")
                 _require(isinstance(status, str) and status in CLAIM_STATUSES, loc,
                          f"claim {claim_id}: invalid status", errors)
@@ -152,8 +265,10 @@ def validate(records: list[dict[str, Any]]) -> list[str]:
                                   isinstance(status, str) and
                                   status in {"unresolved", "conflicted", "assumed"}), loc,
                              f"accepted case has unresolved critical claim {claim_id}", errors)
-                if isinstance(status, str) and status not in {"superseded", "conflicted", "unresolved"} and isinstance(kind, str):
-                    current_by_kind.setdefault(kind, set()).add(json.dumps(
+                if (isinstance(status, str) and
+                        status not in {"superseded", "conflicted", "unresolved"} and
+                        isinstance(kind, str) and isinstance(scope_id, str)):
+                    current_by_scope.setdefault((kind, scope_id), set()).add(json.dumps(
                         claim.get("value"), ensure_ascii=False, sort_keys=True))
                 evidence = claim.get("evidence")
                 _require(isinstance(evidence, list), loc,
@@ -184,7 +299,8 @@ def validate(records: list[dict[str, Any]]) -> list[str]:
                     successor_id = claim.get("superseded_by")
                     successor = claim_ids.get(successor_id) if isinstance(successor_id, str) else None
                     _require(successor is not None and successor.get("status") != "superseded"
-                             and successor.get("kind") == claim.get("kind"), loc,
+                             and successor.get("kind") == claim.get("kind") and
+                             successor.get("scope_id") == claim.get("scope_id"), loc,
                              f"superseded claim {claim.get('claim_id')} lacks current successor", errors)
                     if successor:
                         old_versions = [item.get("requirement_version") for item in claim.get("evidence", [])]
@@ -193,11 +309,10 @@ def validate(records: list[dict[str, Any]]) -> list[str]:
                             _require(max(old_versions) < max(new_versions), loc,
                                      "supersession must follow requirement chronology", errors)
             if record["expected_resolution"] != "conflict_requires_resolution":
-                for kind, values in current_by_kind.items():
+                for (kind, scope_id), values in current_by_scope.items():
                     _require(len(values) <= 1, loc,
-                             f"active claim values conflict for {kind}", errors)
+                             f"active claim values conflict for {kind} in {scope_id}", errors)
 
-        mutation = record["mutation"]
         clarifications = record["required_clarifications"]
         _require(isinstance(clarifications, list), loc,
                  "required_clarifications must be a list", errors)
@@ -222,6 +337,7 @@ def validate(records: list[dict[str, Any]]) -> list[str]:
         _require(mutation is None or isinstance(mutation, dict), loc,
                  "mutation must be null or object", errors)
         if isinstance(mutation, dict):
+            _require(claims == [], loc, "mutation must not define claims", errors)
             _require(isinstance(mutation.get("mutation_type"), str) and
                      mutation["mutation_type"] in MUTATIONS, loc,
                      "invalid mutation_type", errors)
@@ -234,6 +350,10 @@ def validate(records: list[dict[str, Any]]) -> list[str]:
                  annotation["status"] in ANNOTATION_STATUSES, loc,
                  "invalid annotation status", errors)
         if isinstance(annotation, dict):
+            status = annotation.get("status")
+            _require(isinstance(status, str) and
+                     annotation.get("ground_truth_source") == SOURCE_BY_STATUS.get(status),
+                     loc, "ground_truth_source does not match annotation status", errors)
             _require(isinstance(annotation.get("authored_by"), str) and
                      bool(annotation.get("authored_by")), loc,
                      "annotation author missing", errors)
@@ -264,6 +384,12 @@ def validate(records: list[dict[str, Any]]) -> list[str]:
                      "mutation parent leaks across split/group", errors)
             _require(parent["expected_resolution"] == record["expected_resolution"], loc,
                      "mutation changes resolution instead of testing a behavioral deviation", errors)
+            _require(parent["requirement_history"] == record["requirement_history"], loc,
+                     "mutation requirement_history differs from parent", errors)
+            _require(parent["family"] == record["family"], loc,
+                     "mutation family differs from parent", errors)
+            _require(parent["required_clarifications"] == record["required_clarifications"], loc,
+                     "mutation required_clarifications differ from parent", errors)
     return errors
 
 
@@ -311,15 +437,20 @@ def review_queue(records: list[dict[str, Any]]) -> str:
             lines.append(f"- Requirement v{version['version']}: " + " | ".join(version["messages"]))
         lines.append(f"- Proposed resolution: `{record['expected_resolution']}`")
         parent_id = (record["mutation"] or {}).get("parent_case_id")
-        inherited = by_id[parent_id]["claims"] if parent_id else []
-        claims = [f"{c['kind']}={c.get('value')} [{c['status']}]"
-                  for c in inherited + record["claims"] if c["criticality"] == "financial"]
-        lines.append("- Critical claims: " + ("; ".join(claims) or "none proposed"))
+        claims = effective_claims(record, by_id)
+        scopes = effective_scopes(record, by_id)
+        label = f" (inherited from {parent_id})" if parent_id else ""
+        critical = [f"{c['kind']}={c.get('value')} [{c['status']}; scope={c['scope_id']}]"
+                    for c in claims if c["criticality"] == "financial"]
+        lines.append(f"- Critical claims{label}: " + ("; ".join(critical) or "none proposed"))
+        lines.append("- Behavior scopes" + label + ": " + json.dumps(
+            scopes, ensure_ascii=False, sort_keys=True))
         if parent_id:
             lines.append(f"- Inherits canonical interpretation from: `{parent_id}`")
-        assumptions = [f"{c['kind']}={c.get('value')}" for c in record["claims"]
+        assumptions = [f"{c['kind']}={c.get('value')} [scope={c['scope_id']}]" for c in claims
                        if c["status"] in {"assumed", "derived"}]
-        lines.append("- Assumptions/derivations: " + ("; ".join(assumptions) or "none proposed"))
+        lines.append(f"- Assumptions/derivations{label}: " +
+                     ("; ".join(assumptions) or "none proposed"))
         lines.append("- Required clarifications: " +
                      ("; ".join(str(item) for item in record["required_clarifications"]) or "none"))
         lines.append("- Forbidden assumptions: " +

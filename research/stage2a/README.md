@@ -1,8 +1,11 @@
 # Stage 2A research foundation
 
 This directory contains **draft candidate annotations**, not approved ground truth.
-No file here is imported by the production agent. Human approval is required
-before the evaluation split can be frozen or used for promotion decisions.
+No file here is imported by the production agent. The former public
+`evaluation.jsonl` is now `validation.jsonl`: its prior exposure prevents it
+from serving as a blind test even if later frozen. Human review remains pending
+for all 32 cases; an independent hidden evaluation protocol is required before
+accuracy can support production promotion.
 
 From the repository root:
 
@@ -16,7 +19,9 @@ python -m pytest research/stage2a/test_foundation.py -q
 `review_queue.md` is generated deterministically and lists an approve/edit/reject
 decision for each case. Editing that checklist alone does not change annotation
 status or establish ground truth; an adjudication pass must update and version the
-corpus after reviewing the underlying claims and behavior.
+corpus after reviewing the underlying claims, scoped behavior and inherited
+mutation interpretation. Development and public validation each contain 16
+draft cases. Schema hardening does not adjudicate disputed business meanings.
 
 The reference executor uses the existing pinned Haskell semantics in
 `tools/marlowe_smt/upstream/marlowe`, not the Python Node 3 diagnostic mapper.
