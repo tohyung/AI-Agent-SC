@@ -1,0 +1,84 @@
+{
+  "corpus_version": "stage2a-v1",
+  "freeze_type": "public_research_corpus_semantic_freeze",
+  "source_commit": "a6ea94587783d45ffc68406dd856a636a59874ed",
+  "hash_basis": {
+    "type": "git_blob_content",
+    "source_commit": "a6ea94587783d45ffc68406dd856a636a59874ed",
+    "note": "Hashes and byte counts are computed from exact Git blob contents at source_commit, independent of checkout line-ending conversion."
+  },
+  "schema_version": 1,
+  "reference_semantics": {
+    "upstream_commit": "7b5b1e900ec53a8eb18747992bec73470704dfcb",
+    "reference_driver_version": "0.1.0"
+  },
+  "counts": {
+    "total_cases": 32,
+    "canonical_cases": 20,
+    "mutations": 12,
+    "development": 16,
+    "validation": 16,
+    "resolutions": {
+      "accepted_interpretation": 12,
+      "clarification_required": 16,
+      "conflict_requires_resolution": 3,
+      "unsupported_for_current_study": 1
+    },
+    "annotation_status": {
+      "draft": 32
+    }
+  },
+  "claim_kinds": [
+    "amount_lovelace",
+    "asset",
+    "autonomous_execution",
+    "choice_deadline_ms",
+    "choice_owner",
+    "deposit_deadline_ms",
+    "depositing_party",
+    "destination_account_owner",
+    "payment_recipient",
+    "payment_source_account_owner",
+    "refund_deadline_ms",
+    "refund_recipient",
+    "release_recipient",
+    "timeout_ms"
+  ],
+  "artifacts": [
+    {
+      "path": "research/stage2a/corpus/development.jsonl",
+      "sha256": "ea60a4c3ba32cc39ffa354afe1312b69bc86a4afe400dc511cdcf10c27bd9f82",
+      "bytes": 36181,
+      "source": "git_blob_at_source_commit"
+    },
+    {
+      "path": "research/stage2a/corpus/validation.jsonl",
+      "sha256": "60674533df45bf26911d0dda7723336a13a9859f4903b66536917a31721726b9",
+      "bytes": 36247,
+      "source": "git_blob_at_source_commit"
+    },
+    {
+      "path": "research/stage2a/foundation.py",
+      "sha256": "920ecb4aebaddb99bd7c1f8c4fd66da1e94c15f98ffd71256de99010d091e2db",
+      "bytes": 27957,
+      "source": "git_blob_at_source_commit"
+    },
+    {
+      "path": "research/stage2a/protocol.md",
+      "sha256": "e7292c842e6a2f8421af363d4a1a1fcc9892522b2aa19114c07271e980051a30",
+      "bytes": 11383,
+      "source": "git_blob_at_source_commit"
+    }
+  ],
+  "aggregate_rule": "Sort the four artifact paths lexicographically; for each append UTF-8 <path>\\t<sha256>\\n; SHA-256 the concatenated bytes. No timestamp or generated artifact is included.",
+  "aggregate_sha256": "897249e3d355121e7cf8304e8b336dc0a4118515b4bf847f7fb8b8efad587a46",
+  "limitations": [
+    "The public development and validation sets are not blind evaluation.",
+    "Clarification-required cases contain unresolved business facts; semantic freeze does not mean an end user answered them.",
+    "Reference semantics authority is limited to explicit Marlowe Core V1 traces.",
+    "No ledger, testnet, or deployment validation was performed.",
+    "This freeze does not establish production accuracy or readiness.",
+    "Future production-promotion metrics require independent hidden evaluation.",
+    "Mutations are controlled deviations inheriting canonical interpretations."
+  ]
+}

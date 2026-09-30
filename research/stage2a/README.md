@@ -24,7 +24,9 @@ mutation interpretation. Development and public validation each contain 16
 draft cases. The researcher-approved semantic adjudication plan is reflected
 in proposed resolutions, claims and questions, but annotation metadata remains
 `draft`/`candidate_research_annotation`; missing end-user answers have not been
-supplied. A cross-case audit and versioned freeze are separate future work.
+supplied. The cross-case audit has passed, and a `stage2a-v1` semantic freeze
+artifact has been created in [freeze/](freeze/README.md). Its acceptance and
+Stage 2A closure remain pending separate review; Stage 2B has not started.
 
 The reference executor uses the existing pinned Haskell semantics in
 `tools/marlowe_smt/upstream/marlowe`, not the Python Node 3 diagnostic mapper.
