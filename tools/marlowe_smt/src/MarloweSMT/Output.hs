@@ -7,12 +7,18 @@ module MarloweSMT.Output
   , renderAnalysis
   , renderInvalidInput
   , renderInternalFailure
+  , warningJSON
+  , paymentJSON
+  , stateJSON
+  , contractJSON
+  , transactionErrorJSON
   ) where
 
 import Data.Aeson
 import Data.Aeson.Types (Pair)
 import qualified Data.Aeson.KeyMap as KeyMap
 import qualified Data.ByteString as BS
+import qualified Data.Map.Strict as Map
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as TextEncoding
 import qualified Language.Marlowe.Semantics as S
@@ -90,6 +96,118 @@ warningJSON = \case
     , "new_value" .= newValue
     ]
   S.TransactionAssertionFailed -> object ["type" .= String "TransactionAssertionFailed"]
+
+paymentJSON :: S.Payment -> Value
+paymentJSON (S.Payment source payee token amount) = object
+  [ "source_account" .= partyJSON source
+  , "payee" .= payeeJSON payee
+  , "token" .= tokenJSON token
+  , "amount" .= amount
+  ]
+
+stateJSON :: M.State -> Value
+stateJSON state = object
+  [ "accounts" .= [[toJSON [partyJSON party, tokenJSON token], toJSON amount]
+                   | ((party, token), amount) <- Map.toAscList (M.accounts state)]
+  , "choices" .= [toJSON [choiceIdJSON choiceId, toJSON chosen]
+                  | (choiceId, chosen) <- Map.toAscList (M.choices state)]
+  , "boundValues" .= [toJSON [toJSON (valueIdText identifier), toJSON number]
+                     | (identifier, number) <- Map.toAscList (M.boundValues state)]
+  , "minTime" .= M.getPOSIXTime (M.minTime state)
+  ]
+
+contractJSON :: M.Contract -> Value
+contractJSON = \case
+  M.Close -> String "close"
+  M.Pay source payee token amount continuation -> object
+    [ "pay" .= valueJSON amount, "from_account" .= partyJSON source
+    , "to" .= payeeJSON payee, "token" .= tokenJSON token
+    , "then" .= contractJSON continuation
+    ]
+  M.If observation left right -> object
+    [ "if" .= observationJSON observation, "then" .= contractJSON left
+    , "else" .= contractJSON right
+    ]
+  M.When cases timeout continuation -> object
+    [ "when" .= fmap caseJSON cases, "timeout" .= M.getPOSIXTime timeout
+    , "timeout_continuation" .= contractJSON continuation
+    ]
+  M.Let identifier value continuation -> object
+    [ "let" .= valueIdText identifier, "be" .= valueJSON value
+    , "then" .= contractJSON continuation
+    ]
+  M.Assert observation continuation -> object
+    [ "assert" .= observationJSON observation, "then" .= contractJSON continuation ]
+
+caseJSON :: M.Case -> Value
+caseJSON = \case
+  M.Case action continuation -> object
+    [ "case" .= actionJSON action, "then" .= contractJSON continuation ]
+  M.MerkleizedCase action hash -> object
+    [ "case" .= actionJSON action, "merkleized_then" .= bytesText hash ]
+
+actionJSON :: M.Action -> Value
+actionJSON = \case
+  M.Deposit account party token amount -> object
+    [ "into_account" .= partyJSON account, "party" .= partyJSON party
+    , "of_token" .= tokenJSON token, "deposits" .= valueJSON amount
+    ]
+  M.Choice choiceId bounds -> object
+    [ "for_choice" .= choiceIdJSON choiceId
+    , "choose_between" .= [object ["from" .= lower, "to" .= upper]
+                          | M.Bound lower upper <- bounds]
+    ]
+  M.Notify observation -> object ["notify_if" .= observationJSON observation]
+
+valueJSON :: M.Value -> Value
+valueJSON = \case
+  M.AvailableMoney account token -> object
+    ["in_account" .= partyJSON account, "amount_of_token" .= tokenJSON token]
+  M.Constant number -> toJSON number
+  M.NegValue value -> object ["negate" .= valueJSON value]
+  M.AddValue left right -> object ["add" .= valueJSON left, "and" .= valueJSON right]
+  M.SubValue left right -> object ["value" .= valueJSON left, "minus" .= valueJSON right]
+  M.MulValue left right -> object ["multiply" .= valueJSON left, "times" .= valueJSON right]
+  M.DivValue left right -> object ["divide" .= valueJSON left, "by" .= valueJSON right]
+  M.ChoiceValue choiceId -> object ["value_of_choice" .= choiceIdJSON choiceId]
+  M.TimeIntervalStart -> String "time_interval_start"
+  M.TimeIntervalEnd -> String "time_interval_end"
+  M.UseValue identifier -> object ["use_value" .= valueIdText identifier]
+  M.Cond observation left right -> object
+    ["if" .= observationJSON observation, "then" .= valueJSON left, "else" .= valueJSON right]
+
+observationJSON :: M.Observation -> Value
+observationJSON = \case
+  M.AndObs left right -> object ["both" .= observationJSON left, "and" .= observationJSON right]
+  M.OrObs left right -> object ["either" .= observationJSON left, "or" .= observationJSON right]
+  M.NotObs value -> object ["not" .= observationJSON value]
+  M.ChoseSomething choiceId -> object ["chose_something_for" .= choiceIdJSON choiceId]
+  M.ValueGE left right -> compareJSON "ge_than" left right
+  M.ValueGT left right -> compareJSON "gt" left right
+  M.ValueLT left right -> compareJSON "lt" left right
+  M.ValueLE left right -> compareJSON "le_than" left right
+  M.ValueEQ left right -> compareJSON "equal_to" left right
+  M.TrueObs -> Bool True
+  M.FalseObs -> Bool False
+  where
+    compareJSON key left right = object ["value" .= valueJSON left, key .= valueJSON right]
+
+transactionErrorJSON :: S.TransactionError -> Value
+transactionErrorJSON = \case
+  S.TEAmbiguousTimeIntervalError -> object ["type" .= String "TEAmbiguousTimeIntervalError"]
+  S.TEApplyHashMismatch -> object ["type" .= String "TEApplyHashMismatch"]
+  S.TEApplyNoMatchError -> object ["type" .= String "TEApplyNoMatchError"]
+  S.TEUselessTransaction -> object ["type" .= String "TEUselessTransaction"]
+  S.TEIntervalError intervalError -> object
+    ["type" .= String "TEIntervalError", "detail" .= intervalErrorJSON intervalError]
+
+intervalErrorJSON :: M.IntervalError -> Value
+intervalErrorJSON = \case
+  M.InvalidInterval interval -> object
+    ["type" .= String "InvalidInterval", "interval" .= intervalJSON interval]
+  M.IntervalInPastError minTime interval -> object
+    ["type" .= String "IntervalInPastError", "min_time" .= M.getPOSIXTime minTime
+    , "interval" .= intervalJSON interval]
 
 transactionJSON :: S.TransactionInput -> Value
 transactionJSON (S.TransactionInput interval inputs) = object

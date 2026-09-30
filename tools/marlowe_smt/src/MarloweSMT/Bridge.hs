@@ -4,6 +4,8 @@
 module MarloweSMT.Bridge
   ( Request(..)
   , parseRequest
+  , ReferenceRequest(..)
+  , parseReferenceRequest
   , countMerkleizedCases
   ) where
 
@@ -20,11 +22,85 @@ import qualified Data.Text as Text
 import qualified Data.Text.Encoding as TextEncoding
 import qualified Data.Vector as Vector
 import qualified Language.Marlowe.Semantics.Types as M
+import qualified Language.Marlowe.Semantics as S
+import Text.Read (readMaybe)
 
 data Request = Request
   { requestContract :: M.Contract
   , requestState :: Maybe M.State
   }
+
+data ReferenceRequest = ReferenceRequest
+  { referenceContract :: M.Contract
+  , referenceState :: M.State
+  , referenceTransactions :: [S.TransactionInput]
+  , referenceHasMerkleizedInput :: Bool
+  }
+
+parseReferenceRequest :: Value -> Parser ReferenceRequest
+parseReferenceRequest = withObject "reference request" $ \object -> do
+  exact "reference request" ["contract", "state", "transactions"] object
+  contract <- object .: "contract" >>= parseContract
+  state <- object .: "state" >>= parseState
+  transactions <- object .: "transactions" >>= parseList "transactions" parseTransaction
+  let merkleized = any (any isMerkleized . S.txInputs) transactions
+  pure ReferenceRequest
+    { referenceContract = contract
+    , referenceState = state
+    , referenceTransactions = transactions
+    , referenceHasMerkleizedInput = merkleized
+    }
+  where
+    isMerkleized (M.MerkleizedInput _ _) = True
+    isMerkleized _ = False
+
+parseTransaction :: Value -> Parser S.TransactionInput
+parseTransaction = withObject "TransactionInput" $ \object -> do
+  exact "TransactionInput" ["interval", "inputs"] object
+  interval <- object .: "interval" >>= parseInterval
+  inputs <- object .: "inputs" >>= parseList "inputs" parseInput
+  pure (S.TransactionInput interval inputs)
+
+parseInterval :: Value -> Parser M.TimeInterval
+parseInterval = withObject "TimeInterval" $ \object -> do
+  exact "TimeInterval" ["from", "to"] object
+  lower <- object .: "from" >>= parsePOSIX
+  upper <- object .: "to" >>= parsePOSIX
+  pure (M.TimeInterval lower upper)
+
+parsePOSIX :: Value -> Parser M.POSIXTime
+parsePOSIX value = M.POSIXTime <$> case value of
+  Number _ -> parseJSON value
+  String text -> maybe (fail "invalid POSIX millisecond integer") pure (readMaybe (Text.unpack text))
+  _ -> fail "POSIX time must be an integer or decimal string"
+
+parseInput :: Value -> Parser M.Input
+parseInput = withObject "Input" $ \object -> do
+  let merkleized = KeyMap.member "merkleized_continuation" object
+      fields = if merkleized then KeyMap.delete "merkleized_continuation" object else object
+  content <- parseInputContent (Object fields)
+  if merkleized
+    then M.MerkleizedInput content . utf8 <$> fieldText False "merkleized_continuation" object "merkleized_continuation"
+    else pure (M.NormalInput content)
+
+parseInputContent :: Value -> Parser M.InputContent
+parseInputContent = withObject "InputContent" $ \object -> do
+  kind <- object .: "type" :: Parser Text.Text
+  case kind of
+    "Deposit" -> do
+      exact "Deposit input" ["type", "account", "party", "token", "amount"] object
+      M.IDeposit
+        <$> (object .: "account" >>= parseParty)
+        <*> (object .: "party" >>= parseParty)
+        <*> (object .: "token" >>= parseToken)
+        <*> object .: "amount"
+    "Choice" -> do
+      exact "Choice input" ["type", "choice_id", "chosen"] object
+      M.IChoice
+        <$> (object .: "choice_id" >>= parseChoiceId)
+        <*> object .: "chosen"
+    "Notify" -> exact "Notify input" ["type"] object *> pure M.INotify
+    _ -> fail "unsupported input type"
 
 parseRequest :: Value -> Parser Request
 parseRequest value@(Object object)
