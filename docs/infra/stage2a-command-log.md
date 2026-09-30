@@ -176,3 +176,50 @@ kind/value/status were unchanged. The former public evaluation split was
 renamed validation. `choice-e1` gained a second draft refund claim for its
 explicit timeout branch, retaining the same recipient value. The seven risk
 notes are pending human decisions, not adjudication. LLM/API calls: **0**.
+
+## Researcher-approved semantic content (baseline 9912b8c)
+
+Historical command output above is unchanged. This corpus-only patch used a
+one-time structured JSONL editor (`python research/stage2a/_apply_adjudication_once.py`)
+to update canonical parents first, then synchronize and inspect mutations. The
+temporary editor was removed after migration; it is not a runtime dependency.
+
+```text
+git rev-parse HEAD
+9912b8c916382c95dfd4ff2c77a5766372ed58b0
+
+git status --short
+(empty)
+
+python research/stage2a/foundation.py validate
+VALID: 32 draft candidate cases
+
+python research/stage2a/foundation.py stats
+total_candidate_cases: 32
+by_split: development 16, validation 16
+by_resolution: accepted_interpretation 12, clarification_required 16,
+  conflict_requires_resolution 3, unsupported_for_current_study 1
+by_annotation_status: draft 32
+
+python research/stage2a/foundation.py review --output research/stage2a/review_queue.md
+python research/stage2a/foundation.py review --output research/stage2a/review_queue.md
+SHA-256 after each run: F81FF87715C5BE8BC5B15E844B95955ECD1AF1665DA3837AF9C4FD0D0785C897
+
+python -m pytest research/stage2a/test_foundation.py -q
+31 passed in 0.22s
+
+python -m pytest marlowe_ai_agent/tests/ -q
+228 passed, 7 skipped in 1.52s
+
+python -m compileall -q marlowe_ai_agent research/stage2a
+exit 0; no output
+
+uvx ruff check --select F401,F841
+All checks passed!
+```
+
+A case-by-case structured comparison against HEAD confirmed all 32 case IDs,
+requirement histories and complete `annotation` objects were unchanged. Seven
+canonical resolutions and six inheriting mutation resolutions changed from
+accepted to clarification; no missing business answers were supplied.
+No production, SMT, benchmark or deployment files changed. LLM/API calls: **0**.

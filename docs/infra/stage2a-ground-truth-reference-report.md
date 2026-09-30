@@ -30,13 +30,13 @@ architecture correct.
 status `draft`, author `codex`, and no reviewer or adjudicator. The 12
 controlled mutation records inherit a parent interpretation in the same split
 and test a specified behavioral deviation, not a new user intent. There are
-13 proposed accepted canonical cases; this is a composition count, not
+6 proposed accepted canonical cases; this is a composition count, not
 an accuracy result. No model accuracy, precision or recall was measured.
 
 Family distribution: choice-based release 6, conditional payment 5,
 deposit-refund 5, simple timed payment 5, single-deadline escrow 6,
-two-deadline escrow 5. Proposed resolutions: accepted interpretation 25,
-clarification required 3, conflict resolution required 3, unsupported in
+two-deadline escrow 5. Current resolutions: accepted interpretation 12,
+clarification required 16, conflict resolution required 3, unsupported in
 current study 1. Mutation types: double payment, missing refund, reversed
 timeout branch, swapped deadline, unauthorized choice, wrong account owner,
 wrong amount, wrong Choice owner, wrong depositing party, wrong recipient,
@@ -55,13 +55,13 @@ duplicates; it is **not** a blind evaluation set even if later frozen. These
 32 cases seed schema/protocol development, not production-accuracy claims.
 
 The human queue is `research/stage2a/review_queue.md` with approve/edit/reject
-for every case. In particular, reviewers should inspect whether these proposed
-`accepted_interpretation` labels need additional clarification or edits:
+for every case. The following seven canonical cases now propose
+`clarification_required`, rather than silently supplying missing facts:
 `choice-d1` (no-choice timeout outcome), `choice-d2-correction` (funding/account
 and Choice deadline), `refund-d1` (meaning of disbursement and success path),
 `refund-e1` (Notify-success continuation), `escrow-d1` (deposit deadline), and
 `conditional-d1`/`conditional-e1` (which Marlowe Observation establishes
-completion/delivery). These are **review flags**, not resolved conclusions.
+completion/delivery). The questions are proposed content, not end-user answers.
 The remaining cases and all mutations also require review. Approval must
 include each claim, normalized value, abstract trace and mutation relation.
 
@@ -72,7 +72,7 @@ assurance records separate verdict, method, scope, coverage, evidence and
 assumptions; `tested` is not a verdict and `exhaustive` requires a completeness
 argument.
 
-## Pre-adjudication hardening
+## Pre-adjudication hardening (prior patch)
 
 The former public `evaluation` split was renamed/reclassified as `validation`.
 It was exposed during schema development, so freezing or versioning it cannot
@@ -195,3 +195,53 @@ commit with no patches. Two review-queue regenerations produced identical
 SHA-256 `6d2efe5aebaaab0cb83ed9867644913db7d07ec6a2e363358d91391f3979d93`.
 No independent reviewer rerun is claimed. LLM/API calls: 0; production and
 ledger/deployment files changed: 0.
+
+## Researcher-approved semantic content pass
+
+This pass starts from `9912b8c916382c95dfd4ff2c77a5766372ed58b0` and
+applies the researcher's plan to **candidate content only**. All 32 cases
+remain; development/validation stay 16/16. Before: 25 accepted, 3
+clarification, 3 conflict, 1 unsupported. After: 12 accepted, 16
+clarification, 3 conflict, 1 unsupported. The structured baseline diff has
+9 unchanged cases and 23 edited cases;
+none was rejected. Seven canonical cases changed to
+`clarification_required`: `refund-d1`, `choice-d1`, `escrow-d1`,
+`conditional-d1`, `choice-d2-correction`, `refund-e1`, `conditional-e1`.
+Their six mutations inherited the same resolution and questions.
+
+The edited canonical cases add only requirement-grounded claims with exact
+source spans and case-local scopes. `double-d1` and `double-e1` gained
+`decision-1:approve` branch scopes; `escrow-d2-clarify` and
+`choice-e2-clarify` gained distinct timeout-refund scopes linked to explicit
+Choice deadlines. The latter two still ask which funding account is used.
+`pay-d2-clarify` gains its explicit 1100 ms deadline, but **not** a Marlowe
+depositor claim: the wording “Alice gửi” is not taken as sufficient proof of
+that role or of account ownership. `escrow-d1` gains only the explicit 6000 ms
+approval deadline, not an inferred deposit deadline. No Notify Observation or
+oracle is invented for either conditional case.
+
+Mutations remain implementation-deviation candidates, not independent
+accepted contracts. Six descriptors/behavior summaries were scoped to their
+updated parent: `refund-d1-m-missing`, `choice-d1-m-owner`,
+`escrow-d1-m-party`, `conditional-d1-m-token`, `refund-e1-m-account`, and
+`conditional-e1-m-double`. They assert violations only of explicit facts; a
+valid success Observation or unspecified disbursement path is not assumed.
+The other six were checked against updated effective parent claims/scopes and
+kept unchanged. Exact requirement histories and **all annotation metadata**
+match the baseline case by case. A researcher-approved classification plan
+does not constitute an answer from the end user or finalized ground truth.
+
+**Current status:** schema HARDENED; semantic adjudication content APPLIED;
+clarification cases correctly classified but missing business facts NOT
+RESOLVED; mutation corpus REVALIDATED; annotations still DRAFT/CANDIDATE;
+ground-truth freeze NOT DONE; Stage 2A NOT CLOSED; Stage 2B NOT STARTED.
+Next gate: cross-case consistency audit, then corpus version/manifest/hash and
+freeze after the remaining human decisions.
+
+Patch verification from baseline `9912b8c`: corpus validator accepted 32/32
+draft cases; foundation tests 31 passed; production Python tests 228 passed,
+7 skipped; `compileall` exited 0; Ruff F401/F841 clean. The regenerated
+review queue was byte-identical across two runs (SHA-256
+`f81ff87715c5be8bc5b15e844b95955ecd1af1665da3837af9c4fd0d0785c897`).
+No SMT/reference/production code was edited or rerun for this corpus-only
+patch. LLM/API calls: 0.

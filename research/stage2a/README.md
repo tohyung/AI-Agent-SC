@@ -21,7 +21,10 @@ decision for each case. Editing that checklist alone does not change annotation
 status or establish ground truth; an adjudication pass must update and version the
 corpus after reviewing the underlying claims, scoped behavior and inherited
 mutation interpretation. Development and public validation each contain 16
-draft cases. Schema hardening does not adjudicate disputed business meanings.
+draft cases. The researcher-approved semantic adjudication plan is reflected
+in proposed resolutions, claims and questions, but annotation metadata remains
+`draft`/`candidate_research_annotation`; missing end-user answers have not been
+supplied. A cross-case audit and versioned freeze are separate future work.
 
 The reference executor uses the existing pinned Haskell semantics in
 `tools/marlowe_smt/upstream/marlowe`, not the Python Node 3 diagnostic mapper.

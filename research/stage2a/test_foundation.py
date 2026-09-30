@@ -7,6 +7,23 @@ from copy import deepcopy
 from research.stage2a import foundation
 
 
+EXPECTED_CASE_IDS = {
+    "pay-d1", "pay-d1-m-recipient", "refund-d1", "refund-d1-m-missing",
+    "choice-d1", "choice-d1-m-owner", "escrow-d1", "escrow-d1-m-party",
+    "double-d1", "double-d1-m-deadline", "conditional-d1", "conditional-d1-m-token",
+    "choice-d2-correction", "pay-d2-clarify", "escrow-d2-clarify", "double-d2-conflict",
+    "pay-e1", "pay-e1-m-unit", "refund-e1", "refund-e1-m-account",
+    "choice-e1", "choice-e1-m-unauthorized", "escrow-e1", "escrow-e1-m-timeout",
+    "double-e1", "double-e1-m-amount", "conditional-e1", "conditional-e1-m-double",
+    "refund-e2-conflict", "escrow-e2-unsupported", "choice-e2-clarify",
+    "conditional-e2-conflict",
+}
+NEWLY_CLARIFIED = {
+    "refund-d1", "choice-d1", "escrow-d1", "conditional-d1",
+    "choice-d2-correction", "refund-e1", "conditional-e1",
+}
+
+
 def corpus():
     records = foundation.load_corpus()
     assert not foundation.validate(records)
@@ -260,3 +277,138 @@ def test_stats_and_review_queue_are_deterministic():
     assert first == foundation.review_queue(list(reversed(records)))
     assert first.count("[ ] Approve") == 32
     assert "Inherits canonical interpretation from: `pay-d1`" in first
+
+
+def test_adjudication_preserves_all_cases_and_draft_metadata():
+    records = corpus()
+    assert {record["case_id"] for record in records} == EXPECTED_CASE_IDS
+    assert foundation.statistics(records)["by_split"] == {
+        "development": 16, "validation": 16}
+    assert foundation.statistics(records)["by_resolution"] == {
+        "accepted_interpretation": 12,
+        "clarification_required": 16,
+        "conflict_requires_resolution": 3,
+        "unsupported_for_current_study": 1,
+    }
+    assert all(record["annotation"] == {
+        "status": "draft", "authored_by": "codex", "reviewed_by": None,
+        "adjudicated_by": None,
+        "ground_truth_source": "candidate_research_annotation",
+        "notes": record["annotation"]["notes"],
+    } for record in records)
+    assert all(record["expected_resolution"] != "rejected" for record in records)
+
+
+def test_seven_canonical_cases_are_clarification_required_without_invented_answers():
+    records = corpus()
+    for case_id in NEWLY_CLARIFIED:
+        record = by_id(records, case_id)
+        assert record["mutation"] is None
+        assert record["expected_resolution"] == "clarification_required"
+        assert record["required_clarifications"]
+        assert record["annotation"]["status"] == "draft"
+    assert any("giải ngân" in q for q in by_id(records, "refund-d1")["required_clarifications"])
+    assert any("không approve" in q for q in by_id(records, "choice-d1")["required_clarifications"])
+    assert any("nạp" in q for q in by_id(records, "escrow-d1")["required_clarifications"])
+    assert any("Notify" in q for q in by_id(records, "refund-e1")["required_clarifications"])
+
+
+def test_all_mutations_inherit_updated_parent_and_remain_partial_checks():
+    records = corpus()
+    by_case = {record["case_id"]: record for record in records}
+    mutations = [record for record in records if record["mutation"] is not None]
+    assert len(mutations) == 12
+    for record in mutations:
+        parent = by_case[record["mutation"]["parent_case_id"]]
+        assert parent["mutation"] is None
+        assert record["requirement_history"] == parent["requirement_history"]
+        assert record["expected_resolution"] == parent["expected_resolution"]
+        assert record["required_clarifications"] == parent["required_clarifications"]
+        assert record["claims"] == []
+        assert record["behavior_scopes"] == []
+        assert foundation.effective_claims(record, by_case) == parent["claims"]
+        assert foundation.effective_scopes(record, by_case) == parent["behavior_scopes"]
+    assert "Observation unresolved" in " ".join(
+        by_case["conditional-e1-m-double"]["behavior_expectations"]["terminal_outcomes"])
+    assert "disbursement/success path unresolved" in " ".join(
+        by_case["refund-d1-m-missing"]["behavior_expectations"]["terminal_outcomes"])
+
+
+def test_new_timeout_refund_scopes_and_exact_evidence():
+    records = corpus()
+    for case_id in ("escrow-d2-clarify", "choice-e2-clarify"):
+        record = by_id(records, case_id)
+        scopes = {scope["scope_id"]: scope for scope in record["behavior_scopes"]}
+        timeout = scopes["decision-1:timeout"]
+        assert timeout["scope_type"] == "timeout"
+        assert timeout["deadline_claim_id"] == "choice-deadline"
+        refund = next(c for c in record["claims"] if c["claim_id"] == "refund-recipient")
+        assert refund["scope_id"] == "decision-1:timeout"
+        evidence = refund["evidence"][0]
+        source = record["requirement_history"][evidence["requirement_version"] - 1][
+            "messages"][evidence["message_index"]]
+        assert evidence["span"] in source
+
+
+def test_missing_account_owner_and_notify_observation_are_not_invented():
+    records = corpus()
+    for case_id in ("pay-d2-clarify", "escrow-d2-clarify", "choice-e2-clarify"):
+        record = by_id(records, case_id)
+        assert not any(c["kind"] == "destination_account_owner" for c in record["claims"])
+        assert any("account" in q for q in record["required_clarifications"])
+    assert not any(c["kind"] == "depositing_party"
+                   for c in by_id(records, "pay-d2-clarify")["claims"])
+    for case_id in ("conditional-d1", "conditional-e1"):
+        record = by_id(records, case_id)
+        assert not any("observation" in c["kind"].lower() for c in record["claims"])
+        assert any("Observation" in q for q in record["required_clarifications"])
+        assert record["behavior_expectations"]["accepted_traces"] == []
+    escrow = by_id(records, "escrow-d1")
+    assert not any(c["kind"] == "deposit_deadline_ms" for c in escrow["claims"])
+    assert next(c["value"] for c in escrow["claims"]
+                if c["kind"] == "choice_deadline_ms") == 6000
+
+
+def test_new_claim_values_and_scopes_are_source_grounded():
+    records = corpus()
+    expectations = {
+        "choice-d1": {"amount": (12000000, "deposit-1"),
+                      "choice-deadline": (4000, "decision-1")},
+        "double-d1": {"account-owner": ("Alice", "deposit-1"),
+                      "amount": (7000000, "deposit-1"),
+                      "release-recipient": ("Bob", "decision-1:approve")},
+        "choice-d2-correction": {"amount": (2000000, "decision-1:approve")},
+        "escrow-e1": {"amount": (11000000, "deposit-1"),
+                      "deposit-deadline": (16000, "deposit-1"),
+                      "choice-deadline": (16000, "decision-1")},
+        "escrow-e2-unsupported": {"amount": (3000000, "auto-refund-timeout-1"),
+                                  "refund-recipient": ("Lan", "auto-refund-timeout-1")},
+        "conditional-e2-conflict": {"amount": (17000000, "notify-1:success")},
+    }
+    for case_id, claims in expectations.items():
+        record = by_id(records, case_id)
+        by_claim = {claim["claim_id"]: claim for claim in record["claims"]}
+        scope_ids = {scope["scope_id"] for scope in record["behavior_scopes"]}
+        for claim_id, (value, scope_id) in claims.items():
+            claim = by_claim[claim_id]
+            assert (claim["value"], claim["scope_id"]) == (value, scope_id)
+            assert scope_id in scope_ids
+            assert all(item["span"] in record["requirement_history"][
+                item["requirement_version"] - 1]["messages"][item["message_index"]]
+                for item in claim["evidence"])
+
+
+def test_review_queue_shows_updated_clarification_and_inherited_mutation():
+    records = corpus()
+    review = foundation.review_queue(records)
+    parent = review.split("## choice-d1 ", 1)[1].split("\n## ", 1)[0]
+    mutant = review.split("## choice-d1-m-owner ", 1)[1].split("\n## ", 1)[0]
+    assert "Proposed resolution: `clarification_required`" in parent
+    assert "không approve hoặc reject trước POSIX 4000" in parent
+    assert "amount_lovelace=12000000" in parent
+    assert "choice_deadline_ms=4000" in parent
+    assert "Critical claims (inherited from choice-d1)" in mutant
+    assert "Proposed resolution: `clarification_required`" in mutant
+    assert "không approve hoặc reject trước POSIX 4000" in mutant
+    assert "Decision: [ ] Approve  [ ] Edit  [ ] Reject" in parent
+    assert "Decision: [ ] Approve  [ ] Edit  [ ] Reject" in mutant
