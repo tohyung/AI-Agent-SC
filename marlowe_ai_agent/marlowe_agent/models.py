@@ -1,7 +1,10 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from .node3_policy import Node3Result
 
 
 class LLMError(RuntimeError):
@@ -146,7 +149,7 @@ class SemanticHistoryEntry:
 class PipelineResult:
     draft: ContractDraft
     semantic_verification: VerificationResult
-    logic_verification: LogicGraphResult
+    logic_verification: LogicGraphResult | Node3Result
     iterations: int
     trace: list[TraceEvent] = field(default_factory=list)
     status: str = "blocked"

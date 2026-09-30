@@ -20,6 +20,7 @@ from .models import (
     PartySpec,
     VerificationResult,
 )
+from .node3_policy import Node3Result
 from .utils import unique_strings
 
 
@@ -171,7 +172,7 @@ class OpenAIReasoner:
         self,
         prompt: str,
         draft: ContractDraft,
-        logic: LogicGraphResult,
+        logic: LogicGraphResult | Node3Result,
     ) -> dict[str, Any]:
         payload = {
             "prompt": prompt,

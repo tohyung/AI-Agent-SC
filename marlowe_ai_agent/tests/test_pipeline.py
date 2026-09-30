@@ -5,7 +5,7 @@ import sys
 from types import ModuleType, SimpleNamespace
 
 import pytest
-from conftest import make_draft
+from conftest import FakeSMTBackend, make_draft
 
 from marlowe_agent import cli, openai_reasoner
 from marlowe_agent.logic_graph import LogicGraphVerifier
@@ -26,6 +26,8 @@ from marlowe_agent.models import (
     VerificationResult,
 )
 from marlowe_agent.nodes import AgentPipeline
+from marlowe_agent.node3_policy import StructuredWarning
+from marlowe_agent.node3_smt import SMTAnalysis
 from marlowe_agent.openai_reasoner import OpenAIReasoner, parse_json_text
 from tools.fake_reasoner import FakeReasoner
 
@@ -97,7 +99,7 @@ def test_logic_stall_hint_keeps_current_findings() -> None:
     }])
     result = AgentPipeline(reasoner).run("escrow")
     assert result.status == "done"
-    assert "vượt số dư" in result.draft.original_prompt
+    assert "nhưng chỉ trả được 0" in result.draft.original_prompt
     assert "Không lặp lại cách sửa cũ" in result.draft.original_prompt
 
 
@@ -765,3 +767,142 @@ def test_cli_reasoner_initialization_interrupt_writes_partial_result(monkeypatch
     monkeypatch.setattr(sys, "argv", ["main.py", "--prompt", "escrow", "--out", str(target), "--no-run-log"])
     assert cli.main() == 130
     assert json.loads(target.read_text(encoding="utf-8"))["stop_reason"] == "interrupted"
+
+
+def test_live_node3_serialization_and_trace_are_compatible() -> None:
+    backend = FakeSMTBackend(["valid"])
+    result = AgentPipeline(FakeReasoner([make_draft()]), node3_backend=backend).run("escrow")
+    assert (result.status, result.stop_reason, result.iterations) == ("done", "ok", 1)
+    payload = result.to_dict()["logic_verification"]
+    assert {"passed", "findings", "errors", "warnings", "graph", "paths_explored",
+            "verification_backend", "smt_status", "smt_warnings", "counterexample",
+            "analysis_notes", "lint_errors", "lint_warnings"} <= payload.keys()
+    assert "contract" not in payload
+    event = next(event for event in result.trace if event.node == "node_3_logic_graph_verification"
+                 and event.status == "pass")
+    assert event.data["verification_backend"] == "marlowe-smt"
+    assert event.data["findings"] == event.data["errors"] + event.data["warnings"]
+    assert backend.call_count == 1
+
+
+def test_blocking_lint_skips_smt_and_enters_repair_flow() -> None:
+    draft = make_draft()
+    draft.parties = [draft.parties[0]]
+    backend = FakeSMTBackend(["valid"])
+    reasoner = FakeReasoner([draft, make_draft()], clarifications=[{
+        "needs_user_input": False, "questions": [], "internal_instruction": "Sửa vai trò còn thiếu.",
+    }])
+    result = AgentPipeline(reasoner, node3_backend=backend).run("escrow")
+    assert result.status == "done"
+    first = next(event for event in result.trace if event.node == "node_3_logic_graph_verification"
+                 and event.status == "fail")
+    assert first.data["smt_status"] == "not_run"
+    assert backend.call_count == 1
+    assert reasoner.calls.count("clarification") == 1
+
+
+@pytest.mark.parametrize(("statuses", "expected_status", "expected_calls"), [
+    (["timeout", "valid"], "done", 2),
+    (["timeout", "timeout"], "blocked", 2),
+    (["indeterminate", "indeterminate"], "blocked", 2),
+    (["unavailable"], "blocked", 1),
+    (["invalid_input"], "blocked", 1),
+])
+def test_smt_inconclusive_policy(statuses, expected_status, expected_calls) -> None:
+    backend = FakeSMTBackend(statuses)
+    reasoner = FakeReasoner([make_draft()])
+    pipeline = AgentPipeline(reasoner, node3_backend=backend, stop_on_stall=2)
+    result = pipeline.run("escrow")
+    assert result.status == expected_status
+    assert result.stop_reason == ("ok" if expected_status == "done" else "logic_inconclusive")
+    assert result.iterations == 1
+    assert reasoner.calls == ["draft", "semantic"]
+    assert backend.call_count == expected_calls
+    assert pipeline.stall_count == 0
+    assert pipeline.stall_tracker.logic_seen == {}
+    assert result.semantic_history[0].semantic_generation == 0
+    assert not any(event.status == "semantic_reset" for event in result.trace)
+    node3_events = [event for event in result.trace if event.node == "node_3_logic_graph_verification"
+                    and event.status in {"pass", "fail", "inconclusive"}]
+    assert [event.data["smt_attempt"] for event in node3_events] == list(range(1, expected_calls + 1))
+    assert next(event.data["logic"] for event in result.trace if event.status == "iteration") == (
+        "pass" if expected_status == "done" else "inconclusive"
+    )
+
+
+def test_valid_with_analysis_note_blocks_without_retry() -> None:
+    backend = FakeSMTBackend([SMTAnalysis("valid", [], None, ["Merkleized continuation incomplete"], 0.01)])
+    reasoner = FakeReasoner([make_draft()])
+    result = AgentPipeline(reasoner, node3_backend=backend).run("escrow")
+    assert (result.status, result.stop_reason) == ("blocked", "logic_inconclusive")
+    assert backend.call_count == 1
+    assert reasoner.calls == ["draft", "semantic"]
+
+
+def test_indeterminate_then_counterexample_repairs_after_second_attempt() -> None:
+    backend = FakeSMTBackend(["indeterminate", "counterexample", "valid"])
+    reasoner = FakeReasoner([make_draft(pay("Alice", "Bob", 10)), make_draft()], clarifications=[{
+        "needs_user_input": False, "questions": [], "internal_instruction": "Sửa Pay.",
+    }])
+    result = AgentPipeline(reasoner, node3_backend=backend).run("escrow")
+    assert result.status == "done"
+    assert result.iterations == 2
+    assert reasoner.calls == ["draft", "semantic", "clarification", "draft", "semantic"]
+    assert backend.call_count == 3
+    states = [event.status for event in result.trace if event.node == "node_3_logic_graph_verification"
+              and event.status in {"pass", "fail", "inconclusive"}]
+    assert states == ["inconclusive", "fail", "pass"]
+
+
+def test_counterexample_fingerprint_ignores_timing_but_tracks_warning_fields() -> None:
+    contract = pay("Alice", "Bob", 10)
+    warning = StructuredWarning("TransactionAssertionFailed", {})
+    backend = FakeSMTBackend([
+        SMTAnalysis("counterexample", [warning], {}, [], 0.01),
+        SMTAnalysis("counterexample", [warning], {}, [], 9.99),
+    ])
+    clarification = [{"needs_user_input": False, "questions": [], "internal_instruction": "Sửa Assert."}]
+    pipeline = AgentPipeline(FakeReasoner([make_draft(contract), make_draft(contract)],
+                                         clarifications=clarification),
+                             node3_backend=backend, stop_on_stall=2)
+    result = pipeline.run("escrow")
+    assert (result.stop_reason, result.iterations) == ("stalled", 2)
+    assert backend.call_count == 2
+    assert pipeline.stall_count == 1
+
+    changed = FakeSMTBackend([
+        SMTAnalysis("counterexample", [StructuredWarning("FutureWarning", {"amount": 1})], {}, [], 0.01),
+        SMTAnalysis("counterexample", [StructuredWarning("FutureWarning", {"amount": 2})], {}, [], 9.99),
+        SMTAnalysis("valid", [], None, [], 0.01),
+    ])
+    changed_result = AgentPipeline(FakeReasoner([make_draft(contract), make_draft(contract), make_draft()],
+                                                clarifications=clarification),
+                                   node3_backend=changed, stop_on_stall=2).run("escrow")
+    assert changed_result.status == "done"
+
+
+def test_fake_benchmark_does_not_spawn_smt(monkeypatch) -> None:
+    from bench.cases import load_cases
+    from bench.runner import run_case
+    from marlowe_agent import node3_smt
+
+    original_run = node3_smt.subprocess.run
+
+    def reject_smt(*args, **kwargs):
+        if "run_smt.py" in str(args[0]):
+            pytest.fail("fake benchmark spawned SMT")
+        return original_run(*args, **kwargs)
+
+    monkeypatch.setattr(node3_smt.subprocess, "run", reject_smt)
+    record = run_case(load_cases()[0], fake=True)
+    assert record["error"] is None
+    assert record["status"] == "done"
+
+
+def test_cli_trace_only_success_with_live_node3_result(monkeypatch, capsys) -> None:
+    monkeypatch.setattr(cli, "OpenAIReasoner", lambda model=None: FakeReasoner([make_draft()]))
+    monkeypatch.setattr(sys, "argv", ["main.py", "--prompt", "escrow", "--trace-only", "--no-run-log"])
+    assert cli.main() == 0
+    output = capsys.readouterr().out
+    assert "Node 3 - Verification" in output
+    assert "logic_passed: True" in output

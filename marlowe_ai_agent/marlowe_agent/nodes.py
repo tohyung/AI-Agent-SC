@@ -8,6 +8,8 @@ from time import perf_counter, sleep
 from typing import Any, TypeVar
 
 from .logic_graph import LogicGraphVerifier
+from .node3_policy import Node3Result, semantic_fingerprint
+from .node3_smt import MarloweSMTBackend
 from .marlowe_ast import normalize_marlowe_ast
 from .marlowe_validator import validate_contract
 from .models import (
@@ -71,7 +73,7 @@ class PromptToDraftNode:
             return ClarificationOutcome(prompt, ClarificationAction.NO_ACTION)
         return outcome
 
-    def clarify_logic_prompt(self, prompt: str, draft: ContractDraft, logic: LogicGraphResult,
+    def clarify_logic_prompt(self, prompt: str, draft: ContractDraft, logic: LogicGraphResult | Node3Result,
                              stall_hint: str = "") -> ClarificationOutcome:
         clarification = self.call_llm(
             "node_1_prompt_to_draft", "logic_feedback_to_clarification",
@@ -86,7 +88,7 @@ class PromptToDraftNode:
         questions = unique_strings(clarification.get("questions") or [])[:4]
         if clarification.get("needs_user_input") and questions:
             outcome = self.ask_for_clarifications(
-                prompt, questions, "Thong tin bo sung tu nguoi dung sau kiem logic graph",
+                prompt, questions, "Thong tin bo sung tu nguoi dung sau kiem Node 3",
             )
             if outcome.action is ClarificationAction.BLOCK_NO_INPUT and not llm_instruction:
                 return outcome
@@ -126,19 +128,25 @@ class SemanticVerificationNode:
         return self.reasoner.semantic_verify(prompt, draft)
 
 
-class LogicGraphVerificationNode:
-    def __init__(self) -> None:
+class Node3VerificationNode:
+    def __init__(self, backend: Any | None = None) -> None:
         self.verifier = LogicGraphVerifier()
+        self.backend = backend if backend is not None else MarloweSMTBackend()
 
-    def run(self, draft: ContractDraft) -> LogicGraphResult:
-        return self.verifier.verify(draft.marlowe_contract, draft)
+    def run(self, contract: Any, draft: ContractDraft | None = None) -> Node3Result:
+        lint = self.verifier.lint(contract, draft)
+        if lint.errors:
+            return Node3Result(lint.errors, lint.warnings, "not_run", [], None, [], None,
+                               contract=contract, graph=lint.graph, paths_explored=lint.paths_explored)
+        analysis = self.backend.analyze(contract)
+        return Node3Result(lint.errors, lint.warnings, analysis.status, analysis.warnings,
+                           analysis.counterexample, analysis.analysis_notes, analysis.elapsed_seconds,
+                           contract=contract, graph=lint.graph, paths_explored=lint.paths_explored)
 
-    def audit_narrative(self, logic: LogicGraphResult) -> str:
+    def audit_narrative(self, logic: Node3Result) -> str:
         count = len(logic.graph.get("nodes", []))
-        if logic.passed:
-            return f"Node 3 đã kiểm tra {count} node, {logic.paths_explored} đường đi; có {len(logic.warnings)} cảnh báo."
-        return (f"Node 3 kiểm tra {count} node và phát hiện {len(logic.errors)} lỗi, "
-                f"{len(logic.warnings)} cảnh báo: {'; '.join(logic.errors[:3])}")
+        return (f"Node 3 kiểm tra {count} node bằng lint + SMT; kết quả {logic.decision}, "
+                f"SMT={logic.semantic_status}, {len(logic.errors)} lỗi, {len(logic.warnings)} cảnh báo.")
 
 
 TraceCallback = Callable[[TraceEvent], None]
@@ -162,6 +170,7 @@ class AgentPipeline:
         trace_callback: TraceCallback | None = None,
         retry_sleep: Callable[[float], None] = sleep,
         answer_provider: Callable[[str], str] | None = None,
+        node3_backend: Any | None = None,
     ) -> None:
         if any(limit is not None and limit < 1 for limit in (max_iterations, max_llm_calls, stop_on_stall)):
             raise ValueError("Các giới hạn phải >= 1")
@@ -169,7 +178,7 @@ class AgentPipeline:
                                        call_llm=self._call_llm_with_retry,
                                        answer_provider=answer_provider)
         self.node_2 = SemanticVerificationNode(reasoner)
-        self.node_3 = LogicGraphVerificationNode()
+        self.node_3 = Node3VerificationNode(node3_backend)
         self.max_iterations = max_iterations
         self.max_llm_calls = max_llm_calls
         self.stop_on_stall = stop_on_stall
@@ -195,7 +204,7 @@ class AgentPipeline:
             self.trace_callback(event)
 
     def _result(
-        self, draft: ContractDraft, semantic: VerificationResult, logic: LogicGraphResult,
+        self, draft: ContractDraft, semantic: VerificationResult, logic: LogicGraphResult | Node3Result,
         iterations: int, status: str, reason: str,
     ) -> PipelineResult:
         self._finish_iteration()
@@ -218,9 +227,9 @@ class AgentPipeline:
         logic_errors = logic_warnings = 0
         for event in self.trace[self._iteration_trace_start:]:
             key = nodes.get(event.node)
-            if key and event.status in {"pass", "fail"}:
+            if key and event.status in {"pass", "fail", "inconclusive"}:
                 states[key] = event.status
-            if key == "logic" and event.status in {"pass", "fail"}:
+            if key == "logic" and event.status in {"pass", "fail", "inconclusive"}:
                 logic_errors = len(event.data.get("errors", []))
                 logic_warnings = len(event.data.get("warnings", []))
         elapsed = round(perf_counter() - self._iteration_start, 3)
@@ -234,9 +243,10 @@ class AgentPipeline:
             "elapsed_seconds": elapsed,
         })
 
-    def _observe_stall(self, scope: str, contract: Any, errors: list[str]) -> tuple[bool, str]:
+    def _observe_stall(self, scope: str, contract: Any, errors: list[str],
+                       signature: str | None = None) -> tuple[bool, str]:
         seen = getattr(self.stall_tracker, f"{scope}_seen")
-        signature = fingerprint({"contract": contract, "errors": sorted(errors)})
+        signature = signature or fingerprint({"contract": contract, "errors": sorted(errors)})
         occurrences = seen.get(signature, 0) + 1
         seen[signature] = occurrences
         if occurrences >= 2:
@@ -397,17 +407,31 @@ class AgentPipeline:
                 else:
                     self._record_semantic(iterations, current_prompt, draft, semantic)
 
-                self.track("node_3_logic_graph_verification", "start", "Đang kiểm logic graph.")
-                logic = self.node_3.run(draft)
-                self.track("node_3_logic_graph_verification", "pass" if logic.passed else "fail",
-                           "Đã kiểm logic graph.", {"findings": logic.findings,
-                                                     "errors": logic.errors, "warnings": logic.warnings,
-                                                     "reasoning_narrative": self.node_3.audit_narrative(logic)})
+                for smt_attempt in (1, 2):
+                    self.track("node_3_logic_graph_verification", "start", "Đang kiểm Node 3.",
+                               {"smt_attempt": smt_attempt})
+                    logic = self.node_3.run(draft.marlowe_contract, draft)
+                    self.track("node_3_logic_graph_verification", logic.decision,
+                               "Đã kiểm Node 3.", {
+                                   **logic.to_dict(), "smt_attempt": smt_attempt,
+                                   "reasoning_narrative": self.node_3.audit_narrative(logic),
+                               })
+                    if logic.decision != "inconclusive" or logic.semantic_status not in {
+                        "timeout", "indeterminate",
+                    }:
+                        break
+                if logic.decision == "inconclusive":
+                    return self._result(draft, semantic, logic, iterations, "blocked", "logic_inconclusive")
                 if logic.passed:
                     status = "done" if semantic.passed else "blocked"
                     reason = "ok" if semantic.passed else "semantic_not_passed"
                     return self._result(draft, semantic, logic, iterations, status, reason)
-                stalled, stall_hint = self._observe_stall("logic", draft.marlowe_contract, logic.findings)
+                signature = (semantic_fingerprint(logic) if logic.semantic_status == "counterexample"
+                             else fingerprint({"contract": draft.marlowe_contract,
+                                               "errors": sorted(logic.lint_errors)}))
+                stalled, stall_hint = self._observe_stall(
+                    "logic", draft.marlowe_contract, logic.errors, signature,
+                )
                 if stalled:
                     return self._result(draft, semantic, logic, iterations, "blocked", "stalled")
                 if self._limit_reached(iterations):

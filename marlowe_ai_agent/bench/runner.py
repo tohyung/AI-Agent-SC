@@ -19,6 +19,7 @@ from marlowe_agent.marlowe_ast import walk_contract
 from marlowe_agent.models import ContractDraft, PartySpec, VerificationResult
 from marlowe_agent.nodes import AgentPipeline
 from marlowe_agent.openai_reasoner import OpenAIReasoner
+from marlowe_agent.node3_smt import SMTAnalysis
 
 from .config import DATASET
 from .evaluator import evaluate
@@ -91,6 +92,13 @@ class FakeBenchReasoner:
     def usage_summary(self) -> dict[str, Any]:
         return {"calls": 0, "latency_seconds": 0.0, "prompt_tokens": 0,
                 "completion_tokens": 0, "cost": 0.0}
+
+
+class FakeBenchSMTBackend:
+    """Offline benchmark policy input; never launches a solver."""
+
+    def analyze(self, contract: Any) -> SMTAnalysis:
+        return SMTAnalysis("valid", [], None, [], 0.0)
 
 
 def _redact(value: Any) -> Any:
@@ -181,7 +189,8 @@ def run_case(case: Any, *, model: str | None = None, judge_model: str | None = N
 
         pipeline = AgentPipeline(captured, interactive=True, max_iterations=max_iterations,
                                  max_llm_calls=max_llm_calls, answer_provider=simulated.answer,
-                                 trace_callback=trace_callback)
+                                 trace_callback=trace_callback,
+                                 node3_backend=FakeBenchSMTBackend() if fake else None)
         result = pipeline.run(case.prompt)
         stop_reason = result.stop_reason
     except BenchTimeout:

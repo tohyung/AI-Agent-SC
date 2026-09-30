@@ -54,20 +54,113 @@
     {
       "node": "node_3_logic_graph_verification",
       "status": "start",
-      "message": "Đang kiểm logic graph.",
-      "data": {}
+      "message": "Đang kiểm Node 3.",
+      "data": {
+        "smt_attempt": 1
+      }
     },
     {
       "node": "node_3_logic_graph_verification",
       "status": "pass",
-      "message": "Đã kiểm logic graph.",
+      "message": "Đã kiểm Node 3.",
       "data": {
-        "findings": [
-          "Logic graph pass."
-        ],
+        "passed": true,
+        "findings": [],
+        "graph": {
+          "nodes": [
+            {
+              "id": "root",
+              "type": "When"
+            },
+            {
+              "id": "root.when[0].then",
+              "type": "When"
+            },
+            {
+              "id": "root.when[0].then.when[0].then",
+              "type": "Pay"
+            },
+            {
+              "id": "root.when[0].then.when[0].then.then",
+              "type": "Close"
+            },
+            {
+              "id": "root.when[0].then.when[1].then",
+              "type": "Pay"
+            },
+            {
+              "id": "root.when[0].then.when[1].then.then",
+              "type": "Close"
+            },
+            {
+              "id": "root.when[0].then.timeout_continuation",
+              "type": "Pay"
+            },
+            {
+              "id": "root.when[0].then.timeout_continuation.then",
+              "type": "Close"
+            },
+            {
+              "id": "root.timeout_continuation",
+              "type": "Close"
+            }
+          ],
+          "edges": [
+            {
+              "from": "root",
+              "to": "root.when[0].then",
+              "label": "{\"deposits\":250000000,\"into_account\":{\"role_token\":\"Alice\"},\"of_token\":{\"currenc..."
+            },
+            {
+              "from": "root",
+              "to": "root.timeout_continuation",
+              "label": "timeout@1893456000000"
+            },
+            {
+              "from": "root.when[0].then",
+              "to": "root.when[0].then.when[0].then",
+              "label": "{\"choose_between\":[{\"from\":1,\"to\":1}],\"for_choice\":{\"choice_name\":\"approve\",\"cho..."
+            },
+            {
+              "from": "root.when[0].then",
+              "to": "root.when[0].then.when[1].then",
+              "label": "{\"choose_between\":[{\"from\":0,\"to\":0}],\"for_choice\":{\"choice_name\":\"reject\",\"choi..."
+            },
+            {
+              "from": "root.when[0].then",
+              "to": "root.when[0].then.timeout_continuation",
+              "label": "timeout@1893542400000"
+            },
+            {
+              "from": "root.when[0].then.when[0].then",
+              "to": "root.when[0].then.when[0].then.then",
+              "label": "then"
+            },
+            {
+              "from": "root.when[0].then.when[1].then",
+              "to": "root.when[0].then.when[1].then.then",
+              "label": "then"
+            },
+            {
+              "from": "root.when[0].then.timeout_continuation",
+              "to": "root.when[0].then.timeout_continuation.then",
+              "label": "then"
+            }
+          ]
+        },
         "errors": [],
         "warnings": [],
-        "reasoning_narrative": "Node 3 đã kiểm tra 9 node, 4 đường đi; có 0 cảnh báo."
+        "paths_explored": 4,
+        "verification_backend": "marlowe-smt",
+        "smt_status": "valid",
+        "smt_warnings": [],
+        "counterexample": null,
+        "analysis_notes": [],
+        "smt_elapsed_seconds": 0.0,
+        "lint_errors": [],
+        "lint_warnings": [],
+        "smt_attempt": 1,
+        "reasoning_narrative": "Node 3 kiểm tra 9 node bằng lint + SMT; kết quả pass, SMT=valid, 0 lỗi, 0 cảnh báo."
       }
     },
     {
@@ -244,9 +337,7 @@
   },
   "logic_verification": {
     "passed": true,
-    "findings": [
-      "Logic graph pass."
-    ],
+    "findings": [],
     "graph": {
       "nodes": [
         {
@@ -331,7 +422,15 @@
     },
     "errors": [],
     "warnings": [],
-    "paths_explored": 4
+    "paths_explored": 4,
+    "verification_backend": "marlowe-smt",
+    "smt_status": "valid",
+    "smt_warnings": [],
+    "counterexample": null,
+    "analysis_notes": [],
+    "smt_elapsed_seconds": 0.0,
+    "lint_errors": [],
+    "lint_warnings": []
   },
   "marlowe_contract": {
     "when": [

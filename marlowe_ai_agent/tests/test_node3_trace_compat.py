@@ -3,6 +3,9 @@ from __future__ import annotations
 import json
 
 from bench.report import generate
+from conftest import FakeSMTBackend, make_draft
+from marlowe_agent.nodes import AgentPipeline
+from tools.fake_reasoner import FakeReasoner
 
 
 def test_additive_node3_trace_schema_remains_report_compatible(tmp_path) -> None:
@@ -45,3 +48,25 @@ def test_additive_node3_trace_schema_remains_report_compatible(tmp_path) -> None
     assert data["smt_warnings"][0]["expected"] == 6
     assert data["counterexample"] == {"transactions": []}
     assert data["analysis_notes"] == []
+
+
+def test_actual_live_node3_trace_is_report_compatible(tmp_path) -> None:
+    result = AgentPipeline(FakeReasoner([make_draft()]),
+                           node3_backend=FakeSMTBackend(["valid"])).run("escrow")
+    record = {
+        "case_id": "live-trace", "attempt": 1, "type": "escrow", "difficulty": 1,
+        "language": "vi", "info_mode": "complete", "challenges": [],
+        "status": result.status, "stop_reason": result.stop_reason, "converged": True,
+        "iterations": result.iterations, "wall_seconds": 0.1, "cost_usd": None,
+        "call_log": [], "judge": None,
+        "evaluation": {"strict_correct": True, "false_convergence": False, "overall_accuracy": 1.0},
+        "convergence_path": "S+S+L+", "prompt": "live trace", "qa_transcript": [],
+        "contract_description": "escrow", "trace": [event.to_dict() for event in result.trace],
+    }
+    (tmp_path / "runs.jsonl").write_text(json.dumps(record, ensure_ascii=False) + "\n", encoding="utf-8")
+    assert generate(tmp_path)["counts"]["strict_correct"] == 1
+    event = next(event for event in result.trace if event.node == "node_3_logic_graph_verification"
+                 and event.status == "pass")
+    assert event.data["smt_status"] == "valid"
+    assert {"findings", "errors", "warnings", "verification_backend", "smt_warnings",
+            "counterexample", "analysis_notes"} <= event.data.keys()

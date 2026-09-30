@@ -5,6 +5,7 @@ import json
 import pytest
 
 from bench import node3_replay
+from conftest import FakeSMTBackend
 
 
 @pytest.mark.parametrize(("truth", "old_pass", "decision", "expected"), [
@@ -32,11 +33,9 @@ def test_disagreement_special_states():
     "vi-rental_deposit-L3-003-full.json",
     "vi-milestone-L4-003-full.json",
 ])
-def test_stale_audit_truth_is_recomputed_with_current_evaluator(monkeypatch, filename):
-    monkeypatch.setattr(node3_replay, "_run_smt", lambda contract: (
-        {"status": "Valid", "warnings": [], "counterexample": None, "analysis_notes": []}, 0.0,
-    ))
-    row, detail = node3_replay.replay(node3_replay.AUDIT / filename, node3_replay._case_index())
+def test_stale_audit_truth_is_recomputed_with_current_evaluator(filename):
+    row, detail = node3_replay.replay(node3_replay.AUDIT / filename,
+                                      node3_replay._case_index(), FakeSMTBackend(["valid"]))
 
     assert row["persisted_ground_truth"] == "false"
     assert row["ground_truth"] == "true"
@@ -63,15 +62,12 @@ def test_replay_uses_current_evaluator_not_persisted_truth(monkeypatch, tmp_path
                 "diagnostics": {"choice_name_fallback_count": 0}}
 
     monkeypatch.setattr(node3_replay, "evaluate", current_evaluation)
-    monkeypatch.setattr(node3_replay, "_run_smt", lambda contract: (
-        {"status": "Valid", "warnings": [], "counterexample": None, "analysis_notes": []}, 0.0,
-    ))
     case = next(iter(node3_replay._case_index().values()))
     path = tmp_path / "current-evaluator-full.json"
     path.write_text(json.dumps({"case_id": case.id, "contract": "close", "status": "blocked",
                                 "evaluation": {"strict_correct": False}}), encoding="utf-8")
 
-    row, _ = node3_replay.replay(path, {case.id: case})
+    row, _ = node3_replay.replay(path, {case.id: case}, FakeSMTBackend(["valid"]))
     assert row["persisted_ground_truth"] == "false"
     assert row["ground_truth"] == "true"
     assert row["ground_truth_changed"] == "true"

@@ -1,4 +1,4 @@
-"""Offline replay of old Logic Graph and unwired Node 3 policy decisions."""
+"""Offline replay of old Logic Graph and live Node 3 decisions."""
 
 from __future__ import annotations
 
@@ -8,14 +8,12 @@ from dataclasses import fields
 import hashlib
 import json
 from pathlib import Path
-import subprocess
-import sys
-from time import perf_counter
 from typing import Any
 
 from marlowe_agent.logic_graph import LogicGraphVerifier
 from marlowe_agent.models import ContractDraft, PartySpec
-from marlowe_agent.node3_policy import Node3Result, StructuredWarning
+from marlowe_agent.node3_policy import Node3Result
+from marlowe_agent.nodes import Node3VerificationNode
 
 from .cases import Case, load_cases
 from .config import DATASET
@@ -24,9 +22,7 @@ from .evaluator import evaluate
 
 HERE = Path(__file__).resolve().parent
 PROJECT = HERE.parent
-REPO = PROJECT.parent
 AUDIT = HERE / "audit"
-SMT_WRAPPER = REPO / "tools" / "marlowe_smt" / "run_smt.py"
 DEFAULT_OUTPUT = HERE / "node3-replay-results.csv"
 FIELDS = [
     "case_id", "audit_file", "ground_truth", "persisted_ground_truth",
@@ -45,34 +41,6 @@ def _draft(raw: dict[str, Any] | None, contract: Any) -> ContractDraft | None:
     values["parties"] = [PartySpec(**party) for party in raw.get("parties", [])]
     values["marlowe_contract"] = contract
     return ContractDraft(**values)
-
-
-def _run_smt(contract: Any) -> tuple[dict[str, Any], float]:
-    started = perf_counter()
-    process = subprocess.run(
-        [sys.executable, str(SMT_WRAPPER), "--hard-timeout", "90", "--solver-timeout-ms", "60000"],
-        input=json.dumps(contract, ensure_ascii=False, separators=(",", ":")),
-        text=True, capture_output=True, check=False, timeout=95, cwd=REPO,
-    )
-    elapsed = perf_counter() - started
-    try:
-        output = json.loads(process.stdout)
-    except json.JSONDecodeError as error:
-        output = {
-            "status": "Indeterminate", "warnings": [], "counterexample": None,
-            "analysis_notes": [f"SMT wrapper emitted invalid JSON: {error}"],
-        }
-    if process.stderr:
-        output.setdefault("analysis_notes", []).append(
-            "SMT wrapper wrote stderr; raw stderr is intentionally excluded from policy fingerprints."
-        )
-    return output, elapsed
-
-
-def _warning(raw: dict[str, Any]) -> StructuredWarning:
-    return StructuredWarning(
-        str(raw["type"]), {key: value for key, value in raw.items() if key != "type"},
-    )
 
 
 def _persisted_truth(record: dict[str, Any]) -> bool | None:
@@ -107,7 +75,8 @@ def _disagreement(truth: bool | None, old_pass: bool | None, decision: str) -> s
     return "both_wrong"
 
 
-def replay(path: Path, cases_by_id: dict[str, Case]) -> tuple[dict[str, Any], dict[str, Any]]:
+def replay(path: Path, cases_by_id: dict[str, Case],
+           backend: Any | None = None) -> tuple[dict[str, Any], dict[str, Any]]:
     record = json.loads(path.read_text(encoding="utf-8"))
     contract = record.get("contract")
     case_id = record.get("case_id", path.stem)
@@ -131,17 +100,8 @@ def replay(path: Path, cases_by_id: dict[str, Case]) -> tuple[dict[str, Any], di
         logic = LogicGraphVerifier().verify(contract, draft)
         old_pass = logic.passed
         old_errors = logic.errors
-        smt, smt_seconds = _run_smt(contract)
-        node3 = Node3Result(
-            lint_errors=list(logic.errors),
-            lint_warnings=list(logic.warnings),
-            semantic_status=str(smt.get("status", "unavailable")).lower(),
-            semantic_warnings=[_warning(item) for item in smt.get("warnings", [])],
-            counterexample=smt.get("counterexample"),
-            analysis_notes=list(smt.get("analysis_notes", [])),
-            smt_elapsed_seconds=smt_seconds,
-            contract=contract,
-        )
+        node3 = Node3VerificationNode(backend).run(contract, draft)
+        smt_seconds = node3.smt_elapsed_seconds
     truth = current_evaluation["strict_correct"] if current_evaluation is not None else None
     changed = (persisted_truth != truth
                if type(persisted_truth) is bool and type(truth) is bool else None)

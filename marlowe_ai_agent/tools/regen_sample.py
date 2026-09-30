@@ -11,6 +11,7 @@ from marlowe_agent.marlowe_ast import (
 )
 from marlowe_agent.models import ContractDraft, PartySpec, VerificationResult
 from marlowe_agent.nodes import AgentPipeline
+from marlowe_agent.node3_smt import SMTAnalysis
 
 from tools.fake_reasoner import FakeReasoner
 
@@ -19,6 +20,11 @@ SAMPLE_PROMPT = (
     "sau đó Alice chọn approve để trả Bob hoặc reject để hoàn tiền. "
     "Nếu hết hạn quyết định thì hoàn tiền Alice."
 )
+
+
+class SampleSMTBackend:
+    def analyze(self, contract: Any) -> SMTAnalysis:
+        return SMTAnalysis("valid", [], None, [], 0.0)
 
 
 def generate_payload() -> dict[str, Any]:
@@ -46,7 +52,8 @@ def generate_payload() -> dict[str, Any]:
         reasoning_summary="Các bên, số tiền và nhánh xử lý đã rõ.",
         reasoning_narrative="Node 2 xác nhận các điều kiện nạp, duyệt, từ chối và hoàn tiền.",
     )
-    result = AgentPipeline(FakeReasoner([draft], [semantic]), max_iterations=8).run(SAMPLE_PROMPT)
+    result = AgentPipeline(FakeReasoner([draft], [semantic]), max_iterations=8,
+                           node3_backend=SampleSMTBackend()).run(SAMPLE_PROMPT)
     if result.status != "done":
         raise RuntimeError(f"Sample generation failed: {result.stop_reason}")
     payload = result.to_dict()

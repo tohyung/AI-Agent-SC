@@ -26,7 +26,7 @@ def node_display_name(node: str) -> str:
     labels = {
         "node_1_prompt_to_draft": "Node 1 - Draft",
         "node_2_semantic_verification": "Node 2 - Semantic",
-        "node_3_logic_graph_verification": "Node 3 - Logic graph",
+        "node_3_logic_graph_verification": "Node 3 - Verification",
     }
     return labels.get(node, "")
 
@@ -94,7 +94,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--allow-unverified",
         action="store_true",
-        help="Cho phep chay logic graph du semantic verification chua pass. Chi nen dung de debug.",
+        help="Cho phep chay Node 3 verification du semantic verification chua pass. Chi nen dung de debug.",
     )
     return parser
 
@@ -218,6 +218,7 @@ def stop_reason_label(reason: str) -> str:
         "llm_error": "Lời gọi LLM thất bại hoặc vượt giới hạn",
         "semantic_not_passed": "Semantic chưa đạt",
         "logic_not_passed": "Logic graph chưa đạt",
+        "logic_inconclusive": "Node 3/SMT chưa thể kết luận",
         "interrupted": "Đã dừng bằng Ctrl+C",
     }
     return labels.get(reason, reason)
