@@ -25,6 +25,7 @@ ACTIVE_STATUSES = {"explicit", "derived", "assumed", "user_confirmed", "conflict
 CRITICALITIES = {"financial", "nonfinancial"}
 PARAMETER_KINDS = {"amount", "deadline", "asset"}
 EVIDENCE_RELATIONS = {"supports", "contradicts"}
+EVIDENCE_FIELDS = {"requirement_version", "message_index", "span", "relation"}
 SUPPORTING_EVIDENCE_STATUSES = {"explicit", "user_confirmed", "superseded", "conflicted", "derived"}
 UNSAFE_ACCEPT_STATUSES = {"unresolved", "conflicted", "assumed"}
 RESOLUTION_REQUIRED = {"clarification_required", "conflict_requires_resolution"}
@@ -59,6 +60,9 @@ SCOPE_FIELDS = {
     "timeout": {"scope_id", "scope_type", "timeout_id", "decision_id", "deadline_claim_id"},
     "terminal_outcome": {"scope_id", "scope_type", "outcome_id"},
 }
+DECISION_TARGET_SCOPE_TYPE = "transition"
+UNSCORED_OBSERVATION_FIELDS = {"observation_id", "text", "reason", "source_evidence"}
+UNSCORED_OBSERVATION_REASON = "outside_stage2b_v1_claim_taxonomy"
 STATE_CLAIM_KINDS = {
     "funded": {"depositing_party"},
     "awaiting_choice": {"choice_owner", "choice_deadline_ms"},
@@ -109,7 +113,7 @@ def prompt_schema_contract() -> dict[str, Any]:
             "supporting_evidence_statuses": sorted(SUPPORTING_EVIDENCE_STATUSES),
         },
         "evidence": {
-            "fields": ["requirement_version", "message_index", "span", "relation"],
+            "fields": sorted(EVIDENCE_FIELDS),
             "relations": sorted(EVIDENCE_RELATIONS),
         },
         "resolution": {
@@ -146,6 +150,34 @@ def core_prompt_schema_contract() -> dict[str, Any]:
     contract["schema_version"] = CORE_SCHEMA_VERSION
     contract["required_top_level_fields"] = sorted(CORE_FIELDS)
     contract["transition_kinds"] = sorted(TRANSITION_KINDS)
+    contract["scope"]["scope_id_unique"] = True
+    contract["scope"]["global_scope_id"] = "global"
+    contract["scope"]["references"] = {
+        "decision_id": {
+            "target_collection": "behavior_scopes",
+            "target_id_field": "scope_id",
+            "target_scope_type": DECISION_TARGET_SCOPE_TYPE,
+            "required_for": ["branch"],
+            "optional_for": ["timeout"],
+        },
+        "deadline_claim_id": {
+            "target_collection": "claims",
+            "target_id_field": "claim_id",
+            "allowed_kinds": sorted(DEADLINE_KINDS),
+            "optional_for": ["timeout"],
+        },
+    }
+    contract["unscored_observation"] = {
+        "fields": sorted(UNSCORED_OBSERVATION_FIELDS),
+        "reason": UNSCORED_OBSERVATION_REASON,
+        "source_evidence": {
+            "fields": sorted(EVIDENCE_FIELDS),
+            "relations": sorted(EVIDENCE_RELATIONS),
+            "nonempty": True,
+            "exact_source_span": True,
+        },
+        "authoritative_financial_facts_belong_in_claims": True,
+    }
     for key in ("assets_and_accounts_fields", "rich_fields", "parameter_kinds",
                 "outcome_kinds", "state_ids", "state_claim_kinds",
                 "outcome_recipient_kinds", "transition_deadline_kinds",
@@ -335,7 +367,7 @@ def validate_shadow_semantic_core(spec: Any, *,
     for scope_id, scope in scopes.items():
         decision = scope.get("decision_id")
         if decision is not None and (not isinstance(decision, str) or decision not in scopes or
-                                     scopes[decision].get("scope_type") != "transition"):
+                                     scopes[decision].get("scope_type") != DECISION_TARGET_SCOPE_TYPE):
             errors.append(f"scope {scope_id}: decision_id does not reference transition")
         if scope.get("scope_type") == "branch" and decision is None:
             errors.append(f"scope {scope_id}: branch requires decision_id")
@@ -488,9 +520,10 @@ def validate_shadow_semantic_core(spec: Any, *,
         errors.append("unscored_observations must be a list")
     else:
         for item in observations:
-            if (not isinstance(item, dict) or not item.get("observation_id")
+            if (not isinstance(item, dict) or not UNSCORED_OBSERVATION_FIELDS <= item.keys()
+                    or not item.get("observation_id")
                     or not item.get("text") or
-                    item.get("reason") != "outside_stage2b_v1_claim_taxonomy"
+                    item.get("reason") != UNSCORED_OBSERVATION_REASON
                     or not _evidence_valid(item.get("source_evidence"), messages)):
                 errors.append("invalid unscored_observation")
     return errors

@@ -82,7 +82,19 @@ def build_prompt(requirement_history: list[dict[str, Any]]) -> tuple[str, str]:
           "as proof of quantity. Global scope uses scope_id=global and "
           "scope_type=global. A transition scope needs transition_kind; a "
           "branch needs decision_id and branch_id; a timeout needs timeout_id "
-          "and may reference decision_id/deadline_claim_id."
+          "and may reference decision_id/deadline_claim_id. Every "
+          "behavior_scopes.scope_id must be unique: do not reuse an ID for "
+          "two scope objects. Every decision_id must equal the scope_id of an "
+          "existing scope_type=transition object. Do not create a branch/timeout "
+          "reference before creating its referenced transition scope. If present, "
+          "deadline_claim_id must refer to an existing claim whose kind is in "
+          "deadline_kinds. A terminal_outcome scope needs outcome_id. Each "
+          "unscored_observations item must be an object "
+          "with observation_id, text, reason, and source_evidence as specified "
+          "in the schema contract, never a plain string. Use a nonempty stable "
+          "local observation_id and nonempty source-grounded text. Its source_evidence "
+          "must be nonempty with exact source spans. Authoritative financial "
+          "facts must go in claims, not unscored_observations."
     )
     return SYSTEM_PROMPT, user
 
