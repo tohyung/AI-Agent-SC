@@ -17,6 +17,13 @@ REQUIRED_FIELDS = {
     "assumptions_and_provenance", "unscored_observations", "predicted_resolution",
 }
 ACTIVE_STATUSES = {"explicit", "derived", "assumed", "user_confirmed", "conflicted"}
+CRITICALITIES = {"financial", "nonfinancial"}
+PARAMETER_KINDS = {"amount", "deadline", "asset"}
+EVIDENCE_RELATIONS = {"supports", "contradicts"}
+SUPPORTING_EVIDENCE_STATUSES = {"explicit", "user_confirmed", "superseded", "conflicted", "derived"}
+UNSAFE_ACCEPT_STATUSES = {"unresolved", "conflicted", "assumed"}
+RESOLUTION_REQUIRED = {"clarification_required", "conflict_requires_resolution"}
+DERIVED_SOURCE_STATUSES = {"explicit", "user_confirmed"}
 PARTY_KINDS = {
     "choice_owner", "depositing_party", "destination_account_owner",
     "payment_source_account_owner", "payment_recipient", "refund_recipient",
@@ -56,6 +63,13 @@ OUTCOME_RECIPIENT_KINDS = {
     "refund": {"refund_recipient"},
     "release": {"release_recipient"},
 }
+OUTCOME_KINDS = set(OUTCOME_RECIPIENT_KINDS)
+STATE_IDS = {"initial"} | set(STATE_CLAIM_KINDS)
+ACCOUNT_OWNER_KINDS = {"destination_account_owner", "payment_source_account_owner"}
+PARAMETER_CLAIM_KINDS = {
+    "amount": {"amount_lovelace"}, "deadline": DEADLINE_KINDS, "asset": {"asset"},
+}
+TRANSITION_ACTOR_KINDS = {"choice": {"choice_owner"}, "deposit": {"depositing_party"}}
 RICH_FIELDS = {
     "participants": {"participant_id", "name", "claim_refs"},
     "assets": {"asset_id", "symbol", "claim_refs"},
@@ -70,6 +84,53 @@ RICH_FIELDS = {
     "conflicts": {"conflict_id", "kind", "scope_id", "claim_refs"},
     "assumptions_and_provenance": {"assumption_id", "text", "claim_refs"},
 }
+
+
+def prompt_schema_contract() -> dict[str, Any]:
+    """Expose the validator's closed vocabulary to the shadow model."""
+    return {
+        "schema_version": SCHEMA_VERSION,
+        "required_top_level_fields": sorted(REQUIRED_FIELDS),
+        "claim": {
+            "fields": sorted(CLAIM_FIELDS),
+            "kinds": sorted(CLAIM_KINDS),
+            "statuses": sorted(CLAIM_STATUSES),
+            "criticalities": sorted(CRITICALITIES),
+            "active_statuses": sorted(ACTIVE_STATUSES),
+            "backing_statuses": sorted(BACKING_STATUSES),
+            "supporting_evidence_statuses": sorted(SUPPORTING_EVIDENCE_STATUSES),
+        },
+        "evidence": {
+            "fields": ["requirement_version", "message_index", "span", "relation"],
+            "relations": sorted(EVIDENCE_RELATIONS),
+        },
+        "resolution": {
+            "values": sorted(RESOLUTIONS),
+            "requires_user_resolution": sorted(RESOLUTION_REQUIRED),
+        },
+        "scope": {
+            "types": sorted(SCOPE_TYPES),
+            "allowed_fields_by_type": {key: sorted(value) for key, value in SCOPE_FIELDS.items()},
+        },
+        "assets_and_accounts_fields": sorted(ASSETS_ACCOUNTS_FIELDS),
+        "rich_fields": {key: sorted(value) for key, value in RICH_FIELDS.items()},
+        "parameter_kinds": sorted(PARAMETER_KINDS),
+        "outcome_kinds": sorted(OUTCOME_KINDS),
+        "state_ids": sorted(STATE_IDS),
+        "state_claim_kinds": {key: sorted(value) for key, value in STATE_CLAIM_KINDS.items()},
+        "outcome_recipient_kinds": {key: sorted(value) for key, value in OUTCOME_RECIPIENT_KINDS.items()},
+        "deadline_kinds": sorted(DEADLINE_KINDS),
+        "transition_deadline_kinds": {
+            key: sorted(value) for key, value in TRANSITION_DEADLINE_KINDS.items()},
+        "party_kinds": sorted(PARTY_KINDS),
+        "account_owner_kinds": sorted(ACCOUNT_OWNER_KINDS),
+        "parameter_claim_kinds": {
+            key: sorted(value) for key, value in PARAMETER_CLAIM_KINDS.items()},
+        "transition_actor_kinds": {
+            key: sorted(value) for key, value in TRANSITION_ACTOR_KINDS.items()},
+        "derived_source_statuses": sorted(DERIVED_SOURCE_STATUSES),
+        "unsafe_accept_statuses": sorted(UNSAFE_ACCEPT_STATUSES),
+    }
 
 
 def _allowed(value: Any, choices: set[str]) -> bool:
@@ -98,7 +159,7 @@ def _evidence_valid(items: Any, messages: dict[tuple[int, int], str]) -> bool:
         and bool(item["span"])
         and item["span"] in messages.get(
             (item["requirement_version"], item["message_index"]), "")
-        and _allowed(item.get("relation"), {"supports", "contradicts"})
+        and _allowed(item.get("relation"), EVIDENCE_RELATIONS)
         for item in items
     )
 
@@ -170,7 +231,7 @@ def _same_source_span(first: dict[str, Any], second: dict[str, Any]) -> bool:
 
 
 def valid_derived_source(claim: dict[str, Any], source: dict[str, Any] | None) -> bool:
-    return bool(source and _allowed(source.get("status"), {"explicit", "user_confirmed"})
+    return bool(source and _allowed(source.get("status"), DERIVED_SOURCE_STATUSES)
                 and source.get("kind") == claim.get("kind")
                 and _same_source_span(claim, source))
 
@@ -264,13 +325,13 @@ def validate_intent_spec(spec: Any, *,
             errors.append(f"claim {claim_id}: invalid status")
         if not isinstance(claim.get("scope_id"), str) or claim["scope_id"] not in scopes:
             errors.append(f"claim {claim_id}: scope_id not found")
-        if not _allowed(claim.get("criticality"), {"financial", "nonfinancial"}):
+        if not _allowed(claim.get("criticality"), CRITICALITIES):
             errors.append(f"claim {claim_id}: invalid criticality")
         status = claim.get("status")
         evidence = claim.get("evidence")
         if evidence is not None and evidence != [] and not _evidence_valid(evidence, messages):
             errors.append(f"claim {claim_id}: invalid evidence target/span")
-        if _allowed(status, {"explicit", "user_confirmed", "superseded", "conflicted", "derived"}):
+        if _allowed(status, SUPPORTING_EVIDENCE_STATUSES):
             if not valid_supporting_evidence(claim, messages):
                 errors.append(f"claim {claim_id}: supporting evidence required")
         evidence_items = evidence if isinstance(evidence, list) else []
@@ -344,11 +405,11 @@ def validate_intent_spec(spec: Any, *,
     clarifications = spec.get("required_clarifications")
     if not isinstance(clarifications, list):
         errors.append("required_clarifications must be a list")
-    elif _allowed(resolution, {"clarification_required", "conflict_requires_resolution"}) and not clarifications:
+    elif _allowed(resolution, RESOLUTION_REQUIRED) and not clarifications:
         errors.append("clarification/conflict prediction requires a business question")
     if resolution == "accepted_interpretation":
         if any(claim.get("criticality") == "financial" and _allowed(
-               claim.get("status"), {"unresolved", "conflicted", "assumed"}) for claim in raw_claims
+               claim.get("status"), UNSAFE_ACCEPT_STATUSES) for claim in raw_claims
                if isinstance(claim, dict)):
             errors.append("accepted prediction has unsafe critical claim")
         if clarifications:
@@ -399,11 +460,10 @@ def validate_intent_spec(spec: Any, *,
                 if not _backed(item["name"], refs, PARTY_KINDS):
                     errors.append("participant name lacks matching claim_ref")
             if name == "assets" and item.get("symbol") is not None:
-                if not _backed(item["symbol"], refs, {"asset"}):
+                if not _backed(item["symbol"], refs, PARAMETER_CLAIM_KINDS["asset"]):
                     errors.append("asset symbol lacks matching claim_ref")
             if name == "accounts" and item.get("owner") is not None:
-                if not _backed(item["owner"], refs, {
-                    "destination_account_owner", "payment_source_account_owner"}):
+                if not _backed(item["owner"], refs, ACCOUNT_OWNER_KINDS):
                     errors.append("account owner lacks matching claim_ref")
             if name == "funding_relations":
                 scope_id = item.get("scope_id")
@@ -411,29 +471,28 @@ def validate_intent_spec(spec: Any, *,
                         scopes[scope_id].get("scope_type") != "transition"):
                     errors.append("funding relation scope_id must reference transition")
                 if item.get("party") is not None and not _backed(
-                    item["party"], refs, {"depositing_party"}, scope_id):
+                    item["party"], refs, TRANSITION_ACTOR_KINDS["deposit"], scope_id):
                     errors.append("funding party lacks matching claim_ref")
                 if item.get("account_owner") is not None and not _backed(
-                    item["account_owner"], refs, {"destination_account_owner",
-                                                       "payment_source_account_owner"}, scope_id):
+                    item["account_owner"], refs, ACCOUNT_OWNER_KINDS, scope_id):
                     errors.append("funding account owner lacks matching claim_ref")
                 asset_id = item.get("asset_id")
                 if asset_id is not None:
                     asset = assets.get(asset_id) if isinstance(asset_id, str) else None
-                    if asset is None or not _backed(asset.get("symbol"), refs, {"asset"}):
+                    if asset is None or not _backed(asset.get("symbol"), refs,
+                                                    PARAMETER_CLAIM_KINDS["asset"]):
                         errors.append("funding asset_id lacks matching asset and claim_ref")
             if name == "parameters" and item.get("normalized_value") is not None:
-                kinds = ({"amount_lovelace"} if item.get("kind") == "amount" else
-                         DEADLINE_KINDS if item.get("kind") == "deadline" else {"asset"})
+                kinds = PARAMETER_CLAIM_KINDS.get(item.get("kind"), set())
                 if not _backed(item["normalized_value"], refs, kinds):
                     errors.append("parameter value lacks matching claim_ref")
             if name == "parameters" and not _allowed(
-                    item.get("kind"), {"amount", "deadline", "asset"}):
+                    item.get("kind"), PARAMETER_KINDS):
                 errors.append("parameter kind is unsupported")
             if name == "states" and item.get("state_id") != "initial":
                 state_id = item.get("state_id")
                 kinds = STATE_CLAIM_KINDS.get(state_id) if isinstance(state_id, str) else None
-                if kinds is None:
+                if state_id not in STATE_IDS or kinds is None:
                     errors.append("business state kind is unsupported")
                 elif not any(_allowed(claim.get("kind"), kinds) and
                              _allowed(claim.get("status"), BACKING_STATUSES) for claim in refs):
@@ -463,9 +522,8 @@ def validate_intent_spec(spec: Any, *,
                                  for claim in refs):
                         errors.append("transition deadline lacks matching scoped claim_ref")
             if name == "transitions" and item.get("actor") is not None:
-                actor_kind = {"choice": {"choice_owner"}, "deposit": {"depositing_party"}}
                 kind = item.get("kind")
-                kinds = actor_kind.get(kind, set()) if isinstance(kind, str) else set()
+                kinds = TRANSITION_ACTOR_KINDS.get(kind, set()) if isinstance(kind, str) else set()
                 if not _backed(item["actor"], refs, kinds, item.get("transition_id")):
                     errors.append("transition actor lacks matching claim_ref")
             if name == "obligations_and_outcomes" and item.get("recipient") is not None:
@@ -475,7 +533,7 @@ def validate_intent_spec(spec: Any, *,
                 if not _backed(item["recipient"], refs, recipient_kinds, item.get("scope_id")):
                     errors.append("outcome recipient lacks matching scoped claim_ref")
             if name == "obligations_and_outcomes" and not _allowed(
-                    item.get("kind"), set(OUTCOME_RECIPIENT_KINDS)):
+                    item.get("kind"), OUTCOME_KINDS):
                 errors.append("outcome kind is unsupported")
             if name == "obligations_and_outcomes" and (not isinstance(item.get("scope_id"), str)
                                                         or item["scope_id"] not in scopes):

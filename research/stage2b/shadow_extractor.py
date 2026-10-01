@@ -5,16 +5,21 @@ from __future__ import annotations
 import json
 from typing import Any, Protocol
 
-from research.stage2a.foundation import CLAIM_KINDS
-from research.stage2b.intent_spec import IntentSpec, SCHEMA_VERSION
+from research.stage2b.intent_spec import IntentSpec, SCHEMA_VERSION, prompt_schema_contract
 
 
 class ShadowModel(Protocol):
     def generate(self, system: str, user: str) -> dict[str, Any]: ...
 
 
+class InvalidModelOutput(ValueError):
+    """The model returned a JSON value other than an IntentSpec object."""
+
+
 SYSTEM_PROMPT = """Extract user intent only as one JSON IntentSpec object.
 Do NOT generate Marlowe AST, compile, or invent missing business facts.
+Prefer the smallest valid IntentSpec. Leave rich sections empty when no claim
+confidently backs them; rich objects are projections, not independent facts.
 Preserve requirement chronology and explicit corrections. Every financial claim
 must have exact source provenance; deterministic financial derivations need
 exact source evidence and a normalization basis. `derived_from` is optional;
@@ -22,17 +27,26 @@ never point an amount to `asset=ADA` as if the asset claim proved quantity.
 An assumption is not evidence. Use only the supplied
 claim taxonomy. If a fact is outside it, record a non-authoritative
 unscored_observation, never an authoritative rich field.
-Use case-local business scopes: global, deposit-1, payout-1, decision-1,
-decision-1:approve, decision-1:reject, decision-1:timeout, notify-1,
-notify-1:success, notify-1:timeout, or another stable local ID where needed.
+Use stable case-local business scope IDs such as global, deposit-1,
+decision-1:approve, and notify-1:timeout. Every scope must include its valid
+scope_type and required fields from the schema contract. Do not use AST paths.
 Every authoritative participant/account/parameter/transition/outcome fact must
 reference matching claim IDs. Distinguish choice_owner, depositing_party,
 destination_account_owner, payment_source_account_owner, payment_recipient,
 refund_recipient, release_recipient, and transaction_submitter. Never infer
-transaction_submitter from Choice owner or Deposit party. If unknown, leave it
-null or ask a business clarification. Do not invent a new claim kind for it.
-For missing critical finance facts ask a concrete business question, not an
-AST, JSON, field, or constructor question. Conflicts require user resolution;
+transaction_submitter from Choice owner or Deposit party. In Stage 2B v1 it
+must be null: there is no authoritative submitter claim kind. Never invent a
+funding source, account owner, transition actor, payout source, or success state.
+Preserve party and asset spelling and case exactly: Alice != alice; ADA != ada.
+1 ADA = 1000000 lovelace; amount_lovelace is integer lovelace and POSIX
+deadlines are integer milliseconds. Never guess unknown business entities.
+For missing critical finance facts use value=null and status=unresolved, then
+ask a concrete Vietnamese business question, not an AST/JSON question.
+Do not infer payment source from the party depositing. Preserve Notify as
+Notify: missing Observation semantics requires clarification, not an invented
+Choice owner. Two conflicting active values of the same kind/scope require
+both claims marked conflicted and conflict_requires_resolution; do not
+downgrade conflicts to generic ambiguity. Conflicts require user resolution;
 unsupported autonomous execution is unsupported, not merely ambiguous.
 Return JSON only, with all top-level fields shown in the user instruction.
 """
@@ -53,15 +67,26 @@ def build_prompt(requirement_history: list[dict[str, Any]]) -> tuple[str, str]:
     user = (
         "Requirement history is the only source of user intent:\n"
         + json.dumps(requirement_history, ensure_ascii=False)
-        + "\nAllowed claim kinds: " + ", ".join(sorted(CLAIM_KINDS))
+        + "\nValidator schema contract (closed enum/field vocabulary):\n"
+        + json.dumps(prompt_schema_contract(), ensure_ascii=False, sort_keys=True)
         + "\nOutput all fields in this JSON shape (replace example values):\n"
         + json.dumps(template, ensure_ascii=False)
-        + "\nClaim fields: claim_id, kind, value, criticality, status, scope_id, "
-          "evidence; financial derived claims need normalization_basis, while "
-          "derived_from is optional and must prove the same kind of fact; "
-          "assumed claims need assumption_reason. "
-          "Evidence items use requirement_version, message_index, exact span, "
-          "and relation. Use value=null for unresolved facts."
+        + "\nEvery claim uses claim_id, kind, value, criticality, status, scope_id, "
+          "evidence. Evidence items use requirement_version (integer), "
+          "message_index (integer), span (exact substring of source message), "
+          "relation (supports or contradicts). Explicit, user_confirmed, "
+          "conflicted, superseded and derived claims require exact supporting "
+          "evidence. Unresolved claims use value=null and may use evidence=[]. "
+          "Assumed claims require assumption_reason and should use evidence=[]; "
+          "never fabricate a source span. Derived financial claims require "
+          "normalization_basis; derived_from is optional and must prove the "
+          "same kind of fact. Do not link amount_lovelace to asset evidence "
+          "as proof of quantity. Rich objects may contain ONLY fields listed "
+          "for their section in the schema contract; states use only state_id "
+          "and claim_refs. Global scope uses scope_id=global and "
+          "scope_type=global. A transition scope needs transition_kind; a "
+          "branch needs decision_id and branch_id; a timeout needs timeout_id "
+          "and may reference decision_id/deadline_claim_id."
     )
     return SYSTEM_PROMPT, user
 
@@ -70,7 +95,7 @@ def parse_model_output(data: Any) -> IntentSpec:
     if isinstance(data, str):
         data = json.loads(data)
     if not isinstance(data, dict):
-        raise ValueError("shadow model must return a JSON object")
+        raise InvalidModelOutput("shadow model must return a JSON object")
     return IntentSpec(data)
 
 

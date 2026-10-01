@@ -25,6 +25,8 @@ METRIC_NAMES = (
     "exploratory_unsafe_acceptance_rate",
     "exploratory_provenance_completeness",
     "exploratory_structural_validity_rate",
+    "exploratory_resolution_exact_match_rate",
+    "exploratory_conflict_classification_recall",
 )
 
 
@@ -119,6 +121,15 @@ def score_predictions(predictions: dict[str, dict[str, Any]],
             raise ValueError(f"invalid prediction for {case_id}: " + "; ".join(errors))
         candidate_claims = _active_critical(candidate["claims"])
         candidate_resolution = candidate["expected_resolution"]
+        exact = counts["exploratory_resolution_exact_match_rate"]
+        exact[0] += int(raw_prediction is not None and isinstance(raw_prediction, dict)
+                        and raw_prediction.get("predicted_resolution") == candidate_resolution)
+        exact[1] += 1
+        if candidate_resolution == "conflict_requires_resolution":
+            conflict = counts["exploratory_conflict_classification_recall"]
+            conflict[0] += int(raw_prediction is not None and isinstance(raw_prediction, dict)
+                               and raw_prediction.get("predicted_resolution") == candidate_resolution)
+            conflict[1] += 1
         if candidate_resolution == "accepted_interpretation":
             counts["exploratory_critical_claim_recall"][1] += len(candidate_claims)
             if not candidate["required_clarifications"]:

@@ -9,17 +9,46 @@ import json
 from pathlib import Path
 import sys
 
-
 ROOT = Path(__file__).resolve().parents[2]
 if __package__ in (None, ""):
     sys.path.insert(0, str(ROOT))
 
+from marlowe_ai_agent.marlowe_agent.models import LLMError  # noqa: E402
 from research.stage2a import verify_freeze  # noqa: E402
 from research.stage2b.intent_spec import SCHEMA_VERSION  # noqa: E402
 from research.stage2b.scoring import FrozenCandidateAdapter, MANIFEST  # noqa: E402
 from research.stage2b.shadow_extractor import (  # noqa: E402
-    IntentShadowExtractor, LegacyReasonerTransport, build_prompt,
+    IntentShadowExtractor, InvalidModelOutput, LegacyReasonerTransport, build_prompt,
 )
+
+
+USAGE_FIELDS = ("calls", "latency_seconds", "prompt_tokens", "completion_tokens", "cost")
+
+
+def _usage_delta(before: dict, after: dict) -> dict:
+    delta = {}
+    for field in USAGE_FIELDS:
+        current = after.get(field)
+        previous = before.get(field)
+        delta[field] = (current - (previous or 0)) if current is not None else None
+    return delta
+
+
+def _usage_total(per_case: list[dict]) -> dict:
+    return {field: (sum(item[field] for item in per_case)
+                    if all(item[field] is not None for item in per_case) else None)
+            for field in USAGE_FIELDS}
+
+
+def _sanitized_model_error(exc: Exception) -> dict[str, str]:
+    detail = str(exc).lower()
+    if isinstance(exc, TimeoutError) or "timeout" in detail or "timed out" in detail:
+        return {"code": "provider_timeout", "message": "Model request timed out."}
+    if isinstance(exc, json.JSONDecodeError) or isinstance(exc.__cause__, json.JSONDecodeError):
+        return {"code": "invalid_model_json", "message": "Model returned invalid JSON."}
+    if isinstance(exc, InvalidModelOutput):
+        return {"code": "invalid_model_output", "message": "Model returned a non-object value."}
+    return {"code": "provider_error", "message": "Model request failed."}
 
 
 def main() -> int:
@@ -43,7 +72,15 @@ def main() -> int:
             split=args.split, all_canonical=args.all_canonical, case_id=args.case_id)
         model = LegacyReasonerTransport(args.model) if args.live else None
         extractor = IntentShadowExtractor(model) if model is not None else None
-        records = []
+    except (OSError, ValueError, LLMError) as exc:
+        print(f"Shadow precheck failed: {exc}", file=sys.stderr)
+        return 2
+
+    writer = args.output.open("w", encoding="utf-8") if args.output else sys.stdout
+    failed = False
+    count = 0
+    case_usage = []
+    try:
         for candidate in candidates:
             history = candidate["requirement_history"]
             record = {
@@ -56,28 +93,38 @@ def main() -> int:
                 "prediction": None,
                 "validation_errors": [],
                 "usage": None,
+                "run_status": "dry_run" if extractor is None else "ok",
                 "timestamp": datetime.now(timezone.utc).isoformat(),
             }
             if extractor is None:
                 system, user = build_prompt(history)
                 record["prompt"] = {"system": system, "user": user}
             else:
-                prediction = extractor.extract(history)
-                record["prediction"] = prediction.to_dict()
-                record["validation_errors"] = prediction.validation_errors(
-                    expected_history=history)
-                record["usage"] = model.usage()
-            records.append(record)
-    except (OSError, ValueError, RuntimeError) as exc:
-        print(f"Shadow run failed: {exc}", file=sys.stderr)
-        return 2
-    lines = "".join(json.dumps(record, ensure_ascii=False) + "\n" for record in records)
+                usage_before = model.usage()
+                try:
+                    prediction = extractor.extract(history)
+                except (LLMError, TimeoutError, json.JSONDecodeError, InvalidModelOutput) as exc:
+                    record["run_status"] = "model_error"
+                    record["model_error"] = _sanitized_model_error(exc)
+                    failed = True
+                else:
+                    record["prediction"] = prediction.to_dict()
+                    record["validation_errors"] = prediction.validation_errors(
+                        expected_history=history)
+                finally:
+                    record["usage"] = _usage_delta(usage_before, model.usage())
+                case_usage.append(record["usage"])
+            writer.write(json.dumps(record, ensure_ascii=False) + "\n")
+            writer.flush()
+            count += 1
+    finally:
+        if args.output:
+            writer.close()
     if args.output:
-        args.output.write_text(lines, encoding="utf-8")
-        print(f"Wrote {len(records)} shadow records to {args.output}")
-    else:
-        sys.stdout.write(lines)
-    return 0
+        print(f"Wrote {count} shadow records to {args.output}")
+        if model is not None:
+            print("Aggregate usage: " + json.dumps(_usage_total(case_usage)))
+    return 2 if failed else 0
 
 
 if __name__ == "__main__":

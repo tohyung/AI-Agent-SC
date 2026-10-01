@@ -85,11 +85,30 @@ def test_missing_prediction_does_not_disappear_from_candidate_denominators():
         "numerator": 0, "denominator": 1, "value": 0.0}
     assert metric(result, "unsafe_freeze_rate")["denominator"] == 1
     assert result["missing_predictions"] == ["accepted", "clarify"]
+    assert metric(result, "resolution_exact_match_rate") == {
+        "numerator": 0, "denominator": 2, "value": 0.0}
 
 
 def test_unnecessary_clarification_on_fully_specified_accepted_case():
     result = score({"c1": prediction("clarification_required")}, [candidate()])
     assert metric(result, "unnecessary_clarification_rate") == {
+        "numerator": 1, "denominator": 1, "value": 1.0}
+
+
+def test_conflict_hold_is_not_exact_conflict_classification():
+    result = score({"c1": prediction("clarification_required")},
+                   [candidate(resolution="conflict_requires_resolution")])
+    assert metric(result, "required_clarification_recall") == {
+        "numerator": 1, "denominator": 1, "value": 1.0}
+    assert metric(result, "resolution_exact_match_rate") == {
+        "numerator": 0, "denominator": 1, "value": 0.0}
+    assert metric(result, "conflict_classification_recall") == {
+        "numerator": 0, "denominator": 1, "value": 0.0}
+    assert "exploratory_structural_validity_rate" in result["exploratory_metrics"]
+
+    exact = score({"c1": prediction("conflict_requires_resolution")},
+                  [candidate(resolution="conflict_requires_resolution")])
+    assert metric(exact, "conflict_classification_recall") == {
         "numerator": 1, "denominator": 1, "value": 1.0}
 
 

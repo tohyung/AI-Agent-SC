@@ -25,6 +25,13 @@ recall denominators rather than silently disappearing. Its unsafe
 freeze rate is a simulated decision over candidate clarification/conflict
 cases; unsafe acceptance rate is a separate metric over model-predicted
 accepted cases. Timestamps are run metadata, not scoring inputs.
+Required clarification recall measures whether a clarification/conflict case
+was held for user resolution; generic clarification on a conflict case counts
+as held. The separate exploratory resolution exact-match and conflict
+classification recall metrics measure label agreement. A resolution prediction
+can match by chance even when the IntentSpec is structurally invalid.
+Resolution diagnostics must therefore be interpreted together with structural
+validity, not as independent evidence of intent correctness.
 
 From the repository root:
 
@@ -41,6 +48,16 @@ adapter; it is not production authority, does not request a Marlowe AST, and
 does not import `ContractDraft`. Tests use fake transports and make no API
 calls. Output paths are caller-selected; live outputs are not committed by
 default.
+The shadow prompt embeds the validator's closed enum and field vocabulary;
+unknown business facts stay unresolved rather than becoming guessed claims or
+rich projections. With `--output`, prechecks finish before the file is opened.
+Each completed case record is appended and flushed before the next case.
+Expected model failures produce a sanitized `model_error` record and the run
+continues; the command exits non-zero after all selected cases if any such
+failure occurred. Usage in each record is the delta for that case, including
+failed cases where the transport observed a request; aggregate usage sums the
+per-case deltas. Flushing protects completed records at the process/filesystem
+boundary, not against power loss, OS crashes, or disk corruption.
 
 `unscored_observations` hold source-grounded facts outside the frozen claim
 taxonomy. They cannot authorize rich IntentSpec fields, count as matched
