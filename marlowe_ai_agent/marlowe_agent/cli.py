@@ -50,6 +50,10 @@ def build_parser() -> argparse.ArgumentParser:
         help="Hoi dap bo sung thong tin neu prompt bi thieu. Tu bat neu ban khong truyen --prompt.",
     )
     parser.add_argument("--out", help="Duong dan file JSON de luu ket qua.")
+    parser.add_argument("--research-mode", choices=["legacy", "shadow", "candidate", "authorized"],
+                        default="legacy", help="Opt-in research route; legacy remains the default.")
+    parser.add_argument("--research-live", action="store_true",
+                        help="Allow a live model call in the opt-in research route.")
     parser.add_argument("--run-log-dir", default="runs", metavar="PATH",
                         help="Thư mục lưu summary từng lượt dưới dạng JSONL (mặc định runs).")
     parser.add_argument("--no-run-log", action="store_true", help="Tắt ghi JSONL run log.")
@@ -119,6 +123,9 @@ def main() -> int:
         initial_interrupt = True
         prompt = prompt or ""
 
+    if args.research_mode in {"candidate", "authorized"}:
+        return _run_research_route(prompt, args)
+
     log_handle = None
     log_failed = False
 
@@ -185,6 +192,8 @@ def main() -> int:
                 if log_handle is not None:
                     log_handle.close()
     payload = result.to_dict()
+    if args.research_mode == "shadow" and not initial_interrupt:
+        payload["research_sidecar"] = _research_snapshot(prompt, args)
 
     if args.out:
         out_path = Path(args.out)
@@ -222,3 +231,41 @@ def stop_reason_label(reason: str) -> str:
         "interrupted": "Đã dừng bằng Ctrl+C",
     }
     return labels.get(reason, reason)
+
+
+def _research_snapshot(prompt: str, args: argparse.Namespace) -> dict:
+    root = Path(__file__).resolve().parents[2]
+    if str(root) not in sys.path:
+        sys.path.insert(0, str(root))
+    from research.architecture.bootstrap import build_research_pipeline
+
+    try:
+        pipeline = build_research_pipeline(live_model=args.research_live, model_name=args.model)
+        run = pipeline.run([{"version": 1, "messages": [prompt]}], stop_after="compiler_authority")
+    except RuntimeError as exc:
+        return {"status": "UNAVAILABLE", "diagnostics": [f"research model unavailable: {exc}"]}
+    snapshot = run.to_dict()
+    visible_types = {"intent-candidate", "intent-review", "accepted-intent-manifest",
+                     "compile-result", "contract-candidate", "reference-comparison",
+                     "compiler-authority-decision"}
+    snapshot["artifacts"] = {
+        artifact_id: artifact.to_dict()
+        for stage in run.stages.values()
+        for artifact_id in stage.output_artifacts
+        if (artifact := pipeline.store.get(artifact_id)).artifact_type in visible_types
+    }
+    return snapshot
+
+
+def _run_research_route(prompt: str, args: argparse.Namespace) -> int:
+    if args.research_mode == "authorized":
+        print(json.dumps({"status": "BLOCKED", "reason": "profile authority is not promoted"},
+                         ensure_ascii=False))
+        return 2
+    result = _research_snapshot(prompt, args)
+    if args.out:
+        Path(args.out).write_text(json.dumps(result, ensure_ascii=False, indent=2) + "\n",
+                                  encoding="utf-8")
+    print(json.dumps(result, ensure_ascii=False, indent=2))
+    stages = result.get("stages", {})
+    return 0 if stages.get("compile", {}).get("run_status") == "SUCCEEDED" else 2

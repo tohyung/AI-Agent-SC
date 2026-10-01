@@ -1,0 +1,11 @@
+{
+  "schema_version": "research-architecture-v1",
+  "status": "ARCHITECTURE_SPECIFIED_AND_SCAFFOLDED",
+  "production_authority_changed": false,
+  "default_route": "legacy",
+  "artifact_hash_basis": "canonical_json_v1_payload_only",
+  "shared_lifecycle_enum": "ImplementationStatus",
+  "compiler_authority_default": "CANDIDATE_ONLY",
+  "external_adapters_default": "disabled",
+  "validation_state": "offline_contract_smoke_only"
+}
