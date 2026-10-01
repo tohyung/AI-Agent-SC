@@ -9,7 +9,7 @@ from typing import Any
 from research.stage2a import foundation, verify_freeze
 from research.stage2b.intent_spec import (
     ACTIVE_STATUSES, valid_derived_source, valid_supporting_evidence,
-    validate_intent_spec,
+    validate_intent_spec, validate_shadow_semantic_core,
 )
 
 
@@ -100,16 +100,31 @@ def _ratio(numerator: int, denominator: int) -> dict[str, Any]:
 
 def score_predictions(predictions: dict[str, dict[str, Any]],
                       candidates: list[dict[str, Any]], *,
-                      strict_validation: bool = False) -> dict[str, Any]:
+                      strict_validation: bool = False,
+                      run_records: dict[str, dict[str, Any]] | None = None) -> dict[str, Any]:
     aggregate = verify_freeze.verify_freeze(MANIFEST)
     if any(record.get("mutation") is not None for record in candidates):
         raise ValueError("mutation is not an independent intent observation")
     counts = {name: [0, 0] for name in METRIC_NAMES}
     missing = []
     validation_errors: dict[str, list[str]] = {}
+    core_valid_count = 0
+    core_record_count = 0
+    mandatory_eligible = 0
+    mandatory_projected = 0
     for candidate in candidates:
         case_id = candidate["case_id"]
         raw_prediction = predictions.get(case_id)
+        record = (run_records or {}).get(case_id, {})
+        native_core = record.get("semantic_core")
+        if isinstance(native_core, dict):
+            core_record_count += 1
+            core_valid_count += not validate_shadow_semantic_core(
+                native_core, expected_history=candidate["requirement_history"])
+            diagnostics = record.get("projection_diagnostics") or {}
+            if diagnostics.get("core_status") == "valid":
+                mandatory_eligible += diagnostics.get("mandatory_eligible_count", 0)
+                mandatory_projected += diagnostics.get("mandatory_projected_count", 0)
         errors = (["prediction missing"] if raw_prediction is None else
                   validate_intent_spec(raw_prediction,
                                        expected_history=candidate["requirement_history"]))
@@ -142,7 +157,8 @@ def score_predictions(predictions: dict[str, dict[str, Any]],
         if raw_prediction is None:
             missing.append(case_id)
             continue
-        prediction = raw_prediction if isinstance(raw_prediction, dict) else {}
+        prediction = native_core if isinstance(native_core, dict) else (
+            raw_prediction if isinstance(raw_prediction, dict) else {})
         predicted_claims = _active_critical(prediction.get("claims", []))
         predicted_keys = Counter(map(_key, predicted_claims))
         candidate_keys = Counter(map(_key, candidate_claims))
@@ -185,6 +201,17 @@ def score_predictions(predictions: dict[str, dict[str, Any]],
         provenance[0] += sum(_has_provenance(claim, pred_by_id, messages)
                              for claim in predicted_claims)
         provenance[1] += len(predicted_claims)
+    metrics = {name: _ratio(*counts[name]) for name in METRIC_NAMES}
+    if core_record_count:
+        metrics["exploratory_core_structural_validity_rate"] = _ratio(
+            core_valid_count, core_record_count)
+        metrics["exploratory_projection_completeness"] = _ratio(
+            mandatory_projected, mandatory_eligible)
+    else:
+        unavailable = {"numerator": None, "denominator": None, "value": None,
+                       "reason": "historical run predates stage2b-shadow-core-v1"}
+        metrics["exploratory_core_structural_validity_rate"] = unavailable.copy()
+        metrics["exploratory_projection_completeness"] = unavailable.copy()
     return {
         "evaluation_status": "exploratory",
         "reference_status": "frozen_candidate_annotations",
@@ -195,5 +222,5 @@ def score_predictions(predictions: dict[str, dict[str, Any]],
         "scored_cases": len(candidates) - len(missing),
         "missing_predictions": missing,
         "validation_errors": validation_errors,
-        "exploratory_metrics": {name: _ratio(*counts[name]) for name in METRIC_NAMES},
+        "exploratory_metrics": metrics,
     }

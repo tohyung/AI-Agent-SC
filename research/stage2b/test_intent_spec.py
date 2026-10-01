@@ -15,7 +15,7 @@ def simple_payment():
     return {
         "schema_version": "stage2b-shadow-v1", "requirement_history": history,
         "participants": [
-            {"participant_id": "party:Alice", "name": "Alice", "claim_refs": ["depositor"]},
+            {"participant_id": "party:Alice", "name": "Alice", "claim_refs": ["account", "depositor"]},
             {"participant_id": "party:Bob", "name": "Bob", "claim_refs": ["recipient"]},
         ],
         "assets_and_accounts": {
@@ -30,7 +30,9 @@ def simple_payment():
         "states": [{"state_id": "initial", "claim_refs": []},
                    {"state_id": "funded", "claim_refs": ["depositor", "amount"]}],
         "transitions": [{"transition_id": "deposit-1", "kind": "deposit", "actor": "Alice",
-                         "transaction_submitter": None, "claim_refs": ["depositor"]}],
+                         "transaction_submitter": None, "claim_refs": ["depositor"]},
+                        {"transition_id": "payout-1", "kind": "payment", "actor": None,
+                         "transaction_submitter": None, "claim_refs": []}],
         "obligations_and_outcomes": [
             {"outcome_id": "payout-1", "kind": "payment", "recipient": "Bob",
              "scope_id": "payout-1", "claim_refs": ["recipient"]}],
@@ -152,6 +154,7 @@ def test_asset_does_not_infer_account_owner_or_transaction_submitter():
     spec["claims"] = [claim for claim in spec["claims"]
                       if claim["claim_id"] != "account"]
     spec["assets_and_accounts"]["accounts"] = []
+    spec["participants"][0]["claim_refs"] = ["depositor"]
     assert validate_intent_spec(spec) == []
     spec["assets_and_accounts"]["accounts"] = [{
         "account_id": "account:Alice", "owner": "Alice", "claim_refs": ["asset"]}]
@@ -193,6 +196,9 @@ def test_assumed_financial_claim_has_no_fake_provenance_and_is_unsafe():
     spec["obligations_and_outcomes"] = []
     spec["predicted_resolution"] = "clarification_required"
     spec["required_clarifications"] = ["Ai nhận tiền?"]
+    spec["assumptions_and_provenance"] = [{
+        "assumption_id": "assumption:recipient", "text": "Recipient not stated",
+        "claim_refs": ["recipient"]}]
     assert validate_intent_spec(spec) == []
     claim["evidence"] = [{"requirement_version": 1, "message_index": 0,
                            "span": "Bob nhận 10 ADA", "relation": "supports"}]
@@ -293,7 +299,7 @@ def test_funding_relation_requires_scope_and_existing_backed_asset():
                 "party": "Alice", "account_owner": "Alice", "asset_id": "asset:ADA",
                 "claim_refs": ["depositor", "account", "asset"]}
     spec["assets_and_accounts"]["funding_relations"] = [relation]
-    assert validate_intent_spec(spec) == []
+    errors_with(spec, "funding relation lacks explicit relational evidence")
     relation["asset_id"] = "asset:UNKNOWN"
     errors_with(spec, "funding asset_id lacks matching asset")
     relation["asset_id"] = "asset:ADA"

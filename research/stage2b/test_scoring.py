@@ -8,6 +8,8 @@ import pytest
 
 from research.stage2b import scoring
 from research.stage2b.test_intent_spec import simple_payment
+from research.stage2b.intent_spec import extract_core_view
+from research.stage2b.projector import project_intent_spec
 
 
 HISTORY = [{"version": 1, "messages": ["Bob nhận 2 ADA; Alice nhận 2 ADA."]}]
@@ -218,3 +220,26 @@ def test_derived_amount_uses_direct_span_not_fake_asset_source():
     result = score({"derived": spec}, [reference])
     assert any("invalid derived_from" in error for error in result["validation_errors"]["derived"])
     assert metric(result, "provenance_completeness")["numerator"] == 4
+
+
+def test_native_core_and_projection_metrics_do_not_relabel_historical_runs():
+    historical = score({"c1": prediction()}, [candidate()])
+    for name in ("core_structural_validity_rate", "projection_completeness"):
+        metric_value = metric(historical, name)
+        assert metric_value["value"] is None
+        assert "historical run predates" in metric_value["reason"]
+
+    source = extract_core_view(simple_payment())
+    projection = project_intent_spec(source)
+    reference = {"case_id": "native", "mutation": None, "split": "development",
+                 "claims": deepcopy(source["claims"]),
+                 "requirement_history": deepcopy(source["requirement_history"]),
+                 "expected_resolution": source["predicted_resolution"],
+                 "required_clarifications": []}
+    result = scoring.score_predictions(
+        {"native": projection.intent_spec.data}, [reference], run_records={
+            "native": {"semantic_core": source,
+                       "projection_diagnostics": projection.projection_diagnostics}})
+    assert metric(result, "core_structural_validity_rate") == {
+        "numerator": 1, "denominator": 1, "value": 1.0}
+    assert metric(result, "projection_completeness")["value"] == 1.0

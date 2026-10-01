@@ -5,7 +5,9 @@ from __future__ import annotations
 import json
 from typing import Any, Protocol
 
-from research.stage2b.intent_spec import IntentSpec, SCHEMA_VERSION, prompt_schema_contract
+from research.stage2b.intent_spec import (
+    CORE_SCHEMA_VERSION, ShadowSemanticCore, core_prompt_schema_contract,
+)
 
 
 class ShadowModel(Protocol):
@@ -13,29 +15,29 @@ class ShadowModel(Protocol):
 
 
 class InvalidModelOutput(ValueError):
-    """The model returned a JSON value other than an IntentSpec object."""
+    """The model returned a JSON value other than a semantic core object."""
 
 
-SYSTEM_PROMPT = """Extract user intent only as one JSON IntentSpec object.
+SYSTEM_PROMPT = """Extract user intent only as one JSON ShadowSemanticCore object.
 Do NOT generate Marlowe AST, compile, or invent missing business facts.
-Prefer the smallest valid IntentSpec. Leave rich sections empty when no claim
-confidently backs them; rich objects are projections, not independent facts.
+Output only the seven semantic core fields. Python deterministically projects
+all rich sections. Never output participants, accounts, parameters, states,
+transitions, outcomes, conflicts, or assumptions objects.
 Preserve requirement chronology and explicit corrections. Every financial claim
 must have exact source provenance; deterministic financial derivations need
 exact source evidence and a normalization basis. `derived_from` is optional;
 never point an amount to `asset=ADA` as if the asset claim proved quantity.
 An assumption is not evidence. Use only the supplied
 claim taxonomy. If a fact is outside it, record a non-authoritative
-unscored_observation, never an authoritative rich field.
+unscored_observation, never a new claim kind.
 Use stable case-local business scope IDs such as global, deposit-1,
 decision-1:approve, and notify-1:timeout. Every scope must include its valid
 scope_type and required fields from the schema contract. Do not use AST paths.
-Every authoritative participant/account/parameter/transition/outcome fact must
-reference matching claim IDs. Distinguish choice_owner, depositing_party,
+Distinguish choice_owner, depositing_party,
 destination_account_owner, payment_source_account_owner, payment_recipient,
 refund_recipient, release_recipient, and transaction_submitter. Never infer
-transaction_submitter from Choice owner or Deposit party. In Stage 2B v1 it
-must be null: there is no authoritative submitter claim kind. Never invent a
+transaction_submitter from Choice owner or Deposit party. There is no
+authoritative submitter claim kind. Never invent a
 funding source, account owner, transition actor, payout source, or success state.
 Preserve party and asset spelling and case exactly: Alice != alice; ADA != ada.
 1 ADA = 1000000 lovelace; amount_lovelace is integer lovelace and POSIX
@@ -54,21 +56,17 @@ Return JSON only, with all top-level fields shown in the user instruction.
 
 def build_prompt(requirement_history: list[dict[str, Any]]) -> tuple[str, str]:
     template = {
-        "schema_version": SCHEMA_VERSION,
+        "schema_version": CORE_SCHEMA_VERSION,
         "requirement_history": requirement_history,
-        "participants": [],
-        "assets_and_accounts": {"assets": [], "accounts": [], "funding_relations": []},
-        "parameters": [], "states": [], "transitions": [],
-        "obligations_and_outcomes": [], "behavior_scopes": [], "claims": [],
-        "required_clarifications": [], "conflicts": [],
-        "assumptions_and_provenance": [], "unscored_observations": [],
+        "behavior_scopes": [], "claims": [],
+        "required_clarifications": [], "unscored_observations": [],
         "predicted_resolution": "clarification_required",
     }
     user = (
         "Requirement history is the only source of user intent:\n"
         + json.dumps(requirement_history, ensure_ascii=False)
         + "\nValidator schema contract (closed enum/field vocabulary):\n"
-        + json.dumps(prompt_schema_contract(), ensure_ascii=False, sort_keys=True)
+        + json.dumps(core_prompt_schema_contract(), ensure_ascii=False, sort_keys=True)
         + "\nOutput all fields in this JSON shape (replace example values):\n"
         + json.dumps(template, ensure_ascii=False)
         + "\nEvery claim uses claim_id, kind, value, criticality, status, scope_id, "
@@ -81,9 +79,7 @@ def build_prompt(requirement_history: list[dict[str, Any]]) -> tuple[str, str]:
           "never fabricate a source span. Derived financial claims require "
           "normalization_basis; derived_from is optional and must prove the "
           "same kind of fact. Do not link amount_lovelace to asset evidence "
-          "as proof of quantity. Rich objects may contain ONLY fields listed "
-          "for their section in the schema contract; states use only state_id "
-          "and claim_refs. Global scope uses scope_id=global and "
+          "as proof of quantity. Global scope uses scope_id=global and "
           "scope_type=global. A transition scope needs transition_kind; a "
           "branch needs decision_id and branch_id; a timeout needs timeout_id "
           "and may reference decision_id/deadline_claim_id."
@@ -91,19 +87,19 @@ def build_prompt(requirement_history: list[dict[str, Any]]) -> tuple[str, str]:
     return SYSTEM_PROMPT, user
 
 
-def parse_model_output(data: Any) -> IntentSpec:
+def parse_model_output(data: Any) -> ShadowSemanticCore:
     if isinstance(data, str):
         data = json.loads(data)
     if not isinstance(data, dict):
         raise InvalidModelOutput("shadow model must return a JSON object")
-    return IntentSpec(data)
+    return ShadowSemanticCore(data)
 
 
 class IntentShadowExtractor:
     def __init__(self, model: ShadowModel) -> None:
         self.model = model
 
-    def extract(self, requirement_history: list[dict[str, Any]]) -> IntentSpec:
+    def extract(self, requirement_history: list[dict[str, Any]]) -> ShadowSemanticCore:
         system, user = build_prompt(requirement_history)
         return parse_model_output(self.model.generate(system, user))
 

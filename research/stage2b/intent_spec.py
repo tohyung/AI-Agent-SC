@@ -10,6 +10,11 @@ from research.stage2a.foundation import CLAIM_KINDS, CLAIM_STATUSES, RESOLUTIONS
 
 
 SCHEMA_VERSION = "stage2b-shadow-v1"
+CORE_SCHEMA_VERSION = "stage2b-shadow-core-v1"
+CORE_FIELDS = {
+    "schema_version", "requirement_history", "behavior_scopes", "claims",
+    "required_clarifications", "unscored_observations", "predicted_resolution",
+}
 REQUIRED_FIELDS = {
     "schema_version", "requirement_history", "participants", "assets_and_accounts",
     "parameters", "states", "transitions", "obligations_and_outcomes",
@@ -133,6 +138,19 @@ def prompt_schema_contract() -> dict[str, Any]:
     }
 
 
+def core_prompt_schema_contract() -> dict[str, Any]:
+    contract = prompt_schema_contract()
+    contract["schema_version"] = CORE_SCHEMA_VERSION
+    contract["required_top_level_fields"] = sorted(CORE_FIELDS)
+    for key in ("assets_and_accounts_fields", "rich_fields", "parameter_kinds",
+                "outcome_kinds", "state_ids", "state_claim_kinds",
+                "outcome_recipient_kinds", "transition_deadline_kinds",
+                "party_kinds", "account_owner_kinds", "parameter_claim_kinds",
+                "transition_actor_kinds"):
+        contract.pop(key)
+    return contract
+
+
 def _allowed(value: Any, choices: set[str]) -> bool:
     return isinstance(value, str) and value in choices
 
@@ -146,6 +164,22 @@ class IntentSpec:
 
     def validation_errors(self, *, expected_history: list[dict[str, Any]] | None = None) -> list[str]:
         return validate_intent_spec(self.data, expected_history=expected_history)
+
+
+@dataclass
+class ShadowSemanticCore:
+    data: dict[str, Any]
+
+    def to_dict(self) -> dict[str, Any]:
+        return self.data
+
+    def validation_errors(self, *, expected_history: list[dict[str, Any]] | None = None) -> list[str]:
+        return validate_shadow_semantic_core(self.data, expected_history=expected_history)
+
+
+def extract_core_view(spec: dict[str, Any]) -> dict[str, Any]:
+    return {key: (CORE_SCHEMA_VERSION if key == "schema_version" else spec[key])
+            for key in CORE_FIELDS if key in spec}
 
 
 def _evidence_valid(items: Any, messages: dict[tuple[int, int], str]) -> bool:
@@ -236,20 +270,20 @@ def valid_derived_source(claim: dict[str, Any], source: dict[str, Any] | None) -
                 and _same_source_span(claim, source))
 
 
-def validate_intent_spec(spec: Any, *,
-                         expected_history: list[dict[str, Any]] | None = None) -> list[str]:
+def validate_shadow_semantic_core(spec: Any, *,
+                                  expected_history: list[dict[str, Any]] | None = None) -> list[str]:
     errors: list[str] = []
     if not isinstance(spec, dict):
-        return ["IntentSpec must be an object"]
-    missing = REQUIRED_FIELDS - spec.keys()
+        return ["ShadowSemanticCore must be an object"]
+    missing = CORE_FIELDS - spec.keys()
     if missing:
         errors.append(f"missing fields: {sorted(missing)}")
-    extra = spec.keys() - REQUIRED_FIELDS
+    extra = spec.keys() - CORE_FIELDS
     if extra:
         errors.append(f"unknown top-level fields: {sorted(extra)}")
     if "mutation" in spec or "parent_case_id" in spec:
         errors.append("mutation-specific knowledge is not allowed in IntentSpec")
-    if spec.get("schema_version") != SCHEMA_VERSION:
+    if spec.get("schema_version") != CORE_SCHEMA_VERSION:
         errors.append("invalid schema_version")
     resolution = spec.get("predicted_resolution")
     if not _allowed(resolution, RESOLUTIONS):
@@ -283,6 +317,8 @@ def validate_intent_spec(spec: Any, *,
                 errors.append(f"scope {scope_id}: unsupported scope fields {sorted(unknown)}")
         if scope.get("scope_type") == "global" and scope_id != "global":
             errors.append(f"scope {scope_id}: global scope_id must be global")
+        if scope_id == "global" and scope_type != "global":
+            errors.append("scope global: scope_type must be global")
         if scope.get("scope_type") == "transition" and (not isinstance(
                 scope.get("transition_kind"), str) or not scope["transition_kind"].strip()):
             errors.append(f"scope {scope_id}: transition_kind required")
@@ -328,6 +364,17 @@ def validate_intent_spec(spec: Any, *,
         if not _allowed(claim.get("criticality"), CRITICALITIES):
             errors.append(f"claim {claim_id}: invalid criticality")
         status = claim.get("status")
+        kind = claim.get("kind")
+        value = claim.get("value")
+        if status != "unresolved":
+            if _allowed(kind, PARTY_KINDS | {"asset"}) and (
+                    not isinstance(value, str) or not value):
+                errors.append(f"claim {claim_id}: party/asset value must be nonempty text")
+            if _allowed(kind, DEADLINE_KINDS | {"amount_lovelace"}) and (
+                    not isinstance(value, int) or isinstance(value, bool)):
+                errors.append(f"claim {claim_id}: numeric value must be integer")
+            if kind == "autonomous_execution" and not isinstance(value, bool):
+                errors.append(f"claim {claim_id}: autonomous_execution value must be boolean")
         evidence = claim.get("evidence")
         if evidence is not None and evidence != [] and not _evidence_valid(evidence, messages):
             errors.append(f"claim {claim_id}: invalid evidence target/span")
@@ -405,6 +452,10 @@ def validate_intent_spec(spec: Any, *,
     clarifications = spec.get("required_clarifications")
     if not isinstance(clarifications, list):
         errors.append("required_clarifications must be a list")
+    elif any(not ((isinstance(item, str) and item.strip()) or
+                   (isinstance(item, dict) and isinstance(item.get("question"), str)
+                    and item["question"].strip())) for item in clarifications):
+        errors.append("required_clarifications must contain nonempty questions")
     elif _allowed(resolution, RESOLUTION_REQUIRED) and not clarifications:
         errors.append("clarification/conflict prediction requires a business question")
     if resolution == "accepted_interpretation":
@@ -414,6 +465,47 @@ def validate_intent_spec(spec: Any, *,
             errors.append("accepted prediction has unsafe critical claim")
         if clarifications:
             errors.append("accepted prediction still requests clarification")
+
+    observations = spec.get("unscored_observations")
+    if not isinstance(observations, list):
+        errors.append("unscored_observations must be a list")
+    else:
+        for item in observations:
+            if (not isinstance(item, dict) or not item.get("observation_id")
+                    or not item.get("text") or
+                    item.get("reason") != "outside_stage2b_v1_claim_taxonomy"
+                    or not _evidence_valid(item.get("source_evidence"), messages)):
+                errors.append("invalid unscored_observation")
+    return errors
+
+
+def validate_intent_spec(spec: Any, *,
+                         expected_history: list[dict[str, Any]] | None = None,
+                         projected_core: dict[str, Any] | None = None) -> list[str]:
+    if not isinstance(spec, dict):
+        return ["IntentSpec must be an object"]
+    errors = validate_shadow_semantic_core(
+        extract_core_view(spec), expected_history=expected_history)
+    missing = REQUIRED_FIELDS - spec.keys()
+    if missing:
+        errors.append(f"missing fields: {sorted(missing)}")
+    extra = spec.keys() - REQUIRED_FIELDS
+    if extra:
+        errors.append(f"unknown top-level fields: {sorted(extra)}")
+    if spec.get("schema_version") != SCHEMA_VERSION:
+        errors.append("invalid schema_version")
+    scopes = {scope["scope_id"]: scope for scope in spec.get("behavior_scopes", [])
+              if isinstance(scope, dict) and isinstance(scope.get("scope_id"), str)} if isinstance(
+                  spec.get("behavior_scopes"), list) else {}
+    claims = {claim["claim_id"]: claim for claim in spec.get("claims", [])
+              if isinstance(claim, dict) and isinstance(claim.get("claim_id"), str)} if isinstance(
+                  spec.get("claims"), list) else {}
+    by_scope: dict[tuple[str, str], set[str]] = {}
+    for claim in claims.values():
+        if _allowed(claim.get("status"), ACTIVE_STATUSES):
+            by_scope.setdefault((str(claim.get("kind")), str(claim.get("scope_id"))), set()).add(
+                json.dumps(claim.get("value"), sort_keys=True))
+    conflicting = {key for key, values in by_scope.items() if len(values) > 1}
 
     assets_accounts = spec.get("assets_and_accounts")
     if not isinstance(assets_accounts, dict):
@@ -551,14 +643,66 @@ def validate_intent_spec(spec: Any, *,
                     represented_conflicts.add((kind, scope_id))
     for kind, scope_id in conflicting - represented_conflicts:
         errors.append(f"conflict {kind} in {scope_id} lacks matching conflict object")
-    observations = spec.get("unscored_observations")
-    if not isinstance(observations, list):
-        errors.append("unscored_observations must be a list")
-    else:
-        for item in observations:
-            if (not isinstance(item, dict) or not item.get("observation_id")
-                    or not item.get("text") or
-                    item.get("reason") != "outside_stage2b_v1_claim_taxonomy"
-                    or not _evidence_valid(item.get("source_evidence"), messages)):
-                errors.append("invalid unscored_observation")
+    for name, items in sections.items():
+        if not isinstance(items, list):
+            continue
+        id_field = {"participants": "participant_id", "assets": "asset_id",
+                    "accounts": "account_id", "funding_relations": "relation_id",
+                    "parameters": "parameter_id", "states": "state_id",
+                    "transitions": "transition_id", "obligations_and_outcomes": "outcome_id",
+                    "conflicts": "conflict_id", "assumptions_and_provenance": "assumption_id"}[name]
+        ids = [item.get(id_field) for item in items if isinstance(item, dict)]
+        if len(ids) != len(set(map(str, ids))):
+            errors.append(f"{name}: duplicate semantic projection")
+    if sections["funding_relations"]:
+        errors.append("funding relation lacks explicit relational evidence in current taxonomy")
+    for claim in claims.values():
+        claim_id = claim.get("claim_id")
+        kind = claim.get("kind")
+        value = claim.get("value")
+        status = claim.get("status")
+        if status == "assumed":
+            if not any(isinstance(item, dict) and item.get("claim_refs") == [claim_id]
+                       and item.get("text") == claim.get("assumption_reason")
+                       for item in (sections["assumptions_and_provenance"] or [])):
+                errors.append(f"claim {claim_id}: missing assumption projection")
+            continue
+        if not _allowed(status, BACKING_STATUSES) or value is None:
+            continue
+        mandatory: list[tuple[str, str, Any]] = []
+        if _allowed(kind, PARTY_KINDS):
+            mandatory.append(("participants", "name", value))
+        if kind == "asset":
+            mandatory.append(("assets", "symbol", value))
+        if _allowed(kind, ACCOUNT_OWNER_KINDS):
+            mandatory.append(("accounts", "owner", value))
+        if _allowed(kind, RECIPIENT_KINDS):
+            mandatory.append(("obligations_and_outcomes", "recipient", value))
+        if _allowed(kind, PARAMETER_CLAIM_KINDS["amount"] | DEADLINE_KINDS):
+            mandatory.append(("parameters", "normalized_value", value))
+        for section, field, expected in mandatory:
+            if not any(isinstance(item, dict) and item.get(field) == expected
+                       and isinstance(item.get("claim_refs"), list)
+                       and claim_id in item["claim_refs"]
+                       and (section != "obligations_and_outcomes"
+                            or item.get("scope_id") == claim.get("scope_id"))
+                       for item in (sections[section] or [])):
+                errors.append(f"claim {claim_id}: missing mandatory {section} projection")
+    for scope_id, scope in scopes.items():
+        if scope.get("scope_type") == "transition" and not any(
+                isinstance(item, dict) and item.get("transition_id") == scope_id
+                for item in (sections["transitions"] or [])):
+            errors.append(f"scope {scope_id}: missing mandatory transition projection")
+    if projected_core is not None and not validate_shadow_semantic_core(
+            projected_core, expected_history=expected_history):
+        from research.stage2b.projector import project_intent_spec
+
+        for field in CORE_FIELDS - {"schema_version"}:
+            if spec.get(field) != projected_core.get(field):
+                errors.append(f"{field}: authoritative core differs from model output")
+        expected = project_intent_spec(projected_core,
+                                       expected_history=expected_history).intent_spec.to_dict()
+        for field in REQUIRED_FIELDS - CORE_FIELDS:
+            if spec.get(field) != expected.get(field):
+                errors.append(f"{field}: deterministic projection differs from semantic core")
     return errors

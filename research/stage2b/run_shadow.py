@@ -15,7 +15,8 @@ if __package__ in (None, ""):
 
 from marlowe_ai_agent.marlowe_agent.models import LLMError  # noqa: E402
 from research.stage2a import verify_freeze  # noqa: E402
-from research.stage2b.intent_spec import SCHEMA_VERSION  # noqa: E402
+from research.stage2b.intent_spec import CORE_SCHEMA_VERSION, validate_intent_spec  # noqa: E402
+from research.stage2b.projector import classify_projection, project_intent_spec  # noqa: E402
 from research.stage2b.scoring import FrozenCandidateAdapter, MANIFEST  # noqa: E402
 from research.stage2b.shadow_extractor import (  # noqa: E402
     IntentShadowExtractor, InvalidModelOutput, LegacyReasonerTransport, build_prompt,
@@ -87,9 +88,13 @@ def main() -> int:
                 "case_id": candidate["case_id"],
                 "split": candidate["split"],
                 "model": model.reasoner.model if model is not None else None,
-                "schema_version": SCHEMA_VERSION,
+                "schema_version": CORE_SCHEMA_VERSION,
                 "source_corpus_version": "stage2a-v1",
                 "source_corpus_aggregate_sha256": aggregate,
+                "semantic_core": None,
+                "core_validation_errors": [],
+                "projection_diagnostics": None,
+                "projection_classification": None,
                 "prediction": None,
                 "validation_errors": [],
                 "usage": None,
@@ -102,15 +107,28 @@ def main() -> int:
             else:
                 usage_before = model.usage()
                 try:
-                    prediction = extractor.extract(history)
+                    core = extractor.extract(history)
                 except (LLMError, TimeoutError, json.JSONDecodeError, InvalidModelOutput) as exc:
                     record["run_status"] = "model_error"
                     record["model_error"] = _sanitized_model_error(exc)
                     failed = True
                 else:
-                    record["prediction"] = prediction.to_dict()
-                    record["validation_errors"] = prediction.validation_errors(
+                    record["semantic_core"] = core.to_dict()
+                    record["core_validation_errors"] = core.validation_errors(
                         expected_history=history)
+                    projection = project_intent_spec(core, expected_history=history)
+                    record["prediction"] = projection.intent_spec.to_dict()
+                    record["projection_diagnostics"] = projection.projection_diagnostics
+                    record["validation_errors"] = validate_intent_spec(
+                        record["prediction"], expected_history=history,
+                        projected_core=record["semantic_core"])
+                    record["projection_classification"] = classify_projection(
+                        record["core_validation_errors"], record["validation_errors"],
+                        record["projection_diagnostics"])
+                    if record["projection_classification"] == "CORE_INVALID":
+                        record["run_status"] = "core_invalid"
+                    elif record["projection_classification"] == "PROJECTOR_BUG":
+                        record["run_status"] = "projection_invalid"
                 finally:
                     record["usage"] = _usage_delta(usage_before, model.usage())
                 case_usage.append(record["usage"])
