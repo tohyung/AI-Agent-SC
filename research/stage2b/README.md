@@ -117,6 +117,18 @@ failed cases where the transport observed a request; aggregate usage sums the
 per-case deltas. Flushing protects completed records at the process/filesystem
 boundary, not against power loss, OS crashes, or disk corruption.
 
+Model failure telemetry records a sanitized phase and code without persisting
+model content, request bodies, headers, credentials, or exception text. Phases
+distinguish `transport_response_decode` (SDK response decoding),
+`model_output_parse` (content JSON parsing after a response),
+`model_output_schema` (non-object content), `transport_request` (direct
+request timeout), and `unknown` (unclassified failure). `usage.calls` counts
+instrumented `_request` invocations, not independently verified HTTP/provider
+requests. A failed invocation still increments the counter because `call_log`
+is written in `finally`. Token/cost absence on a failed invocation means the
+instrumentation did not observe usage, not that billing was zero. Historical
+v4 `invalid_model_json` labels cannot be assigned a phase retroactively.
+
 `unscored_observations` hold source-grounded facts outside the frozen claim
 taxonomy. They cannot authorize rich IntentSpec fields, count as matched
 claims, or be used by a future compiler without a versioned schema change.

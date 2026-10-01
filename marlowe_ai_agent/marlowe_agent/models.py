@@ -15,6 +15,25 @@ class LLMTransientError(LLMError):
     """A provider or model response failed temporarily."""
 
 
+class LLMPhaseError(LLMTransientError):
+    """A failure with safe, origin-assigned telemetry metadata."""
+
+    _MESSAGES = {
+        ("transport_response_decode", "transport_response_decode_error"):
+            "Provider response could not be decoded.",
+        ("model_output_parse", "model_output_invalid_after_repair"):
+            "Model output remained invalid JSON after repair.",
+    }
+
+    def __init__(self, *, phase: str, code: str,
+                 model_content_received: bool, repair_attempted: bool) -> None:
+        self.phase = phase
+        self.code = code
+        self.model_content_received = model_content_received
+        self.repair_attempted = repair_attempted
+        super().__init__(self._MESSAGES[(phase, code)])
+
+
 class LLMBudgetError(LLMError):
     """The configured LLM call budget was exceeded."""
 

@@ -252,11 +252,11 @@ def test_unexpected_model_programming_error_propagates(tmp_path, monkeypatch):
         run_shadow.main()
 
 
-@pytest.mark.parametrize(("response", "code"), [
-    ("not JSON", "invalid_model_json"),
-    (["not-an-object"], "invalid_model_output"),
+@pytest.mark.parametrize(("response", "code", "phase"), [
+    ("not JSON", "model_output_invalid_json", "model_output_parse"),
+    (["not-an-object"], "invalid_model_output", "model_output_schema"),
 ])
-def test_model_parse_failures_are_recorded(tmp_path, monkeypatch, response, code):
+def test_model_parse_failures_are_recorded(tmp_path, monkeypatch, response, code, phase):
     class FakeTransport:
         def __init__(self, _model):
             self.reasoner = type("Reasoner", (), {"model": "fake"})()
@@ -275,6 +275,7 @@ def test_model_parse_failures_are_recorded(tmp_path, monkeypatch, response, code
     row = json.loads(output.read_text(encoding="utf-8"))
     assert row["run_status"] == "model_error"
     assert row["model_error"]["code"] == code
+    assert row["model_error"]["phase"] == phase
 
 
 def test_precheck_failures_do_not_truncate_existing_output(tmp_path, monkeypatch):

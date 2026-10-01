@@ -15,6 +15,7 @@ from .models import (
     LLMBudgetError,
     LLMConfigError,
     LLMError,
+    LLMPhaseError,
     LLMTransientError,
     LogicGraphResult,
     PartySpec,
@@ -108,6 +109,17 @@ class OpenAIReasoner:
         try:
             response = create(**kwargs)
             return response
+        except Exception as exc:
+            if isinstance(exc, LLMPhaseError):
+                raise
+            if _has_json_decode_error(exc):
+                raise LLMPhaseError(
+                    phase="transport_response_decode",
+                    code="transport_response_decode_error",
+                    model_content_received=False,
+                    repair_attempted=False,
+                ) from exc
+            raise
         finally:
             usage = getattr(response, "usage", None)
             get = (lambda key: usage.get(key)) if isinstance(usage, dict) else (lambda key: getattr(usage, key, None))
@@ -285,11 +297,11 @@ class OpenAIReasoner:
             try:
                 return parse_json_text(repaired)
             except json.JSONDecodeError as repair_exc:
-                raise LLMTransientError(
-                    "Model tra ve JSON khong hop le ngay ca sau khi yeu cau sua. "
-                    "Hay tang LLM_MAX_TOKENS hoac doi model co JSON mode on dinh hon. "
-                    f"Loi ban dau: {error_text}. Loi sau sua: {repair_exc}. "
-                    f"Do dai response goc: {len(content)}. Do dai response sua: {len(repaired)}."
+                raise LLMPhaseError(
+                    phase="model_output_parse",
+                    code="model_output_invalid_after_repair",
+                    model_content_received=True,
+                    repair_attempted=True,
                 ) from repair_exc
 
     def _raw_response(self, system: str, user: str) -> str:
@@ -309,9 +321,9 @@ class OpenAIReasoner:
                             response_format={"type": "json_object"},
                             max_tokens=self.max_tokens,
                         )
-                    except LLMError:
-                        raise
-                    except Exception:  # noqa: BLE001 - providers may reject JSON mode with different errors
+                    except Exception as exc:  # noqa: BLE001 - providers may reject JSON mode with different errors
+                        if isinstance(exc, LLMError) and not isinstance(exc, LLMPhaseError):
+                            raise
                         self._consume_call()
                         response = self._request(self.client.chat.completions.create,
                             model=self.model,
@@ -393,9 +405,9 @@ class OpenAIReasoner:
                     response_format={"type": "json_object"},
                     max_tokens=self.max_tokens,
                 )
-            except LLMError:
-                raise
-            except Exception:  # noqa: BLE001 - providers may reject JSON mode with different errors
+            except Exception as exc:  # noqa: BLE001 - providers may reject JSON mode with different errors
+                if isinstance(exc, LLMError) and not isinstance(exc, LLMPhaseError):
+                    raise
                 self._consume_call()
                 response = self._request(self.client.chat.completions.create,
                     model=self.model,
@@ -410,6 +422,23 @@ class OpenAIReasoner:
         if choices and choices[0].message.content:
             return choices[0].message.content
         raise LLMTransientError(f"Chat completions API tra ve noi dung rong. Response: {_safe_response_debug(response)}")
+
+
+def _has_json_decode_error(error: Exception) -> bool:
+    pending = [error]
+    seen: set[int] = set()
+    while pending:
+        current = pending.pop()
+        if id(current) in seen:
+            continue
+        seen.add(id(current))
+        if isinstance(current, json.JSONDecodeError):
+            return True
+        if current.__cause__ is not None:
+            pending.append(current.__cause__)
+        if current.__context__ is not None:
+            pending.append(current.__context__)
+    return False
 
 
 def _safe_response_debug(response: Any) -> str:
