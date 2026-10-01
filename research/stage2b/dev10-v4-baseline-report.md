@@ -25,7 +25,7 @@ was rerun or selected by output quality; public validation was not run.
   --model nvidia/nemotron-3-ultra-550b-a55b:free --output
   runs/stage2b/dev10-v4-live.jsonl`. Exactly one pass. It wrote all 10 records
   and returned nonzero because two records have `model_error=invalid_model_json`.
-  No bad case, empty object, or failed JSON response was rerun.
+  No bad case, empty object, or failed invocation was rerun.
 - Native score used `FrozenCandidateAdapter().load(split="development")` and
   `score_predictions(predictions, candidates, run_records=run_records)`: all 10
   selected records, eight projected predictions, no historical scoring mode.
@@ -73,8 +73,9 @@ not evidence of zero risk.
 | Invalid `unscored_observation` | 3 | 0 |
 
 The v4 core validator emitted nine messages, all cascading from one empty
-object, not nine independent defects. The two malformed-JSON responses do not
-reach core validation. The three targeted categories disappearing is
+object, not nine independent defects. The two historically labeled JSON
+failures did not reach core validation; their phases remain unresolved. The
+three targeted categories disappearing is
 **consistent with improved prompt/validator compatibility in this pass**; the
 single stochastic pass cannot establish causality. It also cannot prove those
 rules would be obeyed on the two cases with no parseable output.
@@ -84,8 +85,9 @@ Three separate assessments:
 - **Harness/prompt contract:** Both previously implicit contracts are explicit
   and regression-tested. No targeted reference or observation violations were
   observed among eight emitted cores.
-- **Model core extraction:** Two responses were invalid JSON; one emitted core
-  was `{}`. Valid cores still have candidate-relative semantic mismatches:
+- **Model core extraction:** Two records carry the historical
+  `invalid_model_json` label, but their failure phase is unresolved; one
+  emitted core was `{}`. Valid cores still have candidate-relative semantic mismatches:
   `23/47` critical-claim precision, `5/15` recall, and `6/10` resolution match.
   `pay-d1` asks an unnecessary question. No invalid `derived_from` was observed
   in v4; no false conflict classification was observed. Exact claim mismatches
@@ -108,8 +110,8 @@ question equivalence. `-` denotes unavailable output, not a valid core.
 | `pay-d1` | ok; yes/yes; 0/0; PASS | clarification -> accepted | 5/2/1 | 1/0 | Unnecessary clarification; resolution mismatch. |
 | `refund-d1` | ok; yes/yes; 0/0; PASS | clarification -> clarification | 3/5/3 | 3/2 | Resolution matches; claim mismatch remains. |
 | `choice-d1` | ok; yes/yes; 0/0; PASS | clarification -> clarification | 5/5/3 | 6/1 | Many questions; content not separately adjudicated. |
-| `escrow-d1` | model_error; -/-; 0/0; - | - -> clarification | 0/0/8 | -/1 | Invalid model JSON; no core to classify. |
-| `double-d1` | model_error; -/-; 0/0; - | - -> accepted | 0/0/9 | -/0 | Invalid model JSON; no core to classify. |
+| `escrow-d1` | model_error; -/-; 0/0; - | - -> clarification | 0/0/8 | -/1 | Historical `invalid_model_json` label; phase unresolved; no core. |
+| `double-d1` | model_error; -/-; 0/0; - | - -> accepted | 0/0/9 | -/0 | Historical `invalid_model_json` label; phase unresolved; no core. |
 | `conditional-d1` | ok; yes/yes; 0/0; PASS | clarification -> clarification | 5/4/2 | 5/1 | Resolution matches; several extra questions. |
 | `choice-d2-correction` | core_invalid; no/no; 9/7; CORE_INVALID | - -> clarification | 0/0/4 | -/3 | `MODEL_SCHEMA_COMPLIANCE`: one empty `{}` caused all nine core errors. Full errors are cascade. |
 | `pay-d2-clarify` | ok; yes/yes; 0/0; PASS | clarification -> clarification | 2/2/1 | 2/2 | Resolution matches; claim mismatch remains. |
@@ -117,17 +119,26 @@ question equivalence. `-` denotes unavailable output, not a valid core.
 | `double-d2-conflict` | ok; yes/yes; 0/0; PASS | conflict -> conflict | 0/3/2 | 2/1 | Conflict class matches; critical claims differ. |
 
 Only `choice-d2-correction` is a core-invalid case; its root label is
-`MODEL_SCHEMA_COMPLIANCE`. The two `invalid_model_json` cases are model-output
-failures before core validation, so they are not relabeled as core-invalid or
-projector defects.
+`MODEL_SCHEMA_COMPLIANCE`. The two historical `invalid_model_json` cases failed
+before core validation; that label did not distinguish transport-response
+decoding from model-content parsing. Their phase cannot be assigned
+retroactively, and they are not relabeled as core-invalid or projector defects.
 
 ## Usage and comparison
 
-- Selected cases: **10**. Provider-reported requests: **10** (one per case in
-  recorded usage). `model_error`: **2**. No manual retry or second pass.
-- Provider usage sums: **15,422 prompt tokens**, **34,562 completion tokens**,
-  **1,315.676 seconds** request latency, provider-reported cost **0**. Cost is
-  not independently verified billing.
+- Selected cases: **10**. Instrumented `_request` invocations: **10** (one per
+  case in recorded usage). `_request()` appends a `call_log` entry in `finally`,
+  including when the wrapped SDK call raises. This counts observed wrapper
+  invocations, not underlying HTTP/provider requests; neither exactly 10 nor
+  at least 12 HTTP requests can be inferred. `model_error`: **2**. No manual
+  retry or second pass.
+- Recorded usage sums: **15,422 prompt tokens**, **34,562 completion tokens**,
+  **1,315.676 seconds** wrapper latency, and recorded/provider-reported cost
+  **0** for responses with available usage. For the two failed invocations,
+  current instrumentation observed no token or cost usage; its aggregate
+  fallback records numeric zero for those missing responses. This does not
+  establish zero provider-side token usage or billing, and the totals are not
+  independently verified provider accounting.
 - V3 completion tokens: **32,502**; v4: **34,562**. Token movement is not a
   quality metric.
 - V3 core output/valid/full-valid: **10/10, 2/10, 2/10**. V4:
@@ -144,6 +155,6 @@ validation/scoring hardening: **ACCEPTED**; remaining prompt-contract gaps:
 production authority changed: **NO**. Stage 2B is **not complete**.
 
 The targeted structural categories were absent in this pass, so the next
-investigation can focus on semantic extraction and malformed JSON while
+investigation can focus on semantic extraction and JSON reliability while
 preserving the core/projector boundary. Repeated, controlled measurements
 would be needed before making a causal or general-quality claim.
