@@ -17,6 +17,17 @@ reuses core validation and checks rich backing/mandatory coverage. In the
 runner, strict `projected_core` comparison also checks exact deterministic
 projection, IDs, order, references, and absence of invented relations.
 
+Core-v1 closes `transition_kind` to `choice`, `deposit`, `notify`, and
+`payment`. Its only currently taxonomy-modeled unsupported signal is an
+authoritative, provenance-backed `autonomous_execution=true` claim. Such a
+claim requires `unsupported_for_current_study`; conversely, that resolution
+requires a supported v1 signal. Assumed, unresolved, superseded, or
+unprovenanced claims do not qualify, and a genuine conflict is resolved by the
+conflict policy rather than hidden by this rule. This is a version-specific
+taxonomy policy, not a universal definition of unsupported behavior. Adding
+another unsupported feature requires a deliberate taxonomy and schema-version
+extension; the frozen Stage 2A corpus is unchanged.
+
 Projection IDs are stable: transition ID is its scope ID; parameter, outcome,
 and assumption IDs are `parameter:<claim_id>`, `outcome:<claim_id>`, and
 `assumption:<claim_id>`; conflict ID is `conflict:<kind>:<scope_id>`.
@@ -45,8 +56,13 @@ safe optional omissions. Mandatory projected facts cover backed parties,
 assets, accounts, amounts/deadlines, recipients, transition scopes, conflict
 groups, and assumptions. The runner preserves raw `semantic_core`, separate
 core/full errors, projection diagnostics, and sanitized model failures. Invalid
-core is never repaired or treated as a projector bug. Historical v1/v2 runs
-have N/A (not zero) for native core validity and projection completeness;
+core is never repaired or treated as a projector bug. Native core output rate
+counts emitted core objects over all selected cases; native core structural
+validity counts valid cores over the same denominator, including model failures
+as non-valid. Full structural validity also uses strict deterministic
+`projected_core` validation, so these three rates are not interchangeable and
+none is an accuracy estimate. Historical v1/v2 runs have N/A (not zero) for
+native core output, core validity, and projection completeness;
 the separate local v2 ablation is not a native v3 measurement.
 
 The source is the frozen **candidate** corpus. Its 32 annotations remain

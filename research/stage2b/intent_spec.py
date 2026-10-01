@@ -44,6 +44,9 @@ TRANSITION_DEADLINE_KINDS = {
 }
 RECIPIENT_KINDS = {"payment_recipient", "refund_recipient", "release_recipient"}
 BACKING_STATUSES = {"explicit", "derived", "user_confirmed"}
+TRANSITION_KINDS = {"choice", "deposit", "notify", "payment"}
+# Stage 2B core-v1 only; a future unsupported feature needs a versioned signal.
+UNSUPPORTED_SIGNALS_V1 = frozenset({("autonomous_execution", True)})
 ASSETS_ACCOUNTS_FIELDS = {"assets", "accounts", "funding_relations"}
 CLAIM_FIELDS = {
     "claim_id", "kind", "value", "criticality", "status", "scope_id", "evidence",
@@ -142,6 +145,7 @@ def core_prompt_schema_contract() -> dict[str, Any]:
     contract = prompt_schema_contract()
     contract["schema_version"] = CORE_SCHEMA_VERSION
     contract["required_top_level_fields"] = sorted(CORE_FIELDS)
+    contract["transition_kinds"] = sorted(TRANSITION_KINDS)
     for key in ("assets_and_accounts_fields", "rich_fields", "parameter_kinds",
                 "outcome_kinds", "state_ids", "state_claim_kinds",
                 "outcome_recipient_kinds", "transition_deadline_kinds",
@@ -319,9 +323,9 @@ def validate_shadow_semantic_core(spec: Any, *,
             errors.append(f"scope {scope_id}: global scope_id must be global")
         if scope_id == "global" and scope_type != "global":
             errors.append("scope global: scope_type must be global")
-        if scope.get("scope_type") == "transition" and (not isinstance(
-                scope.get("transition_kind"), str) or not scope["transition_kind"].strip()):
-            errors.append(f"scope {scope_id}: transition_kind required")
+        if scope_type == "transition" and not _allowed(
+                scope.get("transition_kind"), TRANSITION_KINDS):
+            errors.append(f"scope {scope_id}: unsupported transition_kind")
         if scope.get("scope_type") == "branch" and not scope.get("branch_id"):
             errors.append(f"scope {scope_id}: branch_id required")
         if scope.get("scope_type") == "timeout" and not scope.get("timeout_id"):
@@ -449,6 +453,19 @@ def validate_shadow_semantic_core(spec: Any, *,
         if isinstance(claim, dict) and claim.get("status") == "conflicted":
             if (str(claim.get("kind")), str(claim.get("scope_id"))) not in conflicting:
                 errors.append(f"claim {claim.get('claim_id')}: conflicted status needs distinct active values")
+    supported_unsupported = any(
+        isinstance(claim, dict)
+        and claim.get("kind") == signal_kind and claim.get("value") is signal_value
+        and _allowed(claim.get("status"), BACKING_STATUSES)
+        and valid_supporting_evidence(claim, messages)
+        for claim in raw_claims
+        for signal_kind, signal_value in UNSUPPORTED_SIGNALS_V1
+    )
+    if supported_unsupported and resolution != "unsupported_for_current_study" and not (
+            resolution == "conflict_requires_resolution" and conflicting):
+        errors.append("authoritative unsupported signal requires unsupported_for_current_study")
+    if resolution == "unsupported_for_current_study" and not supported_unsupported:
+        errors.append("unsupported prediction requires authoritative v1 unsupported signal")
     clarifications = spec.get("required_clarifications")
     if not isinstance(clarifications, list):
         errors.append("required_clarifications must be a list")

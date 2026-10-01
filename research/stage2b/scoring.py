@@ -109,7 +109,7 @@ def score_predictions(predictions: dict[str, dict[str, Any]],
     missing = []
     validation_errors: dict[str, list[str]] = {}
     core_valid_count = 0
-    core_record_count = 0
+    core_output_count = 0
     mandatory_eligible = 0
     mandatory_projected = 0
     for candidate in candidates:
@@ -118,7 +118,7 @@ def score_predictions(predictions: dict[str, dict[str, Any]],
         record = (run_records or {}).get(case_id, {})
         native_core = record.get("semantic_core")
         if isinstance(native_core, dict):
-            core_record_count += 1
+            core_output_count += 1
             core_valid_count += not validate_shadow_semantic_core(
                 native_core, expected_history=candidate["requirement_history"])
             diagnostics = record.get("projection_diagnostics") or {}
@@ -126,8 +126,10 @@ def score_predictions(predictions: dict[str, dict[str, Any]],
                 mandatory_eligible += diagnostics.get("mandatory_eligible_count", 0)
                 mandatory_projected += diagnostics.get("mandatory_projected_count", 0)
         errors = (["prediction missing"] if raw_prediction is None else
-                  validate_intent_spec(raw_prediction,
-                                       expected_history=candidate["requirement_history"]))
+                  validate_intent_spec(
+                      raw_prediction,
+                      expected_history=candidate["requirement_history"],
+                      projected_core=native_core if isinstance(native_core, dict) else None))
         validation_errors[case_id] = errors
         validity = counts["exploratory_structural_validity_rate"]
         validity[0] += int(not errors)
@@ -202,14 +204,17 @@ def score_predictions(predictions: dict[str, dict[str, Any]],
                              for claim in predicted_claims)
         provenance[1] += len(predicted_claims)
     metrics = {name: _ratio(*counts[name]) for name in METRIC_NAMES}
-    if core_record_count:
+    if run_records is not None:
+        metrics["exploratory_core_output_rate"] = _ratio(
+            core_output_count, len(candidates))
         metrics["exploratory_core_structural_validity_rate"] = _ratio(
-            core_valid_count, core_record_count)
+            core_valid_count, len(candidates))
         metrics["exploratory_projection_completeness"] = _ratio(
             mandatory_projected, mandatory_eligible)
     else:
         unavailable = {"numerator": None, "denominator": None, "value": None,
                        "reason": "historical run predates stage2b-shadow-core-v1"}
+        metrics["exploratory_core_output_rate"] = unavailable.copy()
         metrics["exploratory_core_structural_validity_rate"] = unavailable.copy()
         metrics["exploratory_projection_completeness"] = unavailable.copy()
     return {

@@ -224,7 +224,8 @@ def test_derived_amount_uses_direct_span_not_fake_asset_source():
 
 def test_native_core_and_projection_metrics_do_not_relabel_historical_runs():
     historical = score({"c1": prediction()}, [candidate()])
-    for name in ("core_structural_validity_rate", "projection_completeness"):
+    for name in ("core_output_rate", "core_structural_validity_rate",
+                 "projection_completeness"):
         metric_value = metric(historical, name)
         assert metric_value["value"] is None
         assert "historical run predates" in metric_value["reason"]
@@ -243,3 +244,72 @@ def test_native_core_and_projection_metrics_do_not_relabel_historical_runs():
     assert metric(result, "core_structural_validity_rate") == {
         "numerator": 1, "denominator": 1, "value": 1.0}
     assert metric(result, "projection_completeness")["value"] == 1.0
+
+
+def native_batch(*, emitted: int, valid: int, corrupt_rich: bool = False):
+    source = extract_core_view(simple_payment())
+    candidates = []
+    predictions = {}
+    records = {}
+    for index in range(10):
+        case_id = f"native-{index}"
+        candidates.append({
+            "case_id": case_id, "mutation": None, "split": "development",
+            "claims": deepcopy(source["claims"]),
+            "requirement_history": deepcopy(source["requirement_history"]),
+            "expected_resolution": "accepted_interpretation", "required_clarifications": [],
+        })
+        if index >= emitted:
+            records[case_id] = {"run_status": "model_error", "semantic_core": None}
+            continue
+        case_core = deepcopy(source)
+        if index >= valid:
+            case_core["claims"][0]["scope_id"] = "unknown-scope"
+        projection = project_intent_spec(case_core)
+        full = projection.intent_spec.data
+        if corrupt_rich and index == 0:
+            full["obligations_and_outcomes"][0]["outcome_id"] = "wrong-id"
+        predictions[case_id] = full
+        records[case_id] = {
+            "semantic_core": case_core,
+            "projection_diagnostics": projection.projection_diagnostics,
+        }
+    return predictions, candidates, records
+
+
+@pytest.mark.parametrize(("emitted", "valid", "expected_output", "expected_valid"), [
+    (7, 7, 7, 7),
+    (7, 5, 7, 5),
+])
+def test_native_core_rates_include_all_selected_cases(
+        emitted, valid, expected_output, expected_valid):
+    predictions, candidates, records = native_batch(emitted=emitted, valid=valid)
+    result = scoring.score_predictions(predictions, candidates, run_records=records)
+    assert metric(result, "core_output_rate") == {
+        "numerator": expected_output, "denominator": 10, "value": expected_output / 10}
+    assert metric(result, "core_structural_validity_rate") == {
+        "numerator": expected_valid, "denominator": 10, "value": expected_valid / 10}
+
+
+def test_native_missing_record_counts_in_denominator():
+    predictions, candidates, records = native_batch(emitted=7, valid=7)
+    del records["native-9"]
+    result = scoring.score_predictions(predictions, candidates, run_records=records)
+    assert metric(result, "core_output_rate")["denominator"] == 10
+    assert metric(result, "core_structural_validity_rate")["numerator"] == 7
+
+
+def test_native_scorer_uses_runner_strict_projection_validation():
+    predictions, candidates, records = native_batch(emitted=10, valid=10,
+                                                     corrupt_rich=True)
+    first = "native-0"
+    runner_errors = scoring.validate_intent_spec(
+        predictions[first], expected_history=candidates[0]["requirement_history"],
+        projected_core=records[first]["semantic_core"])
+    assert any("deterministic projection differs" in error for error in runner_errors)
+    result = scoring.score_predictions(predictions, candidates, run_records=records)
+    assert result["validation_errors"][first] == runner_errors
+    assert metric(result, "core_output_rate")["numerator"] == 10
+    assert metric(result, "core_structural_validity_rate")["numerator"] == 10
+    assert metric(result, "structural_validity_rate") == {
+        "numerator": 9, "denominator": 10, "value": 0.9}
