@@ -23,33 +23,53 @@ Do NOT generate Marlowe AST, compile, or invent missing business facts.
 Output only the seven semantic core fields. Python deterministically projects
 all rich sections. Never output participants, accounts, parameters, states,
 transitions, outcomes, conflicts, or assumptions objects.
-Preserve requirement chronology and explicit corrections. Every financial claim
-must have exact source provenance; deterministic financial derivations need
-exact source evidence and a normalization basis. `derived_from` is optional;
-never point an amount to `asset=ADA` as if the asset claim proved quantity.
-An assumption is not evidence. Use only the supplied
-claim taxonomy. If a fact is outside it, record a non-authoritative
-unscored_observation, never a new claim kind.
-Use stable case-local business scope IDs such as global, deposit-1,
-decision-1:approve, and notify-1:timeout. Every scope must include its valid
-scope_type and required fields from the schema contract. Do not use AST paths.
-Distinguish choice_owner, depositing_party,
-destination_account_owner, payment_source_account_owner, payment_recipient,
-refund_recipient, release_recipient, and transaction_submitter. Never infer
-transaction_submitter from Choice owner or Deposit party. There is no
-authoritative submitter claim kind. Never invent a
-funding source, account owner, transition actor, payout source, or success state.
-Preserve party and asset spelling and case exactly: Alice != alice; ADA != ada.
-1 ADA = 1000000 lovelace; amount_lovelace is integer lovelace and POSIX
-deadlines are integer milliseconds. Never guess unknown business entities.
-For missing critical finance facts use value=null and status=unresolved, then
-ask a concrete Vietnamese business question, not an AST/JSON question.
-Do not infer payment source from the party depositing. Preserve Notify as
-Notify: missing Observation semantics requires clarification, not an invented
-Choice owner. Two conflicting active values of the same kind/scope require
-both claims marked conflicted and conflict_requires_resolution; do not
-downgrade conflicts to generic ambiguity. Conflicts require user resolution;
-unsupported autonomous execution is unsupported, not merely ambiguous.
+Follow this semantic order before selecting a resolution:
+1. Read requirement history in order. A later explicit correction supersedes
+   the earlier value; only simultaneously active incompatible values of the
+   same kind and business scope form a conflict.
+2. Identify the actual business event and outcome scopes. Use stable case-local
+   IDs such as global, deposit-1, decision-1:approve, notify-1:timeout; include
+   valid scope_type and required fields from the schema contract. Do not use
+   AST paths. Put deposit roles/deadlines on the deposit event, Choice roles
+   and deadlines on the Choice event, and outcome recipients on their actual
+   Choice/Notify branch or timeout. Do not detach an outcome into an invented
+   payment transition. Use global only for genuinely branch-independent facts,
+   including a directly named asset spanning the monetary obligation.
+3. Emit a minimal set of atomic claims: only facts stated by an active
+   requirement, confirmed by correction, or supported by allowed deterministic
+   derivation. A source span must express the claimed role/action relation;
+   a party name alone does not prove who deposits, chooses, owns an account,
+   or receives funds. An assumption is not evidence. Use only the supplied
+   claim taxonomy; facts outside it may be non-authoritative
+   unscored_observations, never new claim kinds. Preserve party/asset spelling
+   and case exactly. Convert 1 ADA to 1000000 integer lovelace and POSIX times
+   to integer milliseconds. A converted amount_lovelace is status=derived with
+   exact source evidence and normalization_basis, not status=explicit merely
+   because the source states an ADA amount. A directly named asset may remain
+   explicit. `derived_from` is optional and must prove the same kind of fact;
+   asset=ADA does not prove an amount.
+4. Keep distinct depositing_party, choice_owner, destination_account_owner,
+   payment_source_account_owner, payment_recipient, refund_recipient, and
+   release_recipient. A depositor does not establish a deposit account owner
+   or payment source; a payment recipient does not establish either account
+   owner. Never invent a funding source, actor, recipient, or success state.
+   Preserve Notify as Notify: if its Observation condition is undefined, ask
+   what makes it true, not who owns a Choice. transaction_submitter is not an
+   authoritative claim kind and must not be inferred from a Choice owner or
+   depositor.
+5. For genuinely missing critical business facts use value=null and
+   status=unresolved. Ask only concrete, nonduplicate Vietnamese business
+   questions that resolve those missing or conflicting facts. Ask which
+   competing value governs a conflict. Do not ask for already stated facts,
+   extra deadlines/recipients for paths not requested, AST/JSON details, or
+   a transaction_submitter unless the requirement explicitly makes submitter
+   identity business-relevant and the taxonomy can represent the issue.
+   Keep schema field names out of user-facing question text.
+6. Choose predicted_resolution last: unsupported_for_current_study only for a
+   valid versioned unsupported signal; otherwise conflict_requires_resolution
+   for active same-kind/same-scope conflict; otherwise clarification_required
+   for remaining critical unresolved facts; otherwise accepted_interpretation.
+   Unsupported autonomous execution is unsupported, not generic ambiguity.
 Return JSON only, with all top-level fields shown in the user instruction.
 """
 

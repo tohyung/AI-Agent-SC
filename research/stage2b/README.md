@@ -137,3 +137,14 @@ Rich objects are closed-schema projections of scoped claims: unknown fields and
 unsupported state/outcome kinds are rejected. Financial derivations use exact
 source spans plus a normalization basis; `derived_from` is optional and cannot
 point from an amount to an `asset=ADA` claim as a substitute for quantity.
+
+The [offline v4 semantic audit](dev10-v4-semantic-audit.md) compares all ten
+canonical development cases against raw model cores and draft candidate
+annotations. It separates source/policy violations from candidate-relative
+differences and unusable output. The research-only extraction prompt now
+prioritizes active facts, business scopes, relation-bearing evidence, derived
+numeric status, role-specific minimal Vietnamese questions, and resolution
+last. Synthetic tests check this contract; they do not demonstrate that the
+model follows it. Historical v4 results are unchanged. A new live v5 pass
+remains gated on explicit quota confirmation and cannot be interpreted as
+causal proof from one stochastic sample.
