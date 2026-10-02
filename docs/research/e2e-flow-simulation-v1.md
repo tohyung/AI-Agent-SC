@@ -20,6 +20,8 @@ pinned-reference integration tests below did execute the Haskell binary.
 | B7 | The synthetic reference accepted `state={}`, which the Haskell bridge rejects. This was an integration-fixture/reference-seam mismatch, not an established production bug. | The separate real-reference seam uses exact `accounts`, `choices`, `boundValues`, and `minTime` fields. The real driver accepts that state and returns `InvalidInput` for `{}`. | Request compatibility is observed only for the tested Notify trace. |
 | B8 | Comparison of only status and final contract could accept a wrong `Close` refund in place of a Pay to Bob. | Optional final-state, warning, and payment observables now preserve legacy expectation identity; the real-reference wrong-compiler regression reports `VIOLATED` with `payments` mismatched. | One reviewed scenario does not establish general semantic equivalence. |
 | B9 | A Pay reduction needs an empty-input transaction, but `Timeout` was the only empty-input domain label. | `NoInput` now represents an empty-input transaction without changing `Timeout`; unit and real-reference tests exercise it. | Transaction-domain coverage remains explicit and bounded. |
+| B10 | A failed/inconclusive comparison could execute the authority stage, and even a legitimate reference outage followed by successful candidate-only metadata could unlock exploration. | The authority exception now covers only `UNAVAILABLE`; exploration additionally requires a `SUCCEEDED/SATISFIED` comparison. Real wrong-`Close` and outage/recovery regressions exercise both gates. | An unavailable reference can still produce `CANDIDATE_ONLY/NO_AUTHORITY` metadata, never behavioral evidence. |
+| B11 | A pre-reviewed accepted intent could not enter the orchestrator at compile without executing or faking Stage 2B/2C. | `ResearchPipelineRun.entry_stage` and explicit `ResearchOrchestrator.run(entry_stage=...)` bound partial execution and resume. The field is appended to preserve the third positional `stages` argument. | The caller supplies external upstream artifacts; this slice does not establish how they were produced or authenticated. |
 
 ## Observed simulation paths
 
@@ -111,3 +113,30 @@ and no warning; `NoWarningsOracle` returned `SATISFIED` for this observed trace
 only. This does not prove general compiler correctness, all traces, ledger
 validity, or production readiness. The full 13-stage simulation still uses
 `FakeReferenceExecutor`.
+
+## Orchestrated real compiler/reference subpipeline
+
+An explicit `entry_stage="compile"`, `stop_after="oracle_evaluation"` run now
+executes exactly compile, semantic comparison, compiler authority, exploration,
+and oracle evaluation. Stage 2B, Stage 2C, and coverage onward are not executed
+or represented by fake success records. The validated accepted intent, reviewed
+scenario, and behavior expectation enter as external artifacts; there are no
+fabricated requirement-history-to-external provenance edges. When the reviewed
+scenario is the independent expectation source, it is explicitly declared as a
+semantic-comparison input and has a provenance edge to the comparison artifact.
+
+The positive controlled run generated Pay-to-Bob, matched the real pinned
+reference payment/final-state/warnings expectation, and reached one bounded
+exploration trace and a `SATISFIED` no-warnings finding for that trace. The
+compiler-authority stage executed and emitted a `compiler-authority-decision`
+artifact with `CANDIDATE_ONLY`, `NO_AUTHORITY`, and no supplied promotion
+decision. Stage execution is not an authority grant.
+
+The wrong-`Close` test remained structurally accepted but real comparison found
+the Alice refund instead of the expected Bob payment. Its `VIOLATED/FAILED`
+result stopped before compiler authority, exploration, and oracle. A reference
+outage instead produced `UNAVAILABLE` comparison and candidate-only authority
+metadata, but still blocked exploration. Resuming the same run after reference
+recovery invalidated the stale downstream run records, reran comparison and
+authority, then reached exploration and oracle. Immutable old artifacts remain
+in the store; the full 13-stage simulation still uses `FakeReferenceExecutor`.

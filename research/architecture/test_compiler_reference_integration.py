@@ -140,6 +140,8 @@ def test_generated_payment_matches_independent_scenario_in_real_reference(real_b
     comparison = _compare(real_binary, accepted, contract, scenario, expectation)
     assert comparison.result.run_status == StageRunStatus.SUCCEEDED
     assert comparison.result.semantic_status == "SATISFIED"
+    assert comparison.result.input_artifacts == [contract.artifact_id, accepted.artifact_id,
+                                                  expectation.artifact_id, scenario.artifact_id]
     payload = comparison.artifacts[0].payload
     assert payload["reference_identity"] == REFERENCE_IDENTITY
     assert "mismatches" not in payload
