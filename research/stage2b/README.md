@@ -96,11 +96,16 @@ From the repository root:
 ```bash
 python research/stage2b/run_shadow.py --dry-run --case-id pay-d1
 python research/stage2b/run_shadow.py --dry-run --split validation --output /tmp/stage2b-prompts.jsonl
-python research/stage2b/run_shadow.py --live --case-id pay-d1 --output /tmp/stage2b-live.jsonl
+python -m research.stage2b.report_shadow_run
+# Controlled live run requires operator-chosen model and monetary ceilings:
+python -m research.stage2b.run_shadow --live --all-canonical --model <MODEL> \
+  --max-physical-calls 60 --max-spend-usd <USD> \
+  --per-request-cost-ceiling-usd <USD_PER_REQUEST> --output <NEW_JSONL_PATH>
 ```
 
 Dry-run is the default and never calls a model. Live mode is explicit and
-requires an output path and the existing LLM configuration. `LegacyReasonerTransport`
+requires a new output path, explicit model, physical request cap, and operator-declared
+monetary ceilings. `LegacyReasonerTransport`
 uses the production reasoner's private JSON transport only as a research
 adapter; it is not production authority, does not request a Marlowe AST, and
 does not import `ContractDraft`. Tests use fake transports and make no API
@@ -109,13 +114,12 @@ default.
 The shadow prompt embeds the core validator's closed enum and field vocabulary;
 unknown business facts stay unresolved rather than becoming guessed claims or
 rich projections. With `--output`, prechecks finish before the file is opened.
-Each completed case record is appended and flushed before the next case.
+Each completed case record is written and flushed before the next case.
 Expected model failures produce a sanitized `model_error` record and the run
 continues; the command exits non-zero after all selected cases if any such
-failure occurred. Usage in each record is the delta for that case, including
-failed cases where the transport observed a request; aggregate usage sums the
-per-case deltas. Flushing protects completed records at the process/filesystem
-boundary, not against power loss, OS crashes, or disk corruption.
+failure occurred. Usage in each record summarizes its exact physical call-log
+window; unavailable provider token/cost fields remain null, with known subtotals
+reported separately. Live output uses exclusive creation and per-record fsync.
 
 Model failure telemetry records a sanitized phase and code without persisting
 model content, request bodies, headers, credentials, or exception text. Phases
