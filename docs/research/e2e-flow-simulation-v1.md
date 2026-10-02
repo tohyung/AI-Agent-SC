@@ -4,8 +4,9 @@ This is a concrete interface integration simulation. It establishes that typed
 artifacts can traverse the research DAG with explicitly injected deterministic
 dependencies. It does not establish semantic accuracy, compiler correctness,
 reference semantics correctness, property safety, ledger validity, or production
-readiness. No LLM, pinned Marlowe executable, wallet, network, testnet, or real
-deployment was used.
+readiness. The deterministic 13-stage simulation used no LLM, pinned Marlowe
+executable, wallet, network, testnet, or real deployment. Separate real
+pinned-reference integration tests below did execute the Haskell binary.
 
 ## Architectural bottlenecks
 
@@ -17,6 +18,8 @@ deployment was used.
 | B4 | Stage 5 ignored its checker and rejected status events at the same candidate version. | Typed `PropertyCheckResult`; checker executes per candidate; registry stores immutable chronological events. Tests cover candidate-to-`REFUTED`, duplicate events, candidate-content collision, and older-version rejection. | Synthetic checker evidence is not a formal proof. Stage success reports completed evaluation, not property satisfaction. |
 | B5 | Authority and property ports read additional artifacts without declaring them as inputs. | Authority now declares comparison and contract; property stage declares adversarial candidates and contract. Clean-flow provenance assertions cover these plus every other executed internal stage. | Provenance records declared input consumption, not authenticity of external evidence. |
 | B7 | The synthetic reference accepted `state={}`, which the Haskell bridge rejects. This was an integration-fixture/reference-seam mismatch, not an established production bug. | The separate real-reference seam uses exact `accounts`, `choices`, `boundValues`, and `minTime` fields. The real driver accepts that state and returns `InvalidInput` for `{}`. | Request compatibility is observed only for the tested Notify trace. |
+| B8 | Comparison of only status and final contract could accept a wrong `Close` refund in place of a Pay to Bob. | Optional final-state, warning, and payment observables now preserve legacy expectation identity; the real-reference wrong-compiler regression reports `VIOLATED` with `payments` mismatched. | One reviewed scenario does not establish general semantic equivalence. |
+| B9 | A Pay reduction needs an empty-input transaction, but `Timeout` was the only empty-input domain label. | `NoInput` now represents an empty-input transaction without changing `Timeout`; unit and real-reference tests exercise it. | Transaction-domain coverage remains explicit and bounded. |
 
 ## Observed simulation paths
 
@@ -73,3 +76,38 @@ mounted local path because pytest was not installed in the WSL interpreter.
 No Python process tried to execute a binary across an OS boundary. This seam
 result does not establish compiler semantic faithfulness, general Marlowe
 correctness, ledger validation, or production readiness.
+
+## Direct payment compiler to pinned reference
+
+The explicitly wired research profile `direct-payment`/`v1` uses compiler
+`deterministic-direct-payment`/`0.1.0`. It supports exactly one payment from an
+existing account, with the claim kinds `payment_source_account_owner`,
+`payment_recipient`, `amount_lovelace`, and `asset`. Only ADA is supported. The
+profile represents a participant/account name as a Marlowe Role with that text;
+this is a representation rule, not a wallet address, token-ownership proof, or
+ledger authorization rule. No default profile registration or compiler authority
+promotion occurred.
+
+A synthetic, validated accepted-intent fixture specifies a payment of 10 ADA
+from Alice's funded account to Bob. It is an integration input, not evidence of
+reviewer authentication. `CompilerPort` generated a Pay-to-Bob Core V1 AST with
+structural mapping evidence. With Alice's account initially funded with exactly
+10 ADA, the real pinned reference
+`7b5b1e900ec53a8eb18747992bec73470704dfcb:0.1.0` returned `Success`, a
+payment to Bob, no warnings, empty final accounts, and `close`. The independent
+behavior expectation compared status, final contract, final state, warnings,
+and payments and returned `SATISFIED`.
+
+A deliberately wrong, test-only compiler instead produced structurally valid
+`close` with complete structural mapping evidence. The same real reference
+returned `Success` and `close`, but refunded Alice. Behavioral comparison
+returned `VIOLATED` with `payments` in its mismatch diagnostics. Thus mapping
+evidence completeness is not mapping semantic correctness, and status plus
+final contract alone would have missed this error.
+
+Bounded exploration used the compiler-produced contract, a `NoInput` transaction,
+depth one, and one trace. The real reference trace succeeded with the Bob payment
+and no warning; `NoWarningsOracle` returned `SATISFIED` for this observed trace
+only. This does not prove general compiler correctness, all traces, ledger
+validity, or production readiness. The full 13-stage simulation still uses
+`FakeReferenceExecutor`.
