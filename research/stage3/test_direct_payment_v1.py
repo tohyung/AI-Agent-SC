@@ -43,8 +43,7 @@ def direct_payment_spec(recipient="Bob"):
         "parameters": [{"parameter_id": "payment-amount", "kind": "amount",
                         "normalized_value": 10000000, "unit": "lovelace",
                         "claim_refs": ["amount"]}],
-        "states": [{"state_id": "initial", "claim_refs": []},
-                   {"state_id": "paid", "claim_refs": ["recipient"]}],
+        "states": [{"state_id": "initial", "claim_refs": []}],
         "transitions": [{"transition_id": "payment-1", "kind": "payment",
                          "actor": None, "deadline_parameter_id": None,
                          "transaction_submitter": None, "claim_refs": []}],
@@ -121,7 +120,7 @@ def test_valid_intent_profile_and_compiler_mapping_are_deterministic():
     assert {"claim", "scope", "participants", "assets", "accounts", "parameters",
             "states", "transitions", "obligations_and_outcomes"} == {
                 kind for kind, _ in mapped}
-    assert len(mapped) == 15
+    assert len(mapped) == 14
 
 
 @pytest.mark.parametrize(("mutation", "status"), [
@@ -147,6 +146,9 @@ def test_valid_intent_profile_and_compiler_mapping_are_deterministic():
      CompileStatus.UNSUPPORTED_FEATURE),
     (lambda ir: replace(ir, funding_relations=(FundingRelationIR(
         "funding-1", "payment-1", "Alice", "Alice", "asset:ADA", {}),)),
+     CompileStatus.UNSUPPORTED_FEATURE),
+    (lambda ir: replace(ir, states=ir.states + (replace(
+        ir.states[0], state_id="paid", source={"state_id": "paid", "claim_refs": ["recipient"]}),)),
      CompileStatus.UNSUPPORTED_FEATURE),
 ])
 def test_rejects_ambiguous_or_unsupported_ir(mutation, status):

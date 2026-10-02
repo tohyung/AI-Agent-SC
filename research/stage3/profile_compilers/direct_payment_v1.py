@@ -53,7 +53,7 @@ def _mapping(ir: CompilationIR) -> tuple[dict[str, str], ...]:
     for item in sorted(ir.parameters, key=lambda value: value.parameter_id):
         add("parameters", item.parameter_id, "$.pay")
     for item in sorted(ir.states, key=lambda value: value.state_id):
-        add("states", item.state_id, "$" if item.state_id == "initial" else "$.then")
+        add("states", item.state_id, "$")
     for item in sorted(ir.transitions, key=lambda value: value.transition_id):
         add("transitions", item.transition_id, "$")
     for item in sorted(ir.outcomes, key=lambda value: value.outcome_id):
@@ -122,9 +122,8 @@ def compile_direct_payment_v1(ir: CompilationIR) -> CompileResult:
             or ir.parameters[0].source.get("unit") != "lovelace"
             or amount_claim.claim_id not in ir.parameters[0].source.get("claim_refs", [])):
         return _unsupported("amount parameter projection inconsistent")
-    if (len(ir.states) != 2 or {item.state_id for item in ir.states} != {"initial", "paid"}
-            or not any(item.state_id == "paid" and recipient_claim.claim_id in
-                       item.source.get("claim_refs", []) for item in ir.states)):
+    if (len(ir.states) != 1 or ir.states[0].state_id != "initial"
+            or ir.states[0].source.get("claim_refs") != []):
         return _unsupported("state projection inconsistent")
     if (len(ir.transitions) != 1 or ir.transitions[0].transition_id != scope_id
             or ir.transitions[0].source.get("kind") != "payment"
