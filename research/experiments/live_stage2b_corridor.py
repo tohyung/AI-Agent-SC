@@ -3,18 +3,21 @@
 from __future__ import annotations
 
 import argparse
+from collections import Counter
 from copy import deepcopy
 import hashlib
 import json
 import os
 from pathlib import Path
-import subprocess
 import sys
 
 from marlowe_ai_agent.marlowe_agent.models import LLMError
 from research.architecture.artifacts import ArtifactEnvelope, canonical_json_v1
 from research.architecture.bootstrap import ResearchPipelineWiring, build_research_pipeline
-from research.stage2b.live_safety import EXPERIMENT_VERSION, make_live_budget, safe_transport_metadata
+from research.stage2b.live_safety import (EXPERIMENT_VERSION, LivePreflightError,
+                                          make_live_budget, require_clean_worktree,
+                                          safe_transport_metadata, validate_live_outputs,
+                                          write_execution_summary)
 from research.stage2b.intent_spec import ACTIVE_STATUSES
 from research.stage2b.profile_diagnostic import direct_payment_profile_match
 from research.stage2b.shadow_extractor import LegacyReasonerTransport
@@ -185,14 +188,8 @@ def run_repetition(model, binary, repetition, *, reference_executor=None):
               "logical_extractions": 1, "profile_match": None}
     record["claim_diagnostic"] = claim_diagnostic(record["semantic_core"])
     record["predicted_resolution"] = (record["semantic_core"] or {}).get("predicted_resolution")
-    if candidate is None and first.stages["intent_extraction"].semantic_status != "PROJECTOR_BUG":
-        diagnostics = first.stages["intent_extraction"].diagnostics
-        budget_stop = any("physical_call_budget_exhausted" in item for item in diagnostics)
-        record["model_error"] = {"code": ("physical_call_budget_exhausted" if budget_stop
-                                          else "provider_error"),
-                                 "phase": "budget" if budget_stop else "intent_extraction",
-                                 "message": ("Physical model-call budget exhausted." if budget_stop
-                                             else "Model extraction did not produce a candidate.")}
+    if candidate is None and first.stages["intent_extraction"].semantic_status == "MODEL_ERROR":
+        record["model_error"] = first.stages["intent_extraction"].safe_error
     if candidate and not record["core_validation_errors"] and record["projection_classification"] == "PASS":
         review_run = pipeline.run(HISTORY, resume=first, stop_after="intent_acceptance")
         run = review_run
@@ -246,25 +243,34 @@ def main(argv=None):
                                   args.per_request_cost_ceiling_usd)
     except ValueError as exc:
         parser.error(str(exc))
-    if args.output.exists() or not Path(args.reference_binary).is_file():
-        print("Canary preflight failed: output exists or reference binary missing", file=sys.stderr)
-        return 2
-    code_sha = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT,
-                                       stdin=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-                                       text=True).strip()
     try:
-        writer = args.output.open("x", encoding="utf-8")
-    except OSError:
-        print("Canary preflight failed: output cannot be created exclusively", file=sys.stderr)
+        validate_live_outputs(args.output, ROOT)
+        if not Path(args.reference_binary).is_file():
+            raise LivePreflightError("LIVE_EXECUTION_BLOCKED_REFERENCE_BINARY_MISSING")
+        code_sha = require_clean_worktree(ROOT)
+    except LivePreflightError as exc:
+        print(str(exc), file=sys.stderr)
         return 2
     try:
         model = LegacyReasonerTransport(args.model)
         model.reasoner.set_call_budget(budget.effective_calls)
-        print(json.dumps({"experiment_version": EXPERIMENT_VERSION, "code_sha": code_sha,
-                          "model": args.model, "repetitions": 3, "budget": budget.to_dict(),
-                          "transport": safe_transport_metadata(model.reasoner)}))
-        records = []
-        budget_interrupted = False
+    except (LLMError, OSError, ValueError):
+        print("Canary preflight failed: model configuration unavailable", file=sys.stderr)
+        return 2
+    try:
+        writer = args.output.open("x", encoding="utf-8")
+    except OSError:
+        print("Canary preflight failed: raw output cannot be created exclusively", file=sys.stderr)
+        return 2
+    transport = safe_transport_metadata(model.reasoner)
+    print(json.dumps({"experiment_version": EXPERIMENT_VERSION, "code_sha": code_sha,
+                      "model": args.model, "repetitions": 3, "budget": budget.to_dict(),
+                      "transport": transport}))
+    records = []
+    budget_interrupted = False
+    status = "COMPLETED"
+    exit_code = 0
+    try:
         for repetition in range(1, 4):
             if model.reasoner.llm_calls >= budget.effective_calls:
                 break
@@ -278,17 +284,29 @@ def main(argv=None):
             if record.get("model_error", {}).get("code") == "physical_call_budget_exhausted":
                 budget_interrupted = True
                 break
-        print(json.dumps({"experiment_status": ("BUDGET_EXHAUSTED" if budget_interrupted or len(records) < 3
-                                                  else "COMPLETED"),
-                          "completed_repetitions": len(records), "corridor_passed": sum(
-                              item["first_failure_class"] == "CORRIDOR_PASSED" for item in records),
-                          "usage": model.usage()}))
-        return 0 if len(records) == 3 and not budget_interrupted else 2
+        if budget_interrupted or len(records) < 3:
+            status, exit_code = "BUDGET_EXHAUSTED", 2
     except LLMError:
-        print("Canary stopped: model configuration or budget failure", file=sys.stderr)
-        return 2
+        status, exit_code = "ENVIRONMENT_BLOCKED", 2
+    except Exception:
+        status, exit_code = "INFRASTRUCTURE_FAILED", 3
     finally:
         writer.close()
+    summary = {"experiment_version": EXPERIMENT_VERSION, "experiment_status": status,
+               "code_sha": code_sha, "model": args.model,
+               "repetitions_requested": 3, "repetitions_completed": len(records),
+               "corridor_passed_count": sum(item["first_failure_class"] == "CORRIDOR_PASSED"
+                                            for item in records),
+               "first_failure_class_counts": dict(Counter(item["first_failure_class"]
+                                                          for item in records)),
+               "budget": budget.to_dict(), "transport": transport, "usage": model.usage()}
+    try:
+        write_execution_summary(args.output, summary)
+    except OSError:
+        print("Canary summary could not be persisted", file=sys.stderr)
+        return 3
+    print(json.dumps(summary))
+    return exit_code
 
 
 if __name__ == "__main__":

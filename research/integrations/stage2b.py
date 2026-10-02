@@ -32,8 +32,10 @@ class Stage2BExtractionPort:
             safe_error = sanitized_model_error(exc)
             return StageExecution(StageResult(
                 "intent_extraction", ImplementationStatus.IMPLEMENTED_UNVALIDATED,
-                StageRunStatus.FAILED, input_artifacts=[source.artifact_id],
-                diagnostics=[f"model extraction failed: {safe_error['code']}"]))
+                StageRunStatus.FAILED, semantic_status="MODEL_ERROR",
+                input_artifacts=[source.artifact_id],
+                diagnostics=[f"model extraction failed: {safe_error['code']}"],
+                safe_error=safe_error))
         core_errors = core.validation_errors(expected_history=history)
         try:
             projection = project_intent_spec(core, expected_history=history)

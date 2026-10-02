@@ -9,7 +9,9 @@ from pathlib import Path
 
 from research.stage2a import foundation
 from research.stage2a import verify_freeze
-from research.stage2b.live_safety import EXPERIMENT_VERSION, STAGE2A_AGGREGATE_SHA256
+from research.stage2b.live_safety import (EXPERIMENT_VERSION, STAGE2A_AGGREGATE_SHA256,
+                                          require_same_experiment_identity, summary_path,
+                                          raw_sha256)
 from research.stage2b.scoring import (MANIFEST, FrozenCandidateAdapter, _active_critical,
                                       _key, score_predictions)
 from research.stage2b.profile_diagnostic import direct_payment_profile_match
@@ -73,6 +75,7 @@ def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--input", type=Path)
     parser.add_argument("--output", type=Path)
+    parser.add_argument("--lane-a-summary", type=Path)
     args = parser.parse_args(argv)
     candidates = FrozenCandidateAdapter().load(all_canonical=True)
     if verify_freeze.verify_freeze(MANIFEST) != STAGE2A_AGGREGATE_SHA256:
@@ -90,6 +93,18 @@ def main(argv=None) -> int:
     if any(record.get("source_corpus_aggregate_sha256") != STAGE2A_AGGREGATE_SHA256
            for record in records):
         parser.error("frozen aggregate mismatch")
+    lane_b_summary = json.loads(summary_path(args.input).read_text(encoding="utf-8"))
+    if lane_b_summary.get("raw_output_sha256") != raw_sha256(args.input):
+        parser.error("Lane B raw output hash differs from execution summary")
+    if any(any(record.get(field) != lane_b_summary.get(field)
+               for field in ("experiment_version", "code_sha", "model")) for record in records):
+        parser.error("Lane B records differ from execution summary identity")
+    if args.lane_a_summary:
+        lane_a_summary = json.loads(args.lane_a_summary.read_text(encoding="utf-8"))
+        try:
+            require_same_experiment_identity(lane_a_summary, lane_b_summary)
+        except ValueError as exc:
+            parser.error(str(exc))
     report = build_report(records, candidates)
     with args.output.open("x", encoding="utf-8") as writer:
         json.dump(report, writer, ensure_ascii=False, indent=2)

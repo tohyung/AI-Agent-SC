@@ -8,7 +8,6 @@ from datetime import datetime, timezone
 import json
 import os
 from pathlib import Path
-import subprocess
 import sys
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -19,7 +18,9 @@ from marlowe_ai_agent.marlowe_agent.models import LLMError, LLMBudgetError  # no
 from research.stage2a import verify_freeze  # noqa: E402
 from research.stage2b.intent_spec import CORE_SCHEMA_VERSION, validate_intent_spec  # noqa: E402
 from research.stage2b.live_safety import (  # noqa: E402
-    EXPERIMENT_VERSION, STAGE2A_AGGREGATE_SHA256, make_live_budget, safe_transport_metadata,
+    EXPERIMENT_VERSION, STAGE2A_AGGREGATE_SHA256, LivePreflightError,
+    make_live_budget, require_clean_worktree, safe_transport_metadata,
+    validate_live_outputs, write_execution_summary,
 )
 from research.stage2b.model_errors import sanitized_model_error  # noqa: E402
 from research.stage2b.projector import classify_projection, project_intent_spec  # noqa: E402
@@ -58,8 +59,10 @@ def main() -> int:
                                       args.per_request_cost_ceiling_usd)
         except ValueError as exc:
             parser.error(str(exc))
-        if args.output.exists():
-            print("Shadow precheck failed: output already exists", file=sys.stderr)
+        try:
+            validate_live_outputs(args.output, ROOT)
+        except LivePreflightError as exc:
+            print(str(exc), file=sys.stderr)
             return 2
     if args.all_canonical and (args.case_id or args.split != "development"):
         parser.error("--all-canonical cannot be combined with --case-id or --split")
@@ -69,12 +72,14 @@ def main() -> int:
             raise ValueError("frozen corpus aggregate does not match experiment baseline")
         candidates = FrozenCandidateAdapter().load(
             split=args.split, all_canonical=args.all_canonical, case_id=args.case_id)
+        code_sha = require_clean_worktree(ROOT) if args.live else None
         model = LegacyReasonerTransport(args.model) if args.live else None
         if model is not None:
             model.reasoner.set_call_budget(budget.effective_calls)
         extractor = IntentShadowExtractor(model) if model is not None else None
-    except (OSError, ValueError, LLMError) as exc:
-        print(f"Shadow precheck failed: {type(exc).__name__}", file=sys.stderr)
+    except (OSError, ValueError, LLMError, LivePreflightError) as exc:
+        print(str(exc) if isinstance(exc, LivePreflightError)
+              else f"Shadow precheck failed: {type(exc).__name__}", file=sys.stderr)
         return 2
 
     try:
@@ -82,16 +87,18 @@ def main() -> int:
     except OSError:
         print("Shadow precheck failed: output cannot be created exclusively", file=sys.stderr)
         return 2
-    code_sha = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT,
-                                       stdin=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-                                       text=True).strip() if args.live else None
+    transport = safe_transport_metadata(model.reasoner) if model is not None else None
     if args.live:
         print(json.dumps({"experiment_version": EXPERIMENT_VERSION, "code_sha": code_sha,
                           "model": args.model, "cases": len(candidates), "budget": budget.to_dict(),
-                          "transport": safe_transport_metadata(model.reasoner)}))
-    failed = False
+                          "transport": transport}))
     count = 0
+    model_error_cases = 0
+    core_invalid_cases = 0
+    projection_bug_cases = 0
     budget_exhausted = False
+    status = "COMPLETED"
+    exit_code = 0
     try:
         for candidate in candidates:
             if model is not None and model.reasoner.llm_calls >= budget.effective_calls:
@@ -131,7 +138,6 @@ def main() -> int:
                 except (LLMError, TimeoutError, json.JSONDecodeError, InvalidModelOutput) as exc:
                     record["run_status"] = "model_error"
                     record["model_error"] = sanitized_model_error(exc)
-                    failed = True
                 else:
                     record["semantic_core"] = core.to_dict()
                     record["core_validation_errors"] = core.validation_errors(
@@ -156,16 +162,37 @@ def main() -> int:
             if args.output and args.live:
                 os.fsync(writer.fileno())
             count += 1
+            model_error_cases += record["run_status"] == "model_error"
+            core_invalid_cases += record["run_status"] == "core_invalid"
+            projection_bug_cases += record["run_status"] == "projection_invalid"
+        if budget_exhausted:
+            status, exit_code = "BUDGET_EXHAUSTED", 2
+    except Exception:
+        if not args.live:
+            raise
+        status, exit_code = "INFRASTRUCTURE_FAILED", 3
     finally:
         if args.output:
             writer.close()
     if args.output:
-        print(f"Wrote {count} shadow records to {args.output}")
+        print(f"Wrote {count} shadow records to {args.output.name}")
         if model is not None:
-            print(json.dumps({"experiment_status": "BUDGET_EXHAUSTED" if budget_exhausted else
-                              "PARTIAL" if failed else "COMPLETED", "completed_cases": count,
-                              "requested_cases": len(candidates), "usage": model.usage()}))
-    return 2 if failed or budget_exhausted else 0
+            summary = {"experiment_version": EXPERIMENT_VERSION, "experiment_status": status,
+                       "code_sha": code_sha, "model": args.model,
+                       "requested_cases": len(candidates), "completed_cases": count,
+                       "model_error_cases": model_error_cases,
+                       "core_invalid_cases": core_invalid_cases,
+                       "projection_bug_cases": projection_bug_cases,
+                       "budget_exhausted": budget_exhausted,
+                       "budget": budget.to_dict(), "transport": transport,
+                       "usage": model.usage()}
+            try:
+                write_execution_summary(args.output, summary)
+            except OSError:
+                print("Shadow summary could not be persisted", file=sys.stderr)
+                return 3
+            print(json.dumps(summary))
+    return exit_code
 
 
 if __name__ == "__main__":

@@ -100,7 +100,7 @@ python -m research.stage2b.report_shadow_run
 # Controlled live run requires operator-chosen model and monetary ceilings:
 python -m research.stage2b.run_shadow --live --all-canonical --model <MODEL> \
   --max-physical-calls 60 --max-spend-usd <USD> \
-  --per-request-cost-ceiling-usd <USD_PER_REQUEST> --output <NEW_JSONL_PATH>
+  --per-request-cost-ceiling-usd <USD_PER_REQUEST> --output <NEW_EXTERNAL_JSONL_PATH>
 ```
 
 Dry-run is the default and never calls a model. Live mode is explicit and
@@ -109,15 +109,18 @@ monetary ceilings. `LegacyReasonerTransport`
 uses the production reasoner's private JSON transport only as a research
 adapter; it is not production authority, does not request a Marlowe AST, and
 does not import `ContractDraft`. Tests use fake transports and make no API
-calls. Output paths are caller-selected; live outputs are not committed by
-default.
+calls. Live output paths must be outside the clean repository; results are
+reviewed before any selected artifacts are copied into a results-only commit.
 The shadow prompt embeds the core validator's closed enum and field vocabulary;
 unknown business facts stay unresolved rather than becoming guessed claims or
 rich projections. With `--output`, prechecks finish before the file is opened.
 Each completed case record is written and flushed before the next case.
 Expected model failures produce a sanitized `model_error` record and the run
-continues; the command exits non-zero after all selected cases if any such
-failure occurred. Usage in each record summarizes its exact physical call-log
+continues. If all selected cases receive durable records, exit 0 and
+`experiment_status=COMPLETED` apply even when model errors occurred. Budget
+exhaustion before completion exits 2; local infrastructure failure exits 3.
+The `<raw>.summary.json` sidecar is created exclusively and binds execution
+counts and usage to the raw file SHA-256. Usage in each record summarizes its exact physical call-log
 window; unavailable provider token/cost fields remain null, with known subtotals
 reported separately. Live output uses exclusive creation and per-record fsync.
 

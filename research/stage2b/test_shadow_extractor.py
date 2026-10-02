@@ -13,6 +13,11 @@ from research.stage2b import intent_spec, run_shadow, shadow_extractor
 from research.stage2b.test_intent_spec import simple_payment
 
 
+@pytest.fixture(autouse=True)
+def clean_git_for_offline_cli(monkeypatch):
+    monkeypatch.setattr(run_shadow, "require_clean_worktree", lambda _root: "a" * 40)
+
+
 def live_argv(*args):
     return ["run_shadow.py", "--live", "--model", "fake", "--max-physical-calls", "60",
             "--max-spend-usd", "30", "--per-request-cost-ceiling-usd", "0.5", *args]
@@ -232,7 +237,7 @@ def test_model_failure_preserves_prior_rows_continues_and_sanitizes(tmp_path, mo
 
     monkeypatch.setattr(run_shadow, "LegacyReasonerTransport", FakeTransport)
     monkeypatch.setattr(sys, "argv", live_argv("--output", str(output)))
-    assert run_shadow.main() == 2
+    assert run_shadow.main() == 0
     rows = [json.loads(line) for line in output.read_text(encoding="utf-8").splitlines()]
     assert len(rows) == 10
     assert rows[0]["run_status"] == "core_invalid"
@@ -246,7 +251,7 @@ def test_model_failure_preserves_prior_rows_continues_and_sanitizes(tmp_path, mo
     assert sum(row["usage"]["calls"] for row in rows) == 10
 
 
-def test_unexpected_model_programming_error_propagates(tmp_path, monkeypatch):
+def test_unexpected_model_programming_error_is_infrastructure_failure(tmp_path, monkeypatch):
     class BrokenTransport(FakeTransportBase):
         def __init__(self, _model):
             self.init_usage()
@@ -257,8 +262,10 @@ def test_unexpected_model_programming_error_propagates(tmp_path, monkeypatch):
     monkeypatch.setattr(run_shadow, "LegacyReasonerTransport", BrokenTransport)
     output = tmp_path / "broken.jsonl"
     monkeypatch.setattr(sys, "argv", live_argv("--case-id", "pay-d1", "--output", str(output)))
-    with pytest.raises(KeyError, match="programmer bug"):
-        run_shadow.main()
+    assert run_shadow.main() == 3
+    summary = json.loads((tmp_path / "broken.jsonl.summary.json").read_text(encoding="utf-8"))
+    assert summary["experiment_status"] == "INFRASTRUCTURE_FAILED"
+    assert "programmer bug" not in json.dumps(summary)
 
 
 @pytest.mark.parametrize(("response", "code", "phase"), [
@@ -277,7 +284,7 @@ def test_model_parse_failures_are_recorded(tmp_path, monkeypatch, response, code
     monkeypatch.setattr(run_shadow, "LegacyReasonerTransport", FakeTransport)
     output = tmp_path / "parse-error.jsonl"
     monkeypatch.setattr(sys, "argv", live_argv("--case-id", "pay-d1", "--output", str(output)))
-    assert run_shadow.main() == 2
+    assert run_shadow.main() == 0
     row = json.loads(output.read_text(encoding="utf-8"))
     assert row["run_status"] == "model_error"
     assert row["model_error"]["code"] == code

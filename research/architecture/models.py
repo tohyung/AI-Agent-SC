@@ -22,15 +22,23 @@ class StageResult:
     limitations: list[str] = field(default_factory=list)
     blocked_by: list[str] = field(default_factory=list)
     authority_level: AuthorityLevel = AuthorityLevel.NO_AUTHORITY
+    safe_error: dict[str, Any] | None = None
 
     def to_dict(self) -> dict[str, Any]:
-        return {"stage": self.stage, "implementation_status": self.implementation_status.value,
+        result = {"stage": self.stage, "implementation_status": self.implementation_status.value,
                 "run_status": self.run_status.value, "semantic_status": self.semantic_status,
                 "input_artifacts": list(self.input_artifacts),
                 "output_artifacts": list(self.output_artifacts),
                 "assurance_claims": [claim.to_dict() for claim in self.assurance_claims],
                 "diagnostics": list(self.diagnostics), "limitations": list(self.limitations),
                 "blocked_by": list(self.blocked_by), "authority_level": self.authority_level.value}
+        if self.safe_error is not None:
+            allowed = {"code", "phase", "message", "model_content_received",
+                       "repair_attempted", "exception_type"}
+            if set(self.safe_error) != allowed:
+                raise ValueError("safe_error must use the closed normalized schema")
+            result["safe_error"] = dict(self.safe_error)
+        return result
 
 
 @dataclass
