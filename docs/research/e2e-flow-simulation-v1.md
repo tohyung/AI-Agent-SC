@@ -22,6 +22,8 @@ pinned-reference integration tests below did execute the Haskell binary.
 | B9 | A Pay reduction needs an empty-input transaction, but `Timeout` was the only empty-input domain label. | `NoInput` now represents an empty-input transaction without changing `Timeout`; unit and real-reference tests exercise it. | Transaction-domain coverage remains explicit and bounded. |
 | B10 | A failed/inconclusive comparison could execute the authority stage, and even a legitimate reference outage followed by successful candidate-only metadata could unlock exploration. | The authority exception now covers only `UNAVAILABLE`; exploration additionally requires a `SUCCEEDED/SATISFIED` comparison. Real wrong-`Close` and outage/recovery regressions exercise both gates. | An unavailable reference can still produce `CANDIDATE_ONLY/NO_AUTHORITY` metadata, never behavioral evidence. |
 | B11 | A pre-reviewed accepted intent could not enter the orchestrator at compile without executing or faking Stage 2B/2C. | `ResearchPipelineRun.entry_stage` and explicit `ResearchOrchestrator.run(entry_stage=...)` bound partial execution and resume. The field is appended to preserve the third positional `stages` argument. | The caller supplies external upstream artifacts; this slice does not establish how they were produced or authenticated. |
+| B12 | Candidate authority metadata could say `unavailable` despite a real comparison, or attribute another contract's observed reference identity. | The comparison identity is reported only when its contract ID matches the current candidate; configured promotion identity remains a separate explicit authorization requirement. Same-contract, wrong-contract, and no-implicit-promotion tests cover this. | Reported identity is metadata, not a compiler authority grant. |
+| B13 | Direct-payment-v1 required a synthetic `paid` state absent from conservative Stage 2B projection. | A pre-fix diagnostic found `initial` only, profile `EXACT_SUPPORTED_PROFILE`, compiler `UNSUPPORTED_FEATURE` with `state projection inconsistent`. The compiler now requires exactly the canonical initial-only state; projector behavior is unchanged. | This supports only the direct-payment-v1 representation, not arbitrary business states. |
 
 ## Observed simulation paths
 
@@ -140,3 +142,34 @@ metadata, but still blocked exploration. Resuming the same run after reference
 recovery invalidated the stale downstream run records, reran comparison and
 authority, then reached exploration and oracle. Immutable old artifacts remain
 in the store; the full 13-stage simulation still uses `FakeReferenceExecutor`.
+
+## Stage 2B/2C to real compiler/reference corridor
+
+The controlled source is exactly `Pay 10 ADA from Alice account to Bob.` A
+deterministic test-only model supplies a valid semantic core with source-grounded
+role spans (`from Alice account`, `to Bob`) and the 10 ADA amount/asset span. The
+real Stage 2B extraction, validation, and deterministic projector produce the
+rich IntentSpec. This is not a live-model quality measurement. Stage 2C first
+returns `WAITING_USER`, then resumes with a synthetic reviewer decision. Its
+test-only policy requires both the specified reviewer ID and exact canonical
+content equality between the approved spec and Stage 2B candidate. Stage 2C
+freezes that unchanged spec; no real reviewer authentication is claimed.
+
+Before the compiler change, the projected state list contained only `initial`.
+The profile matched `EXACT_SUPPORTED_PROFILE`, but direct-payment-v1 returned
+`UNSUPPORTED_FEATURE` with `state projection inconsistent` because its fixture
+and implementation expected a synthetic `paid` state. After the change, the
+projected state list remains `initial` only, the profile still matches exactly,
+and CompilerPort returns `SUPPORTED` without modifying projected intent. Extra
+states remain unsupported. The Stage 2B projector was not changed to invent a
+success state.
+
+The resulting Pay-to-Bob contract runs in the pinned Haskell reference. The
+independent reviewed scenario matches its Bob payment, empty final accounts,
+no warnings, and final `close`. Candidate-only compiler-authority metadata
+reports the observed pinned identity because the comparison belongs to this
+contract, but no promotion decision or policy was supplied: authority remains
+`NO_AUTHORITY`. One bounded real exploration trace reaches a `SATISFIED`
+no-warnings oracle finding for that observed trace only. This corridor does not
+establish general NLP accuracy, authenticated human review, general compiler
+correctness, exhaustive safety, ledger validity, or production readiness.
