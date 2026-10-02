@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from math import isfinite
 from typing import Any, Protocol
 
 
@@ -22,6 +23,15 @@ class ReferenceExecutor(Protocol):
 
 
 class PinnedMarloweReference:
+    def __init__(self, *, binary: str | None = None,
+                 hard_timeout_seconds: float = 30.0) -> None:
+        if (isinstance(hard_timeout_seconds, bool) or not isfinite(hard_timeout_seconds)
+                or hard_timeout_seconds <= 0):
+            raise ValueError("hard_timeout_seconds must be finite and positive")
+        self.binary = binary
+        self.hard_timeout_seconds = hard_timeout_seconds
+
     def execute(self, request: ReferenceRequest) -> dict[str, Any]:
         from tools.marlowe_smt.run_reference import execute
-        return execute(request.to_dict())
+        return execute(request.to_dict(), binary=self.binary,
+                       hard_timeout_seconds=self.hard_timeout_seconds)

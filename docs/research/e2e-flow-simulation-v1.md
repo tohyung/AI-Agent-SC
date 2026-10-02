@@ -16,6 +16,7 @@ deployment was used.
 | B3 | Composition root exposed only model wiring. | `ResearchPipelineWiring` injects stage policies, profile/compiler, reference, exploration, oracle, checker/registry, and final ports. Clean/finding flows use `build_research_pipeline()`. | Default composition deliberately remains offline and fail-closed. |
 | B4 | Stage 5 ignored its checker and rejected status events at the same candidate version. | Typed `PropertyCheckResult`; checker executes per candidate; registry stores immutable chronological events. Tests cover candidate-to-`REFUTED`, duplicate events, candidate-content collision, and older-version rejection. | Synthetic checker evidence is not a formal proof. Stage success reports completed evaluation, not property satisfaction. |
 | B5 | Authority and property ports read additional artifacts without declaring them as inputs. | Authority now declares comparison and contract; property stage declares adversarial candidates and contract. Clean-flow provenance assertions cover these plus every other executed internal stage. | Provenance records declared input consumption, not authenticity of external evidence. |
+| B7 | The synthetic reference accepted `state={}`, which the Haskell bridge rejects. This was an integration-fixture/reference-seam mismatch, not an established production bug. | The separate real-reference seam uses exact `accounts`, `choices`, `boundValues`, and `minTime` fields. The real driver accepts that state and returns `InvalidInput` for `{}`. | Request compatibility is observed only for the tested Notify trace. |
 
 ## Observed simulation paths
 
@@ -40,3 +41,35 @@ claimed: the current adversarial port selects candidates only.
 
 The default research composition cannot traverse this path without injections;
 that is intentional. No production authority or default CLI route changed.
+
+## Real pinned-reference seam
+
+This is a separate evidence layer from the deterministic 13-stage simulation
+above. That full-flow test still uses `FakeReferenceExecutor`; it has not been
+replaced with the Haskell driver. The real seam test uses the exact Core V1
+`When` / `Notify(True)` / `Close` JSON contract, a Notify input at interval
+`[0, 0]`, and the bridge's exact empty state:
+
+```json
+{"accounts": [], "choices": [], "boundValues": [], "minTime": 0}
+```
+
+The pinned identity observed from the real executable was
+`7b5b1e900ec53a8eb18747992bec73470704dfcb:0.1.0`. A direct request
+returned `Success`, `final_contract="close"`, and no warnings. The same request
+with `state={}` returned `InvalidInput`. `PinnedMarloweReference`, the real
+`SemanticComparisonPort`, `ExplorationPort`, and `NoWarningsOracle` were then
+exercised in the WSL Python/Linux-binary environment: comparison was
+`SATISFIED`, exploration coverage remained `BOUNDED`, and the oracle was
+`SATISFIED` for its single observed reference trace. The integration file had
+6 passing tests (one adapter-plumbing unit test and five real-seam checks);
+the Haskell reference driver unittest file had 20 passing tests (17 real
+semantics tests and three mocked wrapper checks).
+
+The binary was built with Cabal 3.10.3.0 and GHC 9.6.7 under WSL Ubuntu;
+`cabal build exe:marlowe-reference --offline` reported `Up to date`. The WSL
+Python 3.14.4 process loaded an already-installed pytest package from a
+mounted local path because pytest was not installed in the WSL interpreter.
+No Python process tried to execute a binary across an OS boundary. This seam
+result does not establish compiler semantic faithfulness, general Marlowe
+correctness, ledger validation, or production readiness.
