@@ -11,6 +11,7 @@ import pytest
 from marlowe_ai_agent.marlowe_agent.models import LLMPhaseError, LLMTransientError
 from marlowe_ai_agent.marlowe_agent.openai_reasoner import OpenAIReasoner
 from research.stage2b import run_shadow, shadow_extractor
+from research.stage2b.test_shadow_extractor import FakeTransportBase, live_argv
 
 
 SECRET = "sk-test-secret-never-log"
@@ -167,33 +168,24 @@ def test_runner_sanitizes_each_failure_phase_without_secret(
         tmp_path, monkeypatch, capsys, failure, phase, code, content, repair):
     failure.__cause__ = failure.__cause__ or RuntimeError(SECRET)
 
-    class FakeTransport:
+    class FakeTransport(FakeTransportBase):
         def __init__(self, _model):
-            self.reasoner = SimpleNamespace(model="fake")
+            self.init_usage()
             self.calls = 0
 
         def generate(self, _system, _user):
             self.calls += 1
+            self.record_usage(latency=None)
             raise failure
-
-        def usage(self):
-            return {"calls": self.calls, "latency_seconds": None,
-                    "prompt_tokens": None, "completion_tokens": None,
-                    "cost": None}
 
     monkeypatch.setattr(run_shadow, "LegacyReasonerTransport", FakeTransport)
     output = tmp_path / "error.jsonl"
-    monkeypatch.setattr(sys, "argv", ["run_shadow.py", "--live", "--case-id", "pay-d1",
-                                          "--output", str(output)])
+    monkeypatch.setattr(sys, "argv", live_argv("--case-id", "pay-d1", "--output", str(output)))
     assert run_shadow.main() == 2
     recorded = output.read_text(encoding="utf-8")
     row = json.loads(recorded)
     assert row["run_status"] == "model_error"
-    assert row["model_error"] == {
-        "code": code, "phase": phase,
-        "message": run_shadow._sanitized_model_error(failure)["message"],
-        "model_content_received": content, "repair_attempted": repair,
-    }
+    assert row["model_error"] == run_shadow._sanitized_model_error(failure)
     assert row["usage"]["calls"] == 1
     captured = capsys.readouterr()
     assert SECRET not in recorded + captured.out + captured.err

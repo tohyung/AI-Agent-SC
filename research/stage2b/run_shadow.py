@@ -6,16 +6,22 @@ from __future__ import annotations
 import argparse
 from datetime import datetime, timezone
 import json
+import os
 from pathlib import Path
+import subprocess
 import sys
 
 ROOT = Path(__file__).resolve().parents[2]
 if __package__ in (None, ""):
     sys.path.insert(0, str(ROOT))
 
-from marlowe_ai_agent.marlowe_agent.models import LLMError, LLMPhaseError  # noqa: E402
+from marlowe_ai_agent.marlowe_agent.models import LLMError, LLMBudgetError  # noqa: E402
 from research.stage2a import verify_freeze  # noqa: E402
 from research.stage2b.intent_spec import CORE_SCHEMA_VERSION, validate_intent_spec  # noqa: E402
+from research.stage2b.live_safety import (  # noqa: E402
+    EXPERIMENT_VERSION, STAGE2A_AGGREGATE_SHA256, make_live_budget, safe_transport_metadata,
+)
+from research.stage2b.model_errors import sanitized_model_error  # noqa: E402
 from research.stage2b.projector import classify_projection, project_intent_spec  # noqa: E402
 from research.stage2b.scoring import FrozenCandidateAdapter, MANIFEST  # noqa: E402
 from research.stage2b.shadow_extractor import (  # noqa: E402
@@ -23,48 +29,7 @@ from research.stage2b.shadow_extractor import (  # noqa: E402
 )
 
 
-USAGE_FIELDS = ("calls", "latency_seconds", "prompt_tokens", "completion_tokens", "cost")
-
-
-def _usage_delta(before: dict, after: dict) -> dict:
-    delta = {}
-    for field in USAGE_FIELDS:
-        current = after.get(field)
-        previous = before.get(field)
-        delta[field] = (current - (previous or 0)) if current is not None else None
-    return delta
-
-
-def _usage_total(per_case: list[dict]) -> dict:
-    return {field: (sum(item[field] for item in per_case)
-                    if all(item[field] is not None for item in per_case) else None)
-            for field in USAGE_FIELDS}
-
-
-def _sanitized_model_error(exc: Exception) -> dict[str, str | bool | None]:
-    if isinstance(exc, LLMPhaseError):
-        messages = {
-            "transport_response_decode_error": "Provider response could not be decoded.",
-            "model_output_invalid_after_repair": "Model output remained invalid JSON after repair.",
-        }
-        return {"code": exc.code, "phase": exc.phase, "message": messages[exc.code],
-                "model_content_received": exc.model_content_received,
-                "repair_attempted": exc.repair_attempted}
-    if isinstance(exc, json.JSONDecodeError):
-        return {"code": "model_output_invalid_json", "phase": "model_output_parse",
-                "message": "Model output was invalid JSON.",
-                "model_content_received": True, "repair_attempted": False}
-    if isinstance(exc, InvalidModelOutput):
-        return {"code": "invalid_model_output", "phase": "model_output_schema",
-                "message": "Model returned a non-object value.",
-                "model_content_received": True, "repair_attempted": False}
-    if isinstance(exc, TimeoutError):
-        return {"code": "provider_timeout", "phase": "transport_request",
-                "message": "Model request timed out.",
-                "model_content_received": False, "repair_attempted": False}
-    return {"code": "provider_error", "phase": "unknown",
-            "message": "Model request failed.",
-            "model_content_received": None, "repair_attempted": None}
+_sanitized_model_error = sanitized_model_error
 
 
 def main() -> int:
@@ -76,28 +41,62 @@ def main() -> int:
     mode.add_argument("--dry-run", action="store_true")
     mode.add_argument("--live", action="store_true")
     parser.add_argument("--model")
+    parser.add_argument("--max-physical-calls", type=int)
+    parser.add_argument("--max-spend-usd")
+    parser.add_argument("--per-request-cost-ceiling-usd")
     parser.add_argument("--output", type=Path)
     args = parser.parse_args()
     if args.live and args.output is None:
         parser.error("--live requires an explicit --output path")
+    if args.live:
+        for name in ("model", "max_physical_calls", "max_spend_usd",
+                     "per_request_cost_ceiling_usd"):
+            if not getattr(args, name):
+                parser.error(f"--live requires --{name.replace('_', '-')}")
+        try:
+            budget = make_live_budget(args.max_physical_calls, 60, args.max_spend_usd,
+                                      args.per_request_cost_ceiling_usd)
+        except ValueError as exc:
+            parser.error(str(exc))
+        if args.output.exists():
+            print("Shadow precheck failed: output already exists", file=sys.stderr)
+            return 2
     if args.all_canonical and (args.case_id or args.split != "development"):
         parser.error("--all-canonical cannot be combined with --case-id or --split")
     try:
         aggregate = verify_freeze.verify_freeze(MANIFEST)
+        if args.live and aggregate != STAGE2A_AGGREGATE_SHA256:
+            raise ValueError("frozen corpus aggregate does not match experiment baseline")
         candidates = FrozenCandidateAdapter().load(
             split=args.split, all_canonical=args.all_canonical, case_id=args.case_id)
         model = LegacyReasonerTransport(args.model) if args.live else None
+        if model is not None:
+            model.reasoner.set_call_budget(budget.effective_calls)
         extractor = IntentShadowExtractor(model) if model is not None else None
     except (OSError, ValueError, LLMError) as exc:
-        print(f"Shadow precheck failed: {exc}", file=sys.stderr)
+        print(f"Shadow precheck failed: {type(exc).__name__}", file=sys.stderr)
         return 2
 
-    writer = args.output.open("w", encoding="utf-8") if args.output else sys.stdout
+    try:
+        writer = args.output.open("x", encoding="utf-8") if args.output else sys.stdout
+    except OSError:
+        print("Shadow precheck failed: output cannot be created exclusively", file=sys.stderr)
+        return 2
+    code_sha = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT,
+                                       stdin=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                                       text=True).strip() if args.live else None
+    if args.live:
+        print(json.dumps({"experiment_version": EXPERIMENT_VERSION, "code_sha": code_sha,
+                          "model": args.model, "cases": len(candidates), "budget": budget.to_dict(),
+                          "transport": safe_transport_metadata(model.reasoner)}))
     failed = False
     count = 0
-    case_usage = []
+    budget_exhausted = False
     try:
         for candidate in candidates:
+            if model is not None and model.reasoner.llm_calls >= budget.effective_calls:
+                budget_exhausted = True
+                break
             history = candidate["requirement_history"]
             record = {
                 "case_id": candidate["case_id"],
@@ -116,16 +115,22 @@ def main() -> int:
                 "run_status": "dry_run" if extractor is None else "ok",
                 "timestamp": datetime.now(timezone.utc).isoformat(),
             }
+            if args.live:
+                record.update(experiment_version=EXPERIMENT_VERSION, code_sha=code_sha,
+                              budget=budget.to_dict())
             if extractor is None:
                 system, user = build_prompt(history)
                 record["prompt"] = {"system": system, "user": user}
             else:
-                usage_before = model.usage()
+                usage_before = model.request_count()
                 try:
                     core = extractor.extract(history)
+                except LLMBudgetError:
+                    budget_exhausted = True
+                    break
                 except (LLMError, TimeoutError, json.JSONDecodeError, InvalidModelOutput) as exc:
                     record["run_status"] = "model_error"
-                    record["model_error"] = _sanitized_model_error(exc)
+                    record["model_error"] = sanitized_model_error(exc)
                     failed = True
                 else:
                     record["semantic_core"] = core.to_dict()
@@ -145,10 +150,11 @@ def main() -> int:
                     elif record["projection_classification"] == "PROJECTOR_BUG":
                         record["run_status"] = "projection_invalid"
                 finally:
-                    record["usage"] = _usage_delta(usage_before, model.usage())
-                case_usage.append(record["usage"])
+                    record["usage"] = model.usage_window(usage_before)
             writer.write(json.dumps(record, ensure_ascii=False) + "\n")
             writer.flush()
+            if args.output and args.live:
+                os.fsync(writer.fileno())
             count += 1
     finally:
         if args.output:
@@ -156,8 +162,10 @@ def main() -> int:
     if args.output:
         print(f"Wrote {count} shadow records to {args.output}")
         if model is not None:
-            print("Aggregate usage: " + json.dumps(_usage_total(case_usage)))
-    return 2 if failed else 0
+            print(json.dumps({"experiment_status": "BUDGET_EXHAUSTED" if budget_exhausted else
+                              "PARTIAL" if failed else "COMPLETED", "completed_cases": count,
+                              "requested_cases": len(candidates), "usage": model.usage()}))
+    return 2 if failed or budget_exhausted else 0
 
 
 if __name__ == "__main__":

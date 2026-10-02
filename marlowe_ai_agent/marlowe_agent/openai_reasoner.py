@@ -123,23 +123,19 @@ class OpenAIReasoner:
         finally:
             usage = getattr(response, "usage", None)
             get = (lambda key: usage.get(key)) if isinstance(usage, dict) else (lambda key: getattr(usage, key, None))
+            prompt_tokens = get("prompt_tokens")
+            completion_tokens = get("completion_tokens")
             self.call_log.append({
                 "latency_seconds": perf_counter() - started,
-                "prompt_tokens": get("prompt_tokens") or get("input_tokens"),
-                "completion_tokens": get("completion_tokens") or get("output_tokens"),
+                "prompt_tokens": prompt_tokens if prompt_tokens is not None else get("input_tokens"),
+                "completion_tokens": (completion_tokens if completion_tokens is not None
+                                      else get("output_tokens")),
                 "cost": get("cost"),
                 "model": getattr(response, "model", None) or self.model,
             })
 
     def usage_summary(self) -> dict[str, Any]:
-        return {
-            "calls": len(self.call_log),
-            "latency_seconds": sum(item["latency_seconds"] for item in self.call_log),
-            "prompt_tokens": sum(item["prompt_tokens"] or 0 for item in self.call_log),
-            "completion_tokens": sum(item["completion_tokens"] or 0 for item in self.call_log),
-            "cost": sum(item["cost"] or 0 for item in self.call_log)
-            if any(item["cost"] is not None for item in self.call_log) else None,
-        }
+        return summarize_call_log(self.call_log)
 
     def semantic_verify(self, prompt: str, draft: ContractDraft) -> VerificationResult:
         payload = {"prompt": _compact_text(prompt, 6000), "draft": _compact_draft_for_semantic(draft)}
@@ -539,6 +535,22 @@ def _compact_contract(contract: Any) -> Any:
         "root": next(iter(contract), None) if isinstance(contract, dict) else contract,
         "preview": text[:12000],
     }
+
+
+def summarize_call_log(entries: list[dict[str, Any]]) -> dict[str, Any]:
+    """Summarize physical calls without treating absent provider telemetry as zero."""
+    result: dict[str, Any] = {"calls": len(entries)}
+    for field in ("latency_seconds", "prompt_tokens", "completion_tokens", "cost"):
+        values = [entry.get(field) for entry in entries]
+        observed = [value for value in values if value is not None]
+        complete = len(observed) == len(entries)
+        subtotal = sum(observed)
+        result[field] = subtotal if complete else None
+        result[f"{field}_known_subtotal"] = subtotal
+        result[f"{field}_observed_calls"] = len(observed)
+        result[f"{field}_total_calls"] = len(entries)
+        result[f"{field}_complete"] = complete
+    return result
 
 
 def _compact_text(text: str, limit: int) -> str:

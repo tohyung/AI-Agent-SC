@@ -27,14 +27,24 @@ class Stage2BExtractionPort:
         try:
             core = IntentShadowExtractor(self.model).extract(history)
         except (RuntimeError, ValueError) as exc:
+            from research.stage2b.model_errors import sanitized_model_error
+
+            safe_error = sanitized_model_error(exc)
             return StageExecution(StageResult(
                 "intent_extraction", ImplementationStatus.IMPLEMENTED_UNVALIDATED,
                 StageRunStatus.FAILED, input_artifacts=[source.artifact_id],
-                diagnostics=[f"model extraction failed: {type(exc).__name__}: {exc}"]))
+                diagnostics=[f"model extraction failed: {safe_error['code']}"]))
         core_errors = core.validation_errors(expected_history=history)
-        projection = project_intent_spec(core, expected_history=history)
-        full_errors = projection.intent_spec.validation_errors(expected_history=history)
-        classification = classify_projection(core_errors, full_errors, projection.projection_diagnostics)
+        try:
+            projection = project_intent_spec(core, expected_history=history)
+            full_errors = projection.intent_spec.validation_errors(expected_history=history)
+            classification = classify_projection(core_errors, full_errors, projection.projection_diagnostics)
+        except Exception:
+            return StageExecution(StageResult(
+                "intent_extraction", ImplementationStatus.IMPLEMENTED_UNVALIDATED,
+                StageRunStatus.FAILED, semantic_status="PROJECTOR_BUG",
+                input_artifacts=[source.artifact_id],
+                diagnostics=["deterministic projection failed"]))
         payload = {"semantic_core": core.to_dict(), "intent_spec": projection.intent_spec.to_dict(),
                    "source_history": history, "source_artifact_id": source.artifact_id,
                    "core_validation_errors": core_errors, "full_validation_errors": full_errors,
@@ -44,11 +54,11 @@ class Stage2BExtractionPort:
             candidate = ArtifactEnvelope("intent-candidate", "v1", "intent_extraction",
                                          ImplementationStatus.IMPLEMENTED_UNVALIDATED,
                                          AuthorityLevel.MODEL_CANDIDATE, payload)
-        except TypeError as exc:
+        except TypeError:
             return StageExecution(StageResult(
                 "intent_extraction", ImplementationStatus.IMPLEMENTED_UNVALIDATED,
                 StageRunStatus.FAILED, input_artifacts=[source.artifact_id],
-                diagnostics=[f"model output is not canonical JSON: {exc}"]))
+                diagnostics=["model output is not canonical JSON"]))
         return StageExecution(StageResult(
             "intent_extraction", ImplementationStatus.IMPLEMENTED_UNVALIDATED,
             StageRunStatus.SUCCEEDED, semantic_status=classification,

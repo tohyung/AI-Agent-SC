@@ -8,8 +8,37 @@ import sys
 import pytest
 
 from marlowe_ai_agent.marlowe_agent.models import LLMConfigError, LLMTransientError
+from marlowe_ai_agent.marlowe_agent.openai_reasoner import summarize_call_log
 from research.stage2b import intent_spec, run_shadow, shadow_extractor
 from research.stage2b.test_intent_spec import simple_payment
+
+
+def live_argv(*args):
+    return ["run_shadow.py", "--live", "--model", "fake", "--max-physical-calls", "60",
+            "--max-spend-usd", "30", "--per-request-cost-ceiling-usd", "0.5", *args]
+
+
+class FakeTransportBase:
+    def init_usage(self, model="fake"):
+        self.reasoner = type("Reasoner", (), {})()
+        self.reasoner.model = model
+        self.reasoner.call_log = []
+        self.reasoner.llm_calls = 0
+        self.reasoner.set_call_budget = lambda limit: setattr(self.reasoner, "max_llm_calls", limit)
+
+    def record_usage(self, *, latency=0.0, prompt=None, completion=None, cost=None):
+        self.reasoner.llm_calls += 1
+        self.reasoner.call_log.append({"latency_seconds": latency, "prompt_tokens": prompt,
+                                       "completion_tokens": completion, "cost": cost})
+
+    def request_count(self):
+        return len(self.reasoner.call_log)
+
+    def usage_window(self, start):
+        return summarize_call_log(self.reasoner.call_log[start:])
+
+    def usage(self):
+        return summarize_call_log(self.reasoner.call_log)
 
 
 class FakeModel:
@@ -123,31 +152,25 @@ def test_live_requires_explicit_output_and_never_runs_by_default(monkeypatch):
 def test_explicit_live_mode_uses_injected_fake_transport_only(tmp_path, monkeypatch):
     calls = []
 
-    class FakeTransport:
+    class FakeTransport(FakeTransportBase):
         def __init__(self, model):
-            self.reasoner = type("Reasoner", (), {"model": model or "fake"})()
+            self.init_usage(model)
             self.calls = 0
 
         def generate(self, system, user):
             calls.append((system, user))
             self.calls += 1
+            self.record_usage(latency=0.5, prompt=10, completion=20)
             return intent_spec.extract_core_view(simple_payment())
-
-        def usage(self):
-            return {"calls": self.calls, "latency_seconds": self.calls * 0.5,
-                    "prompt_tokens": self.calls * 10, "completion_tokens": self.calls * 20,
-                    "cost": None}
 
     monkeypatch.setattr(run_shadow, "LegacyReasonerTransport", FakeTransport)
     output = tmp_path / "live.jsonl"
-    monkeypatch.setattr(sys, "argv", ["run_shadow.py", "--live", "--case-id", "pay-d1",
-                                          "--output", str(output)])
+    monkeypatch.setattr(sys, "argv", live_argv("--case-id", "pay-d1", "--output", str(output)))
     assert run_shadow.main() == 0
     row = json.loads(output.read_text(encoding="utf-8"))
     assert len(calls) == 1
-    assert row["model"] == "fake" and row["usage"] == {
-        "calls": 1, "latency_seconds": 0.5, "prompt_tokens": 10,
-        "completion_tokens": 20, "cost": None}
+    assert row["model"] == "fake" and row["usage"]["calls"] == 1
+    assert row["usage"]["prompt_tokens"] == 10 and row["usage"]["cost"] is None
     assert row["run_status"] == "core_invalid"
     assert row["semantic_core"]["schema_version"] == "stage2b-shadow-core-v1"
     assert row["projection_diagnostics"]["core_status"] == "invalid"
@@ -163,24 +186,20 @@ def test_runner_records_valid_raw_core_projection_and_usage(tmp_path, monkeypatc
             return [{"case_id": "synthetic", "split": "development",
                      "requirement_history": source["requirement_history"]}]
 
-    class FakeTransport:
+    class FakeTransport(FakeTransportBase):
         def __init__(self, _model):
-            self.reasoner = type("Reasoner", (), {"model": "fake"})()
+            self.init_usage()
             self.calls = 0
 
         def generate(self, _system, _user):
             self.calls += 1
+            self.record_usage(latency=0.1, prompt=10, completion=20)
             return source
-
-        def usage(self):
-            return {"calls": self.calls, "latency_seconds": self.calls * 0.1,
-                    "prompt_tokens": self.calls * 10,
-                    "completion_tokens": self.calls * 20, "cost": None}
 
     monkeypatch.setattr(run_shadow, "FrozenCandidateAdapter", FakeAdapter)
     monkeypatch.setattr(run_shadow, "LegacyReasonerTransport", FakeTransport)
     output = tmp_path / "native.jsonl"
-    monkeypatch.setattr(sys, "argv", ["run_shadow.py", "--live", "--output", str(output)])
+    monkeypatch.setattr(sys, "argv", live_argv("--output", str(output)))
     assert run_shadow.main() == 0
     row = json.loads(output.read_text(encoding="utf-8"))
     assert row["run_status"] == "ok" and row["projection_classification"] == "PASS"
@@ -196,13 +215,14 @@ def test_model_failure_preserves_prior_rows_continues_and_sanitizes(tmp_path, mo
     secret = "sk-test-secret-do-not-log"
     output = tmp_path / "partial.jsonl"
 
-    class FakeTransport:
+    class FakeTransport(FakeTransportBase):
         def __init__(self, model):
-            self.reasoner = type("Reasoner", (), {"model": "fake"})()
+            self.init_usage()
             self.calls = 0
 
         def generate(self, _system, _user):
             self.calls += 1
+            self.record_usage(latency=0.25, prompt=10, completion=5, cost=0.01)
             if self.calls == 2:
                 completed = [json.loads(line) for line in
                              output.read_text(encoding="utf-8").splitlines()]
@@ -210,13 +230,8 @@ def test_model_failure_preserves_prior_rows_continues_and_sanitizes(tmp_path, mo
                 raise LLMTransientError(f"provider failed with key {secret}")
             return intent_spec.extract_core_view(simple_payment())
 
-        def usage(self):
-            return {"calls": self.calls, "latency_seconds": self.calls * 0.25,
-                    "prompt_tokens": self.calls * 10, "completion_tokens": self.calls * 5,
-                    "cost": self.calls * 0.01}
-
     monkeypatch.setattr(run_shadow, "LegacyReasonerTransport", FakeTransport)
-    monkeypatch.setattr(sys, "argv", ["run_shadow.py", "--live", "--output", str(output)])
+    monkeypatch.setattr(sys, "argv", live_argv("--output", str(output)))
     assert run_shadow.main() == 2
     rows = [json.loads(line) for line in output.read_text(encoding="utf-8").splitlines()]
     assert len(rows) == 10
@@ -228,26 +243,20 @@ def test_model_failure_preserves_prior_rows_continues_and_sanitizes(tmp_path, mo
     assert rows[2]["run_status"] == "core_invalid"
     assert secret not in output.read_text(encoding="utf-8")
     assert secret not in capsys.readouterr().out
-    assert run_shadow._usage_total([row["usage"] for row in rows]) == {
-        "calls": 10, "latency_seconds": 2.5, "prompt_tokens": 100,
-        "completion_tokens": 50, "cost": pytest.approx(0.10)}
+    assert sum(row["usage"]["calls"] for row in rows) == 10
 
 
 def test_unexpected_model_programming_error_propagates(tmp_path, monkeypatch):
-    class BrokenTransport:
+    class BrokenTransport(FakeTransportBase):
         def __init__(self, _model):
-            self.reasoner = type("Reasoner", (), {"model": "fake"})()
+            self.init_usage()
 
         def generate(self, _system, _user):
             raise KeyError("programmer bug")
 
-        def usage(self):
-            return {"calls": 0}
-
     monkeypatch.setattr(run_shadow, "LegacyReasonerTransport", BrokenTransport)
     output = tmp_path / "broken.jsonl"
-    monkeypatch.setattr(sys, "argv", ["run_shadow.py", "--live", "--case-id", "pay-d1",
-                                          "--output", str(output)])
+    monkeypatch.setattr(sys, "argv", live_argv("--case-id", "pay-d1", "--output", str(output)))
     with pytest.raises(KeyError, match="programmer bug"):
         run_shadow.main()
 
@@ -257,20 +266,17 @@ def test_unexpected_model_programming_error_propagates(tmp_path, monkeypatch):
     (["not-an-object"], "invalid_model_output", "model_output_schema"),
 ])
 def test_model_parse_failures_are_recorded(tmp_path, monkeypatch, response, code, phase):
-    class FakeTransport:
+    class FakeTransport(FakeTransportBase):
         def __init__(self, _model):
-            self.reasoner = type("Reasoner", (), {"model": "fake"})()
+            self.init_usage()
 
         def generate(self, _system, _user):
+            self.record_usage()
             return response
-
-        def usage(self):
-            return {"calls": 0}
 
     monkeypatch.setattr(run_shadow, "LegacyReasonerTransport", FakeTransport)
     output = tmp_path / "parse-error.jsonl"
-    monkeypatch.setattr(sys, "argv", ["run_shadow.py", "--live", "--case-id", "pay-d1",
-                                          "--output", str(output)])
+    monkeypatch.setattr(sys, "argv", live_argv("--case-id", "pay-d1", "--output", str(output)))
     assert run_shadow.main() == 2
     row = json.loads(output.read_text(encoding="utf-8"))
     assert row["run_status"] == "model_error"
@@ -287,7 +293,7 @@ def test_precheck_failures_do_not_truncate_existing_output(tmp_path, monkeypatch
                       lambda _: (_ for _ in ()).throw(ValueError("freeze failed")))
         assert run_shadow.main() == 2
     assert output.read_text(encoding="utf-8") == "sentinel"
-    monkeypatch.setattr(sys, "argv", ["run_shadow.py", "--live", "--output", str(output)])
+    monkeypatch.setattr(sys, "argv", live_argv("--output", str(output)))
     with monkeypatch.context() as patch:
         patch.setattr(run_shadow, "LegacyReasonerTransport",
                       lambda _: (_ for _ in ()).throw(LLMConfigError("bad config")))

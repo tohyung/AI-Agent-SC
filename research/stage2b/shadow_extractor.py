@@ -149,3 +149,11 @@ class LegacyReasonerTransport:
 
     def usage(self) -> dict[str, Any]:
         return self.reasoner.usage_summary()
+
+    def request_count(self) -> int:
+        return len(self.reasoner.call_log)
+
+    def usage_window(self, start_index: int, end_index: int | None = None) -> dict[str, Any]:
+        from marlowe_ai_agent.marlowe_agent.openai_reasoner import summarize_call_log
+
+        return summarize_call_log(self.reasoner.call_log[start_index:end_index])
