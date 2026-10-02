@@ -61,7 +61,8 @@ class CompilerAuthorityPort:
         return StageExecution(StageResult(
             "compiler_authority", ImplementationStatus.IMPLEMENTED_UNVALIDATED,
             StageRunStatus.SUCCEEDED, semantic_status=status.value,
-            input_artifacts=[contract.artifact_id], authority_level=authority,
+            input_artifacts=[contract.artifact_id] + ([comparison.artifact_id] if comparison else []),
+            authority_level=authority,
             limitations=[payload["scope_limit"]]), [output])
 
 

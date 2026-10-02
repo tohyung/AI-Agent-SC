@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import StrEnum
+from copy import deepcopy
 from typing import Any, Protocol
 
 from research.architecture.artifacts import ArtifactEnvelope, stable_artifact_id
@@ -34,7 +35,21 @@ class PropertyCandidate:
 
 
 class PropertyChecker(Protocol):
-    def check(self, candidate: PropertyCandidate) -> dict[str, Any]: ...
+    def check(self, candidate: PropertyCandidate) -> PropertyCheckResult: ...
+
+
+@dataclass(frozen=True)
+class PropertyCheckResult:
+    status: PropertyStatus
+    evidence_ids: tuple[str, ...] = ()
+    reviewer_id: str | None = None
+    diagnostics: tuple[str, ...] = ()
+    limitations: tuple[str, ...] = ()
+
+    def __post_init__(self) -> None:
+        if self.status not in {PropertyStatus.VALIDATED_FOR_SCOPE,
+                               PropertyStatus.REFUTED, PropertyStatus.INCONCLUSIVE}:
+            raise ValueError("checker must return a check outcome")
 
 
 class PropertyRegistry:
@@ -44,19 +59,24 @@ class PropertyRegistry:
     def add(self, candidate: PropertyCandidate, status: PropertyStatus,
             evidence_ids: list[str] | None = None, reviewer_id: str | None = None) -> None:
         evidence_ids = evidence_ids or []
-        if status == PropertyStatus.VALIDATED_FOR_SCOPE and (not evidence_ids or not reviewer_id):
-            raise ValueError("scoped validation needs checker evidence and explicit reviewer")
+        if status in {PropertyStatus.VALIDATED_FOR_SCOPE, PropertyStatus.REFUTED} and (
+                not evidence_ids or not reviewer_id):
+            raise ValueError("terminal property outcome needs evidence and explicit reviewer")
         history = self._history.setdefault(candidate.property_id, [])
         entry = {"candidate": candidate.to_dict(), "status": status.value,
                  "evidence_ids": list(evidence_ids), "reviewer_id": reviewer_id}
-        if history and history[-1] == entry:
+        if history:
+            latest = history[-1]["candidate"]
+            if candidate.version < latest["version"]:
+                raise ValueError("older property version cannot supersede newer version")
+            if candidate.version == latest["version"] and candidate.to_dict() != latest:
+                raise ValueError("same property version has different candidate content")
+        if entry in history:
             return
-        if history and candidate.version <= history[-1]["candidate"]["version"]:
-            raise ValueError("property versions must increase")
-        history.append(entry)
+        history.append(deepcopy(entry))
 
     def history(self, property_id: str) -> list[dict[str, Any]]:
-        return list(self._history.get(property_id, []))
+        return deepcopy(self._history.get(property_id, []))
 
 
 class PropertyValidationPort:
@@ -72,6 +92,8 @@ class PropertyValidationPort:
             return StageExecution(StageResult("property_validation", ImplementationStatus.SCAFFOLDED,
                                               StageRunStatus.NOT_EVALUATED))
         candidates = []
+        outcomes = []
+        diagnostics = []
         for item in adversarial.payload["candidates"]:
             finding = item["finding"]
             candidate = PropertyCandidate(
@@ -81,11 +103,37 @@ class PropertyValidationPort:
                 {"trace_id": finding["trace_id"], "oracle_id": finding["oracle_id"]})
             self.registry.add(candidate, PropertyStatus.CANDIDATE)
             candidates.append(candidate.to_dict())
+            if self.checker is not None:
+                check = self.checker.check(candidate)
+                if not isinstance(check, PropertyCheckResult):
+                    raise TypeError("property checker must return PropertyCheckResult")
+                self.registry.add(candidate, check.status, list(check.evidence_ids), check.reviewer_id)
+                outcomes.append({"property_id": candidate.property_id,
+                                 "status": check.status.value,
+                                 "evidence_ids": list(check.evidence_ids),
+                                 "reviewer_id": check.reviewer_id,
+                                 "diagnostics": list(check.diagnostics),
+                                 "limitations": list(check.limitations)})
+                diagnostics.extend(check.diagnostics)
+        if not candidates:
+            status, semantic = StageRunStatus.SUCCEEDED, "NO_CANDIDATES"
+        elif self.checker is None or any(item["status"] == PropertyStatus.INCONCLUSIVE.value
+                                             for item in outcomes):
+            status, semantic = StageRunStatus.INCONCLUSIVE, "INCONCLUSIVE"
+        else:
+            status = StageRunStatus.SUCCEEDED
+            semantic = (outcomes[0]["status"] if len({item["status"] for item in outcomes}) == 1
+                        else "MIXED_TERMINAL_RESULTS")
         output = ArtifactEnvelope("property-candidates", "v1", "property_validation",
                                   ImplementationStatus.SCAFFOLDED, AuthorityLevel.NO_AUTHORITY,
-                                  {"candidates": candidates, "validated": False,
+                                  {"candidates": candidates, "outcomes": outcomes,
+                                   "validated": bool(outcomes) and all(
+                                       item["status"] == PropertyStatus.VALIDATED_FOR_SCOPE.value
+                                       for item in outcomes),
                                    "checker_configured": self.checker is not None})
         return StageExecution(StageResult(
             "property_validation", ImplementationStatus.SCAFFOLDED,
-            StageRunStatus.INCONCLUSIVE, input_artifacts=[adversarial.artifact_id],
-            limitations=["property formalization/checker/review are not implemented"]), [output])
+            status, semantic_status=semantic,
+            input_artifacts=[adversarial.artifact_id, contract.artifact_id],
+            diagnostics=diagnostics,
+            limitations=["checked outcomes are scoped; stage success does not imply safety"]), [output])

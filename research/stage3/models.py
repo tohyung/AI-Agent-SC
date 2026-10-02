@@ -70,12 +70,14 @@ class ScopeIR:
 class AssetIR:
     asset_id: str
     symbol: str
+    source: dict[str, Any]
 
 
 @dataclass(frozen=True)
 class AccountIR:
     account_id: str
     owner: str
+    source: dict[str, Any]
 
 
 @dataclass(frozen=True)
@@ -85,6 +87,39 @@ class FundingRelationIR:
     party: str
     account_owner: str
     asset_id: str
+    source: dict[str, Any]
+
+
+@dataclass(frozen=True)
+class ParticipantIR:
+    participant_id: str
+    name: str
+    claim_refs: tuple[str, ...]
+    source: dict[str, Any]
+
+
+@dataclass(frozen=True)
+class ParameterIR:
+    parameter_id: str
+    source: dict[str, Any]
+
+
+@dataclass(frozen=True)
+class StateIR:
+    state_id: str
+    source: dict[str, Any]
+
+
+@dataclass(frozen=True)
+class TransitionIR:
+    transition_id: str
+    source: dict[str, Any]
+
+
+@dataclass(frozen=True)
+class OutcomeIR:
+    outcome_id: str
+    source: dict[str, Any]
 
 
 @dataclass(frozen=True)
@@ -93,18 +128,28 @@ class CompilationIR:
     profile_version: str
     claims: tuple[ClaimIR, ...]
     scopes: tuple[ScopeIR, ...]
+    participants: tuple[ParticipantIR, ...]
     assets: tuple[AssetIR, ...]
     accounts: tuple[AccountIR, ...]
     funding_relations: tuple[FundingRelationIR, ...]
+    parameters: tuple[ParameterIR, ...]
+    states: tuple[StateIR, ...]
+    transitions: tuple[TransitionIR, ...]
+    outcomes: tuple[OutcomeIR, ...]
     source_intent_id: str
 
     def to_dict(self) -> dict[str, Any]:
+        def items(values: tuple[Any, ...]) -> list[dict[str, Any]]:
+            return [{key: list(value) if isinstance(value, tuple) else value
+                     for key, value in vars(item).items()} for item in values]
+
         return {"profile_id": self.profile_id, "profile_version": self.profile_version,
-                "claims": [vars(item) for item in self.claims],
-                "scopes": [vars(item) for item in self.scopes],
-                "assets": [vars(item) for item in self.assets],
-                "accounts": [vars(item) for item in self.accounts],
-                "funding_relations": [vars(item) for item in self.funding_relations],
+                "claims": items(self.claims), "scopes": items(self.scopes),
+                "participants": items(self.participants), "assets": items(self.assets),
+                "accounts": items(self.accounts),
+                "funding_relations": items(self.funding_relations),
+                "parameters": items(self.parameters), "states": items(self.states),
+                "transitions": items(self.transitions), "outcomes": items(self.outcomes),
                 "source_intent_id": self.source_intent_id}
 
 

@@ -13,7 +13,8 @@ from research.stage2b.intent_spec import validate_intent_spec
 from marlowe_ai_agent.marlowe_agent.marlowe_validator import validate_contract
 
 from .models import (AccountIR, AssetIR, ClaimIR, CompilationIR, CompileResult,
-                     CompileStatus, FundingRelationIR, ProfileMatchStatus, ScopeIR)
+                     CompileStatus, FundingRelationIR, OutcomeIR, ParameterIR,
+                     ParticipantIR, ProfileMatchStatus, ScopeIR, StateIR, TransitionIR)
 from .profiles import ProfileRegistry
 
 
@@ -57,13 +58,24 @@ class CompilerPort:
                                          item.get("transition_kind"), item.get("decision_id"),
                                          item.get("timeout_id"), item.get("deadline_claim_id"),
                                          dict(item)) for item in spec["behavior_scopes"]),
-                           tuple(AssetIR(item["asset_id"], item["symbol"])
+                           tuple(ParticipantIR(item["participant_id"], item["name"],
+                                               tuple(item["claim_refs"]), dict(item))
+                                 for item in spec["participants"]),
+                           tuple(AssetIR(item["asset_id"], item["symbol"], dict(item))
                                  for item in spec["assets_and_accounts"]["assets"]),
-                           tuple(AccountIR(item["account_id"], item["owner"])
+                           tuple(AccountIR(item["account_id"], item["owner"], dict(item))
                                  for item in spec["assets_and_accounts"]["accounts"]),
                            tuple(FundingRelationIR(item["relation_id"], item["scope_id"],
-                                                   item["party"], item["account_owner"], item["asset_id"])
+                                                   item["party"], item["account_owner"], item["asset_id"],
+                                                   dict(item))
                                  for item in spec["assets_and_accounts"]["funding_relations"]),
+                           tuple(ParameterIR(item["parameter_id"], dict(item))
+                                 for item in spec["parameters"]),
+                           tuple(StateIR(item["state_id"], dict(item)) for item in spec["states"]),
+                           tuple(TransitionIR(item["transition_id"], dict(item))
+                                 for item in spec["transitions"]),
+                           tuple(OutcomeIR(item["outcome_id"], dict(item))
+                                 for item in spec["obligations_and_outcomes"]),
                            accepted.artifact_id)
         result = plugin(ir)
         if result.status != CompileStatus.SUPPORTED:
@@ -79,14 +91,17 @@ class CompilerPort:
                   for item in result.mapping_evidence if item.get("ast_path")}
         expected = {("claim", item.claim_id) for item in ir.claims if item.status != "superseded"}
         expected |= {("scope", item.scope_id) for item in ir.scopes}
-        for section, id_field in (("participants", "participant_id"), ("parameters", "parameter_id"),
-                                  ("states", "state_id"), ("transitions", "transition_id"),
-                                  ("obligations_and_outcomes", "outcome_id")):
-            expected |= {(section, item[id_field]) for item in spec[section]}
-        for section, id_field in (("assets", "asset_id"), ("accounts", "account_id"),
-                                  ("funding_relations", "relation_id")):
-            expected |= {(section, item[id_field])
-                         for item in spec["assets_and_accounts"][section]}
+        for section, items, id_field in (
+            ("participants", ir.participants, "participant_id"),
+            ("parameters", ir.parameters, "parameter_id"),
+            ("states", ir.states, "state_id"),
+            ("transitions", ir.transitions, "transition_id"),
+            ("obligations_and_outcomes", ir.outcomes, "outcome_id"),
+            ("assets", ir.assets, "asset_id"),
+            ("accounts", ir.accounts, "account_id"),
+            ("funding_relations", ir.funding_relations, "relation_id"),
+        ):
+            expected |= {(section, getattr(item, id_field)) for item in items}
         if not expected <= mapped:
             return self._outcome(accepted, CompileResult(
                 CompileStatus.AMBIGUOUS_MAPPING,

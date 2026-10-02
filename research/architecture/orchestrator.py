@@ -33,7 +33,8 @@ class ResearchOrchestrator:
 
     def run(self, requirement_history: list[dict[str, Any]], *,
             stop_after: str = "deployment", resume: ResearchPipelineRun | None = None,
-            options: dict[str, Any] | None = None) -> ResearchPipelineRun:
+            options: dict[str, Any] | None = None,
+            external_artifacts: list[ArtifactEnvelope] | None = None) -> ResearchPipelineRun:
         if stop_after not in STAGE_ORDER:
             raise ValueError(f"unknown stop stage: {stop_after}")
         source = ArtifactEnvelope("requirement-history", "v1", "user_input",
@@ -45,6 +46,11 @@ class ResearchOrchestrator:
             raise ValueError("resume requirement differs from original run")
         result = deepcopy(resume) if resume is not None else ResearchPipelineRun(run_id, source.artifact_id)
         artifacts = [source]
+        for external in external_artifacts or []:
+            self.store.put(external)
+            if external.artifact_id not in result.external_artifact_ids:
+                result.external_artifact_ids.append(external.artifact_id)
+        artifacts.extend(self.store.get(item) for item in result.external_artifact_ids)
         configured = options or {}
         max_executions = configured.get("max_stage_executions")
         if max_executions is not None and (not isinstance(max_executions, int)

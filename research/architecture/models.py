@@ -41,10 +41,12 @@ class ResearchPipelineRun:
     provenance_edges: list[str] = field(default_factory=list)
     provenance_records: dict[str, dict[str, str]] = field(default_factory=dict)
     stage_executions: int = 0
+    external_artifact_ids: list[str] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
         return {"run_id": self.run_id, "requirement_artifact_id": self.requirement_artifact_id,
                 "stages": {key: value.to_dict() for key, value in self.stages.items()},
                 "provenance_edges": list(self.provenance_edges),
                 "provenance_records": dict(self.provenance_records),
-                "stage_executions": self.stage_executions}
+            "stage_executions": self.stage_executions,
+            "external_artifact_ids": list(self.external_artifact_ids)}
