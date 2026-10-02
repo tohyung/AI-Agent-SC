@@ -32,19 +32,19 @@ class TransactionTemplate:
     inputs: tuple[dict[str, Any], ...]
 
     def __post_init__(self) -> None:
-        if self.action_kind not in {"Deposit", "Choice", "Notify", "Timeout"}:
+        if self.action_kind not in {"Deposit", "Choice", "Notify", "Timeout", "NoInput"}:
             raise ValueError("unsupported action kind")
         if (not isinstance(self.interval_from, int) or not isinstance(self.interval_to, int)
                 or isinstance(self.interval_from, bool) or isinstance(self.interval_to, bool)
                 or self.interval_from > self.interval_to):
             raise ValueError("invalid POSIX millisecond interval")
-        expected = [] if self.action_kind == "Timeout" else [self.action_kind]
+        expected = [] if self.action_kind in {"Timeout", "NoInput"} else [self.action_kind]
         if [item.get("type") for item in self.inputs] != expected:
             raise ValueError("input kind does not match transaction template")
         fields = {"Deposit": {"type", "account", "party", "token", "amount"},
                   "Choice": {"type", "choice_id", "chosen"},
                   "Notify": {"type"}}
-        if self.action_kind != "Timeout" and set(self.inputs[0]) != fields[self.action_kind]:
+        if self.action_kind not in {"Timeout", "NoInput"} and set(self.inputs[0]) != fields[self.action_kind]:
             raise ValueError("input fields do not match the pinned reference request")
 
     def to_transaction(self) -> dict[str, Any]:
