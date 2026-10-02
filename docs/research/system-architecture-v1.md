@@ -4,6 +4,15 @@ Status: `ARCHITECTURE_SPECIFIED_AND_SCAFFOLDED`. This is not model, compiler,
 reference, oracle, ledger, or production validation. Legacy Node 1/2/3 remains
 the default production route.
 
+## Objective and evidence scope
+
+This document describes the research system's interfaces, dataflow and trust
+boundaries for a system-design chapter. It does not report semantic accuracy or
+an end-to-end result. The component-by-component evidence and authority limits
+are recorded in [implementation-status-v1.md](implementation-status-v1.md).
+The current implementation can be reported as an architecture with offline
+contract smoke, not as a validated contract-synthesis system.
+
 ## Dataflow and trust boundaries
 
 ```text
@@ -21,6 +30,38 @@ requirement-history
   -> Stage 5 property candidates -> external checker/review -> registry
   -> ledger -> testnet -> deployment [all disabled]
 ```
+
+The following diagram uses solid edges for **data flow** and dashed edges for
+**authority/evidence inputs**. Conditional data edges do not imply that the
+default composition has cleared their gates.
+
+```mermaid
+flowchart TB
+  R[User requirement history] --> B[Stage 2B semantic core and IntentSpec candidate]
+  B --> C[Stage 2C review and human gate]
+  C -- authorized decision only --> A[Accepted intent snapshot]
+  A --> P[Stage 3 exact profile and typed IR]
+  P -- supported plugin only --> K[Core V1 contract candidate]
+  K --> X[Independent reference comparison]
+  X --> H[Profile-scoped compiler authority decision]
+  H --> E[Stage 4 bounded reference explorer]
+  E --> O[Trace oracles and bounded coverage]
+  O --> V[Stage 4C violation candidates; search not implemented]
+  V --> Q[Stage 5 property candidates; checker not implemented]
+  Q --> L[Ledger validation; disabled]
+  L --> T[Testnet; disabled]
+  T --> D[Deployment; disabled]
+
+  F[Stage 2A draft candidate corpus] -. "exploratory comparison only" .-> B
+  RP[Reviewer authorization policy; not configured] -. "permission" .-> C
+  BE[Reviewed behavior expectation; not configured] -. "independent expectation" .-> X
+  REF[Pinned reference executor; not configured] -. "trace evidence" .-> X
+  PP[Promotion policy; not configured] -. "scoped evidence decision" .-> H
+```
+
+There is no automatic repair edge from an oracle or property candidate back to
+accepted intent or the compiler. Reference execution supplies behavioral
+evidence for explicit traces in its pinned model; it is not ledger authority.
 
 `research.architecture` contains only shared models, ports, artifact identity,
 provenance, status and orchestration. It never imports concrete stages at module
@@ -63,6 +104,14 @@ it cannot issue a production-authorized contract.
 - Stage 2C also needs an injected reviewer-authorization policy. A self-reported
   reviewer ID and consent flag alone cannot grant `USER_ACCEPTED_INTENT`.
 
+The lifecycle (`ImplementationStatus`), a particular run's state
+(`StageRunStatus`), semantic result (`CompileStatus`, `PropertyStatus`),
+assurance verdict and authority are independent. In particular, a stage can
+return `SUCCEEDED` because it issued a structured `CANDIDATE_ONLY` decision;
+this is not a successful promotion. Content identity does not identify a run:
+the same requirement artifact may be reused in separate runs with distinct
+run IDs and provenance records.
+
 ## Interfaces and current implementation
 
 | Component | Boundary | Lifecycle | Default outcome |
@@ -97,6 +146,57 @@ transactions with POSIX-millisecond intervals. Before `T` means `to < T`,
 after `T` means `from >= T`, and `from < T <= to` is straddling, not before or
 after. The template never infers missing actors, values or deadlines.
 
+## Stage-specific boundaries
+
+- Stage 2A's frozen corpus remains a set of draft candidate annotations. Its
+  public validation set is not blind or human-reviewed ground truth. Stage 2B
+  extraction is still under evaluation; deterministic projection establishes
+  a reproducible mapping from a *given* semantic core, not the accuracy of that
+  core against the user's intent.
+- Stage 2C deterministically surfaces candidate issues and can pause for a
+  decision. The injected `ReviewerPolicy` is an authorization boundary, not a
+  reviewer identity-verification implementation. An accepted snapshot is
+  immutable/versioned user-reviewed intent only when that external policy and
+  explicit consent are supplied; default composition supplies neither.
+- Stage 3 rejects unsupported/ambiguous profiles and requires an injected
+  deterministic compiler plugin. It checks Core V1 structure and the
+  **presence** of `source_kind`, `source_id` and nonempty `ast_path` coverage
+  over expected semantic objects. It does not validate the semantic meaning or
+  existence of every claimed AST path. Mapping faithfulness needs future
+  profile-specific reference/differential evidence. No LLM AST fallback is
+  present in the research compiler path.
+- Semantic comparison needs a separately reviewed behavior-expectation
+  artifact, an expectation policy and a reference executor. The compiled AST
+  is not the source of expected behavior. A pinned `Success` or expected
+  `TransactionError` concerns the supplied state, transaction sequence and
+  Marlowe model only; `Unavailable`, `Timeout` and unknown statuses do not
+  establish a pass. The promotion policy is absent by default, so no profile
+  gains compiler authority from a single comparison.
+- Stage 4 exploration uses explicit transaction templates and bounded
+  reference transitions. The current oracle checks warnings on observed
+  traces; a trace-local `SATISFIED` verdict is not a universal property.
+  Coverage remains `BOUNDED`, even when template enumeration ends. Stage 4C
+  only selects violation candidates (`search_performed=False`); it does not
+  run an adversarial strategy or automatically repair a contract.
+- Stage 5 records property candidates and a versioned registry seam. Its
+  `PropertyChecker` protocol is not connected to formalization or a proof
+  checker in the default composition. Ledger, testnet and deployment are
+  disabled ports returning `NOT_EVALUATED` when reached.
+
+## Failure propagation
+
+An invalid Stage 2B candidate blocks Stage 2C and leaves compilation
+`NOT_EVALUATED`. Without an authorized human decision there is no accepted
+intent; without an exact profile and plugin there is no contract candidate.
+Without independently reviewed expectations or a reference executor,
+comparison is `INCONCLUSIVE`; without reference evidence, the authority stage
+can record only `CANDIDATE_ONLY`. Missing exploration configuration means no
+concrete oracle/coverage result. An observed oracle satisfaction does not
+promote a global property. Without checker/review and external adapters there
+are no validated property, ledger, testnet or deployment claims. See the
+[failure table](implementation-status-v1.md#failure-and-uncertainty-propagation)
+for the corresponding stage outcomes.
+
 ## Checkpoint and side-effect policy
 
 `ResearchOrchestrator` persists stage results, artifact IDs and provenance in
@@ -108,6 +208,34 @@ cross-process event store. Missing ports and upstream blockers produce typed
 The CLI candidate route does not silently fall back to LLM-generated AST.
 No profile plugin, live model, SMT, reference executor, domain, ledger adapter,
 wallet, testnet connection or deployment credentials are configured by default.
+
+The offline smoke file tests selected contract boundaries, including a
+synthetic all-port DAG. Its synthetic `SUCCEEDED` stages have no assurance
+claims and do not establish concrete end-to-end execution. This documentation
+task ran `python -m pytest research/architecture/test_contract_smoke.py -q`
+locally (`17 passed in 0.09s`); no independent CI/workflow result is used as
+evidence here. See the
+[smoke evidence inventory](implementation-status-v1.md#what-the-offline-smoke-file-actually-exercises)
+before quoting test results in a report.
+
+## Claims permitted in the current research report
+
+The report may say that the project **defines** versioned content-addressed
+artifacts and separate provenance; separates implementation lifecycle, run
+status, verdict and authority; introduces an explicit human acceptance
+boundary; gates deterministic compilation by profile with no LLM AST fallback
+in the research path; treats pinned reference semantics as behavioral evidence
+within its explicit model/trace; and represents bounded exploration, trace
+oracles and fail-closed external seams. Source-present offline smoke exercises
+specific architecture contracts and selected failure boundaries.
+
+The current evidence does **not** support claims that semantic extraction is
+accurate; a real reviewer's identity is authenticated; compiler mappings are
+semantically faithful or the compiler is verified; exploration is exhaustive;
+properties are formally proven; Cardano ledger validity is established;
+testnet/deployment succeeds; or the system is production-ready. Interface
+wiring is represented and smoke-tested, but concrete end-to-end execution has
+not been demonstrated.
 
 ## Validation backlog
 
