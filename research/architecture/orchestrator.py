@@ -34,9 +34,14 @@ class ResearchOrchestrator:
     def run(self, requirement_history: list[dict[str, Any]], *,
             stop_after: str = "deployment", resume: ResearchPipelineRun | None = None,
             options: dict[str, Any] | None = None,
-            external_artifacts: list[ArtifactEnvelope] | None = None) -> ResearchPipelineRun:
+            external_artifacts: list[ArtifactEnvelope] | None = None,
+            invalidate_from: str | None = None) -> ResearchPipelineRun:
         if stop_after not in STAGE_ORDER:
             raise ValueError(f"unknown stop stage: {stop_after}")
+        if invalidate_from is not None and invalidate_from not in STAGE_ORDER:
+            raise ValueError(f"unknown invalidation stage: {invalidate_from}")
+        if invalidate_from is not None and resume is None:
+            raise ValueError("invalidate_from requires a resumed run")
         source = ArtifactEnvelope("requirement-history", "v1", "user_input",
                                   ImplementationStatus.IMPLEMENTED_UNVALIDATED,
                                   AuthorityLevel.NO_AUTHORITY, requirement_history)
@@ -45,6 +50,26 @@ class ResearchOrchestrator:
         if resume is not None and resume.requirement_artifact_id != source.artifact_id:
             raise ValueError("resume requirement differs from original run")
         result = deepcopy(resume) if resume is not None else ResearchPipelineRun(run_id, source.artifact_id)
+        new_external = any(item.artifact_id not in result.external_artifact_ids
+                           for item in external_artifacts or [])
+        if resume is not None and new_external and invalidate_from is None:
+            raise ValueError("new external artifact on resume requires invalidate_from")
+        if resume is not None:
+            first_stale = next((index for index, stage in enumerate(STAGE_ORDER)
+                                if stage not in result.stages
+                                or result.stages[stage].run_status != StageRunStatus.SUCCEEDED),
+                               len(STAGE_ORDER))
+            if invalidate_from is not None:
+                first_stale = min(first_stale, STAGE_ORDER.index(invalidate_from))
+            invalidated = set(STAGE_ORDER[first_stale:])
+            for stage in invalidated:
+                result.stages.pop(stage, None)
+            result.provenance_edges = [edge_id for edge_id in result.provenance_edges
+                                       if result.provenance_records[edge_id]["producer_stage"]
+                                       not in invalidated]
+            result.provenance_records = {
+                edge_id: record for edge_id, record in result.provenance_records.items()
+                if record["producer_stage"] not in invalidated}
         artifacts = [source]
         for external in external_artifacts or []:
             self.store.put(external)

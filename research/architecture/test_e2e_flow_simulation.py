@@ -95,10 +95,14 @@ class TestCompilerPlugin:
 class FakeReferenceExecutor:
     def __init__(self, warning=False):
         self.warning = warning
+        self.unavailable = False
         self.calls = 0
 
     def execute(self, request):
         self.calls += 1
+        if self.unavailable:
+            return {"status": "Unavailable", "steps": [],
+                    "detail": {"reason": "simulated reference outage"}}
         return {"status": "Success", "steps": [{"warnings": ["synthetic warning"]
                 if self.warning else []}], "final_state": request.state,
                 "final_contract": "close",
@@ -220,6 +224,7 @@ def test_clean_flow_traverses_all_real_internal_ports_and_simulated_external_por
     first, second = _advance_to_compile(pipeline)
     expectation = _expectation(pipeline, second)
     final = pipeline.run(HISTORY, resume=second, external_artifacts=[expectation],
+                         invalidate_from="semantic_comparison",
                          options={"compiler_authority_decision": _authority_decision(profile),
                                   "reference_identity": REFERENCE_ID,
                                   "evidence_policy_version": "simulation-policy-v1"})
@@ -303,7 +308,7 @@ def test_warning_flow_checks_property_and_stops_before_external_stages():
     _, second = _advance_to_compile(pipeline)
     expectation = _expectation(pipeline, second)
     result = pipeline.run(HISTORY, resume=second, stop_after="property_validation",
-                          external_artifacts=[expectation],
+                          external_artifacts=[expectation], invalidate_from="semantic_comparison",
                           options={"compiler_authority_decision": _authority_decision(profile),
                                    "reference_identity": REFERENCE_ID,
                                    "evidence_policy_version": "simulation-policy-v1"})
@@ -317,6 +322,40 @@ def test_warning_flow_checks_property_and_stops_before_external_stages():
     assert [item["status"] for item in history] == ["CANDIDATE", "REFUTED"]
     assert [item["candidate"]["version"] for item in history] == [1, 1]
     assert "ledger_validation" not in result.stages
+
+
+def test_recovered_reference_reruns_comparison_and_invalidates_cached_authority():
+    pipeline, model, plugin, reference, _, _, profile = _pipeline()
+    _, compiled = _advance_to_compile(pipeline)
+    expectation = _expectation(pipeline, compiled)
+    options = {"compiler_authority_decision": _authority_decision(profile),
+               "reference_identity": REFERENCE_ID,
+               "evidence_policy_version": "simulation-policy-v1"}
+    reference.unavailable = True
+    unavailable = pipeline.run(
+        HISTORY, resume=compiled, stop_after="compiler_authority",
+        external_artifacts=[expectation], invalidate_from="semantic_comparison",
+        options=options)
+    assert unavailable.stages["semantic_comparison"].run_status == StageRunStatus.UNAVAILABLE
+    assert unavailable.stages["compiler_authority"].semantic_status == "CANDIDATE_ONLY"
+    old_comparison = unavailable.stages["semantic_comparison"].output_artifacts[0]
+    old_authority = unavailable.stages["compiler_authority"].output_artifacts[0]
+    old_edges = {key for key, value in unavailable.provenance_records.items()
+                 if value["producer_stage"] in {"semantic_comparison", "compiler_authority"}}
+    reference.unavailable = False
+    recovered = pipeline.run(HISTORY, resume=unavailable,
+                             stop_after="compiler_authority", options=options)
+    assert recovered.stages["semantic_comparison"].run_status == StageRunStatus.SUCCEEDED
+    assert recovered.stages["compiler_authority"].semantic_status == "AUTHORIZED_FOR_PROFILE"
+    assert recovered.stages["semantic_comparison"].output_artifacts[0] != old_comparison
+    assert recovered.stages["compiler_authority"].output_artifacts[0] != old_authority
+    assert recovered.stage_executions == unavailable.stage_executions + 2
+    assert model.calls == 1 and len(plugin.received) == 1 and reference.calls == 2
+    assert recovered.run_id == unavailable.run_id
+    assert old_edges.isdisjoint(recovered.provenance_records)
+    assert all(pipeline.store.has(item) for item in (old_comparison, old_authority))
+    assert recovered.provenance_edges == list(recovered.provenance_records)
+    assert unavailable.stages["compiler_authority"].semantic_status == "CANDIDATE_ONLY"
 
 
 def test_external_artifact_collision_and_resume_store_boundary():
@@ -333,6 +372,18 @@ def test_external_artifact_collision_and_resume_store_boundary():
     repeated = pipeline.run(HISTORY, resume=first, stop_after="intent_acceptance",
                             external_artifacts=[external, external])
     assert repeated.external_artifact_ids == [external.artifact_id]
+    new_external = ArtifactEnvelope("reviewed-scenario", "v1", "simulation_review",
+                                    ImplementationStatus.SCAFFOLDED, AuthorityLevel.NO_AUTHORITY,
+                                    {"reviewer_id": "second-reviewer"})
+    with pytest.raises(ValueError, match="requires invalidate_from"):
+        pipeline.run(HISTORY, resume=repeated, stop_after="intent_acceptance",
+                     external_artifacts=[new_external])
+    assert not pipeline.store.has(new_external.artifact_id)
+    changed = pipeline.run(HISTORY, resume=repeated, stop_after="intent_acceptance",
+                           external_artifacts=[new_external],
+                           invalidate_from="intent_acceptance")
+    assert changed.external_artifact_ids == [external.artifact_id, new_external.artifact_id]
+    assert changed.stage_executions == repeated.stage_executions + 1
     collision = ArtifactEnvelope("reviewed-scenario", "v1", "simulation_review",
                                  ImplementationStatus.SCAFFOLDED, AuthorityLevel.USER_ACCEPTED_INTENT,
                                  {"reviewer_id": "simulation-reviewer"})

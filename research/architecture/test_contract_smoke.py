@@ -340,6 +340,47 @@ def test_synthetic_ports_connect_full_dag_without_assurance_claims():
     assert resumed.provenance_records == run.provenance_records
 
 
+def test_resume_reuses_only_contiguous_successful_prefix():
+    calls = []
+
+    class _CountingPort:
+        def __init__(self, stage):
+            self.stage = stage
+
+        def execute(self, artifacts, context):
+            calls.append(self.stage)
+            output = ArtifactEnvelope(f"counted-{self.stage}", "v1", self.stage,
+                                      ImplementationStatus.SCAFFOLDED,
+                                      AuthorityLevel.NO_AUTHORITY,
+                                      {"execution": len(calls)})
+            return StageExecution(StageResult(
+                self.stage, ImplementationStatus.SCAFFOLDED, StageRunStatus.SUCCEEDED,
+                input_artifacts=[artifacts[-1].artifact_id]), [output])
+
+    stages = STAGE_ORDER[:4]
+    pipeline = ResearchOrchestrator({stage: _CountingPort(stage) for stage in stages})
+    history = [{"version": 1, "messages": ["synthetic"]}]
+    complete = pipeline.run(history, stop_after=stages[-1])
+    old_compile = complete.stages["compile"].output_artifacts[0]
+    old_comparison = complete.stages["semantic_comparison"].output_artifacts[0]
+    missing = deepcopy(complete)
+    del missing.stages["compile"]
+    resumed = pipeline.run(history, resume=missing, stop_after=stages[-1])
+    assert calls == list(stages) + list(stages[2:])
+    assert resumed.stage_executions == complete.stage_executions + 2
+    assert old_compile != resumed.stages["compile"].output_artifacts[0]
+    assert old_comparison != resumed.stages["semantic_comparison"].output_artifacts[0]
+    assert pipeline.store.has(old_compile) and pipeline.store.has(old_comparison)
+    assert not any(edge["child_artifact_id"] in {old_compile, old_comparison}
+                   for edge in resumed.provenance_records.values())
+    forced = pipeline.run(history, resume=resumed, stop_after=stages[-1],
+                          invalidate_from="compile")
+    assert calls == list(stages) + list(stages[2:]) + list(stages[2:])
+    assert forced.stage_executions == resumed.stage_executions + 2
+    assert forced.stages["intent_extraction"].output_artifacts == (
+        resumed.stages["intent_extraction"].output_artifacts)
+
+
 def test_stage_execution_budget_blocks_without_calling_next_port():
     class _Port:
         def __init__(self, stage):
