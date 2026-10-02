@@ -40,19 +40,27 @@ class CompilerAuthorityPort:
         profile = contract.payload["profile"]
         raw_decision = context.options.get("compiler_authority_decision")
         decision = raw_decision if isinstance(raw_decision, CompilerAuthorityDecision) else None
-        reference_identity = str(context.options.get("reference_identity", "unavailable"))
+        raw_configured_identity = context.options.get("reference_identity")
+        configured_identity = (str(raw_configured_identity)
+                               if raw_configured_identity is not None else None)
+        comparison_matches_contract = (comparison is not None
+                                       and comparison.payload.get("contract_artifact_id")
+                                       == contract.artifact_id)
+        observed_identity = (comparison.payload.get("reference_identity")
+                             if comparison_matches_contract else None)
+        reported_identity = observed_identity or configured_identity or "unavailable"
         policy_version = str(context.options.get("evidence_policy_version", "v1"))
         authorized = (self.promotion_policy is not None
-                      and decision is not None and comparison is not None
+                      and decision is not None and bool(configured_identity)
+                      and comparison_matches_contract
                       and comparison.payload.get("verdict") == "SATISFIED"
-                      and comparison.payload.get("contract_artifact_id") == contract.artifact_id
-                      and comparison.payload.get("reference_identity") == reference_identity
-                      and decision_matches(decision, profile, reference_identity, policy_version)
+                      and observed_identity == configured_identity
+                      and decision_matches(decision, profile, configured_identity, policy_version)
                       and self.promotion_policy.authorize(decision, contract, comparison))
         status = CompilerAuthorityStatus.AUTHORIZED_FOR_PROFILE if authorized else CompilerAuthorityStatus.CANDIDATE_ONLY
         authority = AuthorityLevel.PROFILE_COMPILER_AUTHORITY if authorized else AuthorityLevel.NO_AUTHORITY
         payload = {"status": status.value, "profile": profile,
-                   "reference_identity": reference_identity,
+                   "reference_identity": reported_identity,
                    "evidence_policy_version": policy_version,
                    "decision": decision.to_dict() if authorized else None,
                    "scope_limit": "deterministic profile mapping only; no Stage 4/5 or ledger authority"}
