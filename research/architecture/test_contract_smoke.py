@@ -10,7 +10,7 @@ import pytest
 from research.architecture.artifacts import ArtifactEnvelope, ArtifactStore, stable_artifact_id
 from research.architecture.assurance import AssuranceClaim, EvidenceRef
 from research.architecture.bootstrap import build_research_pipeline
-from research.architecture.models import StageResult
+from research.architecture.models import ResearchPipelineRun, StageResult
 from research.architecture.orchestrator import ResearchOrchestrator, STAGE_ORDER
 from research.architecture.ports import StageExecution
 from research.architecture.status import (AssuranceMethod, AssuranceVerdict, AuthorityLevel,
@@ -135,7 +135,7 @@ def test_self_reported_reviewer_id_cannot_accept_without_policy():
     assert not any(item.artifact_type == "accepted-intent" for item in outcome.artifacts)
 
 
-def test_reference_gap_still_yields_candidate_only_decision():
+def test_missing_reference_evidence_blocks_authority_and_exploration():
     spec = simple_payment()
     contract = ArtifactEnvelope("contract-candidate", "core-v1", "compile",
                                 ImplementationStatus.IMPLEMENTED_UNVALIDATED,
@@ -163,15 +163,55 @@ def test_reference_gap_still_yields_candidate_only_decision():
                                      "compiler_authority": CompilerAuthorityPort()})
     run = pipeline.run(spec["requirement_history"], stop_after="exploration")
     assert run.stages["semantic_comparison"].run_status == StageRunStatus.INCONCLUSIVE
-    assert run.stages["compiler_authority"].semantic_status == "CANDIDATE_ONLY"
+    assert run.stages["compiler_authority"].run_status == StageRunStatus.NOT_EVALUATED
+    assert run.stages["compiler_authority"].blocked_by == ["semantic_comparison"]
     assert run.stages["exploration"].run_status == StageRunStatus.NOT_EVALUATED
+    assert run.stages["exploration"].blocked_by == ["semantic_comparison"]
 
 
 def test_bootstrap_defaults_do_not_create_authority_or_live_model():
     pipeline = build_research_pipeline()
     run = pipeline.run([{"version": 1, "messages": ["pay"]}], stop_after="deployment")
+    assert run.entry_stage == "intent_extraction"
+    assert run.to_dict()["entry_stage"] == "intent_extraction"
     assert run.stages["intent_extraction"].run_status == StageRunStatus.NOT_EVALUATED
     assert all(stage.authority_level == AuthorityLevel.NO_AUTHORITY for stage in run.stages.values())
+
+
+def test_partial_entry_preserves_constructor_and_rejects_invalid_boundaries():
+    stages = {}
+    positional = ResearchPipelineRun("run", "requirement", stages)
+    assert positional.stages is stages
+    assert positional.entry_stage == "intent_extraction"
+    assert positional.to_dict()["entry_stage"] == "intent_extraction"
+
+    pipeline = build_research_pipeline()
+    history = [{"version": 1, "messages": ["pay"]}]
+    with pytest.raises(ValueError, match="unknown entry"):
+        pipeline.run(history, entry_stage="unknown")
+    with pytest.raises(ValueError, match="unknown entry"):
+        pipeline.run(history, entry_stage="")
+    with pytest.raises(ValueError, match="precedes entry"):
+        pipeline.run(history, entry_stage="compile", stop_after="intent_acceptance")
+    partial = pipeline.run(history, entry_stage="compile", stop_after="compile")
+    assert partial.entry_stage == "compile"
+    assert list(partial.stages) == ["compile"]
+    assert partial.stages["compile"].run_status == StageRunStatus.NOT_EVALUATED
+    assert partial.stage_executions == 1
+    assert not partial.stages["compile"].output_artifacts
+    resumed = pipeline.run(history, resume=partial, stop_after="semantic_comparison")
+    assert resumed.run_id == partial.run_id
+    assert resumed.requirement_artifact_id == partial.requirement_artifact_id
+    assert resumed.entry_stage == "compile"
+    assert "intent_extraction" not in resumed.stages
+    with pytest.raises(ValueError, match="entry_stage differs"):
+        pipeline.run(history, resume=partial, entry_stage="intent_extraction")
+    with pytest.raises(ValueError, match="outside requested"):
+        pipeline.run(history, resume=partial, stop_after="compile",
+                     invalidate_from="intent_acceptance")
+    with pytest.raises(ValueError, match="outside requested"):
+        pipeline.run(history, resume=partial, stop_after="compile",
+                     invalidate_from="exploration")
 
 
 def test_reference_unavailable_is_inconclusive_and_not_authority():
@@ -323,6 +363,7 @@ def test_synthetic_ports_connect_full_dag_without_assurance_claims():
                                       {"prior_artifact_id": artifacts[-1].artifact_id})
             return StageExecution(StageResult(
                 self.stage, ImplementationStatus.SCAFFOLDED, StageRunStatus.SUCCEEDED,
+                semantic_status="SATISFIED" if self.stage == "semantic_comparison" else None,
                 input_artifacts=[artifacts[-1].artifact_id],
                 limitations=["interface smoke only; no domain behavior evaluated"]), [output])
 

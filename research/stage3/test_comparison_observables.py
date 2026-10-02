@@ -68,6 +68,8 @@ def test_old_expectation_uses_unchanged_payload_keys_and_legacy_comparison():
     result = _run(raw, legacy=True)
     assert result.result.run_status == StageRunStatus.SUCCEEDED
     assert "mismatches" not in result.artifacts[0].payload
+    assert len(result.result.input_artifacts) == 3
+    assert len(set(result.result.input_artifacts)) == 3
     del raw["final_contract"]
     assert _run(raw, legacy=True).result.run_status == StageRunStatus.FAILED
 

@@ -35,13 +35,26 @@ class ResearchOrchestrator:
             stop_after: str = "deployment", resume: ResearchPipelineRun | None = None,
             options: dict[str, Any] | None = None,
             external_artifacts: list[ArtifactEnvelope] | None = None,
-            invalidate_from: str | None = None) -> ResearchPipelineRun:
+            invalidate_from: str | None = None,
+            entry_stage: str | None = None) -> ResearchPipelineRun:
         if stop_after not in STAGE_ORDER:
             raise ValueError(f"unknown stop stage: {stop_after}")
+        effective_entry = (resume.entry_stage if resume is not None else
+                           (entry_stage if entry_stage is not None else "intent_extraction"))
+        if entry_stage is not None and resume is not None and entry_stage != effective_entry:
+            raise ValueError("entry_stage differs from resumed run")
+        if effective_entry not in STAGE_ORDER:
+            raise ValueError(f"unknown entry stage: {effective_entry}")
+        entry_index = STAGE_ORDER.index(effective_entry)
+        stop_index = STAGE_ORDER.index(stop_after)
+        if stop_index < entry_index:
+            raise ValueError("stop_after precedes entry_stage")
         if invalidate_from is not None and invalidate_from not in STAGE_ORDER:
             raise ValueError(f"unknown invalidation stage: {invalidate_from}")
         if invalidate_from is not None and resume is None:
             raise ValueError("invalidate_from requires a resumed run")
+        if invalidate_from is not None and not entry_index <= STAGE_ORDER.index(invalidate_from) <= stop_index:
+            raise ValueError("invalidate_from lies outside requested stage slice")
         source = ArtifactEnvelope("requirement-history", "v1", "user_input",
                                   ImplementationStatus.IMPLEMENTED_UNVALIDATED,
                                   AuthorityLevel.NO_AUTHORITY, requirement_history)
@@ -49,15 +62,17 @@ class ResearchOrchestrator:
         run_id = resume.run_id if resume is not None else f"research-run:{uuid4()}"
         if resume is not None and resume.requirement_artifact_id != source.artifact_id:
             raise ValueError("resume requirement differs from original run")
-        result = deepcopy(resume) if resume is not None else ResearchPipelineRun(run_id, source.artifact_id)
+        result = (deepcopy(resume) if resume is not None else
+                  ResearchPipelineRun(run_id, source.artifact_id, entry_stage=effective_entry))
         new_external = any(item.artifact_id not in result.external_artifact_ids
                            for item in external_artifacts or [])
         if resume is not None and new_external and invalidate_from is None:
             raise ValueError("new external artifact on resume requires invalidate_from")
         if resume is not None:
             first_stale = next((index for index, stage in enumerate(STAGE_ORDER)
-                                if stage not in result.stages
-                                or result.stages[stage].run_status != StageRunStatus.SUCCEEDED),
+                                if index >= entry_index and (
+                                    stage not in result.stages
+                                    or result.stages[stage].run_status != StageRunStatus.SUCCEEDED)),
                                len(STAGE_ORDER))
             if invalidate_from is not None:
                 first_stale = min(first_stale, STAGE_ORDER.index(invalidate_from))
@@ -84,7 +99,19 @@ class ResearchOrchestrator:
             raise ValueError("max_stage_executions must be a positive integer")
         context = StageContext(run_id, configured)
         previous: StageResult | None = None
-        for stage in STAGE_ORDER[:STAGE_ORDER.index(stop_after) + 1]:
+        for stage in STAGE_ORDER[entry_index:stop_index + 1]:
+            comparison = result.stages.get("semantic_comparison")
+            if (stage == "exploration" and entry_index <= STAGE_ORDER.index("semantic_comparison")
+                    and (comparison is None or comparison.run_status != StageRunStatus.SUCCEEDED
+                         or comparison.semantic_status != "SATISFIED")):
+                blocked = StageResult(stage, ImplementationStatus.SCAFFOLDED,
+                                      StageRunStatus.NOT_EVALUATED,
+                                      input_artifacts=[item.artifact_id for item in artifacts],
+                                      blocked_by=["semantic_comparison"],
+                                      diagnostics=["satisfied reference behavior required for exploration"])
+                result.stages[stage] = blocked
+                previous = blocked
+                continue
             old = result.stages.get(stage)
             if old is not None and old.run_status == StageRunStatus.SUCCEEDED:
                 artifacts.extend(self.store.get(item) for item in old.output_artifacts)
@@ -92,8 +119,7 @@ class ResearchOrchestrator:
                 continue
             authority_after_reference_gap = (stage == "compiler_authority"
                 and previous is not None and previous.stage == "semantic_comparison"
-                and previous.run_status in {StageRunStatus.INCONCLUSIVE, StageRunStatus.UNAVAILABLE,
-                                            StageRunStatus.FAILED, StageRunStatus.BLOCKED})
+                and previous.run_status == StageRunStatus.UNAVAILABLE)
             if (previous is not None and previous.run_status != StageRunStatus.SUCCEEDED
                     and not authority_after_reference_gap):
                 blocked = StageResult(stage, ImplementationStatus.SCAFFOLDED,

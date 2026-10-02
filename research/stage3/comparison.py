@@ -182,10 +182,12 @@ class SemanticComparisonPort:
         result = ArtifactEnvelope("reference-comparison", "v1", "semantic_comparison",
                                   ImplementationStatus.IMPLEMENTED_UNVALIDATED,
                                   AuthorityLevel.NO_AUTHORITY, payload)
+        input_ids = list(dict.fromkeys((contract.artifact_id, accepted.artifact_id,
+                                        expectation_artifact.artifact_id,
+                                        expectation.source_artifact_id)))
         return StageExecution(StageResult(
             "semantic_comparison", ImplementationStatus.IMPLEMENTED_UNVALIDATED, run_status,
-            semantic_status=verdict, input_artifacts=[contract.artifact_id, accepted.artifact_id,
-                                                     expectation_artifact.artifact_id],
+            semantic_status=verdict, input_artifacts=input_ids,
             diagnostics=[f"observable mismatch: {field}" for field in mismatches]
                         + [f"observable unavailable: {field}" for field in unavailable],
             limitations=["one reference trace is not compiler proof or ledger validity"]), [result])
