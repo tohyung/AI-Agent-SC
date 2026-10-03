@@ -6,7 +6,8 @@ import json
 from typing import Any, Protocol
 
 from research.stage2b.intent_spec import (
-    CORE_SCHEMA_VERSION, ShadowSemanticCore, core_prompt_schema_contract,
+    CORE_SCHEMA_VERSION, CORE_SCHEMA_VERSION_V2, ShadowSemanticCore,
+    core_prompt_schema_contract,
 )
 
 
@@ -35,6 +36,11 @@ Follow this semantic order before selecting a resolution:
    Choice/Notify branch or timeout. Do not detach an outcome into an invented
    payment transition. Use global only for genuinely branch-independent facts,
    including a directly named asset spanning the monetary obligation.
+   When one branch has multiple monetary obligations (for example, one party
+   retains a fee and another receives the remainder), give each obligation a
+   distinct terminal_outcome scope and attach its amount and recipient there.
+   Distinct amounts for distinct recipients in one branch are not a conflict.
+   Do not merge them into one branch-level amount or invent an extra payment.
 3. Emit a minimal set of atomic claims: only facts stated by an active
    requirement, confirmed by correction, or supported by allowed deterministic
    derivation. A source span must express the claimed role/action relation;
@@ -74,9 +80,12 @@ Return JSON only, with all top-level fields shown in the user instruction.
 """
 
 
-def build_prompt(requirement_history: list[dict[str, Any]]) -> tuple[str, str]:
+def build_prompt(requirement_history: list[dict[str, Any]], *,
+                 core_schema_version: str = CORE_SCHEMA_VERSION) -> tuple[str, str]:
+    if core_schema_version not in {CORE_SCHEMA_VERSION, CORE_SCHEMA_VERSION_V2}:
+        raise ValueError("unsupported core schema version")
     template = {
-        "schema_version": CORE_SCHEMA_VERSION,
+        "schema_version": core_schema_version,
         "requirement_history": requirement_history,
         "behavior_scopes": [], "claims": [],
         "required_clarifications": [], "unscored_observations": [],
@@ -86,7 +95,8 @@ def build_prompt(requirement_history: list[dict[str, Any]]) -> tuple[str, str]:
         "Requirement history is the only source of user intent:\n"
         + json.dumps(requirement_history, ensure_ascii=False)
         + "\nValidator schema contract (closed enum/field vocabulary):\n"
-        + json.dumps(core_prompt_schema_contract(), ensure_ascii=False, sort_keys=True)
+        + json.dumps(core_prompt_schema_contract(version=core_schema_version),
+                     ensure_ascii=False, sort_keys=True)
         + "\nOutput all fields in this JSON shape (replace example values):\n"
         + json.dumps(template, ensure_ascii=False)
         + "\nEvery claim uses claim_id, kind, value, criticality, status, scope_id, "
@@ -116,7 +126,32 @@ def build_prompt(requirement_history: list[dict[str, Any]]) -> tuple[str, str]:
           "must be nonempty with exact source spans. Authoritative financial "
           "facts must go in claims, not unscored_observations."
     )
-    return SYSTEM_PROMPT, user
+    system = SYSTEM_PROMPT
+    if core_schema_version == CORE_SCHEMA_VERSION_V2:
+        system += (
+            "\nFor each numeric Choice, include inclusive choice_bounds with exact source "
+            "evidence on its transition scope. Every branch of that Choice needs a "
+            "choice_guard with operator and integer threshold plus exact source evidence. "
+            "Preserve ranges and conditions such as price >= 50; do not convert them "
+            "into unscored text or omit them. If a contract-defining condition is "
+            "missing, ask a concrete business question rather than inventing it. "
+            "Each terminal_outcome must include parent_scope_id pointing to its "
+            "actual branch, timeout, or transition scope; never infer this link "
+            "from names such as approve/reject. "
+            "When one event leads to another, include continuation_scope_id on "
+            "the predecessor scope to name the next transition or outcome. "
+            "For example a funded deposit may continue to a Choice; array order "
+            "alone never encodes control flow. A Choice transition does not "
+            "continue to its timeout scope: branch and timeout scopes are "
+            "alternative paths of that same Choice. Give each branch and its "
+            "timeout its own continuation to the first outcome on that path. "
+            "Never use continuation_scope_id to point at a timeout or branch. "
+            "Use unscored_observations reason=irrelevant_context only for source "
+            "details that cannot affect contract behavior (for example, weather or "
+            "biography). Any unrepresented contract behavior must use "
+            "outside_stage2b_v2_claim_taxonomy and remain non-compilable.\n"
+        )
+    return system, user
 
 
 def parse_model_output(data: Any) -> ShadowSemanticCore:
@@ -128,12 +163,40 @@ def parse_model_output(data: Any) -> ShadowSemanticCore:
 
 
 class IntentShadowExtractor:
-    def __init__(self, model: ShadowModel) -> None:
+    def __init__(self, model: ShadowModel, *,
+                 core_schema_version: str = CORE_SCHEMA_VERSION) -> None:
         self.model = model
+        self.core_schema_version = core_schema_version
 
     def extract(self, requirement_history: list[dict[str, Any]]) -> ShadowSemanticCore:
-        system, user = build_prompt(requirement_history)
+        system, user = build_prompt(requirement_history,
+                                    core_schema_version=self.core_schema_version)
         return parse_model_output(self.model.generate(system, user))
+
+    def extract_with_validation_feedback(
+        self, requirement_history: list[dict[str, Any]], *, max_repairs: int = 1
+    ) -> tuple[ShadowSemanticCore, list[str]]:
+        if max_repairs not in (0, 1):
+            raise ValueError("max_repairs must be 0 or 1")
+        system, user = build_prompt(requirement_history,
+                                    core_schema_version=self.core_schema_version)
+        core = parse_model_output(self.model.generate(system, user))
+        initial_errors = core.validation_errors(expected_history=requirement_history)
+        if not initial_errors or max_repairs == 0:
+            return core, initial_errors
+        feedback = (
+            "The previous semantic core failed deterministic validation. "
+            "Regenerate the complete seven-field core from the original requirement only. "
+            "Do not infer new facts, omit financial claims, or change the resolution "
+            "merely to satisfy validation. Fix only errors justified by the original text. "
+            "Keep source spans verbatim; never use ellipses. If derived_from points "
+            "to a different claim kind, omit derived_from unless a valid same-kind "
+            "source exists. Return JSON only.\nValidation errors:\n"
+            + json.dumps(initial_errors, ensure_ascii=False)
+            + "\nPrevious core:\n"
+            + json.dumps(core.to_dict(), ensure_ascii=False)
+        )
+        return parse_model_output(self.model.generate(system, user + "\n" + feedback)), initial_errors
 
 
 class LegacyReasonerTransport:

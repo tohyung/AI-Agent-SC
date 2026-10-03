@@ -22,10 +22,21 @@ class Stage2BExtractionPort:
                                               diagnostics=["shadow model not configured"]))
         from research.stage2b.projector import classify_projection, project_intent_spec
         from research.stage2b.shadow_extractor import IntentShadowExtractor
+        from research.stage2b.intent_spec import CORE_SCHEMA_VERSION
 
         history = source.payload
         try:
-            core = IntentShadowExtractor(self.model).extract(history)
+            repairs = context.options.get("max_core_validation_repairs", 0)
+            extractor = IntentShadowExtractor(
+                self.model,
+                core_schema_version=context.options.get("core_schema_version", CORE_SCHEMA_VERSION),
+            )
+            if repairs:
+                core, initial_errors = extractor.extract_with_validation_feedback(
+                    history, max_repairs=repairs)
+            else:
+                core = extractor.extract(history)
+                initial_errors = []
         except (RuntimeError, ValueError) as exc:
             from research.stage2b.model_errors import sanitized_model_error
 
@@ -48,6 +59,7 @@ class Stage2BExtractionPort:
                 input_artifacts=[source.artifact_id],
                 diagnostics=["deterministic projection failed"]))
         payload = {"semantic_core": core.to_dict(), "intent_spec": projection.intent_spec.to_dict(),
+                   "initial_core_validation_errors": initial_errors,
                    "source_history": history, "source_artifact_id": source.artifact_id,
                    "core_validation_errors": core_errors, "full_validation_errors": full_errors,
                    "projection_diagnostics": projection.projection_diagnostics,

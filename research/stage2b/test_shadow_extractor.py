@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import sys
+from copy import deepcopy
 
 import pytest
 
@@ -70,6 +71,30 @@ def test_fake_extractor_separates_prompt_transport_parse_and_validation():
     assert "transaction_submitter" not in user
     assert "value=null" in user and "evidence=[]" in user
     assert "normalization_basis" in user and "ShadowSemanticCore" in system
+    assert "Distinct amounts for distinct recipients" in system
+
+
+def test_bounded_validation_feedback_preserves_validator_authority():
+    valid = intent_spec.extract_core_view(simple_payment())
+    invalid = deepcopy(valid)
+    invalid["claims"] = None
+
+    class SequencedModel:
+        def __init__(self):
+            self.calls = []
+
+        def generate(self, system, user):
+            self.calls.append((system, user))
+            return invalid if len(self.calls) == 1 else valid
+
+    model = SequencedModel()
+    core, initial_errors = shadow_extractor.IntentShadowExtractor(
+        model).extract_with_validation_feedback(valid["requirement_history"])
+    assert initial_errors
+    assert core.validation_errors(expected_history=valid["requirement_history"]) == []
+    assert len(model.calls) == 2
+    assert "Validation errors:" in model.calls[1][1]
+    assert "never use ellipses" in model.calls[1][1]
 
 
 def test_prompt_contract_tracks_validator_enums(monkeypatch):

@@ -54,8 +54,10 @@ def profile_mismatches(spec: dict[str, Any], profile: SupportedProfile) -> list[
     if any(scope.get("transition_kind") == "notify" for scope in spec.get("behavior_scopes", [])):
         if not profile.supports_observations:
             errors.append("Notify observation unsupported")
-    if spec.get("unscored_observations"):
-        errors.append("unscored observations cannot be compiled")
+    if any(item.get("reason") != "irrelevant_context" for item in
+           spec.get("unscored_observations", []) if isinstance(item, dict)) or any(
+               not isinstance(item, dict) for item in spec.get("unscored_observations", [])):
+        errors.append("unrepresented contract behavior cannot be compiled")
     if spec.get("required_clarifications") or spec.get("conflicts") or spec.get("assumptions_and_provenance"):
         errors.append("open clarification, conflict or assumption cannot be compiled")
     for asset in accounts.get("assets", []):

@@ -1,0 +1,31 @@
+{
+  "batch_id": "online-tuning-batch01",
+  "baseline_sha": "99484ad5a69dc560b6f3e65a2eb4289c064a5688",
+  "dataset_path": "marlowe_ai_agent/bench/dataset/cases.jsonl",
+  "dataset_sha256": "e05c23f43a2bd025258ad5e2fa77569874357f79173e98863a8f8d48ee9a907a",
+  "selection": "first 20 physical JSONL records",
+  "model": "nvidia/nemotron-3-ultra-550b-a55b:free",
+  "max_physical_model_calls": 48,
+  "case_ids": [
+    "vi-third_party-L1-001",
+    "vi-rental_deposit-L4-001",
+    "vi-escrow_3party-L3-001",
+    "vi-swap-L2-001",
+    "vi-milestone-L2-001",
+    "vi-vesting-L3-001",
+    "en-swap-L1-002",
+    "vi-infeasible-L2-001",
+    "vi-escrow_2party-L3-001",
+    "en-third_party-L1-002",
+    "en-rental_deposit-L3-002",
+    "en-escrow_2party-L4-002",
+    "vi-rental_deposit-L3-003",
+    "en-escrow_3party-L1-002",
+    "en-vesting-L2-002",
+    "en-swap-L1-003",
+    "en-milestone-L4-002",
+    "vi-third_party-L2-003",
+    "en-swap-L1-004",
+    "vi-crowdfunding-L3-001"
+  ]
+}

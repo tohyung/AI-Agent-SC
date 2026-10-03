@@ -18,15 +18,18 @@ def review_candidate(candidate: ArtifactEnvelope) -> IntentReviewSession:
         issues.append(ClarificationIssue(f"core-{index}", "INVALID_CORE", str(error)))
     for index, error in enumerate(payload.get("full_validation_errors", [])):
         issues.append(ClarificationIssue(f"full-{index}", "INVALID_INTENT_SPEC", str(error)))
-    for claim in spec.get("claims", []):
+    claims = spec.get("claims")
+    for claim in claims if isinstance(claims, list) else []:
         if not isinstance(claim, dict) or claim.get("criticality") != "financial":
             continue
         if claim.get("status") in {"unresolved", "conflicted", "assumed"}:
             issues.append(ClarificationIssue(
                 f"claim:{claim.get('claim_id')}", str(claim["status"]).upper(),
                 f"critical claim {claim.get('kind')} needs review", claim.get("claim_id")))
-    for index, question in enumerate(spec.get("required_clarifications", [])):
-        issues.append(ClarificationIssue(f"question-{index}", "CLARIFICATION", str(question)))
+    questions = spec.get("required_clarifications")
+    for index, question in enumerate(questions if isinstance(questions, list) else []):
+        description = question.get("question") if isinstance(question, dict) else question
+        issues.append(ClarificationIssue(f"question-{index}", "CLARIFICATION", str(description)))
     if spec.get("predicted_resolution") == "unsupported_for_current_study":
         issues.append(ClarificationIssue("unsupported", "UNSUPPORTED", "candidate marks feature unsupported"))
     if not payload.get("semantic_core") or not spec:

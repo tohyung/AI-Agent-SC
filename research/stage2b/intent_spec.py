@@ -11,6 +11,8 @@ from research.stage2a.foundation import CLAIM_KINDS, CLAIM_STATUSES, RESOLUTIONS
 
 SCHEMA_VERSION = "stage2b-shadow-v1"
 CORE_SCHEMA_VERSION = "stage2b-shadow-core-v1"
+SCHEMA_VERSION_V2 = "stage2b-shadow-v2"
+CORE_SCHEMA_VERSION_V2 = "stage2b-shadow-core-v2"
 CORE_FIELDS = {
     "schema_version", "requirement_history", "behavior_scopes", "claims",
     "required_clarifications", "unscored_observations", "predicted_resolution",
@@ -60,9 +62,20 @@ SCOPE_FIELDS = {
     "timeout": {"scope_id", "scope_type", "timeout_id", "decision_id", "deadline_claim_id"},
     "terminal_outcome": {"scope_id", "scope_type", "outcome_id"},
 }
+SCOPE_FIELDS_V2 = {
+    **SCOPE_FIELDS,
+    "transition": SCOPE_FIELDS["transition"] | {"choice_bounds", "continuation_scope_id"},
+    "branch": SCOPE_FIELDS["branch"] | {"choice_guard", "continuation_scope_id"},
+    "timeout": SCOPE_FIELDS["timeout"] | {"continuation_scope_id"},
+    "terminal_outcome": SCOPE_FIELDS["terminal_outcome"] | {"parent_scope_id"},
+}
+CHOICE_GUARD_OPERATORS = {"ge", "gt", "le", "lt", "eq"}
 DECISION_TARGET_SCOPE_TYPE = "transition"
 UNSCORED_OBSERVATION_FIELDS = {"observation_id", "text", "reason", "source_evidence"}
 UNSCORED_OBSERVATION_REASON = "outside_stage2b_v1_claim_taxonomy"
+UNSCORED_OBSERVATION_REASONS_V2 = {
+    "irrelevant_context", "outside_stage2b_v2_claim_taxonomy",
+}
 STATE_CLAIM_KINDS = {
     "funded": {"depositing_party"},
     "awaiting_choice": {"choice_owner", "choice_deadline_ms"},
@@ -98,7 +111,7 @@ RICH_FIELDS = {
 }
 
 
-def prompt_schema_contract() -> dict[str, Any]:
+def prompt_schema_contract(*, core_version: str = CORE_SCHEMA_VERSION) -> dict[str, Any]:
     """Expose the validator's closed vocabulary to the shadow model."""
     return {
         "schema_version": SCHEMA_VERSION,
@@ -122,7 +135,9 @@ def prompt_schema_contract() -> dict[str, Any]:
         },
         "scope": {
             "types": sorted(SCOPE_TYPES),
-            "allowed_fields_by_type": {key: sorted(value) for key, value in SCOPE_FIELDS.items()},
+            "allowed_fields_by_type": {key: sorted(value) for key, value in
+                                       (SCOPE_FIELDS_V2 if core_version == CORE_SCHEMA_VERSION_V2
+                                        else SCOPE_FIELDS).items()},
         },
         "assets_and_accounts_fields": sorted(ASSETS_ACCOUNTS_FIELDS),
         "rich_fields": {key: sorted(value) for key, value in RICH_FIELDS.items()},
@@ -145,9 +160,11 @@ def prompt_schema_contract() -> dict[str, Any]:
     }
 
 
-def core_prompt_schema_contract() -> dict[str, Any]:
-    contract = prompt_schema_contract()
-    contract["schema_version"] = CORE_SCHEMA_VERSION
+def core_prompt_schema_contract(*, version: str = CORE_SCHEMA_VERSION) -> dict[str, Any]:
+    if version not in {CORE_SCHEMA_VERSION, CORE_SCHEMA_VERSION_V2}:
+        raise ValueError("unsupported core schema version")
+    contract = prompt_schema_contract(core_version=version)
+    contract["schema_version"] = version
     contract["required_top_level_fields"] = sorted(CORE_FIELDS)
     contract["transition_kinds"] = sorted(TRANSITION_KINDS)
     contract["scope"]["scope_id_unique"] = True
@@ -167,9 +184,32 @@ def core_prompt_schema_contract() -> dict[str, Any]:
             "optional_for": ["timeout"],
         },
     }
+    if version == CORE_SCHEMA_VERSION_V2:
+        contract["scope"]["choice_bounds"] = {
+            "fields": ["from", "to", "source_evidence"],
+            "required_for": "choice transition", "integer_inclusive": True,
+        }
+        contract["scope"]["choice_guard"] = {
+            "fields": ["operator", "value", "source_evidence"],
+            "required_for": "branch of choice transition",
+            "operators": sorted(CHOICE_GUARD_OPERATORS),
+            "value_type": "integer", "source_evidence_required": True,
+        }
+        contract["scope"]["terminal_outcome_parent"] = {
+            "field": "parent_scope_id", "required": True,
+            "target_collection": "behavior_scopes", "target_id_field": "scope_id",
+            "target_scope_types": ["branch", "timeout", "transition"],
+        }
+        contract["scope"]["continuation"] = {
+            "field": "continuation_scope_id", "optional": True,
+            "target_collection": "behavior_scopes", "target_id_field": "scope_id",
+            "target_scope_types": ["transition", "terminal_outcome"],
+            "meaning": "the next action or outcome on this path; never infer from list order",
+        }
     contract["unscored_observation"] = {
         "fields": sorted(UNSCORED_OBSERVATION_FIELDS),
-        "reason": UNSCORED_OBSERVATION_REASON,
+        "reason": (sorted(UNSCORED_OBSERVATION_REASONS_V2)
+                   if version == CORE_SCHEMA_VERSION_V2 else UNSCORED_OBSERVATION_REASON),
         "source_evidence": {
             "fields": sorted(EVIDENCE_FIELDS),
             "relations": sorted(EVIDENCE_RELATIONS),
@@ -214,7 +254,9 @@ class ShadowSemanticCore:
 
 
 def extract_core_view(spec: dict[str, Any]) -> dict[str, Any]:
-    return {key: (CORE_SCHEMA_VERSION if key == "schema_version" else spec[key])
+    core_version = (CORE_SCHEMA_VERSION_V2 if spec.get("schema_version") == SCHEMA_VERSION_V2
+                    else CORE_SCHEMA_VERSION)
+    return {key: (core_version if key == "schema_version" else spec[key])
             for key in CORE_FIELDS if key in spec}
 
 
@@ -319,8 +361,10 @@ def validate_shadow_semantic_core(spec: Any, *,
         errors.append(f"unknown top-level fields: {sorted(extra)}")
     if "mutation" in spec or "parent_case_id" in spec:
         errors.append("mutation-specific knowledge is not allowed in IntentSpec")
-    if spec.get("schema_version") != CORE_SCHEMA_VERSION:
+    version = spec.get("schema_version")
+    if version not in {CORE_SCHEMA_VERSION, CORE_SCHEMA_VERSION_V2}:
         errors.append("invalid schema_version")
+    v2 = version == CORE_SCHEMA_VERSION_V2
     resolution = spec.get("predicted_resolution")
     if not _allowed(resolution, RESOLUTIONS):
         errors.append("invalid predicted_resolution")
@@ -348,7 +392,8 @@ def validate_shadow_semantic_core(spec: Any, *,
         if not _allowed(scope_type, SCOPE_TYPES):
             errors.append(f"scope {scope_id}: invalid scope_type")
         else:
-            unknown = scope.keys() - SCOPE_FIELDS[scope_type]
+            allowed = SCOPE_FIELDS_V2 if v2 else SCOPE_FIELDS
+            unknown = scope.keys() - allowed[scope_type]
             if unknown:
                 errors.append(f"scope {scope_id}: unsupported scope fields {sorted(unknown)}")
         if scope.get("scope_type") == "global" and scope_id != "global":
@@ -366,11 +411,47 @@ def validate_shadow_semantic_core(spec: Any, *,
             errors.append(f"scope {scope_id}: outcome_id required")
     for scope_id, scope in scopes.items():
         decision = scope.get("decision_id")
+        if v2 and "continuation_scope_id" in scope:
+            successor_id = scope["continuation_scope_id"]
+            successor = scopes.get(successor_id) if isinstance(successor_id, str) else None
+            if (successor is None or successor_id == scope_id or
+                    successor.get("scope_type") not in {"transition", "terminal_outcome"}):
+                errors.append(f"scope {scope_id}: invalid continuation_scope_id")
         if decision is not None and (not isinstance(decision, str) or decision not in scopes or
                                      scopes[decision].get("scope_type") != DECISION_TARGET_SCOPE_TYPE):
             errors.append(f"scope {scope_id}: decision_id does not reference transition")
         if scope.get("scope_type") == "branch" and decision is None:
             errors.append(f"scope {scope_id}: branch requires decision_id")
+        if v2 and scope.get("scope_type") == "terminal_outcome":
+            parent_id = scope.get("parent_scope_id")
+            parent = scopes.get(parent_id) if isinstance(parent_id, str) else None
+            if parent is None or parent.get("scope_type") not in {
+                    "branch", "timeout", "transition"}:
+                errors.append(f"scope {scope_id}: invalid parent_scope_id")
+        if v2 and scope.get("scope_type") == "transition" and scope.get("transition_kind") == "choice":
+            bounds = scope.get("choice_bounds")
+            if (not isinstance(bounds, dict) or set(bounds) != {"from", "to", "source_evidence"}
+                    or not isinstance(bounds.get("from"), int) or isinstance(bounds.get("from"), bool)
+                    or not isinstance(bounds.get("to"), int) or isinstance(bounds.get("to"), bool)
+                    or bounds["from"] > bounds["to"]
+                    or not _evidence_valid(bounds.get("source_evidence"), messages)):
+                errors.append(f"scope {scope_id}: invalid choice_bounds")
+        if v2 and scope.get("scope_type") == "branch" and isinstance(decision, str):
+            parent = scopes.get(decision)
+            if parent and parent.get("transition_kind") == "choice":
+                guard = scope.get("choice_guard")
+                bounds = parent.get("choice_bounds")
+                if (not isinstance(guard, dict)
+                        or set(guard) != {"operator", "value", "source_evidence"}
+                        or not _allowed(guard.get("operator"), CHOICE_GUARD_OPERATORS)
+                        or not isinstance(guard.get("value"), int)
+                        or isinstance(guard.get("value"), bool)
+                        or not _evidence_valid(guard.get("source_evidence"), messages)):
+                    errors.append(f"scope {scope_id}: invalid choice_guard")
+                elif (isinstance(bounds, dict) and isinstance(bounds.get("from"), int)
+                      and isinstance(bounds.get("to"), int)
+                      and not bounds["from"] <= guard["value"] <= bounds["to"]):
+                    errors.append(f"scope {scope_id}: choice_guard outside choice_bounds")
 
     claims: dict[str, dict[str, Any]] = {}
     raw_claims = spec.get("claims")
@@ -523,7 +604,8 @@ def validate_shadow_semantic_core(spec: Any, *,
             if (not isinstance(item, dict) or not UNSCORED_OBSERVATION_FIELDS <= item.keys()
                     or not item.get("observation_id")
                     or not item.get("text") or
-                    item.get("reason") != UNSCORED_OBSERVATION_REASON
+                    item.get("reason") not in (UNSCORED_OBSERVATION_REASONS_V2 if v2
+                                               else {UNSCORED_OBSERVATION_REASON})
                     or not _evidence_valid(item.get("source_evidence"), messages)):
                 errors.append("invalid unscored_observation")
     return errors
@@ -542,7 +624,7 @@ def validate_intent_spec(spec: Any, *,
     extra = spec.keys() - REQUIRED_FIELDS
     if extra:
         errors.append(f"unknown top-level fields: {sorted(extra)}")
-    if spec.get("schema_version") != SCHEMA_VERSION:
+    if spec.get("schema_version") not in {SCHEMA_VERSION, SCHEMA_VERSION_V2}:
         errors.append("invalid schema_version")
     scopes = {scope["scope_id"]: scope for scope in spec.get("behavior_scopes", [])
               if isinstance(scope, dict) and isinstance(scope.get("scope_id"), str)} if isinstance(

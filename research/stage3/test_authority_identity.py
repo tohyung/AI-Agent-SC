@@ -68,3 +68,28 @@ def test_observed_identity_alone_does_not_authorize_promotion():
     assert result.result.authority_level == AuthorityLevel.NO_AUTHORITY
     assert result.artifacts[0].payload["reference_identity"] == "real-pinned-id"
     assert result.artifacts[0].payload["decision"] is None
+
+
+def test_simulated_intent_contract_cannot_be_promoted_even_with_matching_decision():
+    contract = ArtifactEnvelope(
+        "contract-candidate", "core-v1", "compile",
+        ImplementationStatus.IMPLEMENTED_UNVALIDATED,
+        AuthorityLevel.DETERMINISTIC_COMPILER_CANDIDATE,
+        {"contract": "close", "profile": PROFILE, "simulation_only": True})
+    comparison = _comparison(contract.artifact_id)
+    decision = CompilerAuthorityDecision(
+        CompilerAuthorityStatus.AUTHORIZED_FOR_PROFILE, "direct-payment", "v1",
+        "deterministic-direct-payment", "0.1.0", "stage2b-shadow-v1",
+        "marlowe-core-v1", "real-pinned-id", "v1", ("evidence",), "reviewer")
+
+    class Permit:
+        def authorize(self, decision, contract, comparison):
+            return True
+
+    result = CompilerAuthorityPort(Permit()).execute(
+        [contract, comparison], StageContext("test", {
+            "compiler_authority_decision": decision,
+            "reference_identity": "real-pinned-id",
+        }))
+    assert result.result.semantic_status == "CANDIDATE_ONLY"
+    assert result.result.authority_level == AuthorityLevel.NO_AUTHORITY

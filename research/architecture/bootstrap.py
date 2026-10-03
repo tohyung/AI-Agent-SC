@@ -11,6 +11,7 @@ from .orchestrator import ResearchOrchestrator
 @dataclass
 class ResearchPipelineWiring:
     reviewer_policy: Any = None
+    intent_acceptance_port: Any = None
     profile_registry: Any = None
     compiler_plugins: dict[tuple[str, str], Any] = field(default_factory=dict)
     reference_executor: Any = None
@@ -49,7 +50,8 @@ def build_research_pipeline(*, live_model: bool = False, model_name: str | None 
     from research.stage4.explorer import ExplorationBounds
     return ResearchOrchestrator({
         "intent_extraction": Stage2BExtractionPort(model),
-        "intent_acceptance": IntentAcceptancePort(configured.reviewer_policy),
+        "intent_acceptance": (configured.intent_acceptance_port
+                              or IntentAcceptancePort(configured.reviewer_policy)),
         "compile": CompilerPort(configured.profile_registry, configured.compiler_plugins),
         "semantic_comparison": SemanticComparisonPort(configured.reference_executor,
                                                        configured.expectation_policy),

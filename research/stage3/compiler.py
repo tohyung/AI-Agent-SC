@@ -33,6 +33,18 @@ class CompilerPort:
             return StageExecution(StageResult("compile", ImplementationStatus.IMPLEMENTED_UNVALIDATED,
                                               StageRunStatus.NOT_EVALUATED,
                                               diagnostics=["accepted intent unavailable"]))
+        simulated = accepted.payload.get("simulation_only") is True
+        if (simulated and (accepted.authority_level != AuthorityLevel.NO_AUTHORITY
+                           or context.options.get("allow_simulated_intent") is not True)):
+            return StageExecution(StageResult(
+                "compile", ImplementationStatus.IMPLEMENTED_UNVALIDATED,
+                StageRunStatus.BLOCKED, input_artifacts=[accepted.artifact_id],
+                diagnostics=["simulated intent requires explicit tuning-only opt-in"]))
+        if not simulated and accepted.authority_level != AuthorityLevel.USER_ACCEPTED_INTENT:
+            return StageExecution(StageResult(
+                "compile", ImplementationStatus.IMPLEMENTED_UNVALIDATED,
+                StageRunStatus.BLOCKED, input_artifacts=[accepted.artifact_id],
+                diagnostics=["intent lacks authenticated user acceptance"]))
         spec: dict[str, Any] = accepted.payload["accepted_spec"]
         validation = validate_intent_spec(spec, expected_history=spec.get("requirement_history"))
         if validation:
@@ -111,6 +123,7 @@ class CompilerPort:
                                     ImplementationStatus.IMPLEMENTED_UNVALIDATED,
                                     AuthorityLevel.DETERMINISTIC_COMPILER_CANDIDATE,
                                     {"contract": result.contract, "source_intent_id": accepted.artifact_id,
+                                     "simulation_only": simulated,
                                      "profile": profile.to_dict(),
                                      "mapping_evidence": list(result.mapping_evidence)})
         outcome = self._outcome(accepted, result, StageRunStatus.SUCCEEDED)

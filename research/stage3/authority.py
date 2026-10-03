@@ -52,6 +52,7 @@ class CompilerAuthorityPort:
         policy_version = str(context.options.get("evidence_policy_version", "v1"))
         authorized = (self.promotion_policy is not None
                       and decision is not None and bool(configured_identity)
+                      and contract.payload.get("simulation_only") is not True
                       and comparison_matches_contract
                       and comparison.payload.get("verdict") == "SATISFIED"
                       and observed_identity == configured_identity

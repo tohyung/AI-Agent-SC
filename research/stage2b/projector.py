@@ -8,7 +8,8 @@ from typing import Any
 
 from research.stage2b.intent_spec import (
     BACKING_STATUSES, DEADLINE_KINDS, IntentSpec,
-    OUTCOME_RECIPIENT_KINDS, PARTY_KINDS, SCHEMA_VERSION,
+    OUTCOME_RECIPIENT_KINDS, PARTY_KINDS, SCHEMA_VERSION, SCHEMA_VERSION_V2,
+    CORE_SCHEMA_VERSION_V2,
     TRANSITION_ACTOR_KINDS, TRANSITION_DEADLINE_KINDS,
     validate_shadow_semantic_core,
 )
@@ -50,7 +51,8 @@ def _backed(claim: dict[str, Any]) -> bool:
 
 def _new_spec(core: dict[str, Any]) -> dict[str, Any]:
     return {
-        "schema_version": SCHEMA_VERSION,
+        "schema_version": (SCHEMA_VERSION_V2 if core.get("schema_version") == CORE_SCHEMA_VERSION_V2
+                           else SCHEMA_VERSION),
         "requirement_history": core.get("requirement_history"),
         "participants": [],
         "assets_and_accounts": {"assets": [], "accounts": [], "funding_relations": []},

@@ -40,3 +40,32 @@ def test_pause_then_freeze_exact_candidate_only():
         IntentDecisionStatus.ACCEPTED, "unit-reviewer", True, (), altered)}))
     assert denied.result.run_status == StageRunStatus.BLOCKED
     assert not any(item.artifact_type == "accepted-intent" for item in denied.artifacts)
+
+
+def test_malformed_candidate_collections_block_review_without_crashing():
+    candidate = ArtifactEnvelope("intent-candidate", "v1", "unit",
+                                 ImplementationStatus.IMPLEMENTED_UNVALIDATED,
+                                 AuthorityLevel.MODEL_CANDIDATE,
+                                 {"intent_spec": {"claims": None,
+                                                  "required_clarifications": None},
+                                  "semantic_core": {},
+                                  "core_validation_errors": ["invalid claims"],
+                                  "full_validation_errors": []})
+    outcome = IntentAcceptancePort().execute([candidate], StageContext("unit"))
+    assert outcome.result.run_status == StageRunStatus.BLOCKED
+    assert any("invalid claims" in issue["description"] for issue in
+               outcome.artifacts[0].payload["issues"])
+
+
+def test_structured_clarification_renders_question_not_python_dict():
+    candidate = ArtifactEnvelope("intent-candidate", "v1", "unit",
+                                 ImplementationStatus.IMPLEMENTED_UNVALIDATED,
+                                 AuthorityLevel.MODEL_CANDIDATE,
+                                 {"intent_spec": {"claims": [], "required_clarifications": [
+                                     {"question": "When is the deposit due?"}]},
+                                  "semantic_core": {"schema_version": "test"},
+                                  "core_validation_errors": [], "full_validation_errors": []})
+    outcome = IntentAcceptancePort().execute([candidate], StageContext("unit"))
+    questions = [item["description"] for item in outcome.artifacts[0].payload["issues"]]
+    assert "When is the deposit due?" in questions
+    assert not any("{'question'" in item for item in questions)
