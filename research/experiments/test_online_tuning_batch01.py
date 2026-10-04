@@ -1,6 +1,7 @@
 """Offline guards for the adaptive batch; these tests never contact a provider."""
 
 import json
+import hashlib
 import signal
 
 import pytest
@@ -11,7 +12,7 @@ from research.architecture.status import AuthorityLevel, StageRunStatus
 from research.experiments.online_tuning_batch01 import (PhysicalCallJournal,
                                                         attach_global_budget, batch_wiring, load_batch,
                                                         load_synthetic_input, next_attempt_paths,
-                                                        model_request_deadline,
+                                                        model_request_deadline, physical_call_limit,
                                                         reusable_extraction,
                                                         run_one)
 from research.stage2b.intent_spec import CORE_SCHEMA_VERSION_V2
@@ -35,6 +36,38 @@ def test_attempts_are_persisted_before_network_and_not_reset(tmp_path):
     with pytest.raises(LLMBudgetError, match="BATCH_MODEL_BUDGET_EXHAUSTED"):
         resumed.consume("third")
     assert len(path.read_text(encoding="utf-8").splitlines()) == 2
+
+
+def test_budget_extension_preserves_prior_journal_and_caps_new_attempts(monkeypatch, tmp_path):
+    original_entries = [{"attempt": index, "case_id": "prior"} for index in range(1, 49)]
+    fingerprint = hashlib.sha256(json.dumps(
+        original_entries, sort_keys=True, separators=(",", ":"),
+        ensure_ascii=False).encode("utf-8")).hexdigest()
+    extension = tmp_path / "extension.json"
+    extension.write_text(json.dumps({
+        "batch_id": "online-tuning-batch01", "original_limit": 48,
+        "journal_baseline_attempts": 48, "journal_baseline_sha256": fingerprint,
+        "additional_attempts": 22,
+    }), encoding="utf-8")
+    monkeypatch.setattr("research.experiments.online_tuning_batch01.BUDGET_EXTENSION", extension)
+    journal_path = tmp_path / "attempts.jsonl"
+    manifest = {"batch_id": "online-tuning-batch01", "max_physical_model_calls": 48}
+    assert physical_call_limit(manifest, journal_path) == 48
+    baseline = "".join(json.dumps(item) + "\n" for item in original_entries)
+    journal_path.write_text(baseline, encoding="utf-8")
+    assert physical_call_limit(manifest, journal_path) == 70
+    journal = PhysicalCallJournal(journal_path, limit=70)
+    for _ in range(22):
+        journal.consume("continued")
+    with pytest.raises(LLMBudgetError, match="BATCH_MODEL_BUDGET_EXHAUSTED"):
+        journal.consume("extra")
+    assert journal_path.read_text(encoding="utf-8").startswith(baseline)
+    assert journal.used == 70
+    original_entries[0]["case_id"] = "tampered"
+    journal_path.write_text("".join(json.dumps(item) + "\n" for item in original_entries),
+                            encoding="utf-8")
+    with pytest.raises(ValueError, match="fingerprint mismatch"):
+        physical_call_limit(manifest, journal_path)
 
 
 def test_sdk_hidden_retries_disabled_and_count_is_global(tmp_path):

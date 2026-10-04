@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import json
+from datetime import date, datetime
+import re
 from typing import Any, Protocol
 
 from research.stage2b.intent_spec import (
@@ -34,8 +36,13 @@ Follow this semantic order before selecting a resolution:
    AST paths. Put deposit roles/deadlines on the deposit event, Choice roles
    and deadlines on the Choice event, and outcome recipients on their actual
    Choice/Notify branch or timeout. Do not detach an outcome into an invented
-   payment transition. Use global only for genuinely branch-independent facts,
-   including a directly named asset spanning the monetary obligation.
+   payment transition. Use global only for genuinely branch-independent facts.
+   A single asset spanning every monetary obligation may be global; when
+   obligations use different assets or amounts, scope each fact to its own
+   funding event or outcome. Distinct obligations are not a conflict merely
+   because their values differ. Reward points are not automatically an
+   on-chain token: ask for token identity or a conversion mechanism if
+   executable behavior depends on that distinction.
    When one branch has multiple monetary obligations (for example, one party
    retains a fee and another receives the remainder), give each obligation a
    distinct terminal_outcome scope and attach its amount and recipient there.
@@ -63,6 +70,15 @@ Follow this semantic order before selecting a resolution:
    what makes it true, not who owns a Choice. transaction_submitter is not an
    authoritative claim kind and must not be inferred from a Choice owner or
    depositor.
+   A scheduled release at fixed times is not a user Choice: represent its
+   payment events and their deadlines without inventing a chooser or numeric
+   choice bounds. Choice is reserved for an explicit business decision by an
+   identified actor. Marlowe timeout paths need a transaction to advance;
+   do not claim the ledger autonomously submits that transaction. This ordinary
+   runtime limitation is not an unrepresented contract behavior. Do not create
+   Notify(True) as a placeholder for a time-based payment: that would allow
+   the payment before its scheduled time. A staged payment outcome that leads
+   to a later payment must name that next transition via continuation_scope_id.
 5. For genuinely missing critical business facts use value=null and
    status=unresolved. Ask only concrete, nonduplicate Vietnamese business
    questions that resolve those missing or conflicting facts. Ask which
@@ -94,6 +110,9 @@ def build_prompt(requirement_history: list[dict[str, Any]], *,
     user = (
         "Requirement history is the only source of user intent:\n"
         + json.dumps(requirement_history, ensure_ascii=False)
+        + "\nDeterministic calendar hints from that history (date-only values do not "
+          "establish a timezone):\n"
+        + json.dumps(_calendar_hints(requirement_history), ensure_ascii=False)
         + "\nValidator schema contract (closed enum/field vocabulary):\n"
         + json.dumps(core_prompt_schema_contract(version=core_schema_version),
                      ensure_ascii=False, sort_keys=True)
@@ -137,7 +156,8 @@ def build_prompt(requirement_history: list[dict[str, Any]], *,
             "missing, ask a concrete business question rather than inventing it. "
             "Each terminal_outcome must include parent_scope_id pointing to its "
             "actual branch, timeout, or transition scope; never infer this link "
-            "from names such as approve/reject. "
+            "from names such as approve/reject. If that outcome is followed by "
+            "another event, include continuation_scope_id to its next transition. "
             "When one event leads to another, include continuation_scope_id on "
             "the predecessor scope to name the next transition or outcome. "
             "For example a funded deposit may continue to a Choice; array order "
@@ -152,6 +172,37 @@ def build_prompt(requirement_history: list[dict[str, Any]], *,
             "outside_stage2b_v2_claim_taxonomy and remain non-compilable.\n"
         )
     return system, user
+
+
+def _calendar_hints(history: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    hints: list[dict[str, Any]] = []
+    for revision in history:
+        if not isinstance(revision, dict):
+            continue
+        for index, message in enumerate(revision.get("messages", [])):
+            if not isinstance(message, str):
+                continue
+            for span in re.findall(r"(?<!\d)\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z(?!\d)",
+                                   message):
+                try:
+                    instant = datetime.fromisoformat(span.replace("Z", "+00:00"))
+                except ValueError:
+                    continue
+                hints.append({"requirement_version": revision.get("version"),
+                              "message_index": index, "source_span": span,
+                              "exact_utc_milliseconds": int(instant.timestamp() * 1000)})
+            for day, month, year in re.findall(
+                    r"(?<!\d)(\d{1,2})/(\d{1,2})/(\d{4})(?!\d)", message):
+                try:
+                    calendar_date = date(int(year), int(month), int(day))
+                except ValueError:
+                    continue
+                hints.append({"requirement_version": revision.get("version"),
+                              "message_index": index,
+                              "source_span": f"{day}/{month}/{year}",
+                              "calendar_date": calendar_date.isoformat(),
+                              "timezone_unresolved": True})
+    return hints
 
 
 def parse_model_output(data: Any) -> ShadowSemanticCore:
@@ -184,6 +235,7 @@ class IntentShadowExtractor:
         initial_errors = core.validation_errors(expected_history=requirement_history)
         if not initial_errors or max_repairs == 0:
             return core, initial_errors
+        guidance = _repair_guidance(core.to_dict(), initial_errors)
         feedback = (
             "The previous semantic core failed deterministic validation. "
             "Regenerate the complete seven-field core from the original requirement only. "
@@ -193,10 +245,82 @@ class IntentShadowExtractor:
             "to a different claim kind, omit derived_from unless a valid same-kind "
             "source exists. Return JSON only.\nValidation errors:\n"
             + json.dumps(initial_errors, ensure_ascii=False)
+            + "\nTyped diagnostics (diagnosis only; regenerate from source):\n"
+            + json.dumps(guidance, ensure_ascii=False)
             + "\nPrevious core:\n"
             + json.dumps(core.to_dict(), ensure_ascii=False)
         )
         return parse_model_output(self.model.generate(system, user + "\n" + feedback)), initial_errors
+
+
+def _repair_guidance(core: dict[str, Any], errors: list[str]) -> list[dict[str, Any]]:
+    """Explain validator failures without changing or authorizing model output."""
+    scopes = {
+        scope["scope_id"]: scope for scope in core.get("behavior_scopes", [])
+        if isinstance(scope, dict) and isinstance(scope.get("scope_id"), str)
+    } if isinstance(core.get("behavior_scopes"), list) else {}
+    guidance: list[dict[str, Any]] = []
+    for error in errors:
+        if error.startswith("scope ") and error.endswith(": invalid continuation_scope_id"):
+            source_id = error[len("scope "):-len(": invalid continuation_scope_id")]
+            source = scopes.get(source_id, {})
+            target_id = source.get("continuation_scope_id")
+            target = scopes.get(target_id, {}) if isinstance(target_id, str) else {}
+            guidance.append({
+                "error": error,
+                "source_scope_type": source.get("scope_type"),
+                "source_transition_kind": source.get("transition_kind"),
+                "target_scope_id": target_id,
+                "target_scope_type": target.get("scope_type"),
+                "rule": ("A continuation is a causal successor, never a branch or timeout "
+                         "alternative. If no successor exists, omit this optional field; "
+                         "retain branch decision_id, timeout decision_id, and path-specific "
+                         "continuations. Otherwise reference an existing transition or "
+                         "terminal_outcome. Do not invent a transition to silence this error."),
+            })
+        elif "conflicting values for " in error or "active claim conflict" in error:
+            guidance.append({
+                "error": error,
+                "rule": ("Check whether the values describe independent obligations. "
+                         "If so, attach each claim to its actual funding or outcome scope; "
+                         "if they are incompatible values for the same obligation, preserve "
+                         "the conflict and request clarification. Do not delete a supported claim."),
+            })
+        elif "invalid evidence target/span" in error or "supporting evidence required" in error:
+            guidance.append({
+                "error": error,
+                "rule": ("Copy an exact contiguous substring from a supplied requirement "
+                         "message that states this fact and role. If none exists, mark the "
+                         "fact unresolved rather than fabricate source evidence."),
+            })
+        elif "unresolved value must be null" in error:
+            guidance.append({
+                "error": error,
+                "rule": ("An unresolved claim must have value=null. If the proposed "
+                         "non-null value is established by an exact source span, use the "
+                         "appropriate supported status and evidence instead. Never keep "
+                         "a known value marked unresolved merely to justify a question."),
+            })
+        elif "deadline value contradicts cited calendar date" in error:
+            guidance.append({
+                "error": error,
+                "rule": ("Recompute POSIX milliseconds from the cited source date and "
+                         "an explicit timezone assumption. Preserve the date in the "
+                         "requirement; do not shift its year to make the integer fit. "
+                         "Relative deadlines must use the corrected absolute anchor."),
+            })
+        elif error.startswith("clarification prediction requires an unresolved claim"):
+            guidance.append({
+                "error": error,
+                "rule": ("Do not ask for optional implementation details or facts already "
+                         "established by the requirement. If a critical business fact is "
+                         "genuinely missing, represent that specific claim as unresolved "
+                         "and ask only about it. If an essential behavior is outside the "
+                         "taxonomy, record a source-grounded unrepresented behavior "
+                         "observation. Otherwise choose the supported resolution without "
+                         "inventing an ambiguity."),
+            })
+    return guidance
 
 
 class LegacyReasonerTransport:

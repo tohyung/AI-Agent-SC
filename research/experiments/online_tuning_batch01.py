@@ -31,6 +31,9 @@ from research.stage3.profile_compilers.direct_payment_v1 import (
 from research.stage3.profile_compilers.funded_choice_v1 import (
     FUNDED_CHOICE_PROFILE, compile_funded_choice_v1,
 )
+from research.stage3.profile_compilers.linear_time_release_v1 import (
+    LINEAR_TIME_RELEASE_PROFILE, compile_linear_time_release_v1,
+)
 from research.stage3.profiles import ProfileRegistry
 from research.stage3.reference import PinnedMarloweReference
 from research.stage4.explorer import ExplorationBounds, ExplorationPort
@@ -39,6 +42,7 @@ from research.stage4.oracles import NoWarningsOracle, OraclePort
 
 ROOT = Path(__file__).resolve().parents[2]
 MANIFEST = ROOT / "docs/research/online-tuning-batch01.manifest.json"
+BUDGET_EXTENSION = ROOT / "docs/research/online-tuning-batch01-budget-extension.json"
 DATASET = ROOT / "marlowe_ai_agent/bench/dataset/cases.jsonl"
 RUN_DIR = ROOT / "runs/online-tuning-batch01"
 MODEL_REQUEST_WALL_SECONDS = 300
@@ -85,6 +89,33 @@ def load_batch() -> tuple[dict, list[dict]]:
     if [case["id"] for case in cases] != manifest["case_ids"]:
         raise ValueError("first 20 physical case IDs differ from manifest")
     return manifest, cases
+
+
+def physical_call_limit(manifest: dict, journal_path: Path) -> int:
+    base = manifest["max_physical_model_calls"]
+    if not BUDGET_EXTENSION.exists():
+        return base
+    extension = json.loads(BUDGET_EXTENSION.read_text(encoding="utf-8"))
+    if (extension.get("batch_id") != manifest["batch_id"]
+            or extension.get("original_limit") != base
+            or extension.get("journal_baseline_attempts") != base
+            or type(extension.get("additional_attempts")) is not int
+            or not 0 < extension["additional_attempts"] <= 22):
+        raise ValueError("invalid Batch 01 budget extension")
+    if not journal_path.exists():
+        return base
+    lines = journal_path.read_text(encoding="utf-8").splitlines()
+    if len(lines) < base:
+        return base
+    try:
+        original_entries = [json.loads(line) for line in lines[:base]]
+    except json.JSONDecodeError as exc:
+        raise ValueError("budget extension requires a valid original journal") from exc
+    canonical = json.dumps(original_entries, sort_keys=True, separators=(",", ":"),
+                           ensure_ascii=False).encode("utf-8")
+    if hashlib.sha256(canonical).hexdigest() != extension.get("journal_baseline_sha256"):
+        raise ValueError("budget extension journal fingerprint mismatch")
+    return base + extension["additional_attempts"]
 
 
 def load_synthetic_input(path: Path) -> tuple[list[list[str]], list[dict]]:
@@ -253,12 +284,15 @@ def attach_global_budget(model: LegacyReasonerTransport, journal: PhysicalCallJo
 def batch_wiring() -> ResearchPipelineWiring:
     return ResearchPipelineWiring(
         intent_acceptance_port=SimulatedIntentAcceptancePort(),
-        profile_registry=ProfileRegistry([DIRECT_PAYMENT_PROFILE, FUNDED_CHOICE_PROFILE]),
+        profile_registry=ProfileRegistry([DIRECT_PAYMENT_PROFILE, FUNDED_CHOICE_PROFILE,
+                                          LINEAR_TIME_RELEASE_PROFILE]),
         compiler_plugins={
             (DIRECT_PAYMENT_PROFILE.profile_id, DIRECT_PAYMENT_PROFILE.version):
                 compile_direct_payment_v1,
             (FUNDED_CHOICE_PROFILE.profile_id, FUNDED_CHOICE_PROFILE.version):
                 compile_funded_choice_v1,
+            (LINEAR_TIME_RELEASE_PROFILE.profile_id, LINEAR_TIME_RELEASE_PROFILE.version):
+                compile_linear_time_release_v1,
         },
     )
 
@@ -311,8 +345,9 @@ def run_one(index: int, *, core_schema_version: str = CORE_SCHEMA_VERSION,
     if core_schema_version not in {CORE_SCHEMA_VERSION, CORE_SCHEMA_VERSION_V2}:
         raise ValueError("unsupported core schema version")
     RUN_DIR.mkdir(parents=True, exist_ok=True)
-    journal = PhysicalCallJournal(RUN_DIR / "physical-attempts.jsonl",
-                                  limit=manifest["max_physical_model_calls"])
+    journal_path = RUN_DIR / "physical-attempts.jsonl"
+    journal = PhysicalCallJournal(journal_path,
+                                  limit=physical_call_limit(manifest, journal_path))
     physical_calls_at_start = journal.used
     case = cases[index - 1]
     history = history or [{"version": 1, "messages": [case["prompt"]]}]
@@ -344,8 +379,9 @@ def run_one(index: int, *, core_schema_version: str = CORE_SCHEMA_VERSION,
     if cached is None:
         attach_global_budget(model, journal, case["id"])
     pipeline = build_research_pipeline(model=model, wiring=batch_wiring())
+    max_core_validation_repairs = 1 if journal.limit - journal.used >= 3 else 0
     run = pipeline.run(history, stop_after="intent_extraction",
-                       options={"max_core_validation_repairs": 1,
+                       options={"max_core_validation_repairs": max_core_validation_repairs,
                                 "core_schema_version": core_schema_version})
     extraction_stage = run.stages["intent_extraction"]
     candidate = next((pipeline.store.get(artifact_id).payload for artifact_id in
@@ -407,6 +443,7 @@ def run_one(index: int, *, core_schema_version: str = CORE_SCHEMA_VERSION,
                 "response_diagnostics": getattr(model, "response_diagnostics", []),
                 "request_diagnostics": getattr(model, "request_diagnostics", []),
                 "physical_calls": journal.used - physical_calls_at_start,
+                "max_core_validation_repairs": max_core_validation_repairs,
                 "case_physical_calls_total": sum(entry["case_id"] == case["id"]
                                                  for entry in journal.entries),
                 "cumulative_physical_calls": journal.used,

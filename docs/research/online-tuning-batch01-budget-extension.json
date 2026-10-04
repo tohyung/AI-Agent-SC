@@ -1,0 +1,8 @@
+{
+  "batch_id": "online-tuning-batch01",
+  "original_limit": 48,
+  "journal_baseline_attempts": 48,
+  "journal_baseline_sha256": "519d29c4be026b0ea3498a241fd3b57c570f9451cb9ed93df7dd7119da8a2000",
+  "additional_attempts": 22,
+  "basis": "User reported OpenRouter 28/50 requests used on 2026-10-03 and explicitly requested continuation. The original 48 pre-request journal entries remain immutable. This extension conservatively permits at most 22 further outbound attempts; provider-accounted requests and journaled attempts are not assumed equal."
+}

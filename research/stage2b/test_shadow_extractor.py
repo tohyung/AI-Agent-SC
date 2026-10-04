@@ -97,6 +97,19 @@ def test_bounded_validation_feedback_preserves_validator_authority():
     assert "never use ellipses" in model.calls[1][1]
 
 
+def test_calendar_hints_are_source_only_and_preserve_timezone_uncertainty():
+    history = [{"version": 1, "messages": ["Before 08/01/2027."]},
+               {"version": 2, "messages": ["Use 2027-01-15T00:00:00Z."]}]
+    hints = shadow_extractor._calendar_hints(history)
+    assert hints[0]["calendar_date"] == "2027-01-08"
+    assert hints[0]["timezone_unresolved"] is True
+    assert "exact_utc_milliseconds" not in hints[0]
+    assert hints[1]["exact_utc_milliseconds"] == 1799971200000
+    _, user = shadow_extractor.build_prompt(history)
+    assert "Deterministic calendar hints" in user
+    assert "2027-01-15T00:00:00Z" in user
+
+
 def test_prompt_contract_tracks_validator_enums(monkeypatch):
     contract = intent_spec.core_prompt_schema_contract()
     fields = {

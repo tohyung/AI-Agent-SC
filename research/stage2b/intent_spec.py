@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import date, datetime, timezone
 import json
+import re
 from typing import Any
 
 from research.stage2a.foundation import CLAIM_KINDS, CLAIM_STATUSES, RESOLUTIONS, SCOPE_TYPES
@@ -67,7 +69,8 @@ SCOPE_FIELDS_V2 = {
     "transition": SCOPE_FIELDS["transition"] | {"choice_bounds", "continuation_scope_id"},
     "branch": SCOPE_FIELDS["branch"] | {"choice_guard", "continuation_scope_id"},
     "timeout": SCOPE_FIELDS["timeout"] | {"continuation_scope_id"},
-    "terminal_outcome": SCOPE_FIELDS["terminal_outcome"] | {"parent_scope_id"},
+    "terminal_outcome": SCOPE_FIELDS["terminal_outcome"] |
+                        {"parent_scope_id", "continuation_scope_id"},
 }
 CHOICE_GUARD_OPERATORS = {"ge", "gt", "le", "lt", "eq"}
 DECISION_TARGET_SCOPE_TYPE = "transition"
@@ -282,6 +285,37 @@ def valid_supporting_evidence(claim: dict[str, Any], messages: dict[tuple[int, i
     evidence = claim.get("evidence")
     return _evidence_valid(evidence, messages) and any(
         item["relation"] == "supports" for item in evidence)
+
+
+def _absolute_deadline_mismatch(claim: dict[str, Any]) -> bool:
+    """Reject a date claim whose cited calendar year/day contradicts its POSIX value."""
+    value = claim.get("value")
+    if type(value) is not int:
+        return False
+    cited_dates: list[date] = []
+    for item in claim.get("evidence", []) if isinstance(claim.get("evidence"), list) else []:
+        if not isinstance(item, dict) or item.get("relation") != "supports":
+            continue
+        span = item.get("span")
+        if not isinstance(span, str):
+            continue
+        for day, month, year in re.findall(r"(?<!\d)(\d{1,2})/(\d{1,2})/(\d{4})(?!\d)", span):
+            try:
+                cited_dates.append(date(int(year), int(month), int(day)))
+            except ValueError:
+                continue
+        for year, month, day in re.findall(r"(?<!\d)(\d{4})-(\d{1,2})-(\d{1,2})(?!\d)", span):
+            try:
+                cited_dates.append(date(int(year), int(month), int(day)))
+            except ValueError:
+                continue
+    if not cited_dates:
+        return False
+    try:
+        actual = datetime.fromtimestamp(value / 1000, tz=timezone.utc).date()
+    except (OverflowError, OSError, ValueError):
+        return True
+    return all(abs((actual - cited).days) > 1 for cited in cited_dates)
 
 
 def _messages(history: Any, errors: list[str]) -> dict[tuple[int, int], str]:
@@ -509,6 +543,8 @@ def validate_shadow_semantic_core(spec: Any, *,
             errors.append(f"claim {claim_id}: assumption_reason required")
         if status == "unresolved" and claim.get("value") is not None:
             errors.append(f"claim {claim_id}: unresolved value must be null")
+        if v2 and _allowed(kind, DEADLINE_KINDS) and _absolute_deadline_mismatch(claim):
+            errors.append(f"claim {claim_id}: deadline value contradicts cited calendar date")
         if status == "derived":
             if claim.get("criticality") == "financial" and not claim.get("normalization_basis"):
                 errors.append(f"claim {claim_id}: normalization_basis required")
@@ -588,6 +624,19 @@ def validate_shadow_semantic_core(spec: Any, *,
         errors.append("required_clarifications must contain nonempty questions")
     elif _allowed(resolution, RESOLUTION_REQUIRED) and not clarifications:
         errors.append("clarification/conflict prediction requires a business question")
+    if v2 and resolution == "clarification_required":
+        has_unresolved_claim = any(
+            isinstance(claim, dict) and claim.get("status") == "unresolved"
+            for claim in raw_claims
+        )
+        has_unrepresented_behavior = isinstance(spec.get("unscored_observations"), list) and any(
+            isinstance(item, dict) and
+            item.get("reason") == "outside_stage2b_v2_claim_taxonomy"
+            for item in spec["unscored_observations"]
+        )
+        if not has_unresolved_claim and not has_unrepresented_behavior:
+            errors.append("clarification prediction requires an unresolved claim or "
+                          "unrepresented behavior observation")
     if resolution == "accepted_interpretation":
         if any(claim.get("criticality") == "financial" and _allowed(
                claim.get("status"), UNSAFE_ACCEPT_STATUSES) for claim in raw_claims

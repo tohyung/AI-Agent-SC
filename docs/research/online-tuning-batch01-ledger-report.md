@@ -429,3 +429,67 @@ rewrite, or hidden evidence deletion was performed.
   the report alone. No API key was placed in source/report/manifest.
 - Final `git diff --check` exited 0 (only Windows LF/CRLF notices); no
   commit or push was made in this execution.
+
+## Continuation after user-authorized budget extension (2026-10-04)
+
+The original 48-attempt journal was preserved. The user reported that
+OpenRouter had accounted 28/50 daily requests and requested continuation.
+`online-tuning-batch01-budget-extension.json` grants **at most 22 additional
+pre-request attempts**, not a reinterpretation or reset of the original
+48-attempt batch limit. Provider-accounted requests and journaled outbound
+attempts are distinct measures. The extension pins a canonical SHA-256 of
+the first 48 journal entries and fails if that prefix differs. The local
+append-only journal now contains
+**70/70** attempts; attempts 49-70 are the extension. No further live model
+request is authorized by this extension.
+
+- Case 03, attempt 08: after scope-repair diagnostics and two simulated
+  clarification revisions, the model still predicted clarification without
+  an unresolved claim or unrepresented behavior. Core invalid; simulated
+  acceptance blocked; no compiler/reference/ledger case verdict.
+- Case 04, attempt 02: core structurally valid but waits for clarification
+  on the two funding accounts, swap outcomes and recipients. The business
+  identity of GOLD reward points as an on-chain asset remains unproven.
+  No multi-asset swap compiler or ledger case verdict was claimed.
+- Case 05, attempt 02: core invalid; the model invented numeric Choice
+  bounds/guards for two sequential milestones and a recipient evidence span.
+  No source-backed numeric choice or compiler/ledger case verdict exists.
+- Case 06, attempt 06: a simulated-customer revision specified Huy's
+  funding account, Nga as recipient, two 17.5 ADA releases, and UTC dates.
+  Attempt 04 had passed the old validator and simulated acceptance, but
+  its three POSIX timestamps corresponded to 2024 despite source ISO dates
+  in 2027. That earlier PASS is superseded by the corrected validator, not
+  promoted into a ledger result. Attempt 05 was blocked for the same date
+  mismatch; attempt 06 is core invalid due to three invalid `derived_from`
+  references and unsupported clarification. No case-06 ledger verdict exists.
+
+General harness changes in this continuation: typed, source-preserving
+validation feedback; v2 clarification consistency; absolute calendar-date
+checks for both `dd/mm/yyyy` and ISO `YYYY-MM-DD`; deterministic UTC hints
+only for exact `Z` timestamps; explicit terminal-outcome continuation schema;
+and a conservative two-installment ADA time-release compiler profile. The
+profile passed a real pinned Haskell-reference trace with two 17.5 ADA
+payments, but that is a synthetic fixture, **not** case-06 acceptance or
+ledger validation. The last available outbound attempt ran with repair
+disabled, so its raw candidate and diagnostics were retained. No candidate,
+frozen dataset, hidden evaluator, authority label, or ledger verdict was
+rewritten to force progression.
+
+Offline revalidation of the two historical ledger-size PASS candidates
+(`case-01-attempt-08` and `case-02-attempt-07`) under the new core-v2
+validator found no errors. This does not rerun their model extraction or
+change the limited meaning of their earlier size-analysis verdicts.
+
+Final verification for this continuation: `python -m pytest research/ -q`
+reported `324 passed, 20 skipped`; the agent test suite reported
+`228 passed, 7 skipped`. In WSL, the real-reference time-release test file
+reported `3 passed` (no skip). Ruff F401/F841, compileall, and
+`git diff --check` passed.
+
+Pre-push verification repeated both suites separately with the same results.
+A combined invocation of both test roots in one pytest process was not clean:
+`551 passed, 27 skipped, 1 failed`. The unrelated pinned-reference unit test
+could not resolve `tools.marlowe_smt` because another `tools` module shadowed
+that package during combined collection. The two separate suite invocations
+pass; this combined-run import collision was not relabeled as a pass or folded
+into the Batch 01 patch.
