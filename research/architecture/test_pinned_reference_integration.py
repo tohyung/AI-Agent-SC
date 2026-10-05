@@ -69,7 +69,7 @@ def test_adapter_configuration_is_unit_level_only():
     for timeout in (0, -1):
         with pytest.raises(ValueError, match="positive"):
             PinnedMarloweReference(hard_timeout_seconds=timeout)
-    with patch("tools.marlowe_smt.run_reference.execute", return_value={"status": "unit"}) as mocked:
+    with patch("research.integrations.reference_driver.execute", return_value={"status": "unit"}) as mocked:
         reference = PinnedMarloweReference(binary="unit-binary", hard_timeout_seconds=10.0)
         assert reference.execute(_request()) == {"status": "unit"}
         mocked.assert_called_once_with(_request().to_dict(), binary="unit-binary",

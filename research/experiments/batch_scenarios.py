@@ -14,6 +14,7 @@ from research.architecture.status import AuthorityLevel, ImplementationStatus
 from research.stage3.comparison import BehaviorExpectation
 from research.stage3.reference import ReferenceRequest
 from research.stage2b.intent_spec import parse_native_asset_id
+from research.stage4.declared_domain import DeclaredActionDomain
 
 
 ADA = {"currency_symbol": "", "token_name": ""}
@@ -93,50 +94,6 @@ class SwapTransactionDomain:
                        for field, key in (("party", "party"),
                                           ("into_account", "account"),
                                           ("of_token", "token")))]
-
-
-@dataclass(frozen=True)
-class DeclaredActionDomain:
-    """Match AST-enabled actions to independent, intent-declared transactions."""
-
-    domain_id: str
-    declared: tuple[dict[str, Any], ...]
-    finite: bool = True
-
-    def transactions(self, state: dict[str, Any], contract: Any) -> list[dict[str, Any]]:
-        if contract == "close":
-            return []
-        if isinstance(contract, dict) and "pay" in contract:
-            return [_transaction("NoInput")]
-        if not isinstance(contract, dict) or not isinstance(contract.get("when"), list):
-            return []
-        if not contract["when"]:
-            timeout = contract.get("timeout")
-            return [tx for tx in self.declared
-                    if tx.get("inputs") == []
-                    and tx.get("interval") == {"from": timeout, "to": timeout}]
-        enabled = [item["case"] for item in contract["when"]
-                   if isinstance(item, dict) and isinstance(item.get("case"), dict)]
-        matches = []
-        for tx in self.declared:
-            inputs = tx.get("inputs")
-            if not isinstance(inputs, list) or len(inputs) != 1:
-                continue
-            item = inputs[0]
-            if item.get("type") == "Choice" and any(
-                    action.get("for_choice") == item.get("choice_id")
-                    and any(bound.get("from") <= item.get("chosen") <= bound.get("to")
-                            for bound in action.get("choose_between", []))
-                    for action in enabled if "for_choice" in action):
-                matches.append(tx)
-            elif item.get("type") == "Deposit" and any(
-                    action.get("party") == item.get("party")
-                    and action.get("into_account") == item.get("account")
-                    and action.get("of_token") == item.get("token")
-                    and action.get("deposits") == item.get("amount")
-                    for action in enabled if "deposits" in action):
-                matches.append(tx)
-        return matches
 
 
 @dataclass(frozen=True)

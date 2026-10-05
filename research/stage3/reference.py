@@ -32,6 +32,6 @@ class PinnedMarloweReference:
         self.hard_timeout_seconds = hard_timeout_seconds
 
     def execute(self, request: ReferenceRequest) -> dict[str, Any]:
-        from tools.marlowe_smt.run_reference import execute
+        from research.integrations.reference_driver import execute
         return execute(request.to_dict(), binary=self.binary,
                        hard_timeout_seconds=self.hard_timeout_seconds)

@@ -91,7 +91,13 @@ class ExplorationPort:
         output = ArtifactEnvelope("exploration-graph", "v1", "exploration",
                                   ImplementationStatus.IMPLEMENTED_UNVALIDATED,
                                   AuthorityLevel.NO_AUTHORITY, graph)
+        evaluated = bool(graph["traces"]) and all(
+            trace["status"] in {"Success", "TransactionError"}
+            for trace in graph["traces"])
         return StageExecution(StageResult(
             "exploration", ImplementationStatus.IMPLEMENTED_UNVALIDATED,
-            StageRunStatus.SUCCEEDED, input_artifacts=[contract.artifact_id],
+            StageRunStatus.SUCCEEDED if evaluated else StageRunStatus.INCONCLUSIVE,
+            semantic_status="BOUNDED_TRACES" if evaluated else "NO_RELIABLE_TRACES",
+            input_artifacts=[contract.artifact_id],
+            diagnostics=[] if evaluated else ["no reliable reference traces in declared domain"],
             limitations=graph["limitations"]), [output])

@@ -46,6 +46,9 @@ class OraclePort:
                                               diagnostics=["exploration graph or oracle unavailable"]))
         findings = [oracle.evaluate(trace) for trace in graph.payload["traces"]
                     for oracle in self.oracles]
+        evaluated = any(item.get("verdict") in {
+            AssuranceVerdict.SATISFIED.value, AssuranceVerdict.VIOLATED.value}
+            for item in findings)
         output = ArtifactEnvelope("oracle-findings", "v1", "oracle_evaluation",
                                   ImplementationStatus.IMPLEMENTED_UNVALIDATED,
                                   AuthorityLevel.NO_AUTHORITY,
@@ -53,5 +56,8 @@ class OraclePort:
                                    "scope": "observed traces only"})
         return StageExecution(StageResult(
             "oracle_evaluation", ImplementationStatus.IMPLEMENTED_UNVALIDATED,
-            StageRunStatus.SUCCEEDED, input_artifacts=[graph.artifact_id],
+            StageRunStatus.SUCCEEDED if evaluated else StageRunStatus.INCONCLUSIVE,
+            semantic_status="OBSERVED_VERDICTS" if evaluated else "NO_EVALUATED_ORACLE",
+            input_artifacts=[graph.artifact_id],
+            diagnostics=[] if evaluated else ["no trace received an evaluated oracle verdict"],
             limitations=["a SATISFIED trace is not universal proof"]), [output])

@@ -11,6 +11,7 @@ from research.architecture.ports import StageContext, StageExecution, latest_art
 from research.architecture.status import AuthorityLevel, ImplementationStatus, StageRunStatus
 
 from .reference import ReferenceExecutor, ReferenceRequest
+from .intent_alignment import check_intent_alignment
 
 
 @dataclass(frozen=True)
@@ -57,9 +58,11 @@ def _observed_items(raw: dict[str, Any], field: str) -> list[dict[str, Any]] | N
 
 class SemanticComparisonPort:
     def __init__(self, executor: ReferenceExecutor | None = None,
-                 expectation_policy: ExpectationPolicy | None = None) -> None:
+                 expectation_policy: ExpectationPolicy | None = None,
+                 require_intent_alignment: bool = False) -> None:
         self.executor = executor
         self.expectation_policy = expectation_policy
+        self.require_intent_alignment = require_intent_alignment
 
     def execute(self, artifacts: list[ArtifactEnvelope], context: StageContext) -> StageExecution:
         contract = latest_artifact(artifacts, "contract-candidate")
@@ -68,8 +71,55 @@ class SemanticComparisonPort:
             return StageExecution(StageResult("semantic_comparison", ImplementationStatus.SCAFFOLDED,
                                               StageRunStatus.NOT_EVALUATED,
                                               diagnostics=["contract or accepted intent missing"]))
+        alignment = None
+        if self.require_intent_alignment:
+            spec = accepted.payload.get("accepted_spec")
+            if not isinstance(spec, dict):
+                return StageExecution(StageResult(
+                    "semantic_comparison", ImplementationStatus.IMPLEMENTED_UNVALIDATED,
+                    StageRunStatus.BLOCKED,
+                    diagnostics=["accepted IntentSpec unavailable for alignment"]), [])
+            alignment = check_intent_alignment(
+                spec, contract.payload["contract"],
+                contract.payload.get("mapping_evidence", []),
+            )
+            if alignment["verdict"] == "VIOLATED":
+                status = StageRunStatus.FAILED
+                result = ArtifactEnvelope(
+                    "reference-comparison", "v1", "semantic_comparison",
+                    ImplementationStatus.IMPLEMENTED_UNVALIDATED,
+                    AuthorityLevel.NO_AUTHORITY,
+                    {"verdict": alignment["verdict"], "intent_alignment": alignment,
+                     "contract_artifact_id": contract.artifact_id,
+                     "reference_result": None, "reference_identity": None},
+                )
+                return StageExecution(StageResult(
+                    "semantic_comparison", ImplementationStatus.IMPLEMENTED_UNVALIDATED,
+                    status, semantic_status=alignment["verdict"],
+                    input_artifacts=[contract.artifact_id, accepted.artifact_id],
+                    diagnostics=[f"{item['source_kind']} {item['source_id']}: {item['reason']}"
+                                 for item in alignment["checks"]
+                                 if item["status"] != "SATISFIED"],
+                    limitations=alignment["limitations"],
+                ), [result])
         expectation_artifact = latest_artifact(artifacts, "behavior-expectation")
         if expectation_artifact is None or self.executor is None:
+            if alignment is not None:
+                result = ArtifactEnvelope(
+                    "reference-comparison", "v1", "semantic_comparison",
+                    ImplementationStatus.IMPLEMENTED_UNVALIDATED,
+                    AuthorityLevel.NO_AUTHORITY,
+                    {"verdict": "INCONCLUSIVE", "intent_alignment": alignment,
+                     "contract_artifact_id": contract.artifact_id,
+                     "reference_result": None, "reference_identity": None},
+                )
+                return StageExecution(StageResult(
+                    "semantic_comparison", ImplementationStatus.IMPLEMENTED_UNVALIDATED,
+                    StageRunStatus.INCONCLUSIVE, semantic_status="INCONCLUSIVE",
+                    input_artifacts=[contract.artifact_id, accepted.artifact_id],
+                    diagnostics=["independent expectation or reference executor unavailable"],
+                    limitations=["AST field alignment is not behavioral intent conformance"],
+                ), [result])
             return StageExecution(StageResult("semantic_comparison", ImplementationStatus.SCAFFOLDED,
                                               StageRunStatus.INCONCLUSIVE,
                                               input_artifacts=[contract.artifact_id, accepted.artifact_id],
@@ -175,6 +225,8 @@ class SemanticComparisonPort:
         payload = {"reference_result": raw, "reference_identity": reference_identity,
                    "expectation": expectation.to_dict(), "verdict": verdict,
                    "contract_artifact_id": contract.artifact_id}
+        if alignment is not None:
+            payload["intent_alignment"] = alignment
         if mismatches:
             payload["mismatches"] = mismatches
         if unavailable:
@@ -190,7 +242,10 @@ class SemanticComparisonPort:
             semantic_status=verdict, input_artifacts=input_ids,
             diagnostics=[f"observable mismatch: {field}" for field in mismatches]
                         + [f"observable unavailable: {field}" for field in unavailable],
-            limitations=["one reference trace is not compiler proof or ledger validity"]), [result])
+            limitations=["one reference trace is not whole-intent proof or ledger validity"]
+                        + (["claim/scope alignment remains inconclusive"]
+                           if alignment is not None and alignment["verdict"] == "INCONCLUSIVE"
+                           else [])), [result])
 
 
 class ExpectationPolicy(Protocol):

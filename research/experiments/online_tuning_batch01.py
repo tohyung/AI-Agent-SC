@@ -21,27 +21,14 @@ from research.experiments.batch_scenarios import (SyntheticExpectationPolicy,
                                                  scenario_from_intent)
 from research.experiments.simulated_acceptance import SimulatedIntentAcceptancePort
 from research.final_validation.marlowe_cli import (MarloweCliSizeAnalysisPort,
-                                                   MarloweCliSizeConfig)
+                                                   MarloweCliSizeConfig,
+                                                   config_from_environment)
 from research.stage2b.intent_spec import (CORE_SCHEMA_VERSION, CORE_SCHEMA_VERSION_V2,
                                           CORE_SCHEMA_VERSION_V3)
 from research.stage2b.shadow_extractor import LegacyReasonerTransport
+from research.stage2b.compiler_feedback import CompilerFeedbackModel
 from research.stage3.comparison import SemanticComparisonPort
-from research.stage3.profile_compilers.direct_payment_v1 import (
-    DIRECT_PAYMENT_PROFILE, compile_direct_payment_v1,
-)
-from research.stage3.profile_compilers.funded_choice_v1 import (
-    FUNDED_CHOICE_PROFILE, compile_funded_choice_v1,
-)
-from research.stage3.profile_compilers.funded_swap_v1 import (
-    FUNDED_SWAP_PROFILE, compile_funded_swap_v1,
-)
-from research.stage3.profile_compilers.linear_time_release_v1 import (
-    LINEAR_TIME_RELEASE_PROFILE, compile_linear_time_release_v1,
-)
-from research.stage3.profile_compilers.sequential_approval_v1 import (
-    SEQUENTIAL_APPROVAL_PROFILE, compile_sequential_approval_v1,
-)
-from research.stage3.profiles import ProfileRegistry
+from research.stage3.profile_compilers import configured_compilers
 from research.stage3.reference import PinnedMarloweReference
 from research.stage4.explorer import ExplorationBounds, ExplorationPort
 from research.stage4.oracles import NoWarningsOracle, OraclePort
@@ -81,47 +68,6 @@ class CachedCoreModel:
 
     def generate(self, system: str, user: str) -> dict:
         return self.core
-
-
-class CompilerFeedbackModel:
-    """Ask the model for a new core; never mutate the prior candidate."""
-
-    def __init__(self, base: LegacyReasonerTransport, prior_core: dict,
-                 diagnostics: list[str]) -> None:
-        self.base = base
-        self.prior_core = prior_core
-        self.diagnostics = diagnostics
-
-    def __getattr__(self, name: str) -> Any:
-        return getattr(self.base, name)
-
-    def generate(self, system: str, user: str) -> dict:
-        feedback = (
-            "\nPrevious core passed semantic-core and full structural validation, "
-            "but the deterministic compiler rejected it. Regenerate the COMPLETE "
-            "seven-field semantic core from requirement_history. Correct only "
-            "source-grounded omissions or mappings shown below. Do not delete a "
-            "real requirement, invent a business fact, change resolution merely "
-            "to match a compiler profile, or edit the previous candidate in place. "
-            "Re-evaluate every unscored observation against later explicit "
-            "revisions and already represented scopes/claims; do not preserve "
-            "a superseded uncertainty as unsupported behavior. A named actor's "
-            "approval can be encoded as that actor's Choice without requiring "
-            "the user to specify wallet-signature, oracle, or multisig mechanics "
-            "unless such a mechanism is itself a business requirement. "
-            "If a later absolute deadline resolves an earlier relative date, "
-            "retain the actual deadline claims but drop the obsolete uncertainty "
-            "observation. A statement that the contract does not submit its own "
-            "transactions describes normal ledger operation, not an autonomous "
-            "contract feature or a missing trigger for a time-based payment; "
-            "do not turn it into an autonomous_execution claim or question. "
-            "The result will be independently validated and compiled again.\n"
-            "Compiler diagnostics:\n"
-            + json.dumps(self.diagnostics, ensure_ascii=False)
-            + "\nPrevious valid core:\n"
-            + json.dumps(self.prior_core, ensure_ascii=False)
-        )
-        return self.base.generate(system, user + feedback)
 
 
 def load_compiler_feedback(path: Path, *, case_id: str, history: list[dict],
@@ -395,47 +341,16 @@ def attach_global_budget(model: LegacyReasonerTransport, journal: PhysicalCallJo
 
 
 def batch_wiring() -> ResearchPipelineWiring:
+    registry, plugins = configured_compilers()
     return ResearchPipelineWiring(
         intent_acceptance_port=SimulatedIntentAcceptancePort(),
-        profile_registry=ProfileRegistry([DIRECT_PAYMENT_PROFILE, FUNDED_CHOICE_PROFILE,
-                                          FUNDED_SWAP_PROFILE, LINEAR_TIME_RELEASE_PROFILE,
-                                          SEQUENTIAL_APPROVAL_PROFILE]),
-        compiler_plugins={
-            (DIRECT_PAYMENT_PROFILE.profile_id, DIRECT_PAYMENT_PROFILE.version):
-                compile_direct_payment_v1,
-            (FUNDED_CHOICE_PROFILE.profile_id, FUNDED_CHOICE_PROFILE.version):
-                compile_funded_choice_v1,
-            (FUNDED_SWAP_PROFILE.profile_id, FUNDED_SWAP_PROFILE.version):
-                compile_funded_swap_v1,
-            (LINEAR_TIME_RELEASE_PROFILE.profile_id, LINEAR_TIME_RELEASE_PROFILE.version):
-                compile_linear_time_release_v1,
-            (SEQUENTIAL_APPROVAL_PROFILE.profile_id, SEQUENTIAL_APPROVAL_PROFILE.version):
-                compile_sequential_approval_v1,
-        },
+        profile_registry=registry,
+        compiler_plugins=plugins,
     )
 
 
 def configured_ledger() -> MarloweCliSizeConfig | None:
-    names = ("MARLOWE_LEDGER_BINARY", "MARLOWE_LEDGER_NODE_CLI",
-             "MARLOWE_LEDGER_SOCKET", "MARLOWE_LEDGER_TEMPLATE",
-             "MARLOWE_LEDGER_BINARY_SHA256", "MARLOWE_LEDGER_SOURCE_COMMIT",
-             "MARLOWE_LEDGER_TEMPLATE_SHA256", "MARLOWE_LEDGER_TESTNET_MAGIC")
-    values = {name: os.getenv(name) for name in names}
-    if not any(values.values()):
-        return None
-    missing = [name for name, value in values.items() if not value]
-    if missing:
-        raise ValueError(f"incomplete ledger configuration: {', '.join(missing)}")
-    return MarloweCliSizeConfig(
-        binary=Path(values["MARLOWE_LEDGER_BINARY"]),
-        node_cli_binary=Path(values["MARLOWE_LEDGER_NODE_CLI"]),
-        socket=Path(values["MARLOWE_LEDGER_SOCKET"]),
-        initialized_template=Path(values["MARLOWE_LEDGER_TEMPLATE"]),
-        expected_binary_sha256=values["MARLOWE_LEDGER_BINARY_SHA256"],
-        source_commit=values["MARLOWE_LEDGER_SOURCE_COMMIT"],
-        expected_template_sha256=values["MARLOWE_LEDGER_TEMPLATE_SHA256"],
-        testnet_magic=int(values["MARLOWE_LEDGER_TESTNET_MAGIC"]),
-    )
+    return config_from_environment()
 
 
 def configure_downstream(pipeline: Any, accepted: Any, profile_id: str, *,

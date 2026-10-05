@@ -442,16 +442,9 @@ def test_stage_execution_budget_blocks_without_calling_next_port():
     assert run.stages["intent_acceptance"].run_status == StageRunStatus.BLOCKED
 
 
-def test_cli_candidate_route_is_offline_and_legacy_model_is_not_constructed(monkeypatch, capsys):
-    import sys
+def test_cli_rejects_removed_candidate_route_without_model_call():
+    import pytest
     from marlowe_ai_agent.marlowe_agent import cli
-
-    def _forbidden(*args, **kwargs):
-        raise AssertionError("legacy model must not be constructed")
-
-    monkeypatch.setattr(cli, "OpenAIReasoner", _forbidden)
-    monkeypatch.setattr(sys, "argv", ["main.py", "--prompt", "pay", "--research-mode", "candidate"])
-    assert cli.main() == 2
-    output = capsys.readouterr()
-    assert '"NOT_EVALUATED"' in output.out
-    assert "Traceback" not in output.err
+    with pytest.raises(SystemExit) as exc:
+        cli.build_parser().parse_args(["--prompt", "pay", "--research-mode", "candidate"])
+    assert exc.value.code == 2

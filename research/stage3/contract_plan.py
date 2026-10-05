@@ -10,7 +10,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from marlowe_ai_agent.marlowe_agent.marlowe_validator import validate_contract
+from research.marlowe_core.marlowe_validator import validate_contract
 from research.stage2b.intent_spec import parse_native_asset_id
 
 

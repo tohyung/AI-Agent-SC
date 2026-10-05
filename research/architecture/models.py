@@ -49,6 +49,7 @@ class ResearchPipelineRun:
     provenance_edges: list[str] = field(default_factory=list)
     provenance_records: dict[str, dict[str, str]] = field(default_factory=dict)
     stage_executions: int = 0
+    execution_history: list[dict[str, Any]] = field(default_factory=list)
     external_artifact_ids: list[str] = field(default_factory=list)
     entry_stage: str = "intent_extraction"
 
@@ -59,4 +60,5 @@ class ResearchPipelineRun:
                 "provenance_edges": list(self.provenance_edges),
                 "provenance_records": dict(self.provenance_records),
             "stage_executions": self.stage_executions,
+            "execution_history": [dict(item) for item in self.execution_history],
             "external_artifact_ids": list(self.external_artifact_ids)}

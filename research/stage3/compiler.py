@@ -10,7 +10,7 @@ from research.architecture.models import StageResult
 from research.architecture.ports import StageContext, StageExecution, latest_artifact
 from research.architecture.status import AuthorityLevel, ImplementationStatus, StageRunStatus
 from research.stage2b.intent_spec import validate_intent_spec
-from marlowe_ai_agent.marlowe_agent.marlowe_validator import validate_contract
+from research.marlowe_core.marlowe_validator import validate_contract
 
 from .models import (AccountIR, AssetIR, ClaimIR, CompilationIR, CompileResult,
                      CompileStatus, FundingRelationIR, OutcomeIR, ParameterIR,

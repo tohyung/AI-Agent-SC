@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from copy import deepcopy
 from typing import Any
 from uuid import uuid4
@@ -24,36 +24,42 @@ STAGE_ORDER = (
 
 class ResearchOrchestrator:
     def __init__(self, ports: Mapping[str, StagePort] | None = None,
-                 store: ArtifactStore | None = None) -> None:
-        unknown = set(ports or {}) - set(STAGE_ORDER)
+                 store: ArtifactStore | None = None,
+                 stage_order: tuple[str, ...] = STAGE_ORDER) -> None:
+        if len(stage_order) != len(set(stage_order)) or not stage_order:
+            raise ValueError("stage_order must contain unique stage names")
+        unknown = set(ports or {}) - set(stage_order)
         if unknown:
             raise ValueError(f"unknown stage ports: {sorted(unknown)}")
         self.ports = dict(ports or {})
         self.store = store or ArtifactStore()
+        self.stage_order = stage_order
 
     def run(self, requirement_history: list[dict[str, Any]], *,
             stop_after: str = "deployment", resume: ResearchPipelineRun | None = None,
             options: dict[str, Any] | None = None,
             external_artifacts: list[ArtifactEnvelope] | None = None,
             invalidate_from: str | None = None,
-            entry_stage: str | None = None) -> ResearchPipelineRun:
-        if stop_after not in STAGE_ORDER:
+            entry_stage: str | None = None,
+            on_stage_start: Callable[[str], None] | None = None) -> ResearchPipelineRun:
+        stage_order = self.stage_order
+        if stop_after not in stage_order:
             raise ValueError(f"unknown stop stage: {stop_after}")
         effective_entry = (resume.entry_stage if resume is not None else
                            (entry_stage if entry_stage is not None else "intent_extraction"))
         if entry_stage is not None and resume is not None and entry_stage != effective_entry:
             raise ValueError("entry_stage differs from resumed run")
-        if effective_entry not in STAGE_ORDER:
+        if effective_entry not in stage_order:
             raise ValueError(f"unknown entry stage: {effective_entry}")
-        entry_index = STAGE_ORDER.index(effective_entry)
-        stop_index = STAGE_ORDER.index(stop_after)
+        entry_index = stage_order.index(effective_entry)
+        stop_index = stage_order.index(stop_after)
         if stop_index < entry_index:
             raise ValueError("stop_after precedes entry_stage")
-        if invalidate_from is not None and invalidate_from not in STAGE_ORDER:
+        if invalidate_from is not None and invalidate_from not in stage_order:
             raise ValueError(f"unknown invalidation stage: {invalidate_from}")
         if invalidate_from is not None and resume is None:
             raise ValueError("invalidate_from requires a resumed run")
-        if invalidate_from is not None and not entry_index <= STAGE_ORDER.index(invalidate_from) <= stop_index:
+        if invalidate_from is not None and not entry_index <= stage_order.index(invalidate_from) <= stop_index:
             raise ValueError("invalidate_from lies outside requested stage slice")
         source = ArtifactEnvelope("requirement-history", "v1", "user_input",
                                   ImplementationStatus.IMPLEMENTED_UNVALIDATED,
@@ -69,14 +75,14 @@ class ResearchOrchestrator:
         if resume is not None and new_external and invalidate_from is None:
             raise ValueError("new external artifact on resume requires invalidate_from")
         if resume is not None:
-            first_stale = next((index for index, stage in enumerate(STAGE_ORDER)
+            first_stale = next((index for index, stage in enumerate(stage_order)
                                 if index >= entry_index and (
                                     stage not in result.stages
                                     or result.stages[stage].run_status != StageRunStatus.SUCCEEDED)),
-                               len(STAGE_ORDER))
+                               len(stage_order))
             if invalidate_from is not None:
-                first_stale = min(first_stale, STAGE_ORDER.index(invalidate_from))
-            invalidated = set(STAGE_ORDER[first_stale:])
+                first_stale = min(first_stale, stage_order.index(invalidate_from))
+            invalidated = set(stage_order[first_stale:])
             for stage in invalidated:
                 result.stages.pop(stage, None)
             result.provenance_edges = [edge_id for edge_id in result.provenance_edges
@@ -99,9 +105,9 @@ class ResearchOrchestrator:
             raise ValueError("max_stage_executions must be a positive integer")
         context = StageContext(run_id, configured)
         previous: StageResult | None = None
-        for stage in STAGE_ORDER[entry_index:stop_index + 1]:
+        for stage in stage_order[entry_index:stop_index + 1]:
             comparison = result.stages.get("semantic_comparison")
-            if (stage == "exploration" and entry_index <= STAGE_ORDER.index("semantic_comparison")
+            if (stage == "exploration" and entry_index <= stage_order.index("semantic_comparison")
                     and (comparison is None or comparison.run_status != StageRunStatus.SUCCEEDED
                          or comparison.semantic_status != "SATISFIED")):
                 blocked = StageResult(stage, ImplementationStatus.SCAFFOLDED,
@@ -147,6 +153,8 @@ class ResearchOrchestrator:
                 result.stages[stage] = budget
                 previous = budget
                 continue
+            if on_stage_start is not None:
+                on_stage_start(stage)
             execution = port.execute(artifacts, context)
             result.stage_executions += 1
             if execution.result.stage != stage:
@@ -161,6 +169,7 @@ class ResearchOrchestrator:
                         result.provenance_edges.append(edge.edge_id)
                         result.provenance_records[edge.edge_id] = edge.to_dict()
             execution.result.output_artifacts = [item.artifact_id for item in execution.artifacts]
+            result.execution_history.append(execution.result.to_dict())
             result.stages[stage] = execution.result
             artifacts.extend(execution.artifacts)
             previous = execution.result

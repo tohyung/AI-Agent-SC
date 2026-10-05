@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 import hashlib
 import json
+import os
 from pathlib import Path
 import subprocess
 import tempfile
@@ -44,6 +45,29 @@ class MarloweCliSizeConfig:
                 raise ValueError(f"{label} must be a lowercase SHA-256 hex digest")
         if not self.source_commit.strip():
             raise ValueError("source_commit must identify the pinned tool source")
+
+
+def config_from_environment() -> MarloweCliSizeConfig | None:
+    names = ("MARLOWE_LEDGER_BINARY", "MARLOWE_LEDGER_NODE_CLI",
+             "MARLOWE_LEDGER_SOCKET", "MARLOWE_LEDGER_TEMPLATE",
+             "MARLOWE_LEDGER_BINARY_SHA256", "MARLOWE_LEDGER_SOURCE_COMMIT",
+             "MARLOWE_LEDGER_TEMPLATE_SHA256", "MARLOWE_LEDGER_TESTNET_MAGIC")
+    values = {name: os.getenv(name) for name in names}
+    if not any(values.values()):
+        return None
+    missing = [name for name, value in values.items() if not value]
+    if missing:
+        raise ValueError(f"incomplete ledger configuration: {', '.join(missing)}")
+    return MarloweCliSizeConfig(
+        binary=Path(values["MARLOWE_LEDGER_BINARY"]),
+        node_cli_binary=Path(values["MARLOWE_LEDGER_NODE_CLI"]),
+        socket=Path(values["MARLOWE_LEDGER_SOCKET"]),
+        initialized_template=Path(values["MARLOWE_LEDGER_TEMPLATE"]),
+        expected_binary_sha256=values["MARLOWE_LEDGER_BINARY_SHA256"],
+        source_commit=values["MARLOWE_LEDGER_SOURCE_COMMIT"],
+        expected_template_sha256=values["MARLOWE_LEDGER_TEMPLATE_SHA256"],
+        testnet_magic=int(values["MARLOWE_LEDGER_TESTNET_MAGIC"]),
+    )
 
 
 def _sha256(path: Path) -> str:

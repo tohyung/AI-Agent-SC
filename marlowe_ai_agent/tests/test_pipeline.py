@@ -7,7 +7,7 @@ from types import ModuleType, SimpleNamespace
 import pytest
 from conftest import FakeSMTBackend, make_draft
 
-from marlowe_agent import cli, openai_reasoner
+from marlowe_agent import legacy_cli as cli, openai_reasoner
 from marlowe_agent.logic_graph import LogicGraphVerifier
 from marlowe_agent.marlowe_ast import pay, prompt_contract_examples
 from marlowe_agent.marlowe_validator import (
@@ -334,10 +334,25 @@ def test_invalid_explicit_limits_raise_value_error(kwargs) -> None:
         AgentPipeline(FakeReasoner([make_draft()]), **kwargs)
 
 
-def test_cli_defaults_are_unlimited() -> None:
+def test_cli_defaults_to_new_pipeline_with_legacy_limits_unchanged() -> None:
     args = cli.build_parser().parse_args(["--prompt", "escrow"])
+    assert args.research_mode == "pipeline"
     assert args.max_iterations is None
     assert args.max_llm_calls is None
+
+
+def test_cli_without_prompt_enters_interactive_new_pipeline(monkeypatch) -> None:
+    observed = {}
+
+    def route(prompt, _args, _interrupted, interactive):
+        observed.update(prompt=prompt, interactive=interactive)
+        return 2
+
+    monkeypatch.setattr(cli, "_run_pipeline_route", route)
+    monkeypatch.setattr("builtins.input", lambda _prompt: "Alice pays Bob")
+    monkeypatch.setattr(sys, "argv", ["main.py", "--no-run-log"])
+    assert cli.main() == 2
+    assert observed == {"prompt": "Alice pays Bob", "interactive": True}
 
 
 def test_always_invalid_ast_stops_at_max_iterations() -> None:
@@ -679,7 +694,7 @@ def test_after_regenerate_always_reruns_semantic_before_logic() -> None:
 
 def test_cli_exit_code_2_when_blocked(monkeypatch) -> None:
     monkeypatch.setattr(cli, "OpenAIReasoner", lambda model=None: FakeReasoner([make_draft(invalid_contract(1))]))
-    monkeypatch.setattr(sys, "argv", ["main.py", "--prompt", "escrow", "--max-iterations", "1", "--trace-only"])
+    monkeypatch.setattr(sys, "argv", ["main.py", "--research-mode", "legacy", "--prompt", "escrow", "--max-iterations", "1", "--trace-only"])
     assert cli.main() == 2
 
 
@@ -689,7 +704,7 @@ def test_cli_reasoner_initialization_error_does_not_traceback(monkeypatch, capsy
         raise error
 
     monkeypatch.setattr(cli, "OpenAIReasoner", fail_initialization)
-    monkeypatch.setattr(sys, "argv", ["main.py", "--prompt", "escrow"])
+    monkeypatch.setattr(sys, "argv", ["main.py", "--research-mode", "legacy", "--prompt", "escrow"])
     assert cli.main() == 2
     captured = capsys.readouterr()
     assert captured.out == ""
@@ -700,7 +715,7 @@ def test_cli_reasoner_initialization_error_does_not_traceback(monkeypatch, capsy
 def test_cli_out_file_written(monkeypatch, tmp_path) -> None:
     target = tmp_path / "result.json"
     monkeypatch.setattr(cli, "OpenAIReasoner", lambda model=None: FakeReasoner([make_draft()]))
-    monkeypatch.setattr(sys, "argv", ["main.py", "--prompt", "escrow", "--out", str(target)])
+    monkeypatch.setattr(sys, "argv", ["main.py", "--research-mode", "legacy", "--prompt", "escrow", "--out", str(target)])
     assert cli.main() == 0
     assert json.loads(target.read_text(encoding="utf-8"))["status"] == "done"
 
@@ -708,7 +723,7 @@ def test_cli_out_file_written(monkeypatch, tmp_path) -> None:
 def test_progress_line_and_jsonl_log_written_each_iteration(monkeypatch, tmp_path, capsys) -> None:
     reasoner = FakeReasoner([make_draft(invalid_contract(1)), make_draft()])
     monkeypatch.setattr(cli, "OpenAIReasoner", lambda model=None: reasoner)
-    monkeypatch.setattr(sys, "argv", ["main.py", "--prompt", "escrow", "--run-log-dir", str(tmp_path)])
+    monkeypatch.setattr(sys, "argv", ["main.py", "--research-mode", "legacy", "--prompt", "escrow", "--run-log-dir", str(tmp_path)])
     assert cli.main() == 0
     lines = capsys.readouterr().out
     assert "Lượt 1 | structural=FAIL" in lines
@@ -725,7 +740,7 @@ def test_run_log_write_failure_does_not_break_run(monkeypatch, tmp_path, capsys)
     target = tmp_path / "not_a_directory"
     target.write_text("occupied", encoding="utf-8")
     monkeypatch.setattr(cli, "OpenAIReasoner", lambda model=None: FakeReasoner([make_draft()]))
-    monkeypatch.setattr(sys, "argv", ["main.py", "--prompt", "escrow", "--run-log-dir", str(target)])
+    monkeypatch.setattr(sys, "argv", ["main.py", "--research-mode", "legacy", "--prompt", "escrow", "--run-log-dir", str(target)])
     assert cli.main() == 0
     assert "không ghi được run log" in capsys.readouterr().err
 
@@ -742,7 +757,7 @@ def test_keyboard_interrupt_returns_partial_result(monkeypatch, tmp_path, capsys
 
     target = tmp_path / "partial.json"
     monkeypatch.setattr(cli, "OpenAIReasoner", lambda model=None: FakeReasoner([draft], semantics=[KeyboardInterrupt()]))
-    monkeypatch.setattr(sys, "argv", ["main.py", "--prompt", "escrow", "--out", str(target),
+    monkeypatch.setattr(sys, "argv", ["main.py", "--research-mode", "legacy", "--prompt", "escrow", "--out", str(target),
                                    "--run-log-dir", str(tmp_path)])
     assert cli.main() == 130
     payload = json.loads(target.read_text(encoding="utf-8"))
@@ -753,7 +768,7 @@ def test_keyboard_interrupt_returns_partial_result(monkeypatch, tmp_path, capsys
 def test_cli_exit_code_130_on_interrupt(monkeypatch, tmp_path) -> None:
     monkeypatch.setattr("builtins.input", lambda _: (_ for _ in ()).throw(KeyboardInterrupt()))
     target = tmp_path / "empty_partial.json"
-    monkeypatch.setattr(sys, "argv", ["main.py", "--out", str(target), "--no-run-log"])
+    monkeypatch.setattr(sys, "argv", ["main.py", "--research-mode", "legacy", "--out", str(target), "--no-run-log"])
     assert cli.main() == 130
     assert json.loads(target.read_text(encoding="utf-8"))["stop_reason"] == "interrupted"
 
@@ -764,7 +779,7 @@ def test_cli_reasoner_initialization_interrupt_writes_partial_result(monkeypatch
 
     target = tmp_path / "init_partial.json"
     monkeypatch.setattr(cli, "OpenAIReasoner", interrupt)
-    monkeypatch.setattr(sys, "argv", ["main.py", "--prompt", "escrow", "--out", str(target), "--no-run-log"])
+    monkeypatch.setattr(sys, "argv", ["main.py", "--research-mode", "legacy", "--prompt", "escrow", "--out", str(target), "--no-run-log"])
     assert cli.main() == 130
     assert json.loads(target.read_text(encoding="utf-8"))["stop_reason"] == "interrupted"
 
@@ -901,7 +916,7 @@ def test_fake_benchmark_does_not_spawn_smt(monkeypatch) -> None:
 
 def test_cli_trace_only_success_with_live_node3_result(monkeypatch, capsys) -> None:
     monkeypatch.setattr(cli, "OpenAIReasoner", lambda model=None: FakeReasoner([make_draft()]))
-    monkeypatch.setattr(sys, "argv", ["main.py", "--prompt", "escrow", "--trace-only", "--no-run-log"])
+    monkeypatch.setattr(sys, "argv", ["main.py", "--research-mode", "legacy", "--prompt", "escrow", "--trace-only", "--no-run-log"])
     assert cli.main() == 0
     output = capsys.readouterr().out
     assert "Node 3 - Verification" in output

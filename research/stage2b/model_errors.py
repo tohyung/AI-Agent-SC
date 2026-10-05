@@ -4,20 +4,24 @@ from __future__ import annotations
 
 import json
 
-from marlowe_ai_agent.marlowe_agent.models import LLMBudgetError, LLMPhaseError
+from research.integrations.model_transport import ModelTransportError
 from research.stage2b.shadow_extractor import InvalidModelOutput
 
 
 def sanitized_model_error(exc: Exception) -> dict:
-    if isinstance(exc, LLMBudgetError):
+    if (isinstance(exc, ModelTransportError) and exc.phase == "budget"
+            or type(exc).__name__ == "LLMBudgetError"):
         return {"code": "physical_call_budget_exhausted", "phase": "budget",
                 "message": "Physical model-call budget exhausted.",
                 "model_content_received": None, "repair_attempted": None,
                 "exception_type": type(exc).__name__}
-    if isinstance(exc, LLMPhaseError):
+    if isinstance(exc, ModelTransportError) or (
+            hasattr(exc, "code") and hasattr(exc, "phase")
+            and hasattr(exc, "model_content_received")):
         messages = {
             "transport_response_decode_error": "Provider response could not be decoded.",
             "model_output_invalid_after_repair": "Model output remained invalid JSON after repair.",
+            "invalid_json_after_repair": "Model output remained invalid JSON after repair.",
         }
         return {"code": exc.code, "phase": exc.phase,
                 "message": messages.get(exc.code, "Model request failed."),

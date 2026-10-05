@@ -2,7 +2,7 @@
 
 import pytest
 
-from marlowe_ai_agent.marlowe_agent.marlowe_validator import validate_contract
+from research.marlowe_core.marlowe_validator import validate_contract
 from research.stage3.contract_plan import (Case, Choice, ChoiceGuard, ClaimValue,
                                            Close, Deposit, IfChoice, Pay,
                                            PlanError, When, lower_contract_plan)
