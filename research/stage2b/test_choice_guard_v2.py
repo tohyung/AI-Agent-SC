@@ -53,6 +53,8 @@ def test_v2_choice_guards_survive_projection_without_changing_v1():
     system, user = build_prompt(source["requirement_history"],
                                 core_schema_version=CORE_SCHEMA_VERSION_V2)
     assert "numeric Choice" in system
+    assert "sole bound is from=1,to=1" in system
+    assert "not an invented Choice value 0" in system
     assert "choice_guard" in user
     assert "A Choice transition does not continue to its timeout scope" in system
 
@@ -169,6 +171,22 @@ def test_repair_guidance_distinguishes_independent_obligations_and_bad_evidence(
     system, _ = build_prompt(guarded_choice()["requirement_history"],
                              core_schema_version=CORE_SCHEMA_VERSION_V2)
     assert "Reward points are not automatically an" in system
+    assert "optional hypothetical fee" in system
+    assert "classify that outcome's recipient as refund_recipient" in system
+
+
+def test_evidence_feedback_locates_exact_span_without_rewriting_claim():
+    core = {"claims": [{"claim_id": "source", "kind": "payment_source_account_owner",
+                        "value": "Dung", "evidence": [{"requirement_version": 2,
+                        "message_index": 0, "span": "account of Dung"}]}]}
+    history = [{"version": 2, "messages": ["Dung deposits.",
+                                          "Pay from account of Dung."]}]
+    original = deepcopy(core)
+    guidance = _repair_guidance(core, ["claim source: invalid evidence target/span"], history)
+    assert guidance[0]["exact_span_locations"] == [{
+        "requirement_version": 2, "message_index": 1, "span": "account of Dung"}]
+    assert "independently verify" in guidance[0]["rule"]
+    assert core == original
 
 
 def test_v2_clarification_needs_a_grounded_missing_fact_or_behavior():

@@ -22,6 +22,7 @@ FUNDED_CHOICE_PROFILE = SupportedProfile(
     scope_types=frozenset({"global", "transition", "branch", "timeout", "terminal_outcome"}),
     transition_kinds=frozenset({"deposit", "choice"}),
     supported_assets=frozenset({"ADA"}), supports_branches=True, supports_timeouts=True,
+    transition_counts=(("deposit", 1), ("choice", 1)),
 )
 
 

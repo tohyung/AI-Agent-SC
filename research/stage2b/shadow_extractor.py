@@ -8,7 +8,8 @@ import re
 from typing import Any, Protocol
 
 from research.stage2b.intent_spec import (
-    CORE_SCHEMA_VERSION, CORE_SCHEMA_VERSION_V2, ShadowSemanticCore,
+    CORE_SCHEMA_VERSION, CORE_SCHEMA_VERSION_V2, CORE_SCHEMA_VERSION_V3,
+    ShadowSemanticCore,
     core_prompt_schema_contract,
 )
 
@@ -29,7 +30,9 @@ transitions, outcomes, conflicts, or assumptions objects.
 Follow this semantic order before selecting a resolution:
 1. Read requirement history in order. A later explicit correction supersedes
    the earlier value; only simultaneously active incompatible values of the
-   same kind and business scope form a conflict.
+   same kind and business scope form a conflict. A later explicit absolute
+   deadline also resolves an earlier relative-date uncertainty for the same
+   event; do not retain that old uncertainty as unscored contract behavior.
 2. Identify the actual business event and outcome scopes. Use stable case-local
    IDs such as global, deposit-1, decision-1:approve, notify-1:timeout; include
    valid scope_type and required fields from the schema contract. Do not use
@@ -60,12 +63,17 @@ Follow this semantic order before selecting a resolution:
    exact source evidence and normalization_basis, not status=explicit merely
    because the source states an ADA amount. A directly named asset may remain
    explicit. `derived_from` is optional and must prove the same kind of fact;
-   asset=ADA does not prove an amount.
+   asset=ADA does not prove an amount. Omit `derived_from` entirely when there
+   is no valid same-kind source claim; never emit `derived_from=[]`.
 4. Keep distinct depositing_party, choice_owner, destination_account_owner,
    payment_source_account_owner, payment_recipient, refund_recipient, and
    release_recipient. A depositor does not establish a deposit account owner
    or payment source; a payment recipient does not establish either account
    owner. Never invent a funding source, actor, recipient, or success state.
+   When a branch or timeout returns the funded amount to its original payer,
+   classify that outcome's recipient as refund_recipient, even if the return
+   is selected by an explicit Choice. Use payment_recipient for a transfer
+   to a different payee, not as a generic label for every outgoing payment.
    Preserve Notify as Notify: if its Observation condition is undefined, ask
    what makes it true, not who owns a Choice. transaction_submitter is not an
    authoritative claim kind and must not be inferred from a Choice owner or
@@ -75,10 +83,23 @@ Follow this semantic order before selecting a resolution:
    choice bounds. Choice is reserved for an explicit business decision by an
    identified actor. Marlowe timeout paths need a transaction to advance;
    do not claim the ledger autonomously submits that transaction. This ordinary
-   runtime limitation is not an unrepresented contract behavior. Do not create
+   runtime limitation is not an unrepresented contract behavior. In particular,
+   an explicit statement that the contract does not submit transactions itself
+   confirms ordinary ledger operation; it does not imply a missing business
+   trigger, oracle, approver, or named submitter for a time-based release.
+   If the funding, recipients, amounts, and deadlines are known, do not ask
+   who or what activates payment at those deadlines. Do not create
    Notify(True) as a placeholder for a time-based payment: that would allow
    the payment before its scheduled time. A staged payment outcome that leads
    to a later payment must name that next transition via continuation_scope_id.
+   A stated contract account owner belongs in destination_account_owner and/or
+   payment_source_account_owner claims at the relevant scopes; do not restate
+   that supported fact as outside-taxonomy unscored behavior.
+   A source-named actor approving a stage can be represented by that actor's
+   Marlowe Choice input. Do not ask the business user to choose a wallet
+   signature, oracle, or multisig mechanism merely to encode that approval;
+   ask only if the source requires independent external proof, multi-party
+   authorization, or leaves the approving actor/outcome genuinely unknown.
 5. For genuinely missing critical business facts use value=null and
    status=unresolved. Ask only concrete, nonduplicate Vietnamese business
    questions that resolve those missing or conflicting facts. Ask which
@@ -86,6 +107,11 @@ Follow this semantic order before selecting a resolution:
    extra deadlines/recipients for paths not requested, AST/JSON details, or
    a transaction_submitter unless the requirement explicitly makes submitter
    identity business-relevant and the taxonomy can represent the issue.
+   If clarification is justified by an unrepresented behavior observation,
+   ask about that exact observed condition or event and how it is established.
+   Do not substitute a question about an already supported amount or an
+   optional hypothetical fee for the missing behavior. The question must
+   be answerable by a business user without knowing Marlowe internals.
    Keep schema field names out of user-facing question text.
 6. Choose predicted_resolution last: unsupported_for_current_study only for a
    valid versioned unsupported signal; otherwise conflict_requires_resolution
@@ -98,7 +124,8 @@ Return JSON only, with all top-level fields shown in the user instruction.
 
 def build_prompt(requirement_history: list[dict[str, Any]], *,
                  core_schema_version: str = CORE_SCHEMA_VERSION) -> tuple[str, str]:
-    if core_schema_version not in {CORE_SCHEMA_VERSION, CORE_SCHEMA_VERSION_V2}:
+    if core_schema_version not in {CORE_SCHEMA_VERSION, CORE_SCHEMA_VERSION_V2,
+                                   CORE_SCHEMA_VERSION_V3}:
         raise ValueError("unsupported core schema version")
     template = {
         "schema_version": core_schema_version,
@@ -120,14 +147,16 @@ def build_prompt(requirement_history: list[dict[str, Any]], *,
         + json.dumps(template, ensure_ascii=False)
         + "\nEvery claim uses claim_id, kind, value, criticality, status, scope_id, "
           "evidence. Evidence items use requirement_version (integer), "
-          "message_index (integer), span (exact substring of source message), "
+          "message_index (zero-based index within that requirement_version's messages), "
+          "span (exact substring of that indexed source message), "
           "relation (supports or contradicts). Explicit, user_confirmed, "
           "conflicted, superseded and derived claims require exact supporting "
           "evidence. Unresolved claims use value=null and may use evidence=[]. "
           "Assumed claims require assumption_reason and should use evidence=[]; "
           "never fabricate a source span. Derived financial claims require "
           "normalization_basis; derived_from is optional and must prove the "
-          "same kind of fact. Do not link amount_lovelace to asset evidence "
+          "same kind of fact. Omit derived_from when no source claim qualifies; "
+          "do not emit derived_from=[]. Do not link amount_lovelace to asset evidence "
           "as proof of quantity. Global scope uses scope_id=global and "
           "scope_type=global. A transition scope needs transition_kind; a "
           "branch needs decision_id and branch_id; a timeout needs timeout_id "
@@ -146,11 +175,20 @@ def build_prompt(requirement_history: list[dict[str, Any]], *,
           "facts must go in claims, not unscored_observations."
     )
     system = SYSTEM_PROMPT
-    if core_schema_version == CORE_SCHEMA_VERSION_V2:
+    if core_schema_version in {CORE_SCHEMA_VERSION_V2, CORE_SCHEMA_VERSION_V3}:
         system += (
             "\nFor each numeric Choice, include inclusive choice_bounds with exact source "
             "evidence on its transition scope. Every branch of that Choice needs a "
             "choice_guard with operator and integer threshold plus exact source evidence. "
+            "For an explicit yes/no approval by an identified actor, a single "
+            "approval event may use a Choice whose sole bound is from=1,to=1 "
+            "and whose approval branch has choice_guard eq 1. This is a "
+            "deterministic encoding of the source-stated approval event, not "
+            "a source-stated numeric threshold. Cite the exact approval phrase "
+            "as evidence for both fields. Absence of approval before its "
+            "deadline is the timeout path, not an invented Choice value 0 or "
+            "an invented rejection branch. Do not use this convention unless "
+            "the source names the approving actor and the approval outcome. "
             "Preserve ranges and conditions such as price >= 50; do not convert them "
             "into unscored text or omit them. If a contract-defining condition is "
             "missing, ask a concrete business question rather than inventing it. "
@@ -170,6 +208,70 @@ def build_prompt(requirement_history: list[dict[str, Any]], *,
             "details that cannot affect contract behavior (for example, weather or "
             "biography). Any unrepresented contract behavior must use "
             "outside_stage2b_v2_claim_taxonomy and remain non-compilable.\n"
+        )
+    if core_schema_version == CORE_SCHEMA_VERSION_V3:
+        system = system.replace("outside_stage2b_v2_claim_taxonomy",
+                                "outside_stage2b_v3_claim_taxonomy")
+        system += (
+            "\nFor native-token obligations, never use amount_lovelace for token quantity. "
+            "Use amount_token_units as a positive integer, with a same-scope asset "
+            "claim whose value is the exact source-provided canonical identifier "
+            "native:<56 lowercase policy hex>/<even-length token-name hex>. "
+            "Do not invent a policy ID or infer one from a display name. ADA still "
+            "uses amount_lovelace and asset=ADA. Keep asset and quantity on the "
+            "same actual funding or payout scope; two different assets on two "
+            "different obligations are not a conflict. An exchange that executes "
+            "automatically after both deposits is sequential deposits and payments, "
+            "not an invented user Choice. On a missing second deposit, refund only "
+            "the asset actually funded; on a missing first deposit, no refund is due. "
+            "A terminal payout may continue to another terminal payout; set the "
+            "second payout's parent_scope_id to the first payout scope. Represent "
+            "automatic payouts through terminal_outcome scopes, not redundant "
+            "autonomous_execution claims. A timeout's deadline_claim_id should "
+            "reference the existing deposit deadline claim; do not duplicate that "
+            "deadline as a new claim on the timeout. Keep asset claims on their "
+            "specific funding/payout scopes instead of adding an unrelated global "
+            "asset claim. First-deposit timeout may close directly with no extra "
+            "terminal outcome. Synthetic answers in requirement_history are "
+            "accepted only for this simulation: do not ask to reconfirm the token "
+            "identity there, but never present it as a verified real-world fact. "
+            "Do not introduce a payment transition for an automatic swap; the "
+            "second deposit continues directly to the first terminal payout, "
+            "which continues to the second terminal payout. When both funded "
+            "assets are paid in full, their AST execution order is a deterministic "
+            "compiler convention, not a missing business decision. Do not ask "
+            "which payout happens first. On a labeled simulation, the question "
+            "whether the synthetic token exists or was minted in the real world "
+            "is outside the simulated contract semantics; retain that caveat "
+            "without turning it into a required clarification. Explicit absence "
+            "of Choice, Notify, oracle, or fees is not an unrepresented behavior. "
+            "Every claim_id must be unique across the whole core. Cite only exact "
+            "contiguous source substrings with correct revision and message index. "
+            "Repeat a same-scope asset claim for EACH funding and payout outcome, "
+            "including the native-token payout; a deposit's asset claim does not "
+            "satisfy a later payout's asset requirement. A simulated token that "
+            "is assumed available for this test does not require minting or "
+            "real-world deployment proof as a clarification in this simulation. "
+            "unscored_observations with reason=outside_stage2b_v3_claim_taxonomy "
+            "are reserved ONLY for contract behavior genuinely absent from all "
+            "claims and behavior_scopes, and they block compilation. Never use "
+            "that reason to restate an automatic payout already represented by "
+            "terminal_outcome scopes, a negative statement that no Choice/Notify "
+            "exists, or a simulation-only provenance caveat already recorded in "
+            "simulation_transcript. Do not add redundant unscored observations "
+            "for facts represented in scopes/claims; omit them entirely. "
+            "An explicit later revision with a full UTC timestamp ending Z "
+            "resolves the timezone ambiguity of an earlier date-only phrase "
+            "for that same deadline. Cite the later timestamp and do not ask "
+            "the simulated customer to reconfirm UTC versus local time. "
+            "Within a labeled customer simulation, a concrete answer in a "
+            "later requirement revision is source evidence for that simulated "
+            "run; use explicit or user_confirmed claim status as appropriate, "
+            "not assumed. The accepted artifact still has NO_AUTHORITY and "
+            "simulation_only=true, so this never becomes a real-world fact. "
+            "Do not require the name of a transaction submitter merely to "
+            "model automatic Pay or timeout reduction; submitter/fees are "
+            "ledger-operation concerns outside this contract-intent profile."
         )
     return system, user
 
@@ -227,33 +329,43 @@ class IntentShadowExtractor:
     def extract_with_validation_feedback(
         self, requirement_history: list[dict[str, Any]], *, max_repairs: int = 1
     ) -> tuple[ShadowSemanticCore, list[str]]:
-        if max_repairs not in (0, 1):
-            raise ValueError("max_repairs must be 0 or 1")
+        if type(max_repairs) is not int or not 0 <= max_repairs <= 3:
+            raise ValueError("max_repairs must be an integer from 0 through 3")
         system, user = build_prompt(requirement_history,
                                     core_schema_version=self.core_schema_version)
         core = parse_model_output(self.model.generate(system, user))
         initial_errors = core.validation_errors(expected_history=requirement_history)
         if not initial_errors or max_repairs == 0:
             return core, initial_errors
-        guidance = _repair_guidance(core.to_dict(), initial_errors)
-        feedback = (
-            "The previous semantic core failed deterministic validation. "
-            "Regenerate the complete seven-field core from the original requirement only. "
-            "Do not infer new facts, omit financial claims, or change the resolution "
-            "merely to satisfy validation. Fix only errors justified by the original text. "
-            "Keep source spans verbatim; never use ellipses. If derived_from points "
-            "to a different claim kind, omit derived_from unless a valid same-kind "
-            "source exists. Return JSON only.\nValidation errors:\n"
-            + json.dumps(initial_errors, ensure_ascii=False)
-            + "\nTyped diagnostics (diagnosis only; regenerate from source):\n"
-            + json.dumps(guidance, ensure_ascii=False)
-            + "\nPrevious core:\n"
-            + json.dumps(core.to_dict(), ensure_ascii=False)
-        )
-        return parse_model_output(self.model.generate(system, user + "\n" + feedback)), initial_errors
+        seen = {json.dumps(core.to_dict(), sort_keys=True, ensure_ascii=False)}
+        for _ in range(max_repairs):
+            current_errors = core.validation_errors(expected_history=requirement_history)
+            if not current_errors:
+                break
+            guidance = _repair_guidance(core.to_dict(), current_errors, requirement_history)
+            feedback = (
+                "The previous semantic core failed deterministic validation. "
+                "Regenerate the complete seven-field core from the original requirement only. "
+                "Do not infer new facts, omit financial claims, or change the resolution "
+                "merely to satisfy validation. Fix only errors justified by the original text. "
+                "Keep source spans verbatim and case-sensitive; never use ellipses. "
+                "If derived_from points to a different claim kind, omit derived_from "
+                "unless a valid same-kind source exists. Return JSON only.\n"
+                "Validation errors:\n" + json.dumps(current_errors, ensure_ascii=False)
+                + "\nTyped diagnostics (diagnosis only; regenerate from source):\n"
+                + json.dumps(guidance, ensure_ascii=False)
+                + "\nPrevious core:\n" + json.dumps(core.to_dict(), ensure_ascii=False)
+            )
+            core = parse_model_output(self.model.generate(system, user + "\n" + feedback))
+            fingerprint = json.dumps(core.to_dict(), sort_keys=True, ensure_ascii=False)
+            if fingerprint in seen:
+                break
+            seen.add(fingerprint)
+        return core, initial_errors
 
 
-def _repair_guidance(core: dict[str, Any], errors: list[str]) -> list[dict[str, Any]]:
+def _repair_guidance(core: dict[str, Any], errors: list[str],
+                     history: list[dict[str, Any]] | None = None) -> list[dict[str, Any]]:
     """Explain validator failures without changing or authorizing model output."""
     scopes = {
         scope["scope_id"]: scope for scope in core.get("behavior_scopes", [])
@@ -287,11 +399,48 @@ def _repair_guidance(core: dict[str, Any], errors: list[str]) -> list[dict[str, 
                          "the conflict and request clarification. Do not delete a supported claim."),
             })
         elif "invalid evidence target/span" in error or "supporting evidence required" in error:
-            guidance.append({
+            item: dict[str, Any] = {
                 "error": error,
                 "rule": ("Copy an exact contiguous substring from a supplied requirement "
                          "message that states this fact and role. If none exists, mark the "
                          "fact unresolved rather than fabricate source evidence."),
+            }
+            claim_id = error.split(":", 1)[0].removeprefix("claim ")
+            claims = core.get("claims", [])
+            claim = next((value for value in claims if isinstance(value, dict)
+                          and value.get("claim_id") == claim_id), None) if isinstance(claims, list) else None
+            if claim is not None and history is not None:
+                matches = []
+                for evidence in claim.get("evidence", []):
+                    span = evidence.get("span") if isinstance(evidence, dict) else None
+                    if not isinstance(span, str) or not span:
+                        continue
+                    for revision in history:
+                        for index, message in enumerate(revision.get("messages", [])):
+                            if span in message:
+                                matches.append({"requirement_version": revision.get("version"),
+                                                "message_index": index, "span": span})
+                if matches:
+                    item["exact_span_locations"] = matches
+                    item["rule"] += (" The listed locations only establish where the quoted "
+                                     "text occurs; independently verify that it supports the "
+                                     "claimed fact and role.")
+            guidance.append(item)
+        elif error.endswith(": invalid choice_bounds") or error.endswith(": invalid choice_guard"):
+            guidance.append({
+                "error": error,
+                "rule": ("Use a contiguous, case-sensitive quote from the referenced "
+                         "requirement message, including the correct version and message "
+                         "index. A yes/no approval may use the documented Choice value 1 "
+                         "encoding only when the source explicitly names the approver "
+                         "and approval outcome; do not invent a rejection branch."),
+            })
+        elif error == "required_clarifications must contain nonempty questions":
+            guidance.append({
+                "error": error,
+                "rule": ("required_clarifications must be a JSON array. Include a "
+                         "question object only for a genuinely unresolved critical fact; "
+                         "otherwise use [] and select the source-supported resolution."),
             })
         elif "unresolved value must be null" in error:
             guidance.append({

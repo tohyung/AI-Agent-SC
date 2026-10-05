@@ -39,10 +39,14 @@ class SupportedProfile:
     supports_observations: bool = False
     supports_branches: bool = False
     supports_timeouts: bool = False
+    transition_counts: tuple[tuple[str, int], ...] = ()
 
     def to_dict(self) -> dict[str, Any]:
-        return {key: sorted(value) if isinstance(value, frozenset) else value
-                for key, value in vars(self).items()}
+        payload = {key: sorted(value) if isinstance(value, frozenset) else value
+                   for key, value in vars(self).items() if key != "transition_counts"}
+        payload["transition_counts"] = [
+            {"transition_kind": kind, "count": count} for kind, count in self.transition_counts]
+        return payload
 
 
 @dataclass(frozen=True)

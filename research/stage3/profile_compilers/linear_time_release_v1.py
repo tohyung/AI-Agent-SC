@@ -5,6 +5,8 @@ from __future__ import annotations
 from typing import Any
 
 from research.stage2b.intent_spec import SCHEMA_VERSION_V2
+from research.stage3.contract_plan import (Case, ClaimValue, Close, Deposit, Pay,
+                                           PlanError, When, lower_contract_plan)
 from research.stage3.models import (CompilationIR, CompileResult, CompileStatus,
                                     SupportedProfile)
 
@@ -103,8 +105,6 @@ def compile_linear_time_release_v1(ir: CompilationIR) -> CompileResult:
             or len(account_refs) != len(expected_account_refs)):
         return _unsupported("projected asset or account inconsistent with funding")
 
-    role = lambda name: {"role_token": name}
-    token = {"currency_symbol": "", "token_name": ""}
     claim_paths = {
         asset.claim_id: "$.when[0].case.of_token",
         amount.claim_id: "$.when[0].case.deposits",
@@ -114,7 +114,7 @@ def compile_linear_time_release_v1(ir: CompilationIR) -> CompileResult:
     }
     payment_paths = ["$.when[0].then.timeout_continuation",
                      "$.when[0].then.timeout_continuation.then.timeout_continuation"]
-    continuation: Any = "close"
+    continuation = Close(second.scope_id)
     for position in (1, 0):
         scope, payout, recipient, source, deadline = installments[position]
         path = payment_paths[position]
@@ -122,20 +122,21 @@ def compile_linear_time_release_v1(ir: CompilationIR) -> CompileResult:
         claim_paths[recipient.claim_id] = path + ".to.party"
         claim_paths[source.claim_id] = path + ".from_account"
         claim_paths[deadline.claim_id] = path.rsplit(".timeout_continuation", 1)[0] + ".timeout"
-        continuation = {
-            "when": [], "timeout": deadline.value,
-            "timeout_continuation": {
-                "pay": payout.value, "from_account": role(account.value),
-                "to": {"party": role(recipient.value)}, "token": token,
-                "then": continuation,
-            },
-        }
-    contract = {
-        "when": [{"case": {"party": role(depositor.value), "deposits": amount.value,
-                            "of_token": token, "into_account": role(account.value)},
-                  "then": continuation}],
-        "timeout": deposit_deadline.value, "timeout_continuation": "close",
-    }
+        continuation = When(scope.scope_id, (), ClaimValue(deadline.value, deadline.claim_id),
+                            Pay(scope.scope_id, ClaimValue(source.value, source.claim_id),
+                                ClaimValue(recipient.value, recipient.claim_id),
+                                ClaimValue(asset.value, asset.claim_id),
+                                ClaimValue(payout.value, payout.claim_id), continuation))
+    plan = When("global", (
+        Case(Deposit(deposit.scope_id, ClaimValue(depositor.value, depositor.claim_id),
+                     ClaimValue(account.value, account.claim_id),
+                     ClaimValue(asset.value, asset.claim_id),
+                     ClaimValue(amount.value, amount.claim_id)), continuation),
+    ), ClaimValue(deposit_deadline.value, deposit_deadline.claim_id), Close("global"))
+    try:
+        contract = lower_contract_plan(plan).contract
+    except PlanError as exc:
+        return _unsupported(f"contract plan invalid: {exc}")
     scope_paths = {"global": "$.when[0].case.of_token", deposit.scope_id: "$",
                    first.scope_id: payment_paths[0], second.scope_id: payment_paths[1]}
     records: list[dict[str, str]] = []

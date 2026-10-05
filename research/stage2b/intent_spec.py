@@ -15,6 +15,15 @@ SCHEMA_VERSION = "stage2b-shadow-v1"
 CORE_SCHEMA_VERSION = "stage2b-shadow-core-v1"
 SCHEMA_VERSION_V2 = "stage2b-shadow-v2"
 CORE_SCHEMA_VERSION_V2 = "stage2b-shadow-core-v2"
+SCHEMA_VERSION_V3 = "stage2b-shadow-v3"
+CORE_SCHEMA_VERSION_V3 = "stage2b-shadow-core-v3"
+CLAIM_KINDS_V3 = CLAIM_KINDS | {"amount_token_units"}
+NATIVE_ASSET_ID = re.compile(r"native:([0-9a-f]{56})/([0-9a-f]{2,64})\Z")
+
+
+def parse_native_asset_id(value: str) -> tuple[str, str] | None:
+    match = NATIVE_ASSET_ID.fullmatch(value)
+    return match.groups() if match else None
 CORE_FIELDS = {
     "schema_version", "requirement_history", "behavior_scopes", "claims",
     "required_clarifications", "unscored_observations", "predicted_resolution",
@@ -79,6 +88,9 @@ UNSCORED_OBSERVATION_REASON = "outside_stage2b_v1_claim_taxonomy"
 UNSCORED_OBSERVATION_REASONS_V2 = {
     "irrelevant_context", "outside_stage2b_v2_claim_taxonomy",
 }
+UNSCORED_OBSERVATION_REASONS_V3 = {
+    "irrelevant_context", "outside_stage2b_v3_claim_taxonomy",
+}
 STATE_CLAIM_KINDS = {
     "funded": {"depositing_party"},
     "awaiting_choice": {"choice_owner", "choice_deadline_ms"},
@@ -95,7 +107,8 @@ OUTCOME_KINDS = set(OUTCOME_RECIPIENT_KINDS)
 STATE_IDS = {"initial"} | set(STATE_CLAIM_KINDS)
 ACCOUNT_OWNER_KINDS = {"destination_account_owner", "payment_source_account_owner"}
 PARAMETER_CLAIM_KINDS = {
-    "amount": {"amount_lovelace"}, "deadline": DEADLINE_KINDS, "asset": {"asset"},
+    "amount": {"amount_lovelace", "amount_token_units"},
+    "deadline": DEADLINE_KINDS, "asset": {"asset"},
 }
 TRANSITION_ACTOR_KINDS = {"choice": {"choice_owner"}, "deposit": {"depositing_party"}}
 RICH_FIELDS = {
@@ -117,11 +130,14 @@ RICH_FIELDS = {
 def prompt_schema_contract(*, core_version: str = CORE_SCHEMA_VERSION) -> dict[str, Any]:
     """Expose the validator's closed vocabulary to the shadow model."""
     return {
-        "schema_version": SCHEMA_VERSION,
+        "schema_version": {CORE_SCHEMA_VERSION: SCHEMA_VERSION,
+                           CORE_SCHEMA_VERSION_V2: SCHEMA_VERSION_V2,
+                           CORE_SCHEMA_VERSION_V3: SCHEMA_VERSION_V3}[core_version],
         "required_top_level_fields": sorted(REQUIRED_FIELDS),
         "claim": {
             "fields": sorted(CLAIM_FIELDS),
-            "kinds": sorted(CLAIM_KINDS),
+            "kinds": sorted(CLAIM_KINDS_V3 if core_version == CORE_SCHEMA_VERSION_V3
+                            else CLAIM_KINDS),
             "statuses": sorted(CLAIM_STATUSES),
             "criticalities": sorted(CRITICALITIES),
             "active_statuses": sorted(ACTIVE_STATUSES),
@@ -139,7 +155,8 @@ def prompt_schema_contract(*, core_version: str = CORE_SCHEMA_VERSION) -> dict[s
         "scope": {
             "types": sorted(SCOPE_TYPES),
             "allowed_fields_by_type": {key: sorted(value) for key, value in
-                                       (SCOPE_FIELDS_V2 if core_version == CORE_SCHEMA_VERSION_V2
+                                       (SCOPE_FIELDS_V2 if core_version in {
+                                           CORE_SCHEMA_VERSION_V2, CORE_SCHEMA_VERSION_V3}
                                         else SCOPE_FIELDS).items()},
         },
         "assets_and_accounts_fields": sorted(ASSETS_ACCOUNTS_FIELDS),
@@ -164,7 +181,7 @@ def prompt_schema_contract(*, core_version: str = CORE_SCHEMA_VERSION) -> dict[s
 
 
 def core_prompt_schema_contract(*, version: str = CORE_SCHEMA_VERSION) -> dict[str, Any]:
-    if version not in {CORE_SCHEMA_VERSION, CORE_SCHEMA_VERSION_V2}:
+    if version not in {CORE_SCHEMA_VERSION, CORE_SCHEMA_VERSION_V2, CORE_SCHEMA_VERSION_V3}:
         raise ValueError("unsupported core schema version")
     contract = prompt_schema_contract(core_version=version)
     contract["schema_version"] = version
@@ -187,7 +204,7 @@ def core_prompt_schema_contract(*, version: str = CORE_SCHEMA_VERSION) -> dict[s
             "optional_for": ["timeout"],
         },
     }
-    if version == CORE_SCHEMA_VERSION_V2:
+    if version in {CORE_SCHEMA_VERSION_V2, CORE_SCHEMA_VERSION_V3}:
         contract["scope"]["choice_bounds"] = {
             "fields": ["from", "to", "source_evidence"],
             "required_for": "choice transition", "integer_inclusive": True,
@@ -201,7 +218,9 @@ def core_prompt_schema_contract(*, version: str = CORE_SCHEMA_VERSION) -> dict[s
         contract["scope"]["terminal_outcome_parent"] = {
             "field": "parent_scope_id", "required": True,
             "target_collection": "behavior_scopes", "target_id_field": "scope_id",
-            "target_scope_types": ["branch", "timeout", "transition"],
+            "target_scope_types": (["branch", "timeout", "transition", "terminal_outcome"]
+                                   if version == CORE_SCHEMA_VERSION_V3 else
+                                   ["branch", "timeout", "transition"]),
         }
         contract["scope"]["continuation"] = {
             "field": "continuation_scope_id", "optional": True,
@@ -211,7 +230,9 @@ def core_prompt_schema_contract(*, version: str = CORE_SCHEMA_VERSION) -> dict[s
         }
     contract["unscored_observation"] = {
         "fields": sorted(UNSCORED_OBSERVATION_FIELDS),
-        "reason": (sorted(UNSCORED_OBSERVATION_REASONS_V2)
+        "reason": (sorted(UNSCORED_OBSERVATION_REASONS_V3)
+                   if version == CORE_SCHEMA_VERSION_V3 else
+                   sorted(UNSCORED_OBSERVATION_REASONS_V2)
                    if version == CORE_SCHEMA_VERSION_V2 else UNSCORED_OBSERVATION_REASON),
         "source_evidence": {
             "fields": sorted(EVIDENCE_FIELDS),
@@ -257,8 +278,10 @@ class ShadowSemanticCore:
 
 
 def extract_core_view(spec: dict[str, Any]) -> dict[str, Any]:
-    core_version = (CORE_SCHEMA_VERSION_V2 if spec.get("schema_version") == SCHEMA_VERSION_V2
-                    else CORE_SCHEMA_VERSION)
+    core_version = {SCHEMA_VERSION: CORE_SCHEMA_VERSION,
+                    SCHEMA_VERSION_V2: CORE_SCHEMA_VERSION_V2,
+                    SCHEMA_VERSION_V3: CORE_SCHEMA_VERSION_V3}.get(
+                        spec.get("schema_version"), CORE_SCHEMA_VERSION)
     return {key: (core_version if key == "schema_version" else spec[key])
             for key in CORE_FIELDS if key in spec}
 
@@ -396,9 +419,10 @@ def validate_shadow_semantic_core(spec: Any, *,
     if "mutation" in spec or "parent_case_id" in spec:
         errors.append("mutation-specific knowledge is not allowed in IntentSpec")
     version = spec.get("schema_version")
-    if version not in {CORE_SCHEMA_VERSION, CORE_SCHEMA_VERSION_V2}:
+    if version not in {CORE_SCHEMA_VERSION, CORE_SCHEMA_VERSION_V2, CORE_SCHEMA_VERSION_V3}:
         errors.append("invalid schema_version")
-    v2 = version == CORE_SCHEMA_VERSION_V2
+    v2 = version in {CORE_SCHEMA_VERSION_V2, CORE_SCHEMA_VERSION_V3}
+    v3 = version == CORE_SCHEMA_VERSION_V3
     resolution = spec.get("predicted_resolution")
     if not _allowed(resolution, RESOLUTIONS):
         errors.append("invalid predicted_resolution")
@@ -459,8 +483,10 @@ def validate_shadow_semantic_core(spec: Any, *,
         if v2 and scope.get("scope_type") == "terminal_outcome":
             parent_id = scope.get("parent_scope_id")
             parent = scopes.get(parent_id) if isinstance(parent_id, str) else None
-            if parent is None or parent.get("scope_type") not in {
-                    "branch", "timeout", "transition"}:
+            allowed_parents = {"branch", "timeout", "transition"}
+            if v3:
+                allowed_parents.add("terminal_outcome")
+            if parent is None or parent.get("scope_type") not in allowed_parents:
                 errors.append(f"scope {scope_id}: invalid parent_scope_id")
         if v2 and scope.get("scope_type") == "transition" and scope.get("transition_kind") == "choice":
             bounds = scope.get("choice_bounds")
@@ -506,7 +532,7 @@ def validate_shadow_semantic_core(spec: Any, *,
         unknown = claim.keys() - CLAIM_FIELDS
         if unknown:
             errors.append(f"claim {claim_id}: unsupported claim fields {sorted(unknown)}")
-        if not _allowed(claim.get("kind"), CLAIM_KINDS):
+        if not _allowed(claim.get("kind"), CLAIM_KINDS_V3 if v3 else CLAIM_KINDS):
             errors.append(f"claim {claim_id}: unknown claim kind")
         if not _allowed(claim.get("status"), CLAIM_STATUSES):
             errors.append(f"claim {claim_id}: invalid status")
@@ -521,9 +547,14 @@ def validate_shadow_semantic_core(spec: Any, *,
             if _allowed(kind, PARTY_KINDS | {"asset"}) and (
                     not isinstance(value, str) or not value):
                 errors.append(f"claim {claim_id}: party/asset value must be nonempty text")
-            if _allowed(kind, DEADLINE_KINDS | {"amount_lovelace"}) and (
+            if _allowed(kind, DEADLINE_KINDS | {"amount_lovelace", "amount_token_units"}) and (
                     not isinstance(value, int) or isinstance(value, bool)):
                 errors.append(f"claim {claim_id}: numeric value must be integer")
+            if v3 and kind == "amount_token_units" and type(value) is int and value <= 0:
+                errors.append(f"claim {claim_id}: token quantity must be positive")
+            if v3 and kind == "asset" and isinstance(value, str) and value.startswith("native:"):
+                if parse_native_asset_id(value) is None:
+                    errors.append(f"claim {claim_id}: invalid native asset id")
             if kind == "autonomous_execution" and not isinstance(value, bool):
                 errors.append(f"claim {claim_id}: autonomous_execution value must be boolean")
         evidence = claim.get("evidence")
@@ -551,6 +582,16 @@ def validate_shadow_semantic_core(spec: Any, *,
     for claim in raw_claims:
         if not isinstance(claim, dict):
             continue
+        if v3 and claim.get("kind") == "amount_token_units" and claim.get("status") in BACKING_STATUSES:
+            matching_assets = [item for item in raw_claims if isinstance(item, dict)
+                               and item.get("kind") == "asset"
+                               and item.get("scope_id") == claim.get("scope_id")
+                               and isinstance(item.get("value"), str)
+                               and parse_native_asset_id(item["value"]) is not None
+                               and item.get("status") in BACKING_STATUSES]
+            if len(matching_assets) != 1:
+                errors.append(f"claim {claim.get('claim_id')}: token quantity requires one "
+                              "same-scope native asset id")
         if claim.get("status") == "derived":
             source_id = claim.get("derived_from")
             if source_id is not None:
@@ -608,7 +649,7 @@ def validate_shadow_semantic_core(spec: Any, *,
         and _allowed(claim.get("status"), BACKING_STATUSES)
         and valid_supporting_evidence(claim, messages)
         for claim in raw_claims
-        for signal_kind, signal_value in UNSUPPORTED_SIGNALS_V1
+        for signal_kind, signal_value in (() if v3 else UNSUPPORTED_SIGNALS_V1)
     )
     if supported_unsupported and resolution != "unsupported_for_current_study" and not (
             resolution == "conflict_requires_resolution" and conflicting):
@@ -631,7 +672,8 @@ def validate_shadow_semantic_core(spec: Any, *,
         )
         has_unrepresented_behavior = isinstance(spec.get("unscored_observations"), list) and any(
             isinstance(item, dict) and
-            item.get("reason") == "outside_stage2b_v2_claim_taxonomy"
+            item.get("reason") == ("outside_stage2b_v3_claim_taxonomy" if v3
+                                   else "outside_stage2b_v2_claim_taxonomy")
             for item in spec["unscored_observations"]
         )
         if not has_unresolved_claim and not has_unrepresented_behavior:
@@ -653,8 +695,9 @@ def validate_shadow_semantic_core(spec: Any, *,
             if (not isinstance(item, dict) or not UNSCORED_OBSERVATION_FIELDS <= item.keys()
                     or not item.get("observation_id")
                     or not item.get("text") or
-                    item.get("reason") not in (UNSCORED_OBSERVATION_REASONS_V2 if v2
-                                               else {UNSCORED_OBSERVATION_REASON})
+                    item.get("reason") not in (UNSCORED_OBSERVATION_REASONS_V3 if v3 else
+                                               UNSCORED_OBSERVATION_REASONS_V2 if v2 else
+                                               {UNSCORED_OBSERVATION_REASON})
                     or not _evidence_valid(item.get("source_evidence"), messages)):
                 errors.append("invalid unscored_observation")
     return errors
@@ -673,7 +716,8 @@ def validate_intent_spec(spec: Any, *,
     extra = spec.keys() - REQUIRED_FIELDS
     if extra:
         errors.append(f"unknown top-level fields: {sorted(extra)}")
-    if spec.get("schema_version") not in {SCHEMA_VERSION, SCHEMA_VERSION_V2}:
+    if spec.get("schema_version") not in {SCHEMA_VERSION, SCHEMA_VERSION_V2,
+                                          SCHEMA_VERSION_V3}:
         errors.append("invalid schema_version")
     scopes = {scope["scope_id"]: scope for scope in spec.get("behavior_scopes", [])
               if isinstance(scope, dict) and isinstance(scope.get("scope_id"), str)} if isinstance(

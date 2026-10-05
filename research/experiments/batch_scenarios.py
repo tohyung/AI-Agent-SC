@@ -13,6 +13,7 @@ from research.architecture.artifacts import ArtifactEnvelope
 from research.architecture.status import AuthorityLevel, ImplementationStatus
 from research.stage3.comparison import BehaviorExpectation
 from research.stage3.reference import ReferenceRequest
+from research.stage2b.intent_spec import parse_native_asset_id
 
 
 ADA = {"currency_symbol": "", "token_name": ""}
@@ -42,8 +43,8 @@ def _scope(spec: dict[str, Any], scope_type: str, transition_kind: str | None = 
     return matches[0]
 
 
-def _transaction(kind: str, input_value: dict | None = None) -> dict:
-    return {"interval": {"from": 0, "to": 0},
+def _transaction(kind: str, input_value: dict | None = None, *, at: int = 0) -> dict:
+    return {"interval": {"from": at, "to": at},
             "inputs": [] if input_value is None else [input_value]}
 
 
@@ -70,9 +71,78 @@ class IntentTransactionDomain:
 
 
 @dataclass(frozen=True)
+class SwapTransactionDomain:
+    """Select an intent-declared deposit by action identity, not AST quantity."""
+
+    domain_id: str
+    deposits: tuple[dict[str, Any], ...]
+    finite: bool = True
+
+    def transactions(self, state: dict[str, Any], contract: Any) -> list[dict[str, Any]]:
+        if contract == "close":
+            return []
+        if isinstance(contract, dict) and "pay" in contract:
+            return [_transaction("NoInput")]
+        if not isinstance(contract, dict) or not isinstance(contract.get("when"), list):
+            return []
+        enabled = [case["case"] for case in contract["when"]
+                   if isinstance(case, dict) and isinstance(case.get("case"), dict)
+                   and "deposits" in case["case"]]
+        return [tx for tx in self.deposits for action in enabled
+                if all(action.get(field) == tx["inputs"][0][key]
+                       for field, key in (("party", "party"),
+                                          ("into_account", "account"),
+                                          ("of_token", "token")))]
+
+
+@dataclass(frozen=True)
+class DeclaredActionDomain:
+    """Match AST-enabled actions to independent, intent-declared transactions."""
+
+    domain_id: str
+    declared: tuple[dict[str, Any], ...]
+    finite: bool = True
+
+    def transactions(self, state: dict[str, Any], contract: Any) -> list[dict[str, Any]]:
+        if contract == "close":
+            return []
+        if isinstance(contract, dict) and "pay" in contract:
+            return [_transaction("NoInput")]
+        if not isinstance(contract, dict) or not isinstance(contract.get("when"), list):
+            return []
+        if not contract["when"]:
+            timeout = contract.get("timeout")
+            return [tx for tx in self.declared
+                    if tx.get("inputs") == []
+                    and tx.get("interval") == {"from": timeout, "to": timeout}]
+        enabled = [item["case"] for item in contract["when"]
+                   if isinstance(item, dict) and isinstance(item.get("case"), dict)]
+        matches = []
+        for tx in self.declared:
+            inputs = tx.get("inputs")
+            if not isinstance(inputs, list) or len(inputs) != 1:
+                continue
+            item = inputs[0]
+            if item.get("type") == "Choice" and any(
+                    action.get("for_choice") == item.get("choice_id")
+                    and any(bound.get("from") <= item.get("chosen") <= bound.get("to")
+                            for bound in action.get("choose_between", []))
+                    for action in enabled if "for_choice" in action):
+                matches.append(tx)
+            elif item.get("type") == "Deposit" and any(
+                    action.get("party") == item.get("party")
+                    and action.get("into_account") == item.get("account")
+                    and action.get("of_token") == item.get("token")
+                    and action.get("deposits") == item.get("amount")
+                    for action in enabled if "deposits" in action):
+                matches.append(tx)
+        return matches
+
+
+@dataclass(frozen=True)
 class BatchScenario:
     expectation: ArtifactEnvelope
-    domain: IntentTransactionDomain
+    domain: IntentTransactionDomain | SwapTransactionDomain | DeclaredActionDomain
     initial_state: dict[str, Any]
 
 
@@ -92,7 +162,7 @@ def scenario_from_intent(accepted: ArtifactEnvelope, profile_id: str) -> BatchSc
             or accepted.authority_level != AuthorityLevel.NO_AUTHORITY):
         raise ValueError("batch scenario requires simulated accepted intent")
     spec = accepted.payload["accepted_spec"]
-    if _claim(spec, "asset") != "ADA":
+    if profile_id in {"direct-payment", "funded-choice"} and _claim(spec, "asset") != "ADA":
         raise ValueError("only ADA scenario supported")
     if profile_id == "direct-payment":
         source = _claim(spec, "payment_source_account_owner")
@@ -184,6 +254,193 @@ def scenario_from_intent(accepted: ArtifactEnvelope, profile_id: str) -> BatchSc
         transactions = (deposit_tx, choice_tx)
         actions = {"Deposit": deposit_tx, "Choice": choice_tx}
         state = dict(EMPTY_STATE)
+    elif profile_id == "linear-time-release":
+        if _claim(spec, "asset", "global") != "ADA":
+            raise ValueError("scenario requires a source-grounded ADA asset")
+        deposit = _scope(spec, "transition", "deposit")
+        payments = [item for item in spec["behavior_scopes"]
+                    if item.get("transition_kind") == "payment"]
+        if len(payments) != 2:
+            raise ValueError("scenario requires exactly two payment transitions")
+        first = next((item for item in payments
+                      if item["scope_id"] == deposit.get("continuation_scope_id")), None)
+        second = (next((item for item in payments
+                        if item["scope_id"] == first.get("continuation_scope_id")), None)
+                  if first is not None else None)
+        if first is None or second is None or second.get("continuation_scope_id") is not None:
+            raise ValueError("scenario requires an explicit ordered payment chain")
+        account = _claim(spec, "destination_account_owner", deposit["scope_id"])
+        depositor = _claim(spec, "depositing_party", deposit["scope_id"])
+        funding = [item["value"] for item in spec["claims"]
+                   if item["kind"] == "amount_lovelace"
+                   and item["scope_id"] in {deposit["scope_id"], "global"}
+                   and item["status"] in {"explicit", "derived", "user_confirmed"}]
+        deposit_deadline = _claim(spec, "deposit_deadline_ms", deposit["scope_id"])
+        if (len(funding) != 1 or type(funding[0]) is not int or funding[0] <= 0
+                or type(deposit_deadline) is not int or deposit_deadline <= 0):
+            raise ValueError("scenario requires one positive funding amount and deadline")
+        transactions_list = [_transaction("Deposit", {
+            "type": "Deposit", "account": _role(account), "party": _role(depositor),
+            "token": ADA, "amount": funding[0]}, at=deposit_deadline - 1)]
+        expected_payments_list = []
+        previous_deadline = deposit_deadline
+        for payment in (first, second):
+            scope_id = payment["scope_id"]
+            amount = _claim(spec, "amount_lovelace", scope_id)
+            recipient = _claim(spec, "payment_recipient", scope_id)
+            source = _claim(spec, "payment_source_account_owner", scope_id)
+            deadline = _claim(spec, "timeout_ms", scope_id)
+            if (source != account or type(amount) is not int or amount <= 0
+                    or type(deadline) is not int or deadline <= previous_deadline):
+                raise ValueError("scenario payment amount, source, or timing is inconsistent")
+            expected_payments_list.append({
+                "source_account": _role(account), "payee": {"party": _role(recipient)},
+                "token": ADA, "amount": amount})
+            transactions_list.append(_transaction("NoInput", at=deadline))
+            previous_deadline = deadline
+        if sum(item["amount"] for item in expected_payments_list) != funding[0]:
+            raise ValueError("scenario releases do not conserve funded amount")
+        expected_payments = tuple(expected_payments_list)
+        transactions = tuple(transactions_list)
+        state = dict(EMPTY_STATE)
+        domain = DeclaredActionDomain("batch-timed-release-declared-actions-v1", transactions)
+    elif profile_id == "funded-swap":
+        deposits = [item for item in spec["behavior_scopes"]
+                    if item["scope_type"] == "transition"
+                    and item.get("transition_kind") == "deposit"]
+        if len(deposits) != 2:
+            raise ValueError("scenario requires two deposit transitions")
+        first = next((item for item in deposits
+                      if item.get("continuation_scope_id") in {
+                          other["scope_id"] for other in deposits
+                          if other["scope_id"] != item["scope_id"]}), None)
+        if first is None:
+            raise ValueError("scenario requires ordered deposit transitions")
+        second = next(item for item in deposits if item is not first)
+        declared = []
+        funding = {}
+        for deposit in (first, second):
+            scope_id = deposit["scope_id"]
+            asset = _claim(spec, "asset", scope_id)
+            parsed = parse_native_asset_id(asset) if isinstance(asset, str) else None
+            if asset == "ADA":
+                token = ADA
+                amount = _claim(spec, "amount_lovelace", scope_id)
+            elif parsed is not None:
+                policy, name_hex = parsed
+                token = {"currency_symbol": policy,
+                         "token_name": bytes.fromhex(name_hex).decode("utf-8")}
+                amount = _claim(spec, "amount_token_units", scope_id)
+            else:
+                raise ValueError("scenario requires identified ADA/native assets")
+            depositor = _claim(spec, "depositing_party", scope_id)
+            owner = _claim(spec, "destination_account_owner", scope_id)
+            if type(amount) is not int or amount <= 0:
+                raise ValueError("scenario requires positive deposit quantity")
+            funding[asset] = {"amount": amount, "party": depositor,
+                              "owner": owner, "token": token}
+            declared.append(_transaction("Deposit", {
+                "type": "Deposit", "account": _role(owner), "party": _role(depositor),
+                "token": token, "amount": amount}))
+        if len(funding) != 2 or "ADA" not in funding:
+            raise ValueError("scenario requires distinct ADA/native assets")
+        scopes_by_id = {item["scope_id"]: item for item in spec["behavior_scopes"]}
+        first_payout = scopes_by_id.get(second.get("continuation_scope_id"))
+        second_payout = (scopes_by_id.get(first_payout.get("continuation_scope_id"))
+                         if isinstance(first_payout, dict) else None)
+        if (not isinstance(first_payout, dict) or not isinstance(second_payout, dict)
+                or first_payout.get("scope_type") != "terminal_outcome"
+                or second_payout.get("scope_type") != "terminal_outcome"
+                or first_payout.get("parent_scope_id") != second["scope_id"]
+                or second_payout.get("parent_scope_id") not in {
+                    second["scope_id"], first_payout["scope_id"]}
+                or second_payout.get("continuation_scope_id") is not None):
+            raise ValueError("scenario requires two linked swap payouts")
+        expected_payments = []
+        for outcome in (first_payout, second_payout):
+            scope_id = outcome["scope_id"]
+            asset = _claim(spec, "asset", scope_id)
+            if asset not in funding:
+                raise ValueError("scenario payout asset is not funded")
+            origin = funding[asset]
+            amount_kind = "amount_lovelace" if asset == "ADA" else "amount_token_units"
+            amount = _claim(spec, amount_kind, scope_id)
+            recipient = _claim(spec, "payment_recipient", scope_id)
+            if amount != origin["amount"]:
+                raise ValueError("scenario payout does not conserve funding")
+            expected_payments.append({
+                "source_account": _role(origin["owner"]),
+                "payee": {"party": _role(recipient)},
+                "token": origin["token"], "amount": amount})
+        if len(expected_payments) != 2:
+            raise ValueError("scenario requires both swap payouts")
+        expected_payments = tuple(expected_payments)
+        transactions = tuple(declared)
+        state = dict(EMPTY_STATE)
+        domain = SwapTransactionDomain("batch-funded-swap-declared-deposits-v1",
+                                       transactions)
+    elif profile_id == "sequential-approval":
+        scopes = {item["scope_id"]: item for item in spec["behavior_scopes"]}
+        deposits = [item for item in scopes.values()
+                    if item.get("transition_kind") == "deposit"]
+        if len(deposits) != 1 or _claim(spec, "asset", "global") != "ADA":
+            raise ValueError("scenario requires one ADA deposit")
+        deposit = deposits[0]
+        first = scopes.get(deposit.get("continuation_scope_id"))
+        if not isinstance(first, dict) or first.get("transition_kind") != "choice":
+            raise ValueError("scenario requires a first approval after deposit")
+        first_branch = [item for item in scopes.values() if item.get("scope_type") == "branch"
+                        and item.get("decision_id") == first["scope_id"]]
+        if len(first_branch) != 1:
+            raise ValueError("scenario requires one first-approval branch")
+        first_outcome = scopes.get(first_branch[0].get("continuation_scope_id"))
+        second = (scopes.get(first_outcome.get("continuation_scope_id"))
+                  if isinstance(first_outcome, dict) else None)
+        if not isinstance(second, dict) or second.get("transition_kind") != "choice":
+            raise ValueError("scenario requires a second approval after first payout")
+        second_branch = [item for item in scopes.values() if item.get("scope_type") == "branch"
+                         and item.get("decision_id") == second["scope_id"]]
+        if len(second_branch) != 1:
+            raise ValueError("scenario requires one second-approval branch")
+        second_outcome = scopes.get(second_branch[0].get("continuation_scope_id"))
+        if (not isinstance(first_outcome, dict) or not isinstance(second_outcome, dict)
+                or first_outcome.get("scope_type") != "terminal_outcome"
+                or second_outcome.get("scope_type") != "terminal_outcome"):
+            raise ValueError("scenario requires two explicit payout outcomes")
+        account = _claim(spec, "destination_account_owner", deposit["scope_id"])
+        depositor = _claim(spec, "depositing_party", deposit["scope_id"])
+        amount = _claim(spec, "amount_lovelace", "global")
+        if type(amount) is not int or amount <= 0:
+            raise ValueError("scenario requires positive source-grounded funding")
+        declared = [_transaction("Deposit", {
+            "type": "Deposit", "account": _role(account), "party": _role(depositor),
+            "token": ADA, "amount": amount})]
+        expected_payments = []
+        for choice, outcome in ((first, first_outcome), (second, second_outcome)):
+            bounds = choice.get("choice_bounds")
+            owner = _claim(spec, "choice_owner", choice["scope_id"])
+            if not isinstance(bounds, dict) or (bounds.get("from"), bounds.get("to")) != (1, 1):
+                raise ValueError("scenario requires source-backed approval encoding")
+            declared.append(_transaction("Choice", {
+                "type": "Choice", "choice_id": {
+                    "choice_name": choice["scope_id"], "choice_owner": _role(owner)},
+                "chosen": 1}))
+            scope_id = outcome["scope_id"]
+            payout = _claim(spec, "amount_lovelace", scope_id)
+            recipient = _claim(spec, "payment_recipient", scope_id)
+            source = _claim(spec, "payment_source_account_owner", scope_id)
+            if source != account or type(payout) is not int or payout <= 0:
+                raise ValueError("scenario payout source or amount invalid")
+            expected_payments.append({
+                "source_account": _role(account), "payee": {"party": _role(recipient)},
+                "token": ADA, "amount": payout})
+        if sum(item["amount"] for item in expected_payments) != amount:
+            raise ValueError("scenario payouts do not conserve funded amount")
+        expected_payments = tuple(expected_payments)
+        transactions = tuple(declared)
+        state = dict(EMPTY_STATE)
+        domain = DeclaredActionDomain("batch-sequential-approval-declared-actions-v1",
+                                      transactions)
     else:
         raise ValueError("no synthetic scenario for this profile")
     expectation = BehaviorExpectation(
@@ -195,5 +452,6 @@ def scenario_from_intent(accepted: ArtifactEnvelope, profile_id: str) -> BatchSc
     artifact = ArtifactEnvelope("behavior-expectation", "batch-v1", "batch_synthetic_scenario",
                                 ImplementationStatus.IMPLEMENTED_UNVALIDATED,
                                 AuthorityLevel.NO_AUTHORITY, payload)
-    return BatchScenario(artifact, IntentTransactionDomain(
-        f"batch-{profile_id}-declared-actions-v1", actions), state)
+    if profile_id not in {"funded-swap", "linear-time-release", "sequential-approval"}:
+        domain = IntentTransactionDomain(f"batch-{profile_id}-declared-actions-v1", actions)
+    return BatchScenario(artifact, domain, state)

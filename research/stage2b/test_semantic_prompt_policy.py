@@ -14,6 +14,8 @@ def test_minimal_claim_evidence_and_derived_amount_policy():
     assert "a party name alone does not prove" in system
     assert "status=derived" in system and "not status=explicit" in system
     assert "normalization_basis" in system
+    assert "never emit `derived_from=[]`" in system
+    assert "do not emit derived_from=[]" in user
     assert "Noor deposits 6 ADA" in user
     assert "seven semantic core fields" in system
 
@@ -36,11 +38,21 @@ def test_question_and_notify_policy():
     assert "Ask which" in system and "competing value" in system
     assert "transaction_submitter" in system
     assert "Keep schema field names out" in system
+    assert "Do not ask the business user to choose a wallet" in system
+
+
+def test_time_release_does_not_require_transaction_submitter_clarification():
+    system, _ = _prompt("Release the two payments at fixed times; the contract does not submit transactions itself.")
+    assert "does not imply a missing business" in system
+    assert "do not ask" in system.lower() and "activates payment" in system
+    assert "destination_account_owner" in system
+    assert "outside-taxonomy unscored behavior" in system
 
 
 def test_correction_conflict_and_resolution_order_policy():
     system, _ = _prompt("Version 1 names Kei; version 2 corrects the owner to Noor.")
     assert "later explicit correction supersedes" in system
+    assert "do not retain that old uncertainty as unscored contract behavior" in system
     assert "simultaneously active incompatible values" in system
     assert "Choose predicted_resolution last" in system
     assert system.index("Read requirement history") < system.index("Choose predicted_resolution")

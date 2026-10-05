@@ -493,3 +493,132 @@ could not resolve `tools.marlowe_smt` because another `tools` module shadowed
 that package during combined collection. The two separate suite invocations
 pass; this combined-run import collision was not relabeled as a pass or folded
 into the Batch 01 patch.
+
+## Continuation policy after the 70-attempt extension
+
+The 48-attempt manifest and 22-attempt extension above remain historical audit
+records. A later user instruction removed both the batch-wide ceiling and any
+per-case call allocation. The runner now keeps the same durable, sequential
+outbound-attempt journal without enforcing a local call-count limit. It stops
+on a provider-reported HTTP 402/429 limit, preserving only the safe status code
+in result evidence; transient failures are not reported as quota exhaustion.
+Each case remains subject to the existing semantic, compiler, reference, and
+ledger gates. This policy does not authorize editing a candidate, supplying
+unverified business answers as real user input, or relabeling a blocked stage
+as a pass.
+
+## Continuation: funded choice and native-asset swap (2026-10-04)
+
+The user removed the local call ceilings and prioritized resolving a case
+before allocating calls to others. The append-only physical-attempt journal
+is retained as an outbound-attempt audit, **not** a statement of OpenRouter's
+provider-accounted daily usage. Provider HTTP 402/429 is surfaced as a safe
+limit status; no provider limit was observed through case 04 attempt 06.
+
+Case 03 used explicitly labeled synthetic clarification revisions. Attempts
+09-11 remained blocked by extraction/clarification errors. Attempt 12 was
+core-valid but its payout kind was not supported by the funded-choice
+compiler. After a source-grounded prompt correction, attempt 13 passed the
+core and compiled. Attempt 14 reached the ledger-size port but used a
+template without a valid roles-currency hash. Replaying the exact cached
+candidate with a roles-currency initialized template in attempt 15 used **0
+additional model calls** and yielded `REACHED_LEDGER_PASS`: pinned-reference
+comparison `SATISFIED`, bounded exploration/oracle completed, and private
+Cardano-node-backed Marlowe CLI size analysis measured **12,184 / 16,384
+bytes**. This is a simulated-intent, candidate-only, size-analysis result;
+it is **not** a submitted transaction, real customer acceptance, or proof of
+global contract safety.
+
+Case 04's original requirement leaves GOLD's on-chain identity unknown. The
+user explicitly authorized a **labeled simulation**, not an assertion that
+GOLD is a real Cardano token. The simulation uses a placeholder native asset
+`native:11111111111111111111111111111111111111111111111111111111/474f4c44`
+and assumes 13 units are available to Lan only within the test. A versioned
+Stage 2B v3 schema represents native-token quantity as `amount_token_units`,
+separate from ADA's `amount_lovelace`; a conservative funded-swap compiler
+requires two deposits, two timeouts, conserved payouts, and a refund of only
+the first funded asset when the second deposit expires. No candidate is
+rewritten to match that compiler. A real pinned Haskell-reference integration
+test exercises the success path and both timeout paths with the independent
+intent-derived scenario. The ledger-size check cannot prove that the
+placeholder policy was minted or that Lan controls its tokens.
+
+Case 04 attempts 03-06 remained before simulated intent acceptance: v2
+invented a Choice and represented GOLD as lovelace; early v3 outputs had
+invalid scope/evidence references, duplicated deadlines, omitted same-scope
+native asset claims, or asked to verify real-world token minting despite the
+simulation. These attempts remain immutable evidence. The v3 prompt and
+shared profile were refined by general invariants, not by editing the model
+candidate. The first funded-swap live pass to ledger, if any, must be reported
+separately from the offline synthetic fixture.
+
+## Continuation: shared contract plan and six-case replay (2026-10-05)
+
+The new offline capability inventory classifies the frozen 20-case Batch 01
+slice by contract family and missing facts. A typed, deterministic contract
+plan now lowers Deposit, Choice, Notify, Pay, IfChoice, When, and Close to
+canonical Core V1 while retaining claim-to-AST evidence paths. Strict
+profile matching, funding conservation, causal links, and source-grounded
+claims remain mandatory. This construction layer is reusable across profile
+implementations; it is not a universal compiler or permission to fill gaps in
+the original requirement. The native-token swap and sequential-approval
+profiles were added for source-supported shapes only. No frozen case,
+candidate, authority label, or historical attempt was rewritten.
+
+Case 04 later reached a structurally valid, simulated-customer-accepted
+funded-swap candidate. Attempt 14 had reference comparison `SATISFIED` but
+ledger infrastructure was unavailable because the private node had lost sync.
+A new Babbage testnet (magic 42108) produced blocks and reported 100% sync.
+Attempt 15 replayed the *same* valid core with zero model calls and returned
+`REACHED_LEDGER_PASS`, measuring 12,206 / 16,384 bytes. The GOLD asset ID and
+availability remain labeled simulation assumptions, not verified chain facts.
+
+Case 05 required one ADA deposit, two source-named approvals, staged payouts,
+and two timeout refunds. The model initially invented or omitted Choice
+semantics, emitted invalid evidence, and carried obsolete unscored behavior.
+The prompt/repair path was tightened around exact evidence, single-value
+approval Choice guards, and bounded regeneration; the strict sequential-
+approval compiler requires the declared control flow and conserved funding.
+Attempt 10 passed core/full validation, simulated acceptance, and compile.
+Attempt 11 replayed that unchanged core with zero model calls through pinned
+reference comparison `SATISFIED`, bounded exploration/oracle, and node-backed
+ledger-size analysis: `REACHED_LEDGER_PASS`, 12,250 / 16,384 bytes.
+
+Case 06 initially asked a spurious business question about who would submit
+transactions for scheduled payments. Normal Marlowe timeout execution needs
+a submitted transaction, but submitter identity is not itself a missing
+business trigger. After prompt and compiler-feedback clarification, attempt 09
+passed core/full validation, simulated acceptance, and the existing two-stage
+time-release compiler. The independent synthetic scenario adapter was then
+extended to derive deposit and scheduled no-input transactions from the
+accepted intent, never from compiler AST values. Attempt 11 replayed the
+unchanged core with zero model calls: reference comparison `SATISFIED`,
+bounded exploration/oracle completed, and `REACHED_LEDGER_PASS` at
+11,926 / 16,384 bytes.
+
+Latest recorded results for cases 01-06 are attempts 08, 07, 15, 15, 11, and
+11 respectively. All six have core `PASS`, compile `SUPPORTED`, comparison
+`SATISFIED`, and node-backed Marlowe CLI transaction-size result
+`REACHED_LEDGER_PASS`; measured sizes are 12,182, 12,222, 12,184, 12,206,
+12,250, and 11,926 bytes against `maxTxSize=16,384`. The append-only journal
+records 118 outbound attempts cumulatively, not 118 provider-accounted daily
+requests. No provider HTTP 402/429 was observed. The latest replay for each
+case used zero new model calls.
+
+Verification after these changes: Windows `python -m pytest research/ -q`
+reported `359 passed, 29 skipped`; Windows agent suite reported `228 passed,
+7 skipped`; Ruff F401/F841 and compileall passed. WSL real-reference scenario
+integration reported `5 passed`. An initial WSL full research run reported
+`44 failed, 341 passed, 3 skipped` because Linux Git treated the shared
+Windows checkout's CRLF corpus representation as a tracked semantic diff.
+Without editing frozen files or the verifier, rerunning that suite with the
+process-local Git setting `core.autocrlf=true` reported `385 passed, 3 skipped`.
+This cross-shell checkout configuration remains a reproducibility caveat.
+
+These are six exploratory, labeled simulations with candidate-only compiler
+authority and bounded evidence. Ledger validation here is transaction-size
+analysis against a live local Babbage node and protocol parameters; no
+transaction was signed or submitted. It does not establish handling of every
+prompt or contract, real customer approval, token ownership, global safety,
+or production readiness. Remaining families in the 20-case inventory still
+require explicit source facts and supported, independently tested profiles.

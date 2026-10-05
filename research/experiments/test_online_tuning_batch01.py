@@ -10,13 +10,18 @@ from marlowe_ai_agent.marlowe_agent.models import LLMBudgetError, LLMTransientEr
 from research.architecture.bootstrap import build_research_pipeline
 from research.architecture.status import AuthorityLevel, StageRunStatus
 from research.experiments.online_tuning_batch01 import (PhysicalCallJournal,
+                                                        CompilerFeedbackModel,
+                                                        ProviderLimitReached,
                                                         attach_global_budget, batch_wiring, load_batch,
+                                                        load_compiler_feedback,
+                                                        load_replay_core,
                                                         load_synthetic_input, next_attempt_paths,
                                                         model_request_deadline, physical_call_limit,
                                                         reusable_extraction,
                                                         run_one)
 from research.stage2b.intent_spec import CORE_SCHEMA_VERSION_V2
 from research.stage3.test_funded_choice_v1 import funded_choice_core
+from research.stage3.test_funded_swap_v1 import swap_core
 
 
 def test_batch_manifest_matches_only_first_twenty_physical_records():
@@ -36,6 +41,112 @@ def test_attempts_are_persisted_before_network_and_not_reset(tmp_path):
     with pytest.raises(LLMBudgetError, match="BATCH_MODEL_BUDGET_EXHAUSTED"):
         resumed.consume("third")
     assert len(path.read_text(encoding="utf-8").splitlines()) == 2
+
+
+def test_unbounded_journal_resumes_after_historical_seventy_attempts(tmp_path):
+    path = tmp_path / "attempts.jsonl"
+    path.write_text("".join(json.dumps({"attempt": index, "case_id": "prior"}) + "\n"
+                            for index in range(1, 71)), encoding="utf-8")
+    journal = PhysicalCallJournal(path)
+    journal.consume("current")
+    assert journal.used == 71
+    assert journal.entries[-1]["case_id"] == "current"
+
+
+def test_compiler_feedback_requires_valid_same_case_evidence_and_does_not_edit_core(
+        monkeypatch, tmp_path):
+    core = swap_core()
+    path = tmp_path / "case-04-attempt-11.json"
+    record = {
+        "case_id": "case-4", "core_schema_version": core["schema_version"],
+        "requirement_history": core["requirement_history"],
+        "candidate": {"semantic_core": core, "core_validation_errors": [],
+                      "full_validation_errors": []},
+        "stages": {"intent_acceptance": {"run_status": "SUCCEEDED"},
+                   "compile": {"run_status": "UNSUPPORTED",
+                               "diagnostics": ["missing deposit account owner"]}},
+    }
+    path.write_text(json.dumps(record, ensure_ascii=False), encoding="utf-8")
+    monkeypatch.setattr("research.experiments.online_tuning_batch01.RUN_DIR", tmp_path)
+    loaded, diagnostics = load_compiler_feedback(
+        path, case_id="case-4", history=core["requirement_history"],
+        core_schema_version=core["schema_version"])
+    assert loaded == core
+
+    class Base:
+        def generate(self, system, user):
+            assert "missing deposit account owner" in user
+            assert "Previous valid core" in user
+            assert "superseded uncertainty" in user
+            assert "actor's Choice" in user
+            assert "obsolete uncertainty observation" in user
+            assert "normal ledger operation" in user
+            return {"generated": True}
+
+    assert CompilerFeedbackModel(Base(), loaded, diagnostics).generate("system", "user") == {
+        "generated": True}
+    assert loaded == core
+    with pytest.raises(ValueError, match="same-case valid core"):
+        load_compiler_feedback(path, case_id="other", history=core["requirement_history"],
+                               core_schema_version=core["schema_version"])
+
+
+def test_explicit_core_replay_preserves_prior_valid_candidate_and_provenance(monkeypatch, tmp_path):
+    core = swap_core()
+    path = tmp_path / "case-04-prior.json"
+    record = {
+        "case_id": "case-4", "core_schema_version": core["schema_version"],
+        "requirement_history": core["requirement_history"],
+        "candidate": {"semantic_core": core, "core_validation_errors": [],
+                      "full_validation_errors": []},
+    }
+    path.write_text(json.dumps(record, ensure_ascii=False), encoding="utf-8")
+    monkeypatch.setattr("research.experiments.online_tuning_batch01.RUN_DIR", tmp_path)
+    loaded = load_replay_core(path, case_id="case-4", history=core["requirement_history"],
+                              core_schema_version=core["schema_version"])
+    assert loaded == core and loaded is not core
+    assert json.loads(path.read_text(encoding="utf-8")) == record
+    with pytest.raises(ValueError, match="same-case valid core"):
+        load_replay_core(path, case_id="other", history=core["requirement_history"],
+                         core_schema_version=core["schema_version"])
+
+
+@pytest.mark.parametrize("status_code", [402, 429])
+def test_provider_limit_is_sanitized_and_not_retried(tmp_path, status_code):
+    class ProviderError(Exception):
+        pass
+
+    class Client:
+        def with_options(self, *, max_retries):
+            assert max_retries == 0
+            return self
+
+    class Reasoner:
+        client = Client()
+
+        def set_call_budget(self, limit):
+            assert limit is None
+
+        def _request(self, create, **kwargs):
+            error = ProviderError("sensitive provider response")
+            error.status_code = status_code
+            raise error
+
+        def _raw_response(self, system, user):
+            return "{}"
+
+    class Model:
+        reasoner = Reasoner()
+
+    model = Model()
+    journal = PhysicalCallJournal(tmp_path / "attempts.jsonl")
+    attach_global_budget(model, journal, "current")
+    model.reasoner._consume_call()
+    with pytest.raises(ProviderLimitReached, match=f"HTTP {status_code}") as error:
+        model.reasoner._request(lambda: None, messages=[])
+    assert "sensitive" not in str(error.value)
+    assert model.provider_limit_status == status_code
+    assert journal.used == 1
 
 
 def test_budget_extension_preserves_prior_journal_and_caps_new_attempts(monkeypatch, tmp_path):

@@ -97,6 +97,65 @@ def test_bounded_validation_feedback_preserves_validator_authority():
     assert "never use ellipses" in model.calls[1][1]
 
 
+def test_multiple_repairs_use_latest_errors_and_stop_on_valid_core():
+    valid = intent_spec.extract_core_view(simple_payment())
+    first = deepcopy(valid)
+    first["claims"] = None
+    second = deepcopy(valid)
+    second["predicted_resolution"] = "not_a_resolution"
+
+    class SequencedModel:
+        def __init__(self):
+            self.calls = []
+
+        def generate(self, system, user):
+            self.calls.append(user)
+            return (first, second, valid)[len(self.calls) - 1]
+
+    model = SequencedModel()
+    core, initial_errors = shadow_extractor.IntentShadowExtractor(
+        model).extract_with_validation_feedback(valid["requirement_history"], max_repairs=3)
+    assert initial_errors
+    assert core.validation_errors(expected_history=valid["requirement_history"]) == []
+    assert len(model.calls) == 3
+    assert "claims must be a list" in model.calls[1]
+    assert "claims must be a list" not in model.calls[2]
+
+
+def test_repair_stalls_on_identical_core_and_never_exceeds_cap():
+    valid = intent_spec.extract_core_view(simple_payment())
+    invalid = deepcopy(valid)
+    invalid["claims"] = None
+
+    class RepeatingModel:
+        calls = 0
+
+        def generate(self, system, user):
+            self.calls += 1
+            return invalid
+
+    model = RepeatingModel()
+    core, errors = shadow_extractor.IntentShadowExtractor(
+        model).extract_with_validation_feedback(valid["requirement_history"], max_repairs=3)
+    assert errors and core.validation_errors(expected_history=valid["requirement_history"])
+    assert model.calls == 2
+    with pytest.raises(ValueError, match="0 through 3"):
+        shadow_extractor.IntentShadowExtractor(model).extract_with_validation_feedback(
+            valid["requirement_history"], max_repairs=4)
+
+
+def test_repair_guidance_keeps_approval_evidence_and_questions_source_grounded():
+    guidance = shadow_extractor._repair_guidance({}, [
+        "scope decision-2: invalid choice_bounds",
+        "scope branch-2: invalid choice_guard",
+        "required_clarifications must contain nonempty questions",
+    ])
+    assert len(guidance) == 3
+    assert "case-sensitive" in guidance[0]["rule"]
+    assert "do not invent a rejection branch" in guidance[1]["rule"]
+    assert "JSON array" in guidance[2]["rule"]
+
+
 def test_calendar_hints_are_source_only_and_preserve_timezone_uncertainty():
     history = [{"version": 1, "messages": ["Before 08/01/2027."]},
                {"version": 2, "messages": ["Use 2027-01-15T00:00:00Z."]}]

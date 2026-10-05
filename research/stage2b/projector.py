@@ -9,15 +9,17 @@ from typing import Any
 from research.stage2b.intent_spec import (
     BACKING_STATUSES, DEADLINE_KINDS, IntentSpec,
     OUTCOME_RECIPIENT_KINDS, PARTY_KINDS, SCHEMA_VERSION, SCHEMA_VERSION_V2,
-    CORE_SCHEMA_VERSION_V2,
+    SCHEMA_VERSION_V3, CORE_SCHEMA_VERSION_V2, CORE_SCHEMA_VERSION_V3,
     TRANSITION_ACTOR_KINDS, TRANSITION_DEADLINE_KINDS,
     validate_shadow_semantic_core,
 )
 
 
-PARAMETER_KINDS = {"amount_lovelace": "amount", "asset": "asset",
+PARAMETER_KINDS = {"amount_lovelace": "amount", "amount_token_units": "amount",
+                   "asset": "asset",
                    **{kind: "deadline" for kind in DEADLINE_KINDS}}
-UNITS = {"amount_lovelace": "lovelace", **{kind: "posix_ms" for kind in DEADLINE_KINDS}}
+UNITS = {"amount_lovelace": "lovelace", "amount_token_units": "token_units",
+         **{kind: "posix_ms" for kind in DEADLINE_KINDS}}
 OUTCOMES = {kind: outcome for outcome, kinds in OUTCOME_RECIPIENT_KINDS.items()
             for kind in kinds}
 CATEGORIES = ("participant", "asset", "account", "parameter", "transition",
@@ -51,8 +53,9 @@ def _backed(claim: dict[str, Any]) -> bool:
 
 def _new_spec(core: dict[str, Any]) -> dict[str, Any]:
     return {
-        "schema_version": (SCHEMA_VERSION_V2 if core.get("schema_version") == CORE_SCHEMA_VERSION_V2
-                           else SCHEMA_VERSION),
+        "schema_version": {CORE_SCHEMA_VERSION_V2: SCHEMA_VERSION_V2,
+                           CORE_SCHEMA_VERSION_V3: SCHEMA_VERSION_V3}.get(
+                               core.get("schema_version"), SCHEMA_VERSION),
         "requirement_history": core.get("requirement_history"),
         "participants": [],
         "assets_and_accounts": {"assets": [], "accounts": [], "funding_relations": []},
