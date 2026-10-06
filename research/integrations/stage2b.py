@@ -47,7 +47,13 @@ class Stage2BExtractionPort:
                 input_artifacts=[source.artifact_id],
                 diagnostics=[f"model extraction failed: {safe_error['code']}"],
                 safe_error=safe_error))
-        core_errors = core.validation_errors(expected_history=history)
+        core_errors = extractor.validation_errors(core, history)
+        replay_metadata = getattr(self.model, "replay_metadata_for", None)
+        if callable(replay_metadata):
+            preserved_errors = replay_metadata(core.to_dict())
+            if (isinstance(preserved_errors, list)
+                    and all(isinstance(item, str) for item in preserved_errors)):
+                initial_errors = preserved_errors
         try:
             projection = project_intent_spec(core, expected_history=history)
             full_errors = projection.intent_spec.validation_errors(expected_history=history)

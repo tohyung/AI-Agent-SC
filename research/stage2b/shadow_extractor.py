@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
+from copy import deepcopy
 import json
-from datetime import date, datetime
+from datetime import date
 import re
 from typing import Any, Protocol
 
@@ -11,6 +12,7 @@ from research.stage2b.intent_spec import (
     CORE_SCHEMA_VERSION, CORE_SCHEMA_VERSION_V2, CORE_SCHEMA_VERSION_V3,
     ShadowSemanticCore,
     core_prompt_schema_contract,
+    explicit_utc_instants,
 )
 
 
@@ -59,9 +61,20 @@ Follow this semantic order before selecting a resolution:
    claim taxonomy; facts outside it may be non-authoritative
    unscored_observations, never new claim kinds. Preserve party/asset spelling
    and case exactly. Convert 1 ADA to 1000000 integer lovelace and POSIX times
-   to integer milliseconds. A converted amount_lovelace is status=derived with
+   to integer milliseconds. A date-only phrase does not establish a timezone
+   or an exact POSIX instant: keep its deadline claim unresolved with value=null
+   and ask a business-friendly question about the cutoff/timezone unless a
+   later requirement supplies that exact instant. Never use a calendar hint
+   to guess milliseconds or shift the cited year. Ask the user for a local
+   calendar date, clock time and timezone; never ask them to calculate POSIX
+   milliseconds, inspect an AST, or choose a timestamp encoding. Normalize
+   the answer yourself once those facts are known. A converted amount_lovelace
+   is status=derived with
    exact source evidence and normalization_basis, not status=explicit merely
-   because the source states an ADA amount. A directly named asset may remain
+   because the source states an ADA amount. Do not emit the raw ADA numeral
+   as a second amount_lovelace claim: 20 ADA supports one normalized value
+   20000000 lovelace, not both 20 and 20000000 lovelace in the same scope.
+   A directly named asset may remain
    explicit. `derived_from` is optional and must prove the same kind of fact;
    asset=ADA does not prove an amount. Omit `derived_from` entirely when there
    is no valid same-kind source claim; never emit `derived_from=[]`.
@@ -203,6 +216,8 @@ def build_prompt(requirement_history: list[dict[str, Any]], *,
             "continue to its timeout scope: branch and timeout scopes are "
             "alternative paths of that same Choice. Give each branch and its "
             "timeout its own continuation to the first outcome on that path. "
+            "Omit continuation_scope_id on the Choice transition itself; its "
+            "branch and timeout alternatives are linked by decision_id. "
             "Never use continuation_scope_id to point at a timeout or branch. "
             "Use unscored_observations reason=irrelevant_context only for source "
             "details that cannot affect contract behavior (for example, weather or "
@@ -284,17 +299,17 @@ def _calendar_hints(history: list[dict[str, Any]]) -> list[dict[str, Any]]:
         for index, message in enumerate(revision.get("messages", [])):
             if not isinstance(message, str):
                 continue
-            for span in re.findall(r"(?<!\d)\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z(?!\d)",
-                                   message):
-                try:
-                    instant = datetime.fromisoformat(span.replace("Z", "+00:00"))
-                except ValueError:
-                    continue
+            exact = explicit_utc_instants(message)
+            for start, end, value in exact:
                 hints.append({"requirement_version": revision.get("version"),
-                              "message_index": index, "source_span": span,
-                              "exact_utc_milliseconds": int(instant.timestamp() * 1000)})
-            for day, month, year in re.findall(
+                              "message_index": index, "source_span": message[start:end],
+                              "exact_utc_milliseconds": value})
+            for match in re.finditer(
                     r"(?<!\d)(\d{1,2})/(\d{1,2})/(\d{4})(?!\d)", message):
+                if any(start <= match.start() and match.end() <= end
+                       for start, end, _ in exact):
+                    continue
+                day, month, year = match.groups()
                 try:
                     calendar_date = date(int(year), int(month), int(day))
                 except ValueError:
@@ -326,6 +341,13 @@ class IntentShadowExtractor:
                                     core_schema_version=self.core_schema_version)
         return parse_model_output(self.model.generate(system, user))
 
+    def validation_errors(self, core: ShadowSemanticCore,
+                          requirement_history: list[dict[str, Any]]) -> list[str]:
+        errors = core.validation_errors(expected_history=requirement_history)
+        if core.to_dict().get("schema_version") != self.core_schema_version:
+            errors.insert(0, f"schema_version must equal {self.core_schema_version}")
+        return errors
+
     def extract_with_validation_feedback(
         self, requirement_history: list[dict[str, Any]], *, max_repairs: int = 1
     ) -> tuple[ShadowSemanticCore, list[str]]:
@@ -334,34 +356,110 @@ class IntentShadowExtractor:
         system, user = build_prompt(requirement_history,
                                     core_schema_version=self.core_schema_version)
         core = parse_model_output(self.model.generate(system, user))
-        initial_errors = core.validation_errors(expected_history=requirement_history)
+        initial_errors = self.validation_errors(core, requirement_history)
         if not initial_errors or max_repairs == 0:
             return core, initial_errors
         seen = {json.dumps(core.to_dict(), sort_keys=True, ensure_ascii=False)}
         for _ in range(max_repairs):
-            current_errors = core.validation_errors(expected_history=requirement_history)
+            current_errors = self.validation_errors(core, requirement_history)
             if not current_errors:
                 break
-            guidance = _repair_guidance(core.to_dict(), current_errors, requirement_history)
-            feedback = (
-                "The previous semantic core failed deterministic validation. "
-                "Regenerate the complete seven-field core from the original requirement only. "
-                "Do not infer new facts, omit financial claims, or change the resolution "
-                "merely to satisfy validation. Fix only errors justified by the original text. "
-                "Keep source spans verbatim and case-sensitive; never use ellipses. "
-                "If derived_from points to a different claim kind, omit derived_from "
-                "unless a valid same-kind source exists. Return JSON only.\n"
-                "Validation errors:\n" + json.dumps(current_errors, ensure_ascii=False)
-                + "\nTyped diagnostics (diagnosis only; regenerate from source):\n"
-                + json.dumps(guidance, ensure_ascii=False)
-                + "\nPrevious core:\n" + json.dumps(core.to_dict(), ensure_ascii=False)
-            )
-            core = parse_model_output(self.model.generate(system, user + "\n" + feedback))
+            target_ids = _evidence_repair_targets(core.to_dict(), current_errors)
+            if target_ids:
+                repair_request = {
+                    "requirement_history": requirement_history,
+                    "claims": [claim for claim in core.to_dict()["claims"]
+                               if claim["claim_id"] in target_ids],
+                    "validation_errors": current_errors,
+                }
+                repair_system = (
+                    "Repair only the evidence of the listed claims. Return one JSON object "
+                    "with exactly evidence_by_claim mapping each listed claim_id to its "
+                    "replacement evidence array. Each evidence item must have "
+                    "requirement_version, message_index, span, relation. Copy only exact "
+                    "contiguous source spans from requirement_history, with no ellipses. "
+                    "A span must actually support that claim and role. Do not invent facts "
+                    "or return a new semantic core."
+                )
+                proposed = self.model.generate(
+                    repair_system, json.dumps(repair_request, ensure_ascii=False))
+                patched = _apply_evidence_repair(core.to_dict(), proposed, target_ids)
+                if patched is None:
+                    break
+                core = parse_model_output(patched)
+            else:
+                guidance = _repair_guidance(core.to_dict(), current_errors, requirement_history)
+                feedback = (
+                    "The previous semantic core failed deterministic validation. "
+                    "Regenerate the complete seven-field core from the original requirement only. "
+                    "Do not infer new facts, omit financial claims, or change the resolution "
+                    "merely to satisfy validation. Fix only errors justified by the original text. "
+                    "Keep source spans verbatim and case-sensitive; never use ellipses. "
+                    "If derived_from points to a different claim kind, omit derived_from "
+                    "unless a valid same-kind source exists. Return JSON only.\n"
+                    "Validation errors:\n" + json.dumps(current_errors, ensure_ascii=False)
+                    + "\nTyped diagnostics (diagnosis only; regenerate from source):\n"
+                    + json.dumps(_group_repair_guidance(guidance), ensure_ascii=False)
+                )
+                core = parse_model_output(self.model.generate(system, user + "\n" + feedback))
             fingerprint = json.dumps(core.to_dict(), sort_keys=True, ensure_ascii=False)
             if fingerprint in seen:
                 break
             seen.add(fingerprint)
         return core, initial_errors
+
+
+def _evidence_repair_targets(core: dict[str, Any], errors: list[str]) -> set[str]:
+    if not errors:
+        return set()
+    claims = core.get("claims")
+    if not isinstance(claims, list):
+        return set()
+    claim_ids = {claim.get("claim_id") for claim in claims if isinstance(claim, dict)}
+    targets = set()
+    for error in errors:
+        if not (error.startswith("claim ") and (error.endswith(": invalid evidence target/span")
+                or error.endswith(": supporting evidence required"))):
+            return set()
+        claim_id = error.split(":", 1)[0].removeprefix("claim ")
+        if claim_id not in claim_ids:
+            return set()
+        targets.add(claim_id)
+    return targets
+
+
+def _apply_evidence_repair(core: dict[str, Any], proposed: Any,
+                           target_ids: set[str]) -> dict[str, Any] | None:
+    if not isinstance(proposed, dict) or set(proposed) != {"evidence_by_claim"}:
+        return None
+    replacements = proposed["evidence_by_claim"]
+    if not isinstance(replacements, dict) or set(replacements) != target_ids:
+        return None
+    if any(not isinstance(items, list) or not items
+           or any(not isinstance(item, dict) for item in items)
+           for items in replacements.values()):
+        return None
+    patched = deepcopy(core)
+    for claim in patched["claims"]:
+        if claim["claim_id"] in target_ids:
+            claim["evidence"] = deepcopy(replacements[claim["claim_id"]])
+    return patched
+
+
+def _group_repair_guidance(guidance: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Share repeated instructions while retaining every diagnosed error and detail."""
+    grouped: list[dict[str, Any]] = []
+    by_rule: dict[str, dict[str, Any]] = {}
+    for item in guidance:
+        rule = item["rule"]
+        group = by_rule.get(rule)
+        if group is None:
+            group = {"rule": rule, "diagnostics": []}
+            by_rule[rule] = group
+            grouped.append(group)
+        group["diagnostics"].append({key: value for key, value in item.items()
+                                     if key != "rule"})
+    return grouped
 
 
 def _repair_guidance(core: dict[str, Any], errors: list[str],
@@ -391,12 +489,38 @@ def _repair_guidance(core: dict[str, Any], errors: list[str],
                          "terminal_outcome. Do not invent a transition to silence this error."),
             })
         elif "conflicting values for " in error or "active claim conflict" in error:
+            scope_id = error.rsplit(" in ", 1)[-1]
+            amount_claims = [item for item in core.get("claims", [])
+                             if isinstance(item, dict)
+                             and item.get("kind") == "amount_lovelace"
+                             and item.get("scope_id") == scope_id] if isinstance(
+                                 core.get("claims"), list) else []
+            values = [item.get("value") for item in amount_claims]
+            unit_duplicate = next(((small, large)
+                                   for small in values for large in values
+                                   if type(small) is int and type(large) is int
+                                   and small > 0 and small * 1_000_000 == large), None)
             guidance.append({
                 "error": error,
-                "rule": ("Check whether the values describe independent obligations. "
-                         "If so, attach each claim to its actual funding or outcome scope; "
-                         "if they are incompatible values for the same obligation, preserve "
-                         "the conflict and request clarification. Do not delete a supported claim."),
+                "rule": (("A raw ADA numeral must not also be an amount_lovelace "
+                          f"claim. For {unit_duplicate[0]} ADA keep one source-backed "
+                          f"{unit_duplicate[1]}-lovelace claim at this scope; omit the "
+                          f"unsupported {unit_duplicate[0]}-lovelace "
+                          "duplicate and its derived_from link. Do not hide a real "
+                          "business conflict.") if unit_duplicate else
+                         ("Check whether the values describe independent obligations. "
+                          "If so, attach each claim to its actual funding or outcome scope; "
+                          "if they are incompatible values for the same obligation, preserve "
+                          "the conflict and request clarification. Do not delete a supported claim.")),
+            })
+        elif "invalid derived_from source claim" in error:
+            guidance.append({
+                "error": error,
+                "rule": ("derived_from is optional. If a raw ADA numeral was incorrectly "
+                         "represented as another amount_lovelace claim, omit that raw "
+                         "claim and derived_from; keep one normalized lovelace claim with "
+                         "exact source evidence and normalization_basis. Never invent "
+                         "a source claim only to satisfy this link."),
             })
         elif "invalid evidence target/span" in error or "supporting evidence required" in error:
             item: dict[str, Any] = {
@@ -438,8 +562,10 @@ def _repair_guidance(core: dict[str, Any], errors: list[str],
         elif error == "required_clarifications must contain nonempty questions":
             guidance.append({
                 "error": error,
-                "rule": ("required_clarifications must be a JSON array. Include a "
-                         "question object only for a genuinely unresolved critical fact; "
+                "rule": ("required_clarifications must be a JSON array of nonempty "
+                         "question strings or objects with a nonempty question field. "
+                         "Include a question only for a genuinely "
+                         "unresolved critical fact; "
                          "otherwise use [] and select the source-supported resolution."),
             })
         elif "unresolved value must be null" in error:
@@ -451,13 +577,31 @@ def _repair_guidance(core: dict[str, Any], errors: list[str],
                          "a known value marked unresolved merely to justify a question."),
             })
         elif "deadline value contradicts cited calendar date" in error:
-            guidance.append({
+            claim_id = error.split(":", 1)[0].removeprefix("claim ")
+            claims = core.get("claims", [])
+            claim = next((item for item in claims if isinstance(item, dict)
+                          and item.get("claim_id") == claim_id), None) if isinstance(
+                              claims, list) else None
+            exact = sorted({value for item in (claim or {}).get("evidence", [])
+                            if isinstance(item, dict) and item.get("relation") == "supports"
+                            and isinstance(item.get("span"), str)
+                            for _, _, value in explicit_utc_instants(item["span"])})
+            item = {
                 "error": error,
-                "rule": ("Recompute POSIX milliseconds from the cited source date and "
-                         "an explicit timezone assumption. Preserve the date in the "
-                         "requirement; do not shift its year to make the integer fit. "
-                         "Relative deadlines must use the corrected absolute anchor."),
-            })
+                "rule": (("The cited local clock and UTC offset determine an exact "
+                          "instant. Use only the source-backed millisecond value listed "
+                          "here; do not shift the cited month/year or mark it unresolved.")
+                         if exact else
+                         ("Do not guess POSIX milliseconds from a date-only source. "
+                          "If the requirement gives no timezone/cutoff, set the deadline "
+                          "claim value=null and status=unresolved, then ask a concrete "
+                          "cutoff question. Only derive milliseconds from an exact "
+                          "source-backed instant or labeled later revision. Never shift "
+                          "the cited year to make an integer fit.")),
+            }
+            if exact:
+                item["source_backed_utc_milliseconds"] = exact
+            guidance.append(item)
         elif error.startswith("clarification prediction requires an unresolved claim"):
             guidance.append({
                 "error": error,

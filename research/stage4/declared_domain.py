@@ -5,6 +5,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
+from research.stage3.scenario_binding import ScenarioBindingError, bind_choice_input
+
 
 @dataclass(frozen=True)
 class DeclaredActionDomain:
@@ -37,6 +39,13 @@ class DeclaredActionDomain:
             if not isinstance(inputs, list) or len(inputs) != 1:
                 continue
             item = inputs[0]
+            if item.get("type") == "Choice" and "choice_id" not in item:
+                try:
+                    bound = bind_choice_input(item, enabled)
+                except ScenarioBindingError:
+                    continue
+                tx = {**tx, "inputs": [bound]}
+                item = bound
             if item.get("type") == "Choice" and any(
                     action.get("for_choice") == item.get("choice_id")
                     and any(bound.get("from") <= item.get("chosen") <= bound.get("to")

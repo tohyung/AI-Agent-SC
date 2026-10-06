@@ -12,6 +12,7 @@ import sys
 from research.architecture.cli_runner import SessionOptions, run_session
 from research.final_validation.marlowe_cli import config_from_environment
 from research.integrations.model_transport import ModelTransport
+from research.stage2b.intent_spec import CORE_SCHEMA_VERSION_V2, CORE_SCHEMA_VERSION_V3
 
 
 def positive_int(value: str) -> int:
@@ -38,6 +39,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--max-iterations", type=positive_int, default=8, metavar="N")
     parser.add_argument("--max-llm-calls", type=positive_int, default=40, metavar="N")
     parser.add_argument("--stop-on-stall", type=positive_int, default=2, metavar="K")
+    parser.add_argument("--core-schema-version", choices=("v2", "v3"), default="v3")
     return parser
 
 
@@ -77,6 +79,8 @@ def main() -> int:
                 ledger_config=config_from_environment(),
                 expectation=expectation,
                 smt_binary=os.getenv("MARLOWE_SMT_BIN"),
+                core_schema_version=(CORE_SCHEMA_VERSION_V3 if args.core_schema_version == "v3"
+                                     else CORE_SCHEMA_VERSION_V2),
             )
             model = ModelTransport(args.model)
         except (RuntimeError, ValueError, OSError, json.JSONDecodeError) as exc:

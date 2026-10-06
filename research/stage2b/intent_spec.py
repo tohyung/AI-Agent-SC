@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 import json
 import re
 from typing import Any
@@ -310,18 +310,55 @@ def valid_supporting_evidence(claim: dict[str, Any], messages: dict[tuple[int, i
         item["relation"] == "supports" for item in evidence)
 
 
+def explicit_utc_instants(text: str) -> list[tuple[int, int, int]]:
+    """Locate exact source instants; date-only phrases remain intentionally unknown."""
+    found: list[tuple[int, int, int]] = []
+    iso = re.compile(r"(?<!\d)\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?Z(?!\d)")
+    local = re.compile(
+        r"(?<!\d)(?P<hour>\d{1,2}):(?P<minute>\d{2})\s+(?:ngày\s+)?"
+        r"(?P<day>\d{1,2})/(?P<month>\d{1,2})/(?P<year>\d{4})"
+        r"[^.;\n]{0,80}?\bUTC(?P<sign>[+-])(?P<offset_hour>\d{1,2})"
+        r"(?::(?P<offset_minute>\d{2}))?\b",
+        re.IGNORECASE,
+    )
+    for match in iso.finditer(text):
+        try:
+            instant = datetime.fromisoformat(match.group().replace("Z", "+00:00"))
+        except ValueError:
+            continue
+        found.append((match.start(), match.end(), int(instant.timestamp() * 1000)))
+    for match in local.finditer(text):
+        parts = {name: int(match.group(name)) for name in (
+            "hour", "minute", "day", "month", "year", "offset_hour")}
+        offset_minute = int(match.group("offset_minute") or 0)
+        if parts["offset_hour"] > 23 or offset_minute > 59:
+            continue
+        sign = 1 if match.group("sign") == "+" else -1
+        offset = timezone(sign * timedelta(hours=parts["offset_hour"],
+                                           minutes=offset_minute))
+        try:
+            instant = datetime(parts["year"], parts["month"], parts["day"],
+                               parts["hour"], parts["minute"], tzinfo=offset)
+        except ValueError:
+            continue
+        found.append((match.start(), match.end(), int(instant.timestamp() * 1000)))
+    return sorted(found)
+
+
 def _absolute_deadline_mismatch(claim: dict[str, Any]) -> bool:
     """Reject a date claim whose cited calendar year/day contradicts its POSIX value."""
     value = claim.get("value")
     if type(value) is not int:
         return False
     cited_dates: list[date] = []
+    exact_instants: list[int] = []
     for item in claim.get("evidence", []) if isinstance(claim.get("evidence"), list) else []:
         if not isinstance(item, dict) or item.get("relation") != "supports":
             continue
         span = item.get("span")
         if not isinstance(span, str):
             continue
+        exact_instants.extend(value for _, _, value in explicit_utc_instants(span))
         for day, month, year in re.findall(r"(?<!\d)(\d{1,2})/(\d{1,2})/(\d{4})(?!\d)", span):
             try:
                 cited_dates.append(date(int(year), int(month), int(day)))
@@ -332,6 +369,8 @@ def _absolute_deadline_mismatch(claim: dict[str, Any]) -> bool:
                 cited_dates.append(date(int(year), int(month), int(day)))
             except ValueError:
                 continue
+    if exact_instants:
+        return value not in exact_instants
     if not cited_dates:
         return False
     try:

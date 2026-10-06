@@ -3,13 +3,15 @@
 from copy import deepcopy
 
 from research.architecture.cli_runner import (
-    LocalReviewerPolicy, SessionOptions, reviewed_expectation, run_session,
+    LocalReviewerPolicy, SessionOptions, clarification_questions,
+    reviewed_expectation, run_session,
 )
 from research.architecture.artifacts import ArtifactEnvelope
 from research.architecture.status import AuthorityLevel, ImplementationStatus
 from research.stage2c.models import IntentDecision, IntentDecisionStatus
 from research.stage4.declared_domain import DeclaredActionDomain
 from research.stage3.test_funded_choice_v1 import funded_choice_core
+from research.stage2b.intent_spec import CORE_SCHEMA_VERSION_V2, CORE_SCHEMA_VERSION_V3
 
 
 class StaticModel:
@@ -30,9 +32,25 @@ class ContractModel(StaticModel):
         return deepcopy(self.core)
 
 
+def test_clarification_questions_use_stage2b_string_schema():
+    core = {"required_clarifications": ["Ai nhận tiền hoàn?", "Ai nhận tiền hoàn?",
+                                        "Hạn chót là khi nào?"]}
+    assert clarification_questions(core) == ["Ai nhận tiền hoàn?", "Hạn chót là khi nào?"]
+
+
+def test_clarification_questions_use_stage2b_object_schema():
+    core = {"required_clarifications": [
+        {"question": "  Ai nhận tiền hoàn?  ", "claim_ids": ["refund"]},
+        "Ai nhận tiền hoàn?",
+        {"question": "Hạn chót là khi nào?", "missing_claim_kind": "deadline"},
+    ]}
+    assert clarification_questions(core) == ["Ai nhận tiền hoàn?", "Hạn chót là khi nào?"]
+
+
 def test_noninteractive_pipeline_waits_for_explicit_acceptance():
     core = funded_choice_core()
-    result = run_session(core["requirement_history"][0]["messages"][0], StaticModel(core))
+    result = run_session(core["requirement_history"][0]["messages"][0], StaticModel(core),
+                         options=SessionOptions(core_schema_version=CORE_SCHEMA_VERSION_V2))
     assert result["status"] == "WAITING_USER"
     assert result["stop_reason"] == "explicit_acceptance_required"
     assert result["stages"]["intent_acceptance"]["run_status"] == "WAITING_USER"
@@ -49,7 +67,8 @@ def test_interactive_acceptance_uses_model_contract_without_claiming_ledger(monk
     answers = iter(["dong y", "Tester"])
     progress = []
     result = run_session(core["requirement_history"][0]["messages"][0],
-                         ContractModel(core), options=SessionOptions(interactive=True),
+                         ContractModel(core), options=SessionOptions(
+                             interactive=True, core_schema_version=CORE_SCHEMA_VERSION_V2),
                          ask=lambda _question: next(answers), emit=progress.append)
     assert result["stages"]["intent_acceptance"]["run_status"] == "SUCCEEDED"
     assert result["stages"]["compile"]["run_status"] == "SUCCEEDED"
@@ -58,6 +77,61 @@ def test_interactive_acceptance_uses_model_contract_without_claiming_ledger(monk
     assert result["stages"]["ledger_validation"]["run_status"] != "SUCCEEDED"
     assert "Đang chạy: intent_extraction" in progress
     assert "Đang chạy: compile" in progress
+
+
+def test_default_cli_core_schema_is_v3_and_rejects_v2_output():
+    core = funded_choice_core()
+    assert SessionOptions().core_schema_version == CORE_SCHEMA_VERSION_V3
+    result = run_session(core["requirement_history"][0]["messages"][0], StaticModel(core))
+    assert result["status"] == "BLOCKED"
+    assert result["stop_reason"] == "invalid_candidate"
+    assert any("schema_version must equal" in item
+               for item in result["candidate"]["core_validation_errors"])
+
+
+def test_default_cli_core_schema_v3_reaches_human_acceptance_gate():
+    core = funded_choice_core()
+    core["schema_version"] = CORE_SCHEMA_VERSION_V3
+    result = run_session(core["requirement_history"][0]["messages"][0], StaticModel(core))
+    assert result["status"] == "WAITING_USER"
+    assert result["stop_reason"] == "explicit_acceptance_required"
+    assert result["candidate"]["semantic_core"]["schema_version"] == CORE_SCHEMA_VERSION_V3
+    assert "compile" not in result["stages"]
+
+
+def test_roleplay_runs_main_ports_without_claiming_human_acceptance(monkeypatch):
+    core = funded_choice_core()
+    core["schema_version"] = CORE_SCHEMA_VERSION_V3
+    prompt = core["requirement_history"][0]["messages"][0]
+
+    def unexpected_ask(_question):
+        raise AssertionError("roleplay must not request or fabricate human consent")
+
+    waiting = run_session(prompt, ContractModel(core),
+                          options=SessionOptions(roleplay=True), ask=unexpected_ask)
+    assert waiting["status"] == "WAITING_RESEARCH_REVIEW"
+    assert waiting["simulation_only"] is True
+    assert "compile" not in waiting["stages"]
+    candidate_id = waiting["stages"]["intent_extraction"]["output_artifacts"][0]
+    stale_review = run_session(prompt, ContractModel(core), options=SessionOptions(
+        roleplay=True, roleplay_reviewed_candidate_id="intent-candidate:stale"),
+        ask=unexpected_ask)
+    assert stale_review["status"] == "WAITING_RESEARCH_REVIEW"
+
+    from research.integrations.smt_driver import DRIVER_VERSION, UPSTREAM_COMMIT
+    monkeypatch.setattr("research.integrations.smt_gate.analyze", lambda *_a, **_k: {
+        "status": "Valid", "warnings": [], "analysis_notes": [],
+        "meta": {"upstream_commit": UPSTREAM_COMMIT, "driver_version": DRIVER_VERSION},
+    })
+    reviewed = run_session(prompt, ContractModel(core),
+                           options=SessionOptions(
+                               roleplay=True,
+                               roleplay_reviewed_candidate_id=candidate_id),
+                           ask=unexpected_ask)
+    assert reviewed["status"] == "SIMULATED_CANDIDATE_ONLY"
+    assert reviewed["stages"]["intent_acceptance"]["authority_level"] == "NO_AUTHORITY"
+    assert reviewed["stages"]["compile"]["run_status"] == "SUCCEEDED"
+    assert reviewed["contract_candidate"]["payload"]["simulation_only"] is True
 
 
 def test_reviewer_policy_requires_exact_candidate_and_consent():

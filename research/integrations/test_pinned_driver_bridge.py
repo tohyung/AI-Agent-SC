@@ -14,6 +14,7 @@ from research.integrations.reference_driver import execute
 from research.integrations.smt_driver import DRIVER_VERSION, UPSTREAM_COMMIT, analyze
 from research.integrations.smt_gate import SMTVerificationPort
 from research.architecture.cli_runner import SessionOptions, run_session
+from research.stage2b.intent_spec import CORE_SCHEMA_VERSION_V2
 from research.stage3.test_funded_choice_v1 import _compile, funded_choice_core
 
 
@@ -90,7 +91,8 @@ def test_accepted_intent_to_generated_candidate_runs_real_smt():
 
     answers = iter(["dong y", "Tester"])
     result = run_session(core["requirement_history"][0]["messages"][0], OfflineModel(),
-                         options=SessionOptions(interactive=True),
+                         options=SessionOptions(
+                             interactive=True, core_schema_version=CORE_SCHEMA_VERSION_V2),
                          ask=lambda _question: next(answers))
     assert result["stages"]["compile"]["run_status"] == "SUCCEEDED"
     assert result["stages"]["smt_verification"]["run_status"] == "SUCCEEDED"

@@ -26,10 +26,12 @@ def run_wrapper(name: str, payload: Any, timeout: float,
     shell_command = " ".join(shlex.quote(part) for part in command)
     process = subprocess.run(
         ["wsl", "bash", "-lc", shell_command],
-        input=json.dumps(payload, ensure_ascii=False), text=True,
+        input=json.dumps(payload, ensure_ascii=False).encode("utf-8"),
         capture_output=True, check=False, timeout=timeout + 10,
     )
-    result = json.loads(process.stdout)
+    if not process.stdout:
+        raise RuntimeError("pinned driver produced no JSON output")
+    result = json.loads(process.stdout.decode("utf-8"))
     if not isinstance(result, dict):
         raise ValueError("pinned driver returned non-object JSON")
     if process.returncode and result.get("status") not in {

@@ -19,6 +19,7 @@ _PARTY_FIELDS = {
 _DEADLINE_KINDS = {
     "choice_deadline_ms", "deposit_deadline_ms", "refund_deadline_ms", "timeout_ms",
 }
+_ACTION_FIELD = {"deposit": "deposits", "choice": "for_choice", "notify": "notify_if"}
 
 
 def _lookup(contract: Any, path: str) -> Any:
@@ -69,6 +70,29 @@ def _claim_matches(claim: dict[str, Any], path: str, observed: Any) -> bool | No
     return None
 
 
+def _when_for_transition(contract: Any, scope: dict[str, Any],
+                         mapped: dict[tuple[str, str], list[str]]) -> str | None:
+    field = _ACTION_FIELD.get(scope.get("transition_kind"))
+    paths = mapped.get(("scope", scope.get("scope_id")), [])
+    if field is None or len(paths) != 1:
+        return None
+    path = paths[0]
+    match = re.fullmatch(r"(.+)\.when\[[0-9]+\](?:\.case)?", path)
+    if match is None:
+        return None
+    try:
+        case = _lookup(contract, path)
+        action = case.get("case") if isinstance(case, dict) and "case" in case else case
+        parent = _lookup(contract, match.group(1))
+    except (KeyError, IndexError, TypeError, ValueError):
+        return None
+    if (not isinstance(action, dict) or field not in action
+            or not isinstance(parent, dict) or not isinstance(parent.get("when"), list)
+            or "timeout" not in parent):
+        return None
+    return match.group(1)
+
+
 def check_intent_alignment(spec: dict[str, Any], contract: Any,
                            evidence: list[dict[str, Any]]) -> dict[str, Any]:
     """Unknown is not success; path existence alone is never claim equivalence."""
@@ -78,6 +102,7 @@ def check_intent_alignment(spec: dict[str, Any], contract: Any,
             continue
         key = (item.get("source_kind"), item.get("source_id"))
         mapped.setdefault(key, []).append(item.get("ast_path", ""))
+    scopes_by_id = {item["scope_id"]: item for item in spec.get("behavior_scopes", [])}
     results: list[dict[str, str]] = []
     for claim in spec.get("claims", []):
         if claim.get("status") == "superseded":
@@ -91,13 +116,40 @@ def check_intent_alignment(spec: dict[str, Any], contract: Any,
             try:
                 observed = _lookup(contract, path)
             except (KeyError, IndexError, TypeError, ValueError):
-                state, reason = "VIOLATED", "ast_path_missing"
+                state, reason = "INCONCLUSIVE", "ast_path_missing"
+                scope = scopes_by_id.get(claim.get("scope_id"), {})
+                expected_transition = {"deposit_deadline_ms": "deposit",
+                                       "choice_deadline_ms": "choice"}.get(claim.get("kind"))
+                if expected_transition == scope.get("transition_kind"):
+                    when_path = _when_for_transition(contract, scope, mapped)
+                    if when_path is not None:
+                        resolved = when_path + ".timeout"
+                        matched = _claim_matches(claim, resolved, _lookup(contract, resolved))
+                        path = resolved
+                        if matched is True:
+                            state, reason = "SATISFIED", "causal_scope_timeout_match"
+                        elif matched is False:
+                            state, reason = "VIOLATED", "causal_scope_timeout_mismatch"
             else:
                 matched = _claim_matches(claim, path, observed)
                 if matched is True:
                     state, reason = "SATISFIED", "exact_ast_field_match"
                 elif matched is False:
-                    state, reason = "VIOLATED", "ast_value_mismatch"
+                    state, reason = "INCONCLUSIVE", "unverified_model_mapping_mismatch"
+                    scope = scopes_by_id.get(claim.get("scope_id"), {})
+                    expected_transition = {"deposit_deadline_ms": "deposit",
+                                           "choice_deadline_ms": "choice"}.get(claim.get("kind"))
+                    if expected_transition == scope.get("transition_kind"):
+                        when_path = _when_for_transition(contract, scope, mapped)
+                        if when_path is not None:
+                            resolved = when_path + ".timeout"
+                            matched_timeout = _claim_matches(
+                                claim, resolved, _lookup(contract, resolved))
+                            path = resolved
+                            if matched_timeout is True:
+                                state, reason = "SATISFIED", "causal_scope_timeout_match"
+                            elif matched_timeout is False:
+                                state, reason = "VIOLATED", "causal_scope_timeout_mismatch"
                 else:
                     state, reason = "INCONCLUSIVE", "claim_mapping_not_proven"
         results.append({"source_kind": "claim", "source_id": claim_id,
@@ -112,7 +164,19 @@ def check_intent_alignment(spec: dict[str, Any], contract: Any,
             try:
                 _lookup(contract, path)
             except (KeyError, IndexError, TypeError, ValueError):
-                state, reason = "VIOLATED", "ast_path_missing"
+                state, reason = "INCONCLUSIVE", "ast_path_missing"
+                if scope.get("scope_type") == "timeout":
+                    decision = scopes_by_id.get(scope.get("decision_id"), {})
+                    when_path = _when_for_transition(contract, decision, mapped)
+                    if when_path is not None:
+                        resolved = when_path + ".timeout_continuation"
+                        try:
+                            _lookup(contract, resolved)
+                        except (KeyError, IndexError, TypeError, ValueError):
+                            pass
+                        else:
+                            path = resolved
+                            state, reason = "INCONCLUSIVE", "derived_timeout_path_exists_only"
             else:
                 state, reason = "INCONCLUSIVE", "ast_path_exists_only"
         results.append({"source_kind": "scope", "source_id": scope_id,

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from copy import deepcopy
 from dataclasses import dataclass
 import json
 from typing import Any
@@ -21,7 +22,7 @@ from research.final_validation.marlowe_cli import (
     MarloweCliSizeAnalysisPort,
     MarloweCliSizeConfig,
 )
-from research.stage2b.intent_spec import CORE_SCHEMA_VERSION_V2
+from research.stage2b.intent_spec import CORE_SCHEMA_VERSION_V2, CORE_SCHEMA_VERSION_V3
 from research.stage2c.models import IntentDecision, IntentDecisionStatus
 from research.stage3.comparison import SemanticComparisonPort
 from research.stage3.reference import PinnedMarloweReference
@@ -39,7 +40,12 @@ class SessionOptions:
     reference_binary: str | None = None
     ledger_config: MarloweCliSizeConfig | None = None
     expectation: dict[str, Any] | None = None
+    simulated_expectation: dict[str, Any] | None = None
     smt_binary: str | None = None
+    core_schema_version: str = CORE_SCHEMA_VERSION_V3
+    roleplay: bool = False
+    roleplay_reviewed_candidate_id: str | None = None
+    max_core_validation_repairs: int | None = None
 
     def __post_init__(self) -> None:
         if any(
@@ -51,6 +57,18 @@ class SessionOptions:
             raise ValueError(
                 "reviewed expectation requires interactive mode and reference driver"
             )
+        if self.roleplay and self.expectation is not None:
+            raise ValueError("roleplay cannot claim a user-reviewed expectation")
+        if self.simulated_expectation is not None and not self.roleplay:
+            raise ValueError("simulated expectation requires roleplay mode")
+        if self.roleplay_reviewed_candidate_id is not None and not self.roleplay:
+            raise ValueError("roleplay review requires roleplay mode")
+        if (self.max_core_validation_repairs is not None and
+                (type(self.max_core_validation_repairs) is not int
+                 or not 0 <= self.max_core_validation_repairs <= 3)):
+            raise ValueError("max_core_validation_repairs must be 0 through 3")
+        if self.core_schema_version not in {CORE_SCHEMA_VERSION_V2, CORE_SCHEMA_VERSION_V3}:
+            raise ValueError("unsupported session core schema version")
 
 
 class LocalReviewerPolicy:
@@ -149,6 +167,7 @@ def reviewed_expectation(
         "source_kind": "accepted_intent",
         "reviewer_id": reviewer_id,
         "explicit_review": True,
+        "simulation_only": accepted.payload.get("simulation_only") is True,
     }
     return ArtifactEnvelope(
         "behavior-expectation",
@@ -176,7 +195,19 @@ def _artifact(
     )
 
 
-def _snapshot(
+def clarification_questions(core: dict[str, Any]) -> list[str]:
+    questions = (
+        item if isinstance(item, str) else item.get("question")
+        for item in core["required_clarifications"]
+        if isinstance(item, (str, dict))
+    )
+    return list(dict.fromkeys(
+        question.strip() for question in questions
+        if isinstance(question, str) and question.strip()
+    ))
+
+
+def _base_snapshot(
     pipeline: Any,
     run: Any,
     history: list[dict[str, Any]],
@@ -247,17 +278,51 @@ def run_session(
     options: SessionOptions = SessionOptions(),
     ask: Callable[[str], str] | None = None,
     emit: Callable[[str], None] | None = None,
+    initial_history: list[dict[str, Any]] | None = None,
+    simulation_transcript: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """Repeat extraction after real answers; never fabricate approval or a trace."""
     if not prompt.strip():
         raise ValueError("prompt must not be empty")
-    if options.interactive and ask is None:
-        raise ValueError("interactive session requires an input callback")
+    if (options.interactive or options.roleplay) and ask is None:
+        raise ValueError("interactive or roleplay session requires an input callback")
+    if initial_history is not None and (
+        not initial_history
+        or initial_history[0] != {"version": 1, "messages": [prompt]}
+        or any(not isinstance(item, dict) or item.get("version") != index
+               or not isinstance(item.get("messages"), list) or not item["messages"]
+               or any(not isinstance(message, str) or not message.strip()
+                      for message in item["messages"])
+               for index, item in enumerate(initial_history, 1))
+    ):
+        raise ValueError("initial history must preserve the original prompt and revisions")
+    if simulation_transcript and not options.roleplay:
+        raise ValueError("simulation transcript requires roleplay mode")
     if hasattr(model, "set_call_budget"):
         model.set_call_budget(options.max_llm_calls)
     elif hasattr(model, "reasoner") and hasattr(model.reasoner, "set_call_budget"):
         model.reasoner.set_call_budget(options.max_llm_calls)
-    history = [{"version": 1, "messages": [prompt]}]
+    history = deepcopy(initial_history) if initial_history is not None else [
+        {"version": 1, "messages": [prompt]}]
+    transcript = deepcopy(simulation_transcript) if simulation_transcript else []
+    if options.roleplay:
+        later_messages = [message for revision in history[1:]
+                          for message in revision["messages"]]
+        if (len(transcript) != len(later_messages)
+                or any(not isinstance(item, dict)
+                       or item.get("synthetic_assumption") is not True
+                       or item.get("answer") != message
+                       or not isinstance(item.get("question"), str)
+                       or not item["question"].strip()
+                       for item, message in zip(transcript, later_messages))):
+            raise ValueError("roleplay revisions require labeled source answers")
+
+    def _snapshot(*args: Any, **kwargs: Any) -> dict[str, Any]:
+        result = _base_snapshot(*args, **kwargs)
+        if options.roleplay:
+            result["simulation_only"] = True
+            result["simulation_transcript"] = deepcopy(transcript)
+        return result
     seen: dict[str, int] = {}
     reporter = emit or (lambda _message: None)
 
@@ -266,8 +331,13 @@ def run_session(
 
     last_pipeline = last_run = None
     for iteration in range(1, options.max_iterations + 1):
+        acceptance_port = None
+        if options.roleplay:
+            from research.experiments.simulated_acceptance import SimulatedIntentAcceptancePort
+            acceptance_port = SimulatedIntentAcceptancePort()
         wiring = ResearchPipelineWiring(
-            contract_model=model, enable_smt=True, smt_binary=options.smt_binary
+            contract_model=model, enable_smt=True, smt_binary=options.smt_binary,
+            intent_acceptance_port=acceptance_port,
         )
         pipeline = build_research_pipeline(model=model, wiring=wiring)
         reporter(f"Lượt {iteration}: Stage 2B đang trích xuất intent")
@@ -275,8 +345,11 @@ def run_session(
             history,
             stop_after="intent_acceptance",
             options={
-                "core_schema_version": CORE_SCHEMA_VERSION_V2,
-                "max_core_validation_repairs": 3,
+                "core_schema_version": options.core_schema_version,
+                "max_core_validation_repairs": (options.max_core_validation_repairs
+                                                if options.max_core_validation_repairs is not None
+                                                else 0 if options.roleplay else 3),
+                "simulation_transcript": transcript,
             },
             on_stage_start=stage_start,
         )
@@ -332,15 +405,7 @@ def run_session(
                 model=model,
             )
         core = payload["semantic_core"]
-        questions = list(
-            dict.fromkeys(
-                item["question"]
-                for item in core["required_clarifications"]
-                if isinstance(item, dict)
-                and isinstance(item.get("question"), str)
-                and item["question"].strip()
-            )
-        )
+        questions = clarification_questions(core)
         if core["predicted_resolution"] != "accepted_interpretation" or questions:
             if not questions:
                 return _snapshot(
@@ -352,7 +417,7 @@ def run_session(
                     iterations=iteration,
                     model=model,
                 )
-            if not options.interactive:
+            if not options.interactive and not options.roleplay:
                 return _snapshot(
                     pipeline,
                     run,
@@ -376,8 +441,12 @@ def run_session(
                     questions=questions,
                 )
             history.append({"version": len(history) + 1, "messages": answers})
+            if options.roleplay:
+                transcript.extend({"question": question, "answer": answer,
+                                   "synthetic_assumption": True}
+                                  for question, answer in zip(questions[:4], answers))
             continue
-        if not options.interactive:
+        if not options.interactive and not options.roleplay:
             return _snapshot(
                 pipeline,
                 run,
@@ -387,59 +456,73 @@ def run_session(
                 iterations=iteration,
                 model=model,
             )
+        if (options.roleplay and
+                options.roleplay_reviewed_candidate_id != candidate.artifact_id):
+            return _snapshot(
+                pipeline, run, history, status="WAITING_RESEARCH_REVIEW",
+                stop_reason="roleplay_candidate_review_required",
+                iterations=iteration, model=model,
+            )
         reporter("Stage 2C: kiểm tra từng claim trong candidate trước khi xác nhận")
         reporter("Diễn giải intent được đề nghị:")
         reporter(json.dumps(payload["intent_spec"], ensure_ascii=False, indent=2))
         for claim in core["claims"]:
             if claim.get("status") not in {"superseded", "unresolved"}:
                 reporter(f"  {claim['kind']}={claim['value']} @ {claim['scope_id']}")
-        consent = (
-            ask("Xác nhận đúng toàn bộ diễn giải trên? Gõ 'dong y' để tiếp tục: ")
-            .strip()
-            .lower()
-        )
-        if consent != "dong y":
-            correction = ask(
-                "Nếu có dữ kiện nghiệp vụ sai, hãy nêu phần cần sửa (để trống để dừng): "
-            ).strip()
-            if not correction:
+        if options.roleplay:
+            reviewer_id = "synthetic-roleplay"
+            acceptance_options = {"simulation_transcript": transcript,
+                                  "allow_simulated_intent": True}
+            reporter("Stage 2C: chấp nhận giả lập đã được review, không cấp user authority")
+        else:
+            consent = (
+                ask("Xác nhận đúng toàn bộ diễn giải trên? Gõ 'dong y' để tiếp tục: ")
+                .strip()
+                .lower()
+            )
+            if consent != "dong y":
+                correction = ask(
+                    "Nếu có dữ kiện nghiệp vụ sai, hãy nêu phần cần sửa (để trống để dừng): "
+                ).strip()
+                if not correction:
+                    return _snapshot(
+                        pipeline,
+                        run,
+                        history,
+                        status="WAITING_USER",
+                        stop_reason="explicit_acceptance_required",
+                        iterations=iteration,
+                        model=model,
+                    )
+                history.append({"version": len(history) + 1, "messages": [correction]})
+                continue
+            reviewer_id = ask("Tên người xác nhận (tự khai trong phiên CLI): ").strip()
+            if not reviewer_id:
                 return _snapshot(
                     pipeline,
                     run,
                     history,
                     status="WAITING_USER",
-                    stop_reason="explicit_acceptance_required",
+                    stop_reason="reviewer_missing",
                     iterations=iteration,
                     model=model,
                 )
-            history.append({"version": len(history) + 1, "messages": [correction]})
-            continue
-        reviewer_id = ask("Tên người xác nhận (tự khai trong phiên CLI): ").strip()
-        if not reviewer_id:
-            return _snapshot(
-                pipeline,
-                run,
-                history,
-                status="WAITING_USER",
-                stop_reason="reviewer_missing",
-                iterations=iteration,
-                model=model,
+            pipeline.ports["intent_acceptance"].reviewer_policy = LocalReviewerPolicy(
+                reviewer_id
             )
-        pipeline.ports["intent_acceptance"].reviewer_policy = LocalReviewerPolicy(
-            reviewer_id
-        )
-        decision = IntentDecision(
-            IntentDecisionStatus.ACCEPTED,
-            reviewer_id,
-            True,
-            approved_spec=payload["intent_spec"],
-        )
+            decision = IntentDecision(
+                IntentDecisionStatus.ACCEPTED,
+                reviewer_id,
+                True,
+                approved_spec=payload["intent_spec"],
+            )
+            acceptance_options = {"intent_decision": decision}
         reporter("Stage 2C/3: xác nhận intent và sinh Marlowe candidate")
         run = pipeline.run(
             history,
             resume=run,
             stop_after="smt_verification",
-            options={"intent_decision": decision},
+            options=acceptance_options,
             on_stage_start=stage_start,
         )
         last_run = run
@@ -519,7 +602,8 @@ def run_session(
                 resume=run,
                 stop_after="smt_verification",
                 invalidate_from="compile",
-                options={"generation_feedback": feedback},
+                options={"generation_feedback": feedback,
+                         "allow_simulated_intent": options.roleplay},
                 on_stage_start=stage_start,
             )
             last_run = run
@@ -544,9 +628,12 @@ def run_session(
             LocalExpectationPolicy(reviewer_id),
             require_intent_alignment=True,
         )
-        if options.expectation is not None:
-            reporter("Kịch bản hành vi do người dùng cung cấp:")
-            reporter(json.dumps(options.expectation, ensure_ascii=False, indent=2))
+        scenario = (options.simulated_expectation if options.roleplay
+                    else options.expectation)
+        if scenario is not None:
+            reporter("Kịch bản hành vi mô phỏng:" if options.roleplay
+                     else "Kịch bản hành vi do người dùng cung cấp:")
+            reporter(json.dumps(scenario, ensure_ascii=False, indent=2))
             confirmed = (
                 ask("Xác nhận kịch bản này độc lập và đúng? Gõ 'dong y': ")
                 .strip()
@@ -566,7 +653,7 @@ def run_session(
             if accepted is None:
                 raise RuntimeError("accepted intent artifact missing")
             expectation = reviewed_expectation(
-                accepted, options.expectation, reviewer_id
+                accepted, scenario, reviewer_id
             )
             external.append(expectation)
             transactions = tuple(expectation.payload["request"]["transactions"])
@@ -596,6 +683,97 @@ def run_session(
             on_stage_start=stage_start,
         )
         last_run = run
+        while (run.stages.get("semantic_comparison") is not None
+               and run.stages["semantic_comparison"].semantic_status == "VIOLATED"
+               and generation < options.max_iterations):
+            comparison_report = _artifact(
+                pipeline, run, "semantic_comparison", "reference-comparison")
+            feedback = list(run.stages["semantic_comparison"].diagnostics)
+            if comparison_report is not None:
+                alignment = comparison_report.payload.get("intent_alignment")
+                if isinstance(alignment, dict):
+                    violated = [item for item in alignment.get("checks", [])
+                                if item.get("status") == "VIOLATED"]
+                    feedback.extend(
+                        "intent alignment: " + json.dumps(item, ensure_ascii=False,
+                                                           sort_keys=True)
+                        for item in violated
+                    )
+                    claim_by_id = {item["claim_id"]: item for item in core["claims"]}
+                    if any(item.get("reason") == "ast_value_mismatch"
+                           and claim_by_id.get(item.get("source_id"), {}).get("kind") == "asset"
+                           and claim_by_id[item["source_id"]].get("value") == "ADA"
+                           for item in violated):
+                        feedback.append(
+                            'Native ADA Token is {"currency_symbol":"","token_name":""}; '
+                            'token_name="ADA" is a different asset. Preserve the accepted ADA intent.')
+                    if any(item.get("reason") == "ast_path_missing"
+                           and claim_by_id.get(item.get("source_id"), {}).get("kind", "")
+                           .endswith("deadline_ms") for item in violated):
+                        feedback.append(
+                            "Mapping paths start at the contract root: root When timeout is "
+                            "$.timeout; a When inside the first Case continuation is "
+                            "$.when[0].then.timeout. Point each deadline claim to its "
+                            "actual existing timeout field.")
+            fingerprint = json.dumps(feedback, ensure_ascii=False, sort_keys=True)
+            if fingerprint in seen_contracts:
+                return _snapshot(
+                    pipeline, run, history, status="BLOCKED",
+                    stop_reason="generation_stalled", iterations=iteration, model=model)
+            seen_contracts.add(fingerprint)
+            reporter(f"Intent/reference chưa khớp; sinh lại AST (lượt {generation + 1})")
+            run = pipeline.run(
+                history, resume=run, stop_after="smt_verification",
+                invalidate_from="compile",
+                options={"generation_feedback": feedback,
+                         "allow_simulated_intent": options.roleplay},
+                on_stage_start=stage_start,
+            )
+            generation += 1
+            last_run = run
+            while (run.stages["compile"].run_status != StageRunStatus.SUCCEEDED
+                   or run.stages["smt_verification"].run_status != StageRunStatus.SUCCEEDED):
+                compile_stage = run.stages["compile"]
+                smt_stage = run.stages["smt_verification"]
+                if compile_stage.semantic_status == "MODEL_ERROR":
+                    return _snapshot(
+                        pipeline, run, history, status="BLOCKED",
+                        stop_reason="llm_error", iterations=iteration, model=model)
+                if smt_stage.run_status in {StageRunStatus.UNAVAILABLE,
+                                            StageRunStatus.INCONCLUSIVE}:
+                    return _snapshot(
+                        pipeline, run, history, status="BLOCKED",
+                        stop_reason="smt_unavailable_or_inconclusive",
+                        iterations=iteration, model=model)
+                if generation >= options.max_iterations:
+                    return _snapshot(
+                        pipeline, run, history, status="BLOCKED",
+                        stop_reason="max_generation_attempts",
+                        iterations=iteration, model=model)
+                failed = (smt_stage if smt_stage.run_status == StageRunStatus.FAILED
+                          else compile_stage)
+                feedback = list(failed.diagnostics)
+                fingerprint = json.dumps(feedback, ensure_ascii=False, sort_keys=True)
+                if fingerprint in seen_contracts:
+                    return _snapshot(
+                        pipeline, run, history, status="BLOCKED",
+                        stop_reason="generation_stalled", iterations=iteration, model=model)
+                seen_contracts.add(fingerprint)
+                reporter(f"AST chưa đạt gate; sinh lại candidate (lượt {generation + 1})")
+                run = pipeline.run(
+                    history, resume=run, stop_after="smt_verification",
+                    invalidate_from="compile",
+                    options={"generation_feedback": feedback,
+                             "allow_simulated_intent": options.roleplay},
+                    on_stage_start=stage_start,
+                )
+                generation += 1
+                last_run = run
+            run = pipeline.run(
+                history, resume=run, stop_after="deployment",
+                on_stage_start=stage_start,
+            )
+            last_run = run
         ledger = run.stages.get("ledger_validation")
         checked = (
             ledger is not None
@@ -627,7 +805,9 @@ def run_session(
             pipeline,
             run,
             history,
-            status="LEDGER_SIZE_CHECKED" if checked else "CANDIDATE_ONLY",
+            status=("SIMULATED_LEDGER_SIZE_CHECKED" if checked else
+                    "SIMULATED_CANDIDATE_ONLY") if options.roleplay else (
+                        "LEDGER_SIZE_CHECKED" if checked else "CANDIDATE_ONLY"),
             stop_reason="candidate_only",
             iterations=iteration,
             model=model,

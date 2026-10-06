@@ -16,6 +16,23 @@ from research.stage2b.intent_spec import validate_intent_spec
 from research.stage2b.model_errors import sanitized_model_error
 
 
+def _noncanonical_ada_paths(contract: Any, path: str = "$") -> list[str]:
+    if isinstance(contract, list):
+        return [item for index, value in enumerate(contract)
+                for item in _noncanonical_ada_paths(value, f"{path}[{index}]")]
+    if not isinstance(contract, dict):
+        return []
+    invalid = []
+    for key, value in contract.items():
+        child_path = f"{path}.{key}"
+        if key in {"token", "of_token"} and isinstance(value, dict):
+            if value != {"currency_symbol": "", "token_name": ""}:
+                invalid.append(child_path)
+        else:
+            invalid.extend(_noncanonical_ada_paths(value, child_path))
+    return invalid
+
+
 class LLMContractGeneratorPort:
     """Produce an untrusted AST candidate; verification owns all authority."""
 
@@ -30,12 +47,17 @@ class LLMContractGeneratorPort:
                 StageRunStatus.NOT_EVALUATED,
                 diagnostics=["accepted intent or contract model unavailable"],
             ))
-        if (accepted.authority_level != AuthorityLevel.USER_ACCEPTED_INTENT
-                or accepted.payload.get("simulation_only") is True):
+        simulated = accepted.payload.get("simulation_only") is True
+        simulation_allowed = context.options.get("allow_simulated_intent") is True
+        if ((simulated and (not simulation_allowed
+                            or accepted.authority_level != AuthorityLevel.NO_AUTHORITY))
+                or (not simulated and
+                    accepted.authority_level != AuthorityLevel.USER_ACCEPTED_INTENT)):
             return StageExecution(StageResult(
                 "compile", ImplementationStatus.IMPLEMENTED_UNVALIDATED,
                 StageRunStatus.BLOCKED, input_artifacts=[accepted.artifact_id],
-                diagnostics=["LLM contract generation requires real user-accepted intent"],
+                diagnostics=["LLM contract generation requires user-accepted intent "
+                             "or explicit simulation-only research mode"],
             ))
         spec = accepted.payload["accepted_spec"]
         errors = validate_intent_spec(spec, expected_history=spec.get("requirement_history"))
@@ -57,6 +79,8 @@ class LLMContractGeneratorPort:
             "An ast_path must start at root or $ and identify an existing location in the returned AST. "
             "Do not claim that the AST is verified; all mappings will be checked independently. "
             "Use Vietnamese for the short reasoning_narrative, not raw chain-of-thought. "
+            "For ADA, every of_token/token object must be exactly "
+            '{"currency_symbol":"","token_name":""}; never use token_name="ADA". '
             "Return JSON only.\n" + describe_marlowe_grammar()
         )
         user = json.dumps({
@@ -86,6 +110,14 @@ class LLMContractGeneratorPort:
             diagnostics = ["mapping_evidence items must contain source_kind, source_id and ast_path"]
         else:
             diagnostics = validate_contract(output.get("contract"))
+            assets = [claim.get("value") for claim in spec.get("claims", [])
+                      if claim.get("kind") == "asset"
+                      and claim.get("status") != "superseded"]
+            if not diagnostics and assets and set(assets) == {"ADA"}:
+                diagnostics.extend(
+                    f"{path}: accepted intent has only ADA; use empty currency_symbol "
+                    "and empty token_name"
+                    for path in _noncanonical_ada_paths(output["contract"]))
         if diagnostics:
             return StageExecution(StageResult(
                 "compile", ImplementationStatus.IMPLEMENTED_UNVALIDATED,
@@ -98,7 +130,9 @@ class LLMContractGeneratorPort:
             AuthorityLevel.MODEL_CANDIDATE,
             {"contract": output["contract"], "source_intent_id": accepted.artifact_id,
              "mapping_evidence": output["mapping_evidence"],
-             "generation_mode": "llm_from_accepted_intent_v1",
+             "generation_mode": ("llm_from_simulated_intent_v1" if simulated else
+                                 "llm_from_accepted_intent_v1"),
+             "simulation_only": simulated,
              "reasoning_narrative": str(output.get("reasoning_narrative") or "")[:700]},
         )
         return StageExecution(StageResult(

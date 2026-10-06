@@ -3,8 +3,21 @@
 from __future__ import annotations
 
 from copy import deepcopy
+from datetime import datetime, timezone
 
-from research.stage2b.intent_spec import validate_intent_spec
+from research.stage2b.intent_spec import (
+    _absolute_deadline_mismatch, explicit_utc_instants, validate_intent_spec,
+)
+
+
+def test_exact_local_utc_offset_deadline_uses_instant_not_utc_calendar_day():
+    span = "trước 00:00 ngày 03/01/2027 theo giờ Việt Nam (UTC+7)"
+    expected = int(datetime(2027, 1, 2, 17, tzinfo=timezone.utc).timestamp() * 1000)
+    assert explicit_utc_instants(span) == [(6, len(span) - 1, expected)]
+    evidence = [{"relation": "supports", "span": span}]
+    assert not _absolute_deadline_mismatch({"value": expected, "evidence": evidence})
+    assert _absolute_deadline_mismatch({"value": expected + 60_000, "evidence": evidence})
+    assert explicit_utc_instants("trước ngày 03/01/2027") == []
 
 
 def simple_payment():

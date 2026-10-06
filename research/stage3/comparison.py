@@ -12,6 +12,7 @@ from research.architecture.status import AuthorityLevel, ImplementationStatus, S
 
 from .reference import ReferenceExecutor, ReferenceRequest
 from .intent_alignment import check_intent_alignment
+from .scenario_binding import ScenarioBindingError, bind_choice_transactions
 
 
 @dataclass(frozen=True)
@@ -171,8 +172,19 @@ class SemanticComparisonPort:
             return StageExecution(StageResult("semantic_comparison", ImplementationStatus.IMPLEMENTED_UNVALIDATED,
                                               StageRunStatus.BLOCKED,
                                               diagnostics=["expectation source is not independent accepted evidence"]))
+        try:
+            bound_transactions, binding_evidence = bind_choice_transactions(
+                contract.payload["contract"], expectation.request.transactions)
+        except ScenarioBindingError:
+            return StageExecution(StageResult(
+                "semantic_comparison", ImplementationStatus.IMPLEMENTED_UNVALIDATED,
+                StageRunStatus.INCONCLUSIVE, semantic_status="SCENARIO_BINDING_INCONCLUSIVE",
+                input_artifacts=[contract.artifact_id, accepted.artifact_id,
+                                 expectation_artifact.artifact_id],
+                diagnostics=["declared Choice action cannot bind uniquely to the AST"],
+            ))
         request = ReferenceRequest(contract.payload["contract"], expectation.request.state,
-                                   expectation.request.transactions)
+                                   bound_transactions)
         raw = self.executor.execute(request)
         status = str(raw.get("status", "Unknown"))
         meta = raw.get("meta", {})
@@ -224,7 +236,10 @@ class SemanticComparisonPort:
                 verdict, run_status = "SATISFIED", StageRunStatus.SUCCEEDED
         payload = {"reference_result": raw, "reference_identity": reference_identity,
                    "expectation": expectation.to_dict(), "verdict": verdict,
-                   "contract_artifact_id": contract.artifact_id}
+                   "contract_artifact_id": contract.artifact_id,
+                   "bound_transactions": list(bound_transactions),
+                   "scenario_binding_evidence": binding_evidence,
+                   "simulation_only": accepted.payload.get("simulation_only") is True}
         if alignment is not None:
             payload["intent_alignment"] = alignment
         if mismatches:

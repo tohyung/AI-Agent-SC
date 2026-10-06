@@ -12,6 +12,7 @@ from marlowe_ai_agent.marlowe_agent.models import LLMConfigError, LLMTransientEr
 from marlowe_ai_agent.marlowe_agent.openai_reasoner import summarize_call_log
 from research.stage2b import intent_spec, run_shadow, shadow_extractor
 from research.stage2b.test_intent_spec import simple_payment
+from research.stage3.test_funded_choice_v1 import funded_choice_core
 
 
 @pytest.fixture(autouse=True)
@@ -95,6 +96,33 @@ def test_bounded_validation_feedback_preserves_validator_authority():
     assert len(model.calls) == 2
     assert "Validation errors:" in model.calls[1][1]
     assert "never use ellipses" in model.calls[1][1]
+    assert "Previous core:" not in model.calls[1][1]
+    assert "10 ADA" in model.calls[1][1]
+
+
+def test_requested_core_version_is_repaired_and_cannot_silently_downgrade():
+    old = funded_choice_core()
+    current = deepcopy(old)
+    current["schema_version"] = intent_spec.CORE_SCHEMA_VERSION_V3
+
+    class SequencedModel:
+        def __init__(self):
+            self.calls = []
+
+        def generate(self, _system, user):
+            self.calls.append(user)
+            return old if len(self.calls) == 1 else current
+
+    model = SequencedModel()
+    extractor = shadow_extractor.IntentShadowExtractor(
+        model, core_schema_version=intent_spec.CORE_SCHEMA_VERSION_V3)
+    core, initial_errors = extractor.extract_with_validation_feedback(
+        old["requirement_history"], max_repairs=1)
+    assert initial_errors == [
+        f"schema_version must equal {intent_spec.CORE_SCHEMA_VERSION_V3}"]
+    assert extractor.validation_errors(core, old["requirement_history"]) == []
+    assert len(model.calls) == 2
+    assert "schema_version must equal" in model.calls[1]
 
 
 def test_multiple_repairs_use_latest_errors_and_stop_on_valid_core():
@@ -154,6 +182,86 @@ def test_repair_guidance_keeps_approval_evidence_and_questions_source_grounded()
     assert "case-sensitive" in guidance[0]["rule"]
     assert "do not invent a rejection branch" in guidance[1]["rule"]
     assert "JSON array" in guidance[2]["rule"]
+    assert "question strings" in guidance[2]["rule"]
+
+
+def test_repair_feedback_groups_repeated_rules_without_losing_diagnostics():
+    guidance = [
+        {"error": "claim first: invalid derived_from source claim", "rule": "Fix link"},
+        {"error": "claim second: invalid derived_from source claim", "rule": "Fix link"},
+        {"error": "claim deadline: invalid value", "rule": "Use source instant",
+         "source_backed_utc_milliseconds": [1798909200000]},
+    ]
+    grouped = shadow_extractor._group_repair_guidance(guidance)
+    assert len(grouped) == 2
+    assert [item["error"] for item in grouped[0]["diagnostics"]] == [
+        guidance[0]["error"], guidance[1]["error"]]
+    assert grouped[1]["diagnostics"][0]["source_backed_utc_milliseconds"] == [
+        1798909200000]
+
+
+def test_evidence_only_repair_keeps_other_core_fields_unchanged():
+    valid = intent_spec.extract_core_view(simple_payment())
+    invalid = deepcopy(valid)
+    claim = next(item for item in invalid["claims"] if item.get("evidence"))
+    claim_id = claim["claim_id"]
+    original_evidence = deepcopy(claim["evidence"])
+    claim["evidence"][0]["span"] = "not an exact source quote ..."
+
+    class EvidenceModel:
+        calls = []
+
+        def generate(self, system, user):
+            self.calls.append((system, user))
+            if len(self.calls) == 1:
+                return invalid
+            return {"evidence_by_claim": {claim_id: original_evidence}}
+
+    model = EvidenceModel()
+    core, initial_errors = shadow_extractor.IntentShadowExtractor(
+        model).extract_with_validation_feedback(valid["requirement_history"])
+    assert initial_errors
+    assert core.to_dict() == valid
+    assert "Repair only the evidence" in model.calls[1][0]
+    assert claim_id in model.calls[1][1]
+    assert "not an exact source quote" in claim["evidence"][0]["span"]
+
+
+def test_evidence_repair_rejects_unlisted_claim_changes():
+    core = intent_spec.extract_core_view(simple_payment())
+    claim = next(item for item in core["claims"] if item.get("evidence"))
+    target = {claim["claim_id"]}
+    proposed = {"evidence_by_claim": {claim["claim_id"]: claim["evidence"],
+                                      "unlisted": claim["evidence"]}}
+    assert shadow_extractor._apply_evidence_repair(core, proposed, target) is None
+
+
+def test_date_only_feedback_never_invents_posix_milliseconds():
+    guidance = shadow_extractor._repair_guidance({}, [
+        "claim deadline: deadline value contradicts cited calendar date",
+    ])
+    assert "value=null" in guidance[0]["rule"]
+    assert "Never shift" in guidance[0]["rule"]
+
+
+def test_repair_guidance_uses_exact_local_instant_and_detects_ada_unit_duplicate():
+    span = "trước 00:00 ngày 03/01/2027 theo giờ Việt Nam (UTC+7)"
+    core = {"claims": [
+        {"claim_id": "deadline", "kind": "deposit_deadline_ms",
+         "evidence": [{"relation": "supports", "span": span}]},
+        {"claim_id": "normalized", "kind": "amount_lovelace", "scope_id": "deposit",
+         "value": 20_000_000},
+        {"claim_id": "raw", "kind": "amount_lovelace", "scope_id": "deposit",
+         "value": 20},
+    ]}
+    guidance = shadow_extractor._repair_guidance(core, [
+        "claim deadline: deadline value contradicts cited calendar date",
+        "active claim conflict for amount_lovelace in deposit",
+        "claim normalized: invalid derived_from source claim",
+    ])
+    assert guidance[0]["source_backed_utc_milliseconds"] == [1798909200000]
+    assert "20000000-lovelace" in guidance[1]["rule"]
+    assert "omit that raw" in guidance[2]["rule"]
 
 
 def test_calendar_hints_are_source_only_and_preserve_timezone_uncertainty():
@@ -167,6 +275,24 @@ def test_calendar_hints_are_source_only_and_preserve_timezone_uncertainty():
     _, user = shadow_extractor.build_prompt(history)
     assert "Deterministic calendar hints" in user
     assert "2027-01-15T00:00:00Z" in user
+    system, _ = shadow_extractor.build_prompt(history)
+    assert "never ask them to calculate POSIX" in system
+
+
+def test_calendar_hint_resolves_local_clock_with_explicit_utc_offset():
+    history = [{"version": 1, "messages": [
+        "Bình nạp trước 00:00 ngày 03/01/2027 theo giờ Việt Nam (UTC+7)."]}]
+    hints = shadow_extractor._calendar_hints(history)
+    assert len(hints) == 1
+    assert hints[0]["exact_utc_milliseconds"] == 1798909200000
+    assert "timezone_unresolved" not in hints[0]
+
+
+def test_choice_prompt_forbids_transition_to_its_branch():
+    system, _ = shadow_extractor.build_prompt(
+        [{"version": 1, "messages": ["Alice chooses between 0 and 100."]}],
+        core_schema_version=intent_spec.CORE_SCHEMA_VERSION_V3)
+    assert "Omit continuation_scope_id on the Choice transition itself" in system
 
 
 def test_prompt_contract_tracks_validator_enums(monkeypatch):
