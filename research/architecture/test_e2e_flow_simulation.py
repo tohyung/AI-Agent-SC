@@ -150,7 +150,7 @@ class SimulationFinalPort:
                                           limitations=["simulation interface only"]), [output])
 
 
-def _pipeline(warning=False):
+def _pipeline(warning=False, property_dataset=None):
     model = StaticShadowModel()
     plugin = TestCompilerPlugin()
     reference = FakeReferenceExecutor(warning)
@@ -172,6 +172,7 @@ def _pipeline(warning=False):
             TransactionTemplate("Timeout", 0, 0, ())]),
         exploration_initial_state={}, exploration_bounds=ExplorationBounds(1, 1),
         oracles=[NoWarningsOracle()], property_checker=checker, property_registry=registry,
+        property_dataset=property_dataset,
         ledger_port=SimulationFinalPort("ledger_validation", "property-candidates"),
         testnet_port=SimulationFinalPort("testnet", "ledger-simulation"),
         deployment_port=SimulationFinalPort("deployment", "testnet-simulation"))
@@ -322,6 +323,61 @@ def test_warning_flow_checks_property_and_stops_before_external_stages():
     assert [item["status"] for item in history] == ["CANDIDATE", "REFUTED"]
     assert [item["candidate"]["version"] for item in history] == [1, 1]
     assert "ledger_validation" not in result.stages
+
+
+def test_warning_flow_records_property_evidence_without_adjudicating_it(tmp_path):
+    from research.stage5.dataset import PropertyDataset
+
+    dataset = PropertyDataset(tmp_path / "property.sqlite3")
+    pipeline, _, _, _, _, _, profile = _pipeline(warning=True, property_dataset=dataset)
+    _, compiled = _advance_to_compile(pipeline)
+    expectation = _expectation(pipeline, compiled)
+    result = pipeline.run(
+        HISTORY, resume=compiled, stop_after="property_validation",
+        external_artifacts=[expectation], invalidate_from="semantic_comparison",
+        options={"compiler_authority_decision": _authority_decision(profile),
+                 "reference_identity": REFERENCE_ID,
+                 "evidence_policy_version": "simulation-policy-v1"})
+    artifact = pipeline.store.get(result.stages["property_validation"].output_artifacts[0])
+    ids = artifact.payload["dataset_observation_ids"]
+    assert ids
+    example = dataset.get(ids[0])
+    assert example["finding"]["verdict"] == "VIOLATED"
+    assert example["property_candidate_id"] == artifact.payload["candidates"][0]["property_id"]
+    with dataset._connection() as connection:
+        kinds = [kind for kind, _ in dataset._events_for(connection, ids[0])]
+    assert kinds == ["OBSERVED", "PROPERTY_CANDIDATE", "CHECKER_OUTCOME"]
+    assert dataset.export_approved(tmp_path / "approved.jsonl")["count"] == 0
+
+
+def test_inconclusive_oracle_is_recorded_before_stage5_is_blocked(tmp_path):
+    from research.stage5.dataset import PropertyDataset
+
+    dataset = PropertyDataset(tmp_path / "property.sqlite3")
+    pipeline, _, _, reference, _, _, profile = _pipeline(property_dataset=dataset)
+    original_execute = reference.execute
+
+    def missing_warning_data(request):
+        response = original_execute(request)
+        del response["steps"][0]["warnings"]
+        return response
+
+    reference.execute = missing_warning_data
+    _, compiled = _advance_to_compile(pipeline)
+    expectation = _expectation(pipeline, compiled)
+    result = pipeline.run(
+        HISTORY, resume=compiled, stop_after="property_validation",
+        external_artifacts=[expectation], invalidate_from="semantic_comparison",
+        options={"compiler_authority_decision": _authority_decision(profile),
+                 "reference_identity": REFERENCE_ID,
+                 "evidence_policy_version": "simulation-policy-v1"})
+    assert result.stages["oracle_evaluation"].run_status == StageRunStatus.INCONCLUSIVE
+    assert result.stages["property_validation"].run_status == StageRunStatus.NOT_EVALUATED
+    assert dataset.audit()["example_count"] == 1
+    with dataset._connection() as connection:
+        example_id = connection.execute("SELECT example_id FROM examples").fetchone()[0]
+    assert dataset.get(example_id)["finding"]["verdict"] == "INCONCLUSIVE"
+    assert dataset.export_approved(tmp_path / "approved.jsonl")["count"] == 0
 
 
 def test_recovered_reference_reruns_comparison_and_invalidates_cached_authority():

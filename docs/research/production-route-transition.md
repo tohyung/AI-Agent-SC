@@ -17,7 +17,10 @@ exposed by the supported CLI. This is **not** a production authorization.
 - Stage 4 explores bounded, declared transactions through the pinned reference;
   no payment transaction is invented when none was declared. Empty or wholly
   unevaluated exploration/oracle evidence is `INCONCLUSIVE`. Stage 5 keeps
-  candidate property records, but has no general independent property checker.
+  candidate property records and a local, unadjudicated observation dataset,
+  but has no general independent property checker. Dataset export requires
+  pinned replay, two concordant reviews and asserted data-use rights; see
+  [Stage 5 dataset](../../research/stage5/README.md).
 - The ledger port currently checks transaction size against a pinned CLI and a
   synchronized local node when explicitly configured. It does not sign or submit.
 

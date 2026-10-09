@@ -27,6 +27,7 @@ class ResearchPipelineWiring:
     oracles: list[Any] = field(default_factory=list)
     property_checker: Any = None
     property_registry: Any = None
+    property_dataset: Any = None
     ledger_port: Any = None
     testnet_port: Any = None
     deployment_port: Any = None
@@ -70,11 +71,12 @@ def build_research_pipeline(*, live_model: bool = False, model_name: str | None 
         "exploration": ExplorationPort(configured.exploration_domain, configured.reference_executor,
                                        configured.exploration_initial_state,
                                        configured.exploration_bounds or ExplorationBounds()),
-        "oracle_evaluation": OraclePort(configured.oracles),
+        "oracle_evaluation": OraclePort(configured.oracles, configured.property_dataset),
         "coverage": CoveragePort(),
         "adversarial_search": AdversarialPort(),
         "property_validation": PropertyValidationPort(configured.property_checker,
-                                                      configured.property_registry),
+                                                      configured.property_registry,
+                                                      configured.property_dataset),
         "ledger_validation": configured.ledger_port or DisabledExternalPort("ledger_validation"),
         "testnet": configured.testnet_port or DisabledExternalPort("testnet"),
         "deployment": configured.deployment_port or DisabledExternalPort("deployment"),

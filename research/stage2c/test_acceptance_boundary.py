@@ -69,3 +69,19 @@ def test_structured_clarification_renders_question_not_python_dict():
     questions = [item["description"] for item in outcome.artifacts[0].payload["issues"]]
     assert "When is the deposit due?" in questions
     assert not any("{'question'" in item for item in questions)
+
+
+def test_source_backed_unsupported_candidate_stops_without_user_acceptance():
+    spec = direct_payment_spec()
+    spec["predicted_resolution"] = "unsupported_for_current_study"
+    candidate = ArtifactEnvelope(
+        "intent-candidate", "v1", "unit",
+        ImplementationStatus.IMPLEMENTED_UNVALIDATED,
+        AuthorityLevel.MODEL_CANDIDATE,
+        {"intent_spec": spec, "semantic_core": extract_core_view(spec),
+         "core_validation_errors": [], "full_validation_errors": []},
+    )
+    outcome = IntentAcceptancePort().execute([candidate], StageContext("unit"))
+    assert outcome.result.run_status == StageRunStatus.UNSUPPORTED
+    assert outcome.result.authority_level == AuthorityLevel.NO_AUTHORITY
+    assert not any(item.artifact_type == "accepted-intent" for item in outcome.artifacts)

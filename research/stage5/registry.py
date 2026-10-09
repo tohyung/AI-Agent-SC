@@ -12,6 +12,8 @@ from research.architecture.models import StageResult
 from research.architecture.ports import StageContext, StageExecution, latest_artifact
 from research.architecture.status import AuthorityLevel, ImplementationStatus, StageRunStatus
 
+from .dataset import PropertyDataset
+
 
 class PropertyStatus(StrEnum):
     CANDIDATE = "CANDIDATE"
@@ -81,9 +83,11 @@ class PropertyRegistry:
 
 class PropertyValidationPort:
     def __init__(self, checker: PropertyChecker | None = None,
-                 registry: PropertyRegistry | None = None) -> None:
+                 registry: PropertyRegistry | None = None,
+                 dataset: PropertyDataset | None = None) -> None:
         self.checker = checker
         self.registry = registry or PropertyRegistry()
+        self.dataset = dataset
 
     def execute(self, artifacts: list[ArtifactEnvelope], context: StageContext) -> StageExecution:
         adversarial = latest_artifact(artifacts, "adversarial-candidates")
@@ -91,23 +95,33 @@ class PropertyValidationPort:
         if adversarial is None or contract is None:
             return StageExecution(StageResult("property_validation", ImplementationStatus.SCAFFOLDED,
                                               StageRunStatus.NOT_EVALUATED))
+        observation_ids = (self.dataset.ingest_artifacts(artifacts, context.run_id)
+                           if self.dataset is not None else [])
         candidates = []
         outcomes = []
         diagnostics = []
         for item in adversarial.payload["candidates"]:
             finding = item["finding"]
             candidate = PropertyCandidate(
-                stable_artifact_id("property-candidate", "v1", finding),
+                stable_artifact_id("property-candidate", "v1", {
+                    "finding": finding, "contract_artifact_id": contract.artifact_id}),
                 f"Review oracle {finding['oracle_id']} violation on observed trace",
                 finding["trace_id"], contract.artifact_id,
                 {"trace_id": finding["trace_id"], "oracle_id": finding["oracle_id"]})
             self.registry.add(candidate, PropertyStatus.CANDIDATE)
+            if self.dataset is not None:
+                self.dataset.record_property_candidate(candidate.to_dict(), context.run_id)
             candidates.append(candidate.to_dict())
             if self.checker is not None:
                 check = self.checker.check(candidate)
                 if not isinstance(check, PropertyCheckResult):
                     raise TypeError("property checker must return PropertyCheckResult")
                 self.registry.add(candidate, check.status, list(check.evidence_ids), check.reviewer_id)
+                if self.dataset is not None:
+                    self.dataset.record_checker_outcome(
+                        candidate.property_id, status=check.status.value,
+                        evidence_ids=list(check.evidence_ids),
+                        reviewer_id=check.reviewer_id, run_id=context.run_id)
                 outcomes.append({"property_id": candidate.property_id,
                                  "status": check.status.value,
                                  "evidence_ids": list(check.evidence_ids),
@@ -127,6 +141,7 @@ class PropertyValidationPort:
         output = ArtifactEnvelope("property-candidates", "v1", "property_validation",
                                   ImplementationStatus.SCAFFOLDED, AuthorityLevel.NO_AUTHORITY,
                                   {"candidates": candidates, "outcomes": outcomes,
+                                   "dataset_observation_ids": observation_ids,
                                    "validated": bool(outcomes) and all(
                                        item["status"] == PropertyStatus.VALIDATED_FOR_SCOPE.value
                                        for item in outcomes),

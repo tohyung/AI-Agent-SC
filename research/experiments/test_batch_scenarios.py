@@ -113,7 +113,8 @@ def test_linear_time_release_scenario_uses_intent_deadlines_not_ast_values():
     second_deadline = transactions[2]["interval"]["from"]
     assert first_deadline < second_deadline
     assert scenario.domain.transactions({}, {"when": [], "timeout": first_deadline}) == [
-        transactions[1]]
+        transactions[1], transactions[2]]
     assert scenario.domain.transactions({}, {"when": [], "timeout": second_deadline}) == [
         transactions[2]]
-    assert scenario.domain.transactions({}, {"when": [], "timeout": first_deadline + 1}) == []
+    assert scenario.domain.transactions({}, {"when": [], "timeout": first_deadline + 1}) == [
+        transactions[2]]

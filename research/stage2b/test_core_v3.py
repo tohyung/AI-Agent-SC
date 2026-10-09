@@ -91,6 +91,45 @@ def test_v3_sequential_outcomes_and_automatic_payment_are_not_v1_unsupported():
                for error in validate_shadow_semantic_core(old))
 
 
+def test_v3_confirmed_ledger_history_deletion_is_source_backed_unsupported():
+    core = token_core()
+    core["requirement_history"] = [{
+        "version": 1,
+        "messages": ["Xóa hẳn lịch sử giao dịch đã xác nhận trên Cardano."],
+    }]
+    core["behavior_scopes"] = [{"scope_id": "global", "scope_type": "global"}]
+    core["claims"] = [{
+        "claim_id": "erase-confirmed", "kind": "ledger_history_deletion", "value": True,
+        "criticality": "nonfinancial", "status": "explicit", "scope_id": "global",
+        "evidence": [{"requirement_version": 1, "message_index": 0,
+                      "span": "Xóa hẳn lịch sử giao dịch đã xác nhận",
+                      "relation": "supports"}],
+    }]
+    core["predicted_resolution"] = "unsupported_for_current_study"
+    assert validate_shadow_semantic_core(core) == []
+    missing_evidence = deepcopy(core)
+    missing_evidence["claims"][0]["evidence"] = []
+    assert any("unsupported prediction requires authoritative" in error
+               for error in validate_shadow_semantic_core(missing_evidence))
+    false_signal = deepcopy(core)
+    false_signal["claims"][0]["value"] = False
+    assert any("unsupported prediction requires authoritative" in error
+               for error in validate_shadow_semantic_core(false_signal))
+    legacy = deepcopy(core)
+    legacy["schema_version"] = CORE_SCHEMA_VERSION_V2
+    assert any("unknown claim kind" in error
+               for error in validate_shadow_semantic_core(legacy))
+
+
+def test_v3_prompt_exposes_only_confirmed_ledger_deletion_unsupported_signal():
+    system, user = build_prompt([{"version": 1, "messages": [
+        "Xóa hẳn lịch sử giao dịch đã xác nhận trên Cardano."]}],
+        core_schema_version=CORE_SCHEMA_VERSION_V3)
+    assert "ledger_history_deletion" in system
+    assert '"kind": "ledger_history_deletion"' in user
+    assert '"kind": "autonomous_execution", "value": true' not in user
+
+
 def test_v3_prompt_distinguishes_represented_behavior_and_later_utc_answer():
     system, _ = build_prompt(token_core()["requirement_history"],
                              core_schema_version=CORE_SCHEMA_VERSION_V3)

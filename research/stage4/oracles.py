@@ -35,8 +35,10 @@ class NoWarningsOracle:
 
 
 class OraclePort:
-    def __init__(self, oracles: list[TraceOracle] | None = None) -> None:
+    def __init__(self, oracles: list[TraceOracle] | None = None,
+                 dataset: Any = None) -> None:
         self.oracles = list(oracles or [])
+        self.dataset = dataset
 
     def execute(self, artifacts: list[ArtifactEnvelope], context: StageContext) -> StageExecution:
         graph = latest_artifact(artifacts, "exploration-graph")
@@ -54,6 +56,8 @@ class OraclePort:
                                   AuthorityLevel.NO_AUTHORITY,
                                   {"graph_id": graph.artifact_id, "findings": findings,
                                    "scope": "observed traces only"})
+        if self.dataset is not None:
+            self.dataset.ingest_artifacts([*artifacts, output], context.run_id)
         return StageExecution(StageResult(
             "oracle_evaluation", ImplementationStatus.IMPLEMENTED_UNVALIDATED,
             StageRunStatus.SUCCEEDED if evaluated else StageRunStatus.INCONCLUSIVE,

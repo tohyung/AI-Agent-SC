@@ -174,7 +174,8 @@ class SemanticComparisonPort:
                                               diagnostics=["expectation source is not independent accepted evidence"]))
         try:
             bound_transactions, binding_evidence = bind_choice_transactions(
-                contract.payload["contract"], expectation.request.transactions)
+                contract.payload["contract"], expectation.request.transactions,
+                reference=self.executor, initial_state=expectation.request.state)
         except ScenarioBindingError:
             return StageExecution(StageResult(
                 "semantic_comparison", ImplementationStatus.IMPLEMENTED_UNVALIDATED,

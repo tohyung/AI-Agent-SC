@@ -81,6 +81,13 @@ class LLMContractGeneratorPort:
             "Use Vietnamese for the short reasoning_narrative, not raw chain-of-thought. "
             "For ADA, every of_token/token object must be exactly "
             '{"currency_symbol":"","token_name":""}; never use token_name="ADA". '
+            "Marlowe Constant Value is a bare JSON integer, e.g. deposits: 1 or "
+            'pay: 1, never {"constant": 1}. '
+            "Pay is one Contract object with exactly pay, from_account, to, token, "
+            'then at the same level, e.g. {"pay":1,"from_account":{"role_token":"A"},'
+            '"to":{"party":{"role_token":"B"}},'
+            '"token":{"currency_symbol":"","token_name":""},"then":"close"}. '
+            'Never wrap that Contract in {"pay": {...}}. '
             "Return JSON only.\n" + describe_marlowe_grammar()
         )
         user = json.dumps({

@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import sys
 from copy import deepcopy
+from datetime import datetime, timedelta, timezone
 
 import pytest
 
@@ -180,6 +181,10 @@ def test_repair_guidance_keeps_approval_evidence_and_questions_source_grounded()
     ])
     assert len(guidance) == 3
     assert "case-sensitive" in guidance[0]["rule"]
+    assert "nonempty JSON array" in guidance[0]["rule"]
+    assert "Do not omit choice_bounds" in guidance[0]["rule"]
+    assert "not one object" in guidance[1]["rule"]
+    assert "Do not omit choice_guard" in guidance[1]["rule"]
     assert "do not invent a rejection branch" in guidance[1]["rule"]
     assert "JSON array" in guidance[2]["rule"]
     assert "question strings" in guidance[2]["rule"]
@@ -227,6 +232,33 @@ def test_evidence_only_repair_keeps_other_core_fields_unchanged():
     assert "not an exact source quote" in claim["evidence"][0]["span"]
 
 
+def test_evidence_repair_supplies_verbatim_cited_source_message():
+    valid = intent_spec.extract_core_view(simple_payment())
+    invalid = deepcopy(valid)
+    claim = next(item for item in invalid["claims"] if item.get("evidence"))
+    original = deepcopy(claim["evidence"])
+    claim["evidence"][0]["span"] = "merged phrase absent from source"
+    calls = []
+
+    class EvidenceModel:
+        def generate(self, system, user):
+            calls.append((system, user))
+            if len(calls) == 1:
+                return invalid
+            return {"evidence_by_claim": {claim["claim_id"]: original}}
+
+    shadow_extractor.IntentShadowExtractor(EvidenceModel()).extract_with_validation_feedback(
+        valid["requirement_history"])
+    repair = json.loads(calls[1][1])
+    cited = repair["verbatim_source_messages"][claim["claim_id"]]
+    assert cited == [{"requirement_version": original[0]["requirement_version"],
+                      "message_index": original[0]["message_index"],
+                      "message": valid["requirement_history"][
+                          original[0]["requirement_version"] - 1]["messages"][
+                              original[0]["message_index"]]}]
+    assert "rather than joining fragments" in calls[1][0]
+
+
 def test_evidence_repair_rejects_unlisted_claim_changes():
     core = intent_spec.extract_core_view(simple_payment())
     claim = next(item for item in core["claims"] if item.get("evidence"))
@@ -262,6 +294,22 @@ def test_repair_guidance_uses_exact_local_instant_and_detects_ada_unit_duplicate
     assert guidance[0]["source_backed_utc_milliseconds"] == [1798909200000]
     assert "20000000-lovelace" in guidance[1]["rule"]
     assert "omit that raw" in guidance[2]["rule"]
+    assert "points to an asset claim" in guidance[2]["rule"]
+
+
+def test_repair_guidance_resolves_english_shared_timezone_from_source_message():
+    message = ("Helen deposits before 23:59 on 09/01/2027 in Vietnam time (UTC+7). "
+               "Kate deposits before 23:59 on 16/01/2027 in the same timezone.")
+    history = [{"version": 1, "messages": [message]}]
+    core = {"claims": [{"claim_id": "kate-deadline", "kind": "deposit_deadline_ms",
+                        "evidence": [{"requirement_version": 1, "message_index": 0,
+                                      "span": "before 23:59 on 16/01/2027 in the same timezone",
+                                      "relation": "supports"}]}]}
+    guidance = shadow_extractor._repair_guidance(core, [
+        "claim kate-deadline: deadline value contradicts cited calendar date"], history)
+    expected = int(datetime(2027, 1, 16, 23, 59,
+                            tzinfo=timezone(timedelta(hours=7))).timestamp() * 1000)
+    assert guidance[0]["source_backed_utc_milliseconds"] == [expected]
 
 
 def test_calendar_hints_are_source_only_and_preserve_timezone_uncertainty():
@@ -293,6 +341,16 @@ def test_choice_prompt_forbids_transition_to_its_branch():
         [{"version": 1, "messages": ["Alice chooses between 0 and 100."]}],
         core_schema_version=intent_spec.CORE_SCHEMA_VERSION_V3)
     assert "Omit continuation_scope_id on the Choice transition itself" in system
+    assert "source_evidence is a NONEMPTY JSON ARRAY" in system
+
+
+def test_choice_prompt_contract_matches_evidence_array_validator():
+    contract = intent_spec.core_prompt_schema_contract(
+        version=intent_spec.CORE_SCHEMA_VERSION_V3)
+    for field in ("choice_bounds", "choice_guard"):
+        shape = contract["scope"][field]
+        assert shape["source_evidence_type"] == "nonempty_array_of_evidence_objects"
+        assert shape["source_evidence_item_fields"] == sorted(intent_spec.EVIDENCE_FIELDS)
 
 
 def test_prompt_contract_tracks_validator_enums(monkeypatch):

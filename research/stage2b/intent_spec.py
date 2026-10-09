@@ -17,7 +17,7 @@ SCHEMA_VERSION_V2 = "stage2b-shadow-v2"
 CORE_SCHEMA_VERSION_V2 = "stage2b-shadow-core-v2"
 SCHEMA_VERSION_V3 = "stage2b-shadow-v3"
 CORE_SCHEMA_VERSION_V3 = "stage2b-shadow-core-v3"
-CLAIM_KINDS_V3 = CLAIM_KINDS | {"amount_token_units"}
+CLAIM_KINDS_V3 = CLAIM_KINDS | {"amount_token_units", "ledger_history_deletion"}
 NATIVE_ASSET_ID = re.compile(r"native:([0-9a-f]{56})/([0-9a-f]{2,64})\Z")
 
 
@@ -61,6 +61,7 @@ BACKING_STATUSES = {"explicit", "derived", "user_confirmed"}
 TRANSITION_KINDS = {"choice", "deposit", "notify", "payment"}
 # Stage 2B core-v1 only; a future unsupported feature needs a versioned signal.
 UNSUPPORTED_SIGNALS_V1 = frozenset({("autonomous_execution", True)})
+UNSUPPORTED_SIGNALS_V3 = frozenset({("ledger_history_deletion", True)})
 ASSETS_ACCOUNTS_FIELDS = {"assets", "accounts", "funding_relations"}
 CLAIM_FIELDS = {
     "claim_id", "kind", "value", "criticality", "status", "scope_id", "evidence",
@@ -204,16 +205,27 @@ def core_prompt_schema_contract(*, version: str = CORE_SCHEMA_VERSION) -> dict[s
             "optional_for": ["timeout"],
         },
     }
+    contract["unsupported_signals"] = [
+        {"kind": kind, "value": value, "requires_supporting_evidence": True}
+        for kind, value in sorted(
+            UNSUPPORTED_SIGNALS_V3 if version == CORE_SCHEMA_VERSION_V3
+            else UNSUPPORTED_SIGNALS_V1
+        )
+    ]
     if version in {CORE_SCHEMA_VERSION_V2, CORE_SCHEMA_VERSION_V3}:
         contract["scope"]["choice_bounds"] = {
             "fields": ["from", "to", "source_evidence"],
             "required_for": "choice transition", "integer_inclusive": True,
+            "source_evidence_type": "nonempty_array_of_evidence_objects",
+            "source_evidence_item_fields": sorted(EVIDENCE_FIELDS),
         }
         contract["scope"]["choice_guard"] = {
             "fields": ["operator", "value", "source_evidence"],
             "required_for": "branch of choice transition",
             "operators": sorted(CHOICE_GUARD_OPERATORS),
             "value_type": "integer", "source_evidence_required": True,
+            "source_evidence_type": "nonempty_array_of_evidence_objects",
+            "source_evidence_item_fields": sorted(EVIDENCE_FIELDS),
         }
         contract["scope"]["terminal_outcome_parent"] = {
             "field": "parent_scope_id", "required": True,
@@ -315,7 +327,7 @@ def explicit_utc_instants(text: str) -> list[tuple[int, int, int]]:
     found: list[tuple[int, int, int]] = []
     iso = re.compile(r"(?<!\d)\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?Z(?!\d)")
     local = re.compile(
-        r"(?<!\d)(?P<hour>\d{1,2}):(?P<minute>\d{2})\s+(?:ngày\s+)?"
+        r"(?<!\d)(?P<hour>\d{1,2}):(?P<minute>\d{2})\s+(?:(?:ngày|on)\s+)?"
         r"(?P<day>\d{1,2})/(?P<month>\d{1,2})/(?P<year>\d{4})"
         r"[^.;\n]{0,80}?\bUTC(?P<sign>[+-])(?P<offset_hour>\d{1,2})"
         r"(?::(?P<offset_minute>\d{2}))?\b",
@@ -342,6 +354,32 @@ def explicit_utc_instants(text: str) -> list[tuple[int, int, int]]:
         except ValueError:
             continue
         found.append((match.start(), match.end(), int(instant.timestamp() * 1000)))
+    offsets = list(re.finditer(r"\bUTC(?P<sign>[+-])(?P<hour>\d{1,2})"
+                               r"(?::(?P<minute>\d{2}))?\b", text, re.IGNORECASE))
+    if len(offsets) == 1:
+        offset_match = offsets[0]
+        offset_hour = int(offset_match.group("hour"))
+        offset_minute = int(offset_match.group("minute") or 0)
+        if offset_hour <= 23 and offset_minute <= 59:
+            sign = 1 if offset_match.group("sign") == "+" else -1
+            shared_offset = timezone(sign * timedelta(hours=offset_hour,
+                                                      minutes=offset_minute))
+            shared = re.compile(
+                r"(?<!\d)(?P<hour>\d{1,2}):(?P<minute>\d{2})\s+"
+                r"(?:(?:ngày|on)\s+)?(?P<day>\d{1,2})/(?P<month>\d{1,2})/"
+                r"(?P<year>\d{4})[^.;\n]{0,80}?\b(?:same timezone|cùng múi giờ)\b",
+                re.IGNORECASE,
+            )
+            for match in shared.finditer(text):
+                if match.start() <= offset_match.end():
+                    continue
+                try:
+                    instant = datetime(int(match.group("year")), int(match.group("month")),
+                                       int(match.group("day")), int(match.group("hour")),
+                                       int(match.group("minute")), tzinfo=shared_offset)
+                except ValueError:
+                    continue
+                found.append((match.start(), match.end(), int(instant.timestamp() * 1000)))
     return sorted(found)
 
 
@@ -370,7 +408,12 @@ def _absolute_deadline_mismatch(claim: dict[str, Any]) -> bool:
             except ValueError:
                 continue
     if exact_instants:
-        return value not in exact_instants
+        if value in exact_instants:
+            return False
+        if len(set(cited_dates)) == 1:
+            return True
+        # A shared timezone after several dates may attach to a date the parser missed.
+        # In that case only a calendar contradiction is provable from this span.
     if not cited_dates:
         return False
     try:
@@ -594,8 +637,11 @@ def validate_shadow_semantic_core(spec: Any, *,
             if v3 and kind == "asset" and isinstance(value, str) and value.startswith("native:"):
                 if parse_native_asset_id(value) is None:
                     errors.append(f"claim {claim_id}: invalid native asset id")
-            if kind == "autonomous_execution" and not isinstance(value, bool):
-                errors.append(f"claim {claim_id}: autonomous_execution value must be boolean")
+            if isinstance(kind, str) and kind in {
+                "autonomous_execution", "ledger_history_deletion"
+            } \
+                    and not isinstance(value, bool):
+                errors.append(f"claim {claim_id}: {kind} value must be boolean")
         evidence = claim.get("evidence")
         if evidence is not None and evidence != [] and not _evidence_valid(evidence, messages):
             errors.append(f"claim {claim_id}: invalid evidence target/span")
@@ -688,13 +734,19 @@ def validate_shadow_semantic_core(spec: Any, *,
         and _allowed(claim.get("status"), BACKING_STATUSES)
         and valid_supporting_evidence(claim, messages)
         for claim in raw_claims
-        for signal_kind, signal_value in (() if v3 else UNSUPPORTED_SIGNALS_V1)
+        for signal_kind, signal_value in (
+            UNSUPPORTED_SIGNALS_V3 if v3 else UNSUPPORTED_SIGNALS_V1
+        )
     )
     if supported_unsupported and resolution != "unsupported_for_current_study" and not (
             resolution == "conflict_requires_resolution" and conflicting):
         errors.append("authoritative unsupported signal requires unsupported_for_current_study")
     if resolution == "unsupported_for_current_study" and not supported_unsupported:
-        errors.append("unsupported prediction requires authoritative v1 unsupported signal")
+        errors.append(
+            "unsupported prediction requires authoritative "
+            + ("v3 ledger-history-deletion" if v3 else "v1")
+            + " unsupported signal"
+        )
     clarifications = spec.get("required_clarifications")
     if not isinstance(clarifications, list):
         errors.append("required_clarifications must be a list")

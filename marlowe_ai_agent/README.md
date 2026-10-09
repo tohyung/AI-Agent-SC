@@ -36,6 +36,11 @@ or SMT findings, but it cannot silently change an already approved intent.
 The run log at `runs/<timestamp>.jsonl` records requirement history, stage
 executions, artifacts and sanitized model-call metadata, not API keys or raw
 chain-of-thought. `--run-log-dir` and `--no-run-log` control that output.
+Stage 5 also records local property/oracle observations in
+`runs/property-dataset.sqlite3` by default. They are not training labels.
+Use `--no-property-dataset` to opt out, or `--property-dataset PATH` to change
+the location. Review, replay, export, trust limits and privacy rules are in
+[`research/stage5/README.md`](../research/stage5/README.md).
 
 An independent behavior scenario can be supplied with `--expectation PATH`.
 The CLI asks for separate confirmation before using it for reference

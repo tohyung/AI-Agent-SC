@@ -216,6 +216,7 @@ def run_case(index: int, *, answers: list[str] | None = None,
                 simulated_expectation=expectation,
                 roleplay_reviewed_candidate_id=reviewed_candidate_id,
                 max_core_validation_repairs=repair_attempts,
+                property_dataset_path="runs/property-dataset.sqlite3",
             ),
             ask=answer,
             emit=lambda message: print(message, flush=True) if message.startswith(

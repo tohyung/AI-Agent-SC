@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import os
 from pathlib import Path
+import re
 import time
 from collections.abc import Callable
 from typing import Any
@@ -47,6 +48,15 @@ def _usage(response: Any) -> dict[str, int | None]:
                               getattr(usage, "output_tokens", None)),
         "total_tokens": getattr(usage, "total_tokens", None),
     }
+
+
+def _parse_json_content(content: str) -> Any:
+    source = content.strip().lstrip("\ufeff")
+    fenced = re.fullmatch(r"```(?:json)?\s*\n(.*?)\n```", source,
+                          flags=re.DOTALL | re.IGNORECASE)
+    if fenced is not None:
+        source = fenced.group(1)
+    return json.loads(source)
 
 
 class ModelTransport:
@@ -208,7 +218,7 @@ class ModelTransport:
     def generate(self, system: str, user: str) -> dict[str, Any]:
         content = self._retry_request(system, user, phase="generation")
         try:
-            result = json.loads(content)
+            result = _parse_json_content(content)
         except json.JSONDecodeError:
             repair = self._retry_request(
                 "Return only one complete JSON object. Preserve the original task and meaning.",
@@ -216,7 +226,7 @@ class ModelTransport:
                 phase="json_repair",
             )
             try:
-                result = json.loads(repair)
+                result = _parse_json_content(repair)
             except json.JSONDecodeError as exc:
                 raise ModelTransportError("invalid_json_after_repair", "model_output_parse",
                                           content_received=True, repair_attempted=True) from exc

@@ -3,6 +3,7 @@
 from copy import deepcopy
 
 from research.architecture.cli_runner import (LocalExpectationPolicy, SessionOptions,
+                                              _reference_counterexample_feedback,
                                               reviewed_expectation, run_session)
 from research.architecture.artifacts import ArtifactEnvelope
 from research.architecture.bootstrap import ResearchPipelineWiring, build_research_pipeline
@@ -49,6 +50,30 @@ def test_model_generator_uses_accepted_spec_and_keeps_candidate_authority():
     assert execution.artifacts[0].authority_level == AuthorityLevel.MODEL_CANDIDATE
     assert execution.artifacts[0].payload["source_intent_id"] == accepted.artifact_id
     assert "deadline mismatch" in model.requests[0][1]
+    assert 'never {"constant": 1}' in model.requests[0][0]
+    assert 'Never wrap that Contract in {"pay": {...}}' in model.requests[0][0]
+
+
+def test_reference_feedback_explains_timeout_path_without_rewriting_scenario():
+    report = {
+        "expectation": {"expected_status": "Success", "expected_payments": [
+            {"amount": 17500000, "payee": {"party": {"role_token": "Nga"}}}]},
+        "bound_transactions": [
+            {"interval": {"from": 10, "to": 10}, "inputs": [{"type": "Deposit"}]},
+            {"interval": {"from": 20, "to": 20}, "inputs": []}],
+        "reference_result": {"status": "Success", "steps": [
+            {"status": "Success", "contract": {"when": [{"case": {
+                "notify_if": True}, "then": "close"}], "timeout": 20,
+                "timeout_continuation": "close"}, "payments": []},
+            {"status": "Success", "payments": [{"amount": 35000000,
+                "payee": {"party": {"role_token": "Huy"}}}]}]},
+    }
+    feedback = _reference_counterexample_feedback(report)
+    assert any("interval.from=20 reaches When.timeout=20" in item for item in feedback)
+    assert any("timeout_continuation" in item and "not behind Notify" in item
+               for item in feedback)
+    assert any("35000000" in item and "Huy" in item for item in feedback)
+    assert any("17500000" in item and "Nga" in item for item in feedback)
 
 
 def test_model_generator_rejects_noncanonical_token_when_intent_only_uses_ada():

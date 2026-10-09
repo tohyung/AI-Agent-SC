@@ -90,7 +90,16 @@ class IntentAcceptancePort:
                 StageRunStatus.BLOCKED, input_artifacts=[candidate.artifact_id],
                 diagnostics=["reviewer authorization policy missing or denied"]),
                 [review_artifact])
-        outcome = apply_decision(candidate, review, raw_decision)
+        if (raw_decision is None
+                and candidate.payload.get("semantic_core", {}).get(
+                    "predicted_resolution") == "unsupported_for_current_study"):
+            outcome = IntentAcceptanceResult(
+                IntentDecisionStatus.UNSUPPORTED,
+                diagnostics=("source-backed candidate requests unsupported behavior; "
+                             "no contract was accepted or compiled",),
+            )
+        else:
+            outcome = apply_decision(candidate, review, raw_decision)
         outputs = [review_artifact]
         status = StageRunStatus.WAITING_USER
         authority = AuthorityLevel.NO_AUTHORITY

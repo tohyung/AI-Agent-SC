@@ -6,6 +6,7 @@ from collections.abc import Callable
 from copy import deepcopy
 from dataclasses import dataclass
 import json
+from pathlib import Path
 from typing import Any
 
 from research.architecture.artifacts import ArtifactEnvelope
@@ -46,6 +47,7 @@ class SessionOptions:
     roleplay: bool = False
     roleplay_reviewed_candidate_id: str | None = None
     max_core_validation_repairs: int | None = None
+    property_dataset_path: str | None = None
 
     def __post_init__(self) -> None:
         if any(
@@ -69,6 +71,8 @@ class SessionOptions:
             raise ValueError("max_core_validation_repairs must be 0 through 3")
         if self.core_schema_version not in {CORE_SCHEMA_VERSION_V2, CORE_SCHEMA_VERSION_V3}:
             raise ValueError("unsupported session core schema version")
+        if self.property_dataset_path is not None and not self.property_dataset_path.strip():
+            raise ValueError("property dataset path must be nonempty")
 
 
 class LocalReviewerPolicy:
@@ -207,6 +211,51 @@ def clarification_questions(core: dict[str, Any]) -> list[str]:
     ))
 
 
+def _reference_counterexample_feedback(report: dict[str, Any]) -> list[str]:
+    raw = report.get("reference_result")
+    expectation = report.get("expectation")
+    transactions = report.get("bound_transactions")
+    if (not isinstance(raw, dict) or not isinstance(expectation, dict)
+            or not isinstance(transactions, list)
+            or not isinstance(raw.get("steps"), list)):
+        return []
+    feedback = ["Pinned reference counterexample: " + json.dumps({
+        "expected_status": expectation.get("expected_status"),
+        "observed_status": raw.get("status"),
+        "expected_payments": expectation.get("expected_payments"),
+    }, ensure_ascii=False, sort_keys=True)]
+    steps = raw["steps"]
+    for index, (transaction, step) in enumerate(zip(transactions[:4], steps[:4])):
+        if not isinstance(transaction, dict) or not isinstance(step, dict):
+            continue
+        inputs = transaction.get("inputs")
+        feedback.append("Reference transaction: " + json.dumps({
+            "index": index,
+            "interval": transaction.get("interval"),
+            "input_types": [item.get("type") for item in inputs if isinstance(item, dict)]
+            if isinstance(inputs, list) else None,
+            "status": step.get("status"),
+            "payments": step.get("payments"),
+            "error": step.get("error"),
+        }, ensure_ascii=False, sort_keys=True))
+        if index == 0 or not isinstance(inputs, list) or inputs:
+            continue
+        previous = steps[index - 1]
+        prior_contract = previous.get("contract") if isinstance(previous, dict) else None
+        interval = transaction.get("interval")
+        timeout = prior_contract.get("timeout") if isinstance(prior_contract, dict) else None
+        start = interval.get("from") if isinstance(interval, dict) else None
+        if (isinstance(prior_contract, dict) and isinstance(prior_contract.get("when"), list)
+                and type(timeout) is int and type(start) is int and start >= timeout):
+            feedback.append(
+                f"At transaction {index}, interval.from={start} reaches When.timeout={timeout}. "
+                "Marlowe takes timeout_continuation; an empty-input transaction cannot "
+                "match a Notify case. If the accepted intent calls for a timed payout, "
+                "place that payout on timeout_continuation, not behind Notify. "
+                "Do not change the independent scenario to fit the AST.")
+    return feedback
+
+
 def _base_snapshot(
     pipeline: Any,
     run: Any,
@@ -339,6 +388,10 @@ def run_session(
             contract_model=model, enable_smt=True, smt_binary=options.smt_binary,
             intent_acceptance_port=acceptance_port,
         )
+        if options.property_dataset_path is not None:
+            from research.stage5.dataset import PropertyDataset
+
+            wiring.property_dataset = PropertyDataset(Path(options.property_dataset_path))
         pipeline = build_research_pipeline(model=model, wiring=wiring)
         reporter(f"Lượt {iteration}: Stage 2B đang trích xuất intent")
         run = pipeline.run(
@@ -406,6 +459,16 @@ def run_session(
             )
         core = payload["semantic_core"]
         questions = clarification_questions(core)
+        if core["predicted_resolution"] == "unsupported_for_current_study":
+            return _snapshot(
+                pipeline,
+                run,
+                history,
+                status="UNSUPPORTED",
+                stop_reason="unsupported_intent",
+                iterations=iteration,
+                model=model,
+            )
         if core["predicted_resolution"] != "accepted_interpretation" or questions:
             if not questions:
                 return _snapshot(
@@ -666,7 +729,8 @@ def run_session(
                 expectation.payload["request"]["state"],
                 ExplorationBounds(max_depth=max(2, len(transactions)), max_traces=8),
             )
-            pipeline.ports["oracle_evaluation"] = OraclePort([NoWarningsOracle()])
+            pipeline.ports["oracle_evaluation"] = OraclePort(
+                [NoWarningsOracle()], wiring.property_dataset)
         if options.ledger_config is not None:
             pipeline.ports["ledger_validation"] = MarloweCliSizeAnalysisPort(
                 options.ledger_config
@@ -690,6 +754,7 @@ def run_session(
                 pipeline, run, "semantic_comparison", "reference-comparison")
             feedback = list(run.stages["semantic_comparison"].diagnostics)
             if comparison_report is not None:
+                feedback.extend(_reference_counterexample_feedback(comparison_report.payload))
                 alignment = comparison_report.payload.get("intent_alignment")
                 if isinstance(alignment, dict):
                     violated = [item for item in alignment.get("checks", [])

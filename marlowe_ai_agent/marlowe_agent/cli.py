@@ -34,6 +34,10 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--expectation", type=Path,
                         help="JSON kịch bản hành vi độc lập do người dùng xác nhận.")
     parser.add_argument("--run-log-dir", default="runs", metavar="PATH")
+    parser.add_argument("--property-dataset", default="runs/property-dataset.sqlite3",
+                        metavar="PATH", help="Kho evidence/property local (SQLite).")
+    parser.add_argument("--no-property-dataset", action="store_true",
+                        help="Khong ghi observation vao kho property.")
     parser.add_argument("--no-run-log", action="store_true")
     parser.add_argument("--trace-only", action="store_true")
     parser.add_argument("--max-iterations", type=positive_int, default=8, metavar="N")
@@ -81,6 +85,8 @@ def main() -> int:
                 smt_binary=os.getenv("MARLOWE_SMT_BIN"),
                 core_schema_version=(CORE_SCHEMA_VERSION_V3 if args.core_schema_version == "v3"
                                      else CORE_SCHEMA_VERSION_V2),
+                property_dataset_path=(None if args.no_property_dataset
+                                       else args.property_dataset),
             )
             model = ModelTransport(args.model)
         except (RuntimeError, ValueError, OSError, json.JSONDecodeError) as exc:

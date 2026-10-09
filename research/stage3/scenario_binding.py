@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from .reference import ReferenceExecutor, ReferenceRequest
+
 
 class ScenarioBindingError(ValueError):
     pass
@@ -37,6 +39,14 @@ def _choice_actions(contract: Any) -> list[dict[str, Any]]:
     return found
 
 
+def _enabled_choice_actions(contract: Any) -> list[dict[str, Any]]:
+    if not isinstance(contract, dict) or not isinstance(contract.get("when"), list):
+        return []
+    return [item["case"] for item in contract["when"]
+            if isinstance(item, dict) and isinstance(item.get("case"), dict)
+            and "for_choice" in item["case"]]
+
+
 def bind_choice_input(item: dict[str, Any],
                       actions: list[dict[str, Any]]) -> dict[str, Any]:
     if item.get("type") != "Choice" or "choice_id" in item:
@@ -60,20 +70,41 @@ def bind_choice_input(item: dict[str, Any],
     return {"type": "Choice", "choice_id": _materialize(matches[0]), "chosen": chosen}
 
 
-def bind_choice_transactions(contract: Any, transactions: tuple[dict[str, Any], ...]
+def bind_choice_transactions(contract: Any, transactions: tuple[dict[str, Any], ...],
+                             *, reference: ReferenceExecutor | None = None,
+                             initial_state: dict[str, Any] | None = None
                              ) -> tuple[tuple[dict[str, Any], ...], list[dict[str, Any]]]:
+    if reference is not None and initial_state is None:
+        raise ValueError("path-aware binding requires an initial state")
     actions = _choice_actions(contract)
     bound: list[dict[str, Any]] = []
     evidence: list[dict[str, Any]] = []
     for tx_index, transaction in enumerate(transactions):
         copy = _materialize(transaction)
+        abstract = [index for index, item in enumerate(copy.get("inputs", []))
+                    if item.get("type") == "Choice" and "choice_id" not in item]
+        if reference is not None and abstract:
+            if len(copy["inputs"]) != 1:
+                raise ScenarioBindingError("path-aware Choice binding needs one input per transaction")
+            current = contract
+            if bound:
+                try:
+                    prefix = reference.execute(ReferenceRequest(
+                        contract, initial_state, tuple(bound)))
+                except (OSError, RuntimeError, ValueError) as exc:
+                    raise ScenarioBindingError("reference prefix could not be evaluated") from exc
+                if prefix.get("status") != "Success" or prefix.get("final_contract") is None:
+                    raise ScenarioBindingError("reference prefix has no reliable continuation")
+                current = prefix["final_contract"]
+            actions = _enabled_choice_actions(current)
         for input_index, item in enumerate(copy.get("inputs", [])):
             if item.get("type") != "Choice" or "choice_id" in item:
                 continue
             resolved = bind_choice_input(item, actions)
             copy["inputs"][input_index] = resolved
             evidence.append({"transaction_index": tx_index, "input_index": input_index,
-                             "binding_kind": "unique_choice_owner_and_bound",
+                             "binding_kind": ("enabled_choice_owner_and_bound" if reference is not None
+                                              else "unique_choice_owner_and_bound"),
                              "choice_id": resolved["choice_id"]})
         bound.append(copy)
     return tuple(bound), evidence

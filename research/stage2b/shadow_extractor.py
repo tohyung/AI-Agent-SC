@@ -193,6 +193,9 @@ def build_prompt(requirement_history: list[dict[str, Any]], *,
             "\nFor each numeric Choice, include inclusive choice_bounds with exact source "
             "evidence on its transition scope. Every branch of that Choice needs a "
             "choice_guard with operator and integer threshold plus exact source evidence. "
+            "For both choice_bounds and choice_guard, source_evidence is a NONEMPTY "
+            "JSON ARRAY of evidence objects, never a single object. Each item has "
+            "requirement_version, message_index, span, and relation. "
             "For an explicit yes/no approval by an identified actor, a single "
             "approval event may use a Choice whose sole bound is from=1,to=1 "
             "and whose approval branch has choice_guard eq 1. This is a "
@@ -227,7 +230,20 @@ def build_prompt(requirement_history: list[dict[str, Any]], *,
     if core_schema_version == CORE_SCHEMA_VERSION_V3:
         system = system.replace("outside_stage2b_v2_claim_taxonomy",
                                 "outside_stage2b_v3_claim_taxonomy")
+        system = system.replace(
+            "Unsupported autonomous execution is unsupported, not generic ambiguity.",
+            "In v3, autonomous_execution alone is not unsupported. A request to "
+            "delete or rewrite a confirmed on-chain transaction or its history "
+            "is unsupported only when the source explicitly asks for that behavior."
+        )
         system += (
+            "\nFor explicit deletion or rewrite of confirmed Cardano transaction "
+            "history, record a source-backed global ledger_history_deletion=true "
+            "claim and choose unsupported_for_current_study. Do not reinterpret "
+            "deletion as refund, reversal, or a new contract; do not ask for amount, "
+            "asset, deadline, or participants that cannot make deletion possible. "
+            "Do not use this signal for ordinary cancellation before a transaction "
+            "is confirmed, or for a requested compensating transaction. "
             "\nFor native-token obligations, never use amount_lovelace for token quantity. "
             "Use amount_token_units as a positive integer, with a same-scope asset "
             "claim whose value is the exact source-provided canonical identifier "
@@ -370,6 +386,8 @@ class IntentShadowExtractor:
                     "requirement_history": requirement_history,
                     "claims": [claim for claim in core.to_dict()["claims"]
                                if claim["claim_id"] in target_ids],
+                    "verbatim_source_messages": _verbatim_source_messages(
+                        core.to_dict(), target_ids, requirement_history),
                     "validation_errors": current_errors,
                 }
                 repair_system = (
@@ -378,6 +396,10 @@ class IntentShadowExtractor:
                     "replacement evidence array. Each evidence item must have "
                     "requirement_version, message_index, span, relation. Copy only exact "
                     "contiguous source spans from requirement_history, with no ellipses. "
+                    "Use verbatim_source_messages to copy the exact text at each claim's "
+                    "source index. If a date, time, and shared timezone are separated "
+                    "within one message, cite that entire message verbatim rather than "
+                    "joining fragments into a phrase the user never wrote. "
                     "A span must actually support that claim and role. Do not invent facts "
                     "or return a new semantic core."
                 )
@@ -407,6 +429,33 @@ class IntentShadowExtractor:
                 break
             seen.add(fingerprint)
         return core, initial_errors
+
+
+def _verbatim_source_messages(core: dict[str, Any], target_ids: set[str],
+                              history: list[dict[str, Any]]) -> dict[str, list[dict[str, Any]]]:
+    messages = {(revision.get("version"), index): message
+                for revision in history if isinstance(revision, dict)
+                for index, message in enumerate(revision.get("messages", []))
+                if isinstance(message, str)}
+    result: dict[str, list[dict[str, Any]]] = {}
+    for claim in core.get("claims", []):
+        if not isinstance(claim, dict) or claim.get("claim_id") not in target_ids:
+            continue
+        cited: list[dict[str, Any]] = []
+        for item in claim.get("evidence") or []:
+            if not isinstance(item, dict):
+                continue
+            version, index = item.get("requirement_version"), item.get("message_index")
+            if type(version) is not int or type(index) is not int:
+                continue
+            message = messages.get((version, index))
+            if message is not None and not any(
+                    old["requirement_version"] == version and old["message_index"] == index
+                    for old in cited):
+                cited.append({"requirement_version": version, "message_index": index,
+                              "message": message})
+        result[claim["claim_id"]] = cited
+    return result
 
 
 def _evidence_repair_targets(core: dict[str, Any], errors: list[str]) -> set[str]:
@@ -516,11 +565,13 @@ def _repair_guidance(core: dict[str, Any], errors: list[str],
         elif "invalid derived_from source claim" in error:
             guidance.append({
                 "error": error,
-                "rule": ("derived_from is optional. If a raw ADA numeral was incorrectly "
-                         "represented as another amount_lovelace claim, omit that raw "
-                         "claim and derived_from; keep one normalized lovelace claim with "
-                         "exact source evidence and normalization_basis. Never invent "
-                         "a source claim only to satisfy this link."),
+                "rule": ("For this exact claim, remove the derived_from key when it "
+                         "points to an asset claim or any other claim kind. An asset "
+                         "claim cannot prove an amount_lovelace quantity. Keep this "
+                         "amount_lovelace claim, its supported numeric value, exact "
+                         "source evidence and normalization_basis unchanged. Do not "
+                         "invent another claim or derived_from link. If a separate "
+                         "raw ADA-unit duplicate exists, omit that raw duplicate."),
             })
         elif "invalid evidence target/span" in error or "supporting evidence required" in error:
             item: dict[str, Any] = {
@@ -551,13 +602,25 @@ def _repair_guidance(core: dict[str, Any], errors: list[str],
                                      "claimed fact and role.")
             guidance.append(item)
         elif error.endswith(": invalid choice_bounds") or error.endswith(": invalid choice_guard"):
+            is_bounds = error.endswith(": invalid choice_bounds")
             guidance.append({
                 "error": error,
-                "rule": ("Use a contiguous, case-sensitive quote from the referenced "
-                         "requirement message, including the correct version and message "
-                         "index. A yes/no approval may use the documented Choice value 1 "
-                         "encoding only when the source explicitly names the approver "
-                         "and approval outcome; do not invent a rejection branch."),
+                "rule": (("The Choice transition must include choice_bounds with "
+                          "integer from and to (inclusive) plus source_evidence. "
+                          "Do not omit choice_bounds or replace it with a claim. "
+                          "Use only source-backed numeric bounds. ") if is_bounds else
+                         ("Each Choice branch must include choice_guard with operator "
+                          "and integer value plus source_evidence. Do not omit "
+                          "choice_guard or replace it with a claim. The guard must "
+                          "fit the parent Choice bounds and the source-stated outcome. "))
+                        + ("source_evidence must be a nonempty JSON array of objects, "
+                           "not one object. Each item needs requirement_version, "
+                           "message_index, span, and relation. Use a contiguous, case-sensitive "
+                           "quote from the referenced requirement message, including the "
+                           "correct version and message index. A yes/no approval may use "
+                           "the documented Choice value 1 encoding only when the source "
+                           "explicitly names the approver and approval outcome; do not "
+                           "invent a rejection branch."),
             })
         elif error == "required_clarifications must contain nonempty questions":
             guidance.append({
@@ -586,6 +649,29 @@ def _repair_guidance(core: dict[str, Any], errors: list[str],
                             if isinstance(item, dict) and item.get("relation") == "supports"
                             and isinstance(item.get("span"), str)
                             for _, _, value in explicit_utc_instants(item["span"])})
+            if not exact and isinstance(history, list):
+                messages = {(revision.get("version"), index): message
+                            for revision in history if isinstance(revision, dict)
+                            for index, message in enumerate(revision.get("messages", []))
+                            if isinstance(message, str)}
+                instants = set()
+                for evidence in (claim or {}).get("evidence", []):
+                    if (not isinstance(evidence, dict)
+                            or evidence.get("relation") != "supports"
+                            or not isinstance(evidence.get("span"), str)):
+                        continue
+                    source = messages.get((evidence.get("requirement_version"),
+                                           evidence.get("message_index")))
+                    if source is None:
+                        continue
+                    clock_dates = re.findall(
+                        r"\d{1,2}:\d{2}\s+(?:(?:ngày|on)\s+)?"
+                        r"\d{1,2}/\d{1,2}/\d{4}", evidence["span"], re.IGNORECASE)
+                    for start, end, value in explicit_utc_instants(source):
+                        if any(fragment.lower() in source[start:end].lower()
+                               for fragment in clock_dates):
+                            instants.add(value)
+                exact = sorted(instants)
             item = {
                 "error": error,
                 "rule": (("The cited local clock and UTC offset determine an exact "

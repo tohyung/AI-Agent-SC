@@ -28,7 +28,9 @@ class DeclaredActionDomain:
                            if tx.get("inputs") == []
                            and isinstance(tx.get("interval"), dict)
                            and type(timeout) is int
-                           and tx["interval"] == {"from": timeout, "to": timeout}]
+                           and type(tx["interval"].get("from")) is int
+                           and type(tx["interval"].get("to")) is int
+                           and timeout <= tx["interval"]["from"] <= tx["interval"]["to"]]
         if not contract["when"]:
             return timeout_actions
         enabled = [item["case"] for item in contract["when"]

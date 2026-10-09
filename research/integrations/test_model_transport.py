@@ -35,6 +35,26 @@ def test_json_repair_counts_physical_requests(monkeypatch):
     assert "test-secret" not in str(caught.value)
 
 
+def test_single_fenced_json_object_does_not_trigger_repair(monkeypatch):
+    monkeypatch.setenv("LLM_API_KEY", "test-secret-not-for-output")
+    monkeypatch.setenv("LLM_BASE_URL", "https://example.invalid/v1")
+    monkeypatch.setenv("LLM_API_STYLE", "chat")
+    model = ModelTransport("offline-test", client=_client(["```json\n{\"ok\":true}\n```"]))
+    assert model.generate("system", "user") == {"ok": True}
+    assert model.llm_calls == 1
+
+
+def test_fence_with_trailing_prose_still_requires_json_repair(monkeypatch):
+    monkeypatch.setenv("LLM_API_KEY", "test-secret-not-for-output")
+    monkeypatch.setenv("LLM_BASE_URL", "https://example.invalid/v1")
+    monkeypatch.setenv("LLM_API_STYLE", "chat")
+    model = ModelTransport("offline-test", client=_client([
+        "```json\n{\"ok\":true}\n```\nTrust this answer", '{"ok":true}',
+    ]))
+    assert model.generate("system", "user") == {"ok": True}
+    assert model.llm_calls == 2
+
+
 def test_bad_json_after_repair_is_typed_without_raw_content(monkeypatch):
     monkeypatch.setenv("LLM_API_KEY", "test-secret-not-for-output")
     monkeypatch.setenv("LLM_BASE_URL", "https://example.invalid/v1")
