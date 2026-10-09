@@ -88,6 +88,14 @@ class LLMContractGeneratorPort:
             '"to":{"party":{"role_token":"B"}},'
             '"token":{"currency_symbol":"","token_name":""},"then":"close"}. '
             'Never wrap that Contract in {"pay": {...}}. '
+            "A payment scheduled solely by a deadline needs no user input. "
+            "Encode it on When.timeout_continuation at that deadline; for two "
+            "scheduled payments, the first timeout continuation pays the first "
+            "amount and continues to a second When whose timeout continuation "
+            "pays the remainder. Never put a scheduled payment behind Notify, "
+            "because reaching a timeout takes timeout_continuation and does not "
+            "match a Notify case. Do not replace a source-stated approval or "
+            "other required input with an automatic timeout payout. "
             "Return JSON only.\n" + describe_marlowe_grammar()
         )
         user = json.dumps({

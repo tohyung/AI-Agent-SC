@@ -12,7 +12,7 @@ import traceback
 from typing import Any
 
 from research.architecture.cli_runner import SessionOptions, run_session
-from research.experiments.online_tuning_batch01 import load_batch
+from research.experiments.online_tuning_batch01 import DATASET, load_batch
 from research.final_validation.marlowe_cli import config_from_environment
 from research.integrations.model_replay import (FirstCoreReplayModel, JournaledModel,
                                                 SavedContractReplayModel)
@@ -22,6 +22,21 @@ from research.stage2b.intent_spec import CORE_SCHEMA_VERSION_V3
 
 ROOT = Path(__file__).resolve().parents[2]
 RUN_DIR = ROOT / "runs" / "roleplay-main-batch20"
+REMAINING_RUN_DIR = ROOT / "runs" / "roleplay-main-batch80"
+
+
+def _case_at(index: int) -> dict[str, Any]:
+    _, first_cases = load_batch()
+    if 1 <= index <= len(first_cases):
+        return first_cases[index - 1]
+    if not 21 <= index <= 100:
+        raise ValueError("case index outside frozen 100-case dataset")
+    with DATASET.open(encoding="utf-8") as source:
+        cases = [json.loads(line) for line in source]
+    if (len(cases) != 100 or cases[:len(first_cases)] != first_cases
+            or len({case.get("id") for case in cases}) != 100):
+        raise ValueError("frozen 100-case dataset identity is invalid")
+    return cases[index - 1]
 
 
 def _write_exclusive(path: Path, payload: dict[str, Any]) -> None:
@@ -126,10 +141,10 @@ def run_case(index: int, *, answers: list[str] | None = None,
              expectation: dict[str, Any] | None = None,
              revision: str | None = None,
              repair_attempts: int = 0,
-             run_dir: Path = RUN_DIR) -> dict[str, Any]:
-    _, cases = load_batch()
-    if not 1 <= index <= len(cases):
-        raise ValueError("case index outside frozen batch")
+             run_dir: Path | None = None) -> dict[str, Any]:
+    case = _case_at(index)
+    if run_dir is None:
+        run_dir = RUN_DIR if index <= 20 else REMAINING_RUN_DIR
     if answers is not None and (not isinstance(answers, list)
                                 or any(not isinstance(item, str) or not item.strip()
                                        for item in answers)):
@@ -142,7 +157,6 @@ def run_case(index: int, *, answers: list[str] | None = None,
         raise ValueError("a candidate cannot be reviewed and repaired in the same run")
     if repair_candidate_id is not None and repair_attempts == 0:
         raise ValueError("candidate repair requires at least one validation repair")
-    case = cases[index - 1]
     case_dir = run_dir / f"case-{index:02d}"
     case_dir.mkdir(parents=True, exist_ok=True)
     previous = _latest(case_dir)

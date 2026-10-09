@@ -11,6 +11,15 @@ from research.stage2b.intent_spec import CORE_SCHEMA_VERSION_V3
 from research.stage3.test_funded_choice_v1 import funded_choice_core
 
 
+def test_remaining_cases_preserve_frozen_batch_identity():
+    _, first = roleplay_main_case.load_batch()
+    assert roleplay_main_case._case_at(20) == first[-1]
+    assert roleplay_main_case._case_at(21)["id"] == "vi-vesting-L2-003"
+    assert roleplay_main_case._case_at(100)["id"] == "vi-infeasible-L3-005"
+    with pytest.raises(ValueError, match="outside frozen"):
+        roleplay_main_case._case_at(101)
+
+
 def test_roleplay_resume_keeps_only_requirement_answers():
     history = [{"version": 1, "messages": ["Initial"]},
                {"version": 2, "messages": ["Bình sẽ nạp 20 ADA."]}]

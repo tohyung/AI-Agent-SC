@@ -52,6 +52,8 @@ def test_model_generator_uses_accepted_spec_and_keeps_candidate_authority():
     assert "deadline mismatch" in model.requests[0][1]
     assert 'never {"constant": 1}' in model.requests[0][0]
     assert 'Never wrap that Contract in {"pay": {...}}' in model.requests[0][0]
+    assert "Never put a scheduled payment behind Notify" in model.requests[0][0]
+    assert "Do not replace a source-stated approval" in model.requests[0][0]
 
 
 def test_reference_feedback_explains_timeout_path_without_rewriting_scenario():
