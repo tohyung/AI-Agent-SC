@@ -14,6 +14,8 @@ from research.stage2b.intent_spec import (
     core_prompt_schema_contract,
     explicit_utc_instants,
 )
+from research.stage2b.core_draft import DRAFT_FIELDS, materialize_core_draft
+from research.stage2b.repair_policy import diagnostic_codes, repair_progress
 
 
 class ShadowModel(Protocol):
@@ -129,7 +131,10 @@ Follow this semantic order before selecting a resolution:
 6. Choose predicted_resolution last: unsupported_for_current_study only for a
    valid versioned unsupported signal; otherwise conflict_requires_resolution
    for active same-kind/same-scope conflict; otherwise clarification_required
-   for remaining critical unresolved facts; otherwise accepted_interpretation.
+   only for remaining critical unresolved facts or a source-grounded
+   unrepresented behavior observation that needs an answer. If neither exists,
+   use accepted_interpretation, not clarification_required; do not copy the
+   example resolution from the output shape.
    Unsupported autonomous execution is unsupported, not generic ambiguity.
 Return JSON only, with all top-level fields shown in the user instruction.
 """
@@ -147,6 +152,8 @@ def build_prompt(requirement_history: list[dict[str, Any]], *,
         "required_clarifications": [], "unscored_observations": [],
         "predicted_resolution": "clarification_required",
     }
+    if core_schema_version == CORE_SCHEMA_VERSION_V3:
+        template = {key: value for key, value in template.items() if key in DRAFT_FIELDS}
     user = (
         "Requirement history is the only source of user intent:\n"
         + json.dumps(requirement_history, ensure_ascii=False)
@@ -156,7 +163,10 @@ def build_prompt(requirement_history: list[dict[str, Any]], *,
         + "\nValidator schema contract (closed enum/field vocabulary):\n"
         + json.dumps(core_prompt_schema_contract(version=core_schema_version),
                      ensure_ascii=False, sort_keys=True)
-        + "\nOutput all fields in this JSON shape (replace example values):\n"
+        + ("\nOutput only these five internal draft fields; the runtime binds "
+           "schema_version and requirement_history from trusted input:\n"
+           if core_schema_version == CORE_SCHEMA_VERSION_V3 else
+           "\nOutput all fields in this JSON shape (replace example values):\n")
         + json.dumps(template, ensure_ascii=False)
         + "\nEvery claim uses claim_id, kind, value, criticality, status, scope_id, "
           "evidence. Evidence items use requirement_version (integer), "
@@ -170,13 +180,20 @@ def build_prompt(requirement_history: list[dict[str, Any]], *,
           "normalization_basis; derived_from is optional and must prove the "
           "same kind of fact. Omit derived_from when no source claim qualifies; "
           "do not emit derived_from=[]. Do not link amount_lovelace to asset evidence "
-          "as proof of quantity. Global scope uses scope_id=global and "
+          "as proof of quantity. For an explicit source amount such as 47.5 ADA, "
+          "value may be that exact quoted source phrase in the internal draft; "
+          "the runtime converts it to 47500000 lovelace. Never guess a unit. "
+          "Global scope uses scope_id=global and "
           "scope_type=global. A transition scope needs transition_kind; a "
           "branch needs decision_id and branch_id; a timeout needs timeout_id "
           "and may reference decision_id/deadline_claim_id. Every "
           "behavior_scopes.scope_id must be unique: do not reuse an ID for "
           "two scope objects. Every decision_id must equal the scope_id of an "
-          "existing scope_type=transition object. Do not create a branch/timeout "
+          "existing scope_type=transition object. When a later user answer explicitly "
+          "corrects an earlier value for the same obligation, the earlier value is "
+          "superseded, not an active conflict; use the corrected value for the "
+          "accepted interpretation and preserve the old fact with its provenance. "
+          "Do not create a branch/timeout "
           "reference before creating its referenced transition scope. If present, "
           "deadline_claim_id must refer to an existing claim whose kind is in "
           "deadline_kinds. A terminal_outcome scope needs outcome_id. Each "
@@ -188,6 +205,23 @@ def build_prompt(requirement_history: list[dict[str, Any]], *,
           "facts must go in claims, not unscored_observations."
     )
     system = SYSTEM_PROMPT
+    if core_schema_version == CORE_SCHEMA_VERSION_V3:
+        system = system.replace(
+            "Output only the seven semantic core fields. Python deterministically projects",
+            "Output only five internal draft fields: behavior_scopes, claims, "
+            "required_clarifications, unscored_observations, predicted_resolution. "
+            "The runtime attaches schema_version and exact requirement_history. "
+            "Python deterministically projects")
+        system = system.replace(
+            "Convert 1 ADA to 1000000 integer lovelace and POSIX times\n"
+            "   to integer milliseconds.",
+            "For amount_lovelace and deadline claims, prefer an exact quoted source "
+            "expression as value; runtime normalizes source-backed ADA units and "
+            "explicit timezone instants. An already explicit lovelace or POSIX value "
+            "may be an integer. Never calculate or guess an unsupported value.")
+        system = system.replace(
+            "Normalize\n   the answer yourself once those facts are known.",
+            "The runtime normalizes source-grounded values once those facts are known.")
     if core_schema_version in {CORE_SCHEMA_VERSION_V2, CORE_SCHEMA_VERSION_V3}:
         system += (
             "\nFor each numeric Choice, include inclusive choice_bounds with exact source "
@@ -210,10 +244,20 @@ def build_prompt(requirement_history: list[dict[str, Any]], *,
             "missing, ask a concrete business question rather than inventing it. "
             "Each terminal_outcome must include parent_scope_id pointing to its "
             "actual branch, timeout, or transition scope; never infer this link "
-            "from names such as approve/reject. If that outcome is followed by "
+            "from names such as approve/reject. parent_scope_id describes ownership "
+            "but does not make the outcome reachable: the predecessor must also "
+            "name this outcome in continuation_scope_id. If that outcome is followed by "
             "another event, include continuation_scope_id to its next transition. "
+            "If it is the final outcome on its path, omit continuation_scope_id. "
+            "A scope must never use its own scope_id as continuation_scope_id. "
+            "If one path refunds two distinct contributors, use two distinct "
+            "terminal_outcome scopes in sequence, one refund recipient per scope; "
+            "do not put both recipients into one outcome as conflicting claims. "
             "When one event leads to another, include continuation_scope_id on "
             "the predecessor scope to name the next transition or outcome. "
+            "A single contract has one entry transition. Every later transition "
+            "must have an incoming continuation_scope_id from its predecessor; "
+            "two unrelated root transitions do not encode sequential events. "
             "For example a funded deposit may continue to a Choice; array order "
             "alone never encodes control flow. A Choice transition does not "
             "continue to its timeout scope: branch and timeout scopes are "
@@ -351,11 +395,21 @@ class IntentShadowExtractor:
                  core_schema_version: str = CORE_SCHEMA_VERSION) -> None:
         self.model = model
         self.core_schema_version = core_schema_version
+        self.normalization_actions: list[dict[str, Any]] = []
+        self.repair_trace: list[dict[str, Any]] = []
+
+    def _materialize(self, output: Any,
+                     history: list[dict[str, Any]]) -> ShadowSemanticCore:
+        parsed = parse_model_output(output)
+        data, actions = materialize_core_draft(
+            parsed.to_dict(), history, self.core_schema_version)
+        self.normalization_actions = actions
+        return ShadowSemanticCore(data)
 
     def extract(self, requirement_history: list[dict[str, Any]]) -> ShadowSemanticCore:
         system, user = build_prompt(requirement_history,
                                     core_schema_version=self.core_schema_version)
-        return parse_model_output(self.model.generate(system, user))
+        return self._materialize(self.model.generate(system, user), requirement_history)
 
     def validation_errors(self, core: ShadowSemanticCore,
                           requirement_history: list[dict[str, Any]]) -> list[str]:
@@ -371,17 +425,115 @@ class IntentShadowExtractor:
             raise ValueError("max_repairs must be an integer from 0 through 3")
         system, user = build_prompt(requirement_history,
                                     core_schema_version=self.core_schema_version)
-        core = parse_model_output(self.model.generate(system, user))
+        self.repair_trace = []
+        core = self._materialize(self.model.generate(system, user), requirement_history)
         initial_errors = self.validation_errors(core, requirement_history)
         if not initial_errors or max_repairs == 0:
             return core, initial_errors
         seen = {json.dumps(core.to_dict(), sort_keys=True, ensure_ascii=False)}
+        no_progress = 0
         for _ in range(max_repairs):
             current_errors = self.validation_errors(core, requirement_history)
             if not current_errors:
                 break
             target_ids = _evidence_repair_targets(core.to_dict(), current_errors)
-            if target_ids:
+            deadline_ids = {
+                error[len("claim "):-len(": deadline value contradicts cited calendar date")]
+                for error in current_errors
+                if error.startswith("claim ")
+                and error.endswith(": deadline value contradicts cited calendar date")
+            }
+            if deadline_ids:
+                repair_kind = "NORMALIZATION"
+                deadline_request = {
+                    "requirement_history": requirement_history,
+                    "claims": [claim for claim in core.to_dict()["claims"]
+                               if claim.get("claim_id") in deadline_ids],
+                    "calendar_hints": _calendar_hints(requirement_history),
+                    "validation_errors": current_errors,
+                }
+                proposed = self.model.generate(
+                    "Repair only numeric POSIX millisecond values for the listed deadline "
+                    "claims. Return exactly one JSON object with deadline_values mapping "
+                    "each listed claim_id to one integer. Derive the instant from the "
+                    "cited date, clock time, and timezone; never change the business "
+                    "deadline or invent a timezone. Do not return a new semantic core.",
+                    json.dumps(deadline_request, ensure_ascii=False),
+                )
+                values = proposed.get("deadline_values") if isinstance(proposed, dict) else None
+                if (not isinstance(proposed, dict)
+                        or set(proposed) != {"deadline_values"} or not isinstance(values, dict)
+                        or set(values) != deadline_ids
+                        or any(type(value) is not int for value in values.values())):
+                    break
+                patched = deepcopy(core.to_dict())
+                for claim in patched["claims"]:
+                    if claim.get("claim_id") in deadline_ids:
+                        claim["value"] = values[claim["claim_id"]]
+                core = parse_model_output(patched)
+            elif any(error.endswith(": terminal outcome has no incoming continuation")
+                   for error in current_errors):
+                repair_kind = "SCOPE_GRAPH"
+                outcome_request = {
+                    "requirement_history": requirement_history,
+                    "behavior_scopes": core.to_dict()["behavior_scopes"],
+                    "claims": core.to_dict()["claims"],
+                    "scope_schema_contract": core_prompt_schema_contract(
+                        version=self.core_schema_version)["scope"],
+                    "validation_errors": current_errors,
+                }
+                proposed = self.model.generate(
+                    "Repair orphan terminal outcomes only. Return exactly one JSON object "
+                    "with behavior_scopes and claims. parent_scope_id alone does not "
+                    "establish reachability: the predecessor branch, timeout, or transition "
+                    "must name the outcome in continuation_scope_id. An outcome must be "
+                    "reached by a source-supported continuation. If it has no valid path, remove that "
+                    "outcome and only its dependent claims; otherwise add the actual "
+                    "continuation. Preserve all unrelated scopes and claims. Do not "
+                    "invent a payment, refund, or user fact to satisfy validation.",
+                    json.dumps(outcome_request, ensure_ascii=False),
+                )
+                if (not isinstance(proposed, dict)
+                        or set(proposed) != {"behavior_scopes", "claims"}
+                        or not isinstance(proposed["behavior_scopes"], list)
+                        or not isinstance(proposed["claims"], list)):
+                    break
+                patched = core.to_dict().copy()
+                patched["behavior_scopes"] = proposed["behavior_scopes"]
+                patched["claims"] = proposed["claims"]
+                core = parse_model_output(patched)
+            elif any(error.startswith("multiple root transitions without predecessor:")
+                   for error in current_errors):
+                repair_kind = "SCOPE_GRAPH"
+                scope_request = {
+                    "requirement_history": requirement_history,
+                    "behavior_scopes": core.to_dict()["behavior_scopes"],
+                    "scope_schema_contract": core_prompt_schema_contract(
+                        version=self.core_schema_version)["scope"],
+                    "validation_errors": current_errors,
+                }
+                proposed = self.model.generate(
+                    "Repair only behavior_scopes in this semantic core. Return exactly one "
+                    "JSON object with behavior_scopes. Keep existing scope IDs and semantic "
+                    "roles; add only source-supported causal continuation_scope_id links. "
+                    "A single Marlowe contract has one entry transition. Do not infer "
+                    "control flow from array order alone or invent a business event. "
+                    "If source text states that a funding deposit is followed by a "
+                    "repayment deposit, link the funding transition to the repayment "
+                    "transition. Resolve every listed multiple-root error by naming "
+                    "the actual predecessor in continuation_scope_id; returning the "
+                    "same disconnected scopes is not a repair.",
+                    json.dumps(scope_request, ensure_ascii=False),
+                )
+                if (not isinstance(proposed, dict)
+                        or set(proposed) != {"behavior_scopes"}
+                        or not isinstance(proposed["behavior_scopes"], list)):
+                    break
+                patched = core.to_dict().copy()
+                patched["behavior_scopes"] = proposed["behavior_scopes"]
+                core = parse_model_output(patched)
+            elif target_ids:
+                repair_kind = "SOURCE_EVIDENCE"
                 repair_request = {
                     "requirement_history": requirement_history,
                     "claims": [claim for claim in core.to_dict()["claims"]
@@ -410,6 +562,7 @@ class IntentShadowExtractor:
                     break
                 core = parse_model_output(patched)
             else:
+                repair_kind = "FULL_REGENERATION"
                 guidance = _repair_guidance(core.to_dict(), current_errors, requirement_history)
                 feedback = (
                     "The previous semantic core failed deterministic validation. "
@@ -423,9 +576,22 @@ class IntentShadowExtractor:
                     + "\nTyped diagnostics (diagnosis only; regenerate from source):\n"
                     + json.dumps(_group_repair_guidance(guidance), ensure_ascii=False)
                 )
-                core = parse_model_output(self.model.generate(system, user + "\n" + feedback))
+                core = self._materialize(
+                    self.model.generate(system, user + "\n" + feedback),
+                    requirement_history)
+            after_errors = self.validation_errors(core, requirement_history)
+            progressed = repair_progress(current_errors, after_errors)
+            self.repair_trace.append({
+                "repair_kind": repair_kind,
+                "before_error_count": len(set(current_errors)),
+                "after_error_count": len(set(after_errors)),
+                "before_codes": diagnostic_codes(current_errors),
+                "after_codes": diagnostic_codes(after_errors),
+                "progressed": progressed,
+            })
+            no_progress = 0 if progressed else no_progress + 1
             fingerprint = json.dumps(core.to_dict(), sort_keys=True, ensure_ascii=False)
-            if fingerprint in seen:
+            if fingerprint in seen or no_progress >= 2:
                 break
             seen.add(fingerprint)
         return core, initial_errors
@@ -557,7 +723,11 @@ def _repair_guidance(core: dict[str, Any], errors: list[str],
                           f"unsupported {unit_duplicate[0]}-lovelace "
                           "duplicate and its derived_from link. Do not hide a real "
                           "business conflict.") if unit_duplicate else
-                         ("Check whether the values describe independent obligations. "
+                         ("First check the full requirement history: if a later answer "
+                          "explicitly corrects the earlier value for this same obligation, "
+                          "mark the earlier claim superseded and retain the corrected "
+                          "claim with exact provenance; this is not a live conflict. "
+                          "Otherwise check whether the values describe independent obligations. "
                           "If so, attach each claim to its actual funding or outcome scope; "
                           "if they are incompatible values for the same obligation, preserve "
                           "the conflict and request clarification. Do not delete a supported claim.")),

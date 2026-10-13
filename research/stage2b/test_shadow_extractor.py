@@ -101,6 +101,118 @@ def test_bounded_validation_feedback_preserves_validator_authority():
     assert "10 ADA" in model.calls[1][1]
 
 
+def test_scope_repair_changes_only_model_proposed_scopes():
+    history = [{"version": 1, "messages": ["Grace deposits, then Jack deposits."]}]
+    source = {
+        "schema_version": intent_spec.CORE_SCHEMA_VERSION_V3,
+        "requirement_history": history,
+        "behavior_scopes": [
+            {"scope_id": "global", "scope_type": "global"},
+            {"scope_id": "grace", "scope_type": "transition", "transition_kind": "deposit"},
+            {"scope_id": "jack", "scope_type": "transition", "transition_kind": "deposit"},
+        ],
+        "claims": [], "required_clarifications": [], "unscored_observations": [],
+        "predicted_resolution": "accepted_interpretation",
+    }
+
+    class ScopeModel:
+        def __init__(self):
+            self.calls = []
+
+        def generate(self, system, user):
+            self.calls.append((system, user))
+            if len(self.calls) == 1:
+                return deepcopy(source)
+            scopes = deepcopy(source["behavior_scopes"])
+            scopes[1]["continuation_scope_id"] = "jack"
+            return {"behavior_scopes": scopes}
+
+    model = ScopeModel()
+    core, initial = shadow_extractor.IntentShadowExtractor(
+        model, core_schema_version=intent_spec.CORE_SCHEMA_VERSION_V3
+    ).extract_with_validation_feedback(history)
+    assert any("multiple root transitions" in error for error in initial)
+    assert core.validation_errors(expected_history=history) == []
+    assert core.to_dict()["claims"] == source["claims"]
+    assert len(model.calls) == 2
+    assert "funding deposit is followed by a repayment deposit" in model.calls[1][0]
+    assert "allowed_fields_by_type" in json.loads(model.calls[1][1])["scope_schema_contract"]
+
+
+def test_orphan_repair_revalidates_model_proposed_scopes_and_claims():
+    history = [{"version": 1, "messages": ["Grace deposits."]}]
+    source = {
+        "schema_version": intent_spec.CORE_SCHEMA_VERSION_V3,
+        "requirement_history": history,
+        "behavior_scopes": [
+            {"scope_id": "global", "scope_type": "global"},
+            {"scope_id": "grace", "scope_type": "transition", "transition_kind": "deposit"},
+            {"scope_id": "orphan", "scope_type": "terminal_outcome",
+             "outcome_id": "orphan", "parent_scope_id": "grace"},
+        ],
+        "claims": [], "required_clarifications": [], "unscored_observations": [],
+        "predicted_resolution": "accepted_interpretation",
+    }
+
+    class OutcomeModel:
+        def __init__(self):
+            self.calls = []
+
+        def generate(self, system, user):
+            self.calls.append((system, user))
+            if len(self.calls) == 1:
+                return deepcopy(source)
+            return {"behavior_scopes": deepcopy(source["behavior_scopes"][:2]), "claims": []}
+
+    model = OutcomeModel()
+    core, initial = shadow_extractor.IntentShadowExtractor(
+        model, core_schema_version=intent_spec.CORE_SCHEMA_VERSION_V3
+    ).extract_with_validation_feedback(history)
+    assert any("terminal outcome has no incoming continuation" in error for error in initial)
+    assert core.validation_errors(expected_history=history) == []
+    assert core.to_dict()["requirement_history"] == history
+    assert len(model.calls) == 2
+    assert "allowed_fields_by_type" in json.loads(model.calls[1][1])["scope_schema_contract"]
+
+
+def test_deadline_repair_preserves_other_core_fields():
+    message = "Grace deposits by 23:59 ngày 12/01/2027 (UTC+7)."
+    history = [{"version": 1, "messages": [message]}]
+    source = {
+        "schema_version": intent_spec.CORE_SCHEMA_VERSION_V3,
+        "requirement_history": history,
+        "behavior_scopes": [
+            {"scope_id": "global", "scope_type": "global"},
+            {"scope_id": "deposit", "scope_type": "transition", "transition_kind": "deposit"},
+        ],
+        "claims": [{"claim_id": "deadline", "kind": "deposit_deadline_ms",
+                    "value": 1799859540000, "criticality": "financial", "status": "derived",
+                    "normalization_basis": "UTC+7 to POSIX milliseconds", "scope_id": "deposit",
+                    "evidence": [{"requirement_version": 1, "message_index": 0,
+                                  "span": "23:59 ngày 12/01/2027 (UTC+7)", "relation": "supports"}]}],
+        "required_clarifications": [], "unscored_observations": [],
+        "predicted_resolution": "accepted_interpretation",
+    }
+
+    class DeadlineModel:
+        def __init__(self):
+            self.calls = []
+
+        def generate(self, system, user):
+            self.calls.append((system, user))
+            return deepcopy(source) if len(self.calls) == 1 else {
+                "deadline_values": {"deadline": 1799773140000}}
+
+    model = DeadlineModel()
+    core, initial = shadow_extractor.IntentShadowExtractor(
+        model, core_schema_version=intent_spec.CORE_SCHEMA_VERSION_V3
+    ).extract_with_validation_feedback(history)
+    assert any("deadline value contradicts" in error for error in initial)
+    assert core.validation_errors(expected_history=history) == []
+    assert core.to_dict()["behavior_scopes"] == source["behavior_scopes"]
+    assert model.calls[1][0].startswith("Repair only numeric POSIX millisecond values")
+
+
 def test_requested_core_version_is_repaired_and_cannot_silently_downgrade():
     old = funded_choice_core()
     current = deepcopy(old)
@@ -171,6 +283,30 @@ def test_repair_stalls_on_identical_core_and_never_exceeds_cap():
     with pytest.raises(ValueError, match="0 through 3"):
         shadow_extractor.IntentShadowExtractor(model).extract_with_validation_feedback(
             valid["requirement_history"], max_repairs=4)
+
+
+def test_repair_stops_after_two_distinct_nonprogressing_outputs():
+    valid = intent_spec.extract_core_view(simple_payment())
+
+    class DriftingModel:
+        calls = 0
+
+        def generate(self, _system, _user):
+            self.calls += 1
+            output = deepcopy(valid)
+            output["predicted_resolution"] = f"invalid-{self.calls}"
+            return output
+
+    model = DriftingModel()
+    extractor = shadow_extractor.IntentShadowExtractor(model)
+    core, initial = extractor.extract_with_validation_feedback(
+        valid["requirement_history"], max_repairs=3)
+    assert initial == ["invalid predicted_resolution"]
+    assert core.validation_errors(expected_history=valid["requirement_history"])
+    assert model.calls == 3
+    assert len(extractor.repair_trace) == 2
+    assert all(step["progressed"] is False for step in extractor.repair_trace)
+    assert extractor.repair_trace[0]["before_codes"] == ["BUSINESS_DECISION"]
 
 
 def test_repair_guidance_keeps_approval_evidence_and_questions_source_grounded():
@@ -295,6 +431,25 @@ def test_repair_guidance_uses_exact_local_instant_and_detects_ada_unit_duplicate
     assert "20000000-lovelace" in guidance[1]["rule"]
     assert "omit that raw" in guidance[2]["rule"]
     assert "points to an asset claim" in guidance[2]["rule"]
+
+
+def test_prompt_and_repair_distinguish_corrected_value_and_outcome_reachability():
+    history = [{"version": 1, "messages": ["Alice lends 102 ADA to Bob."]},
+               {"version": 2, "messages": ["I meant 101 ADA, not 102 ADA."]}]
+    system, user = shadow_extractor.build_prompt(
+        history, core_schema_version=intent_spec.CORE_SCHEMA_VERSION_V3)
+    assert "earlier value is superseded, not an active conflict" in user
+    assert "parent_scope_id describes ownership" in system
+    assert "continuation_scope_id" in system
+    guidance = shadow_extractor._repair_guidance(
+        {"claims": [
+            {"claim_id": "old", "kind": "amount_lovelace", "scope_id": "deposit",
+             "value": 102_000_000},
+            {"claim_id": "new", "kind": "amount_lovelace", "scope_id": "deposit",
+             "value": 101_000_000},
+        ]}, ["active claim conflict for amount_lovelace in deposit"], history)
+    assert "earlier claim superseded" in guidance[0]["rule"]
+    assert "exact provenance" in guidance[0]["rule"]
 
 
 def test_repair_guidance_resolves_english_shared_timezone_from_source_message():

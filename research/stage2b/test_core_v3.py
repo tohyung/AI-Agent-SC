@@ -71,6 +71,7 @@ def test_native_quantity_is_rejected_in_v2_and_without_identified_asset():
 def test_v3_sequential_outcomes_and_automatic_payment_are_not_v1_unsupported():
     core = token_core()
     core["requirement_history"][0]["messages"][0] += " Tự động trả cho Giang."
+    core["behavior_scopes"][1]["continuation_scope_id"] = "pay-1"
     core["behavior_scopes"].extend([
         {"scope_id": "pay-1", "scope_type": "terminal_outcome",
          "outcome_id": "pay-1", "parent_scope_id": "deposit-1",

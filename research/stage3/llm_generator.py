@@ -73,6 +73,11 @@ class LLMContractGeneratorPort:
         system = (
             "Generate one canonical Marlowe Core V1 JSON contract from the accepted IntentSpec. "
             "Never alter parties, amounts, assets, accounts, branch outcomes or deadlines. "
+            "Conserve funds per account and asset on every path. If two contributors "
+            "deposit 47.5 ADA each and a recipient is owed 95 ADA in total, pay "
+            "47.5 ADA from each funded account; never pay 95 ADA from each account. "
+            "A refund can spend only the amount that was actually deposited in "
+            "that account on that path. Do not invent a deposit to fund a payout. "
             "Never invent missing business facts or turn an unsupported behavior into a different one. "
             "Return JSON with contract, mapping_evidence and reasoning_narrative. "
             "Each mapping item has source_kind ('claim' or 'scope'), source_id and ast_path. "
@@ -103,6 +108,14 @@ class LLMContractGeneratorPort:
             "accepted_intent_id": accepted.artifact_id,
             "generation_feedback": feedback,
         }, ensure_ascii=False)
+        call_start = getattr(self.model, "llm_calls", None)
+
+        def usage() -> dict[str, int | None]:
+            call_end = getattr(self.model, "llm_calls", None)
+            return {"physical_calls": (call_end - call_start
+                                       if type(call_start) is int and type(call_end) is int
+                                       else None)}
+
         try:
             output = self.model.generate(system, user)
         except (RuntimeError, ValueError) as exc:
@@ -113,6 +126,7 @@ class LLMContractGeneratorPort:
                 input_artifacts=[accepted.artifact_id],
                 diagnostics=[f"contract model failed: {safe_error['code']}"],
                 safe_error=safe_error,
+                telemetry=usage(),
             ))
         if not isinstance(output, dict):
             diagnostics = ["contract model did not return a JSON object"]
@@ -138,6 +152,7 @@ class LLMContractGeneratorPort:
                 "compile", ImplementationStatus.IMPLEMENTED_UNVALIDATED,
                 StageRunStatus.FAILED, semantic_status="INVALID_CONTRACT_CANDIDATE",
                 input_artifacts=[accepted.artifact_id], diagnostics=diagnostics,
+                telemetry=usage(),
             ))
         candidate = ArtifactEnvelope(
             "contract-candidate", "core-v1", "compile",
@@ -155,5 +170,6 @@ class LLMContractGeneratorPort:
             StageRunStatus.SUCCEEDED, semantic_status="CANDIDATE_GENERATED",
             input_artifacts=[accepted.artifact_id],
             authority_level=AuthorityLevel.MODEL_CANDIDATE,
+            telemetry=usage(),
             limitations=["structural validity and model mapping claims are not intent conformance"],
         ), [candidate])

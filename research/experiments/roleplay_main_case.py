@@ -18,6 +18,7 @@ from research.integrations.model_replay import (FirstCoreReplayModel, JournaledM
                                                 SavedContractReplayModel)
 from research.integrations.model_transport import ModelTransport
 from research.stage2b.intent_spec import CORE_SCHEMA_VERSION_V3
+from research.stage2b.repair_policy import REPAIR_POLICY_VERSION
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -64,6 +65,34 @@ def _next_attempt(case_dir: Path) -> int:
                 raise ValueError("invalid outbound attempt journal")
             used.add(attempt)
     return max(used, default=0) + 1
+
+
+def _repair_stalled(case_dir: Path, history: list[dict[str, Any]]) -> bool:
+    comparable = []
+    for path in sorted(case_dir.glob("attempt-*.json"), reverse=True):
+        record = json.loads(path.read_text(encoding="utf-8"))
+        if record.get("stop_reason") == "repair_stalled":
+            continue
+        if record.get("requirement_history") != history:
+            break
+        if record.get("stop_reason") != "invalid_candidate":
+            break
+        telemetry = (record.get("stages", {}).get("intent_extraction", {})
+                     .get("telemetry"))
+        if (not isinstance(telemetry, dict)
+                or telemetry.get("repair_policy_version") != REPAIR_POLICY_VERSION):
+            break
+        comparable.append(telemetry)
+        if len(comparable) == 2:
+            break
+    if len(comparable) < 2:
+        return False
+    recent, older = comparable
+    return (bool(recent.get("final_error_codes"))
+            and recent.get("final_error_codes") == older.get("final_error_codes")
+            and type(recent.get("final_error_count")) is int
+            and type(older.get("final_error_count")) is int
+            and recent["final_error_count"] >= older["final_error_count"])
 
 
 def _source_transcript(history: list[dict[str, Any]] | None,
@@ -190,6 +219,38 @@ def run_case(index: int, *, answers: list[str] | None = None,
     attempt = _next_attempt(case_dir)
     evidence_path = case_dir / f"attempt-{attempt:03d}.json"
     physical_journal = case_dir / "outbound-attempts.jsonl"
+    if (reviewed_candidate_id is None and revision is None
+            and _repair_stalled(case_dir, history or [
+                {"version": 1, "messages": [case["prompt"]]}])):
+        payload = {
+            "case_id": case["id"], "case_index": index, "attempt": attempt,
+            "simulation_only": True, "status": "BLOCKED",
+            "stop_reason": "repair_stalled", "provider_limit": False,
+            "requirement_history": history,
+            "simulation_transcript": transcript or [],
+            "roleplay_answers_supplied": [], "roleplay_revision": None,
+            "replayed_core_candidate_id": None,
+            "replayed_contract_candidate_id": None,
+            "repair_attempts": repair_attempts,
+            "model_usage_this_attempt": {"api_calls": 0, "prompt_tokens": 0,
+                                         "completion_tokens": 0, "total_tokens": 0},
+            "model_call_log_this_attempt": [], "harness_error_type": None,
+            "case_physical_calls_total": (
+                len(physical_journal.read_text(encoding="utf-8").splitlines())
+                if physical_journal.exists() else 0),
+            "harness_error_locations": [], "iterations": 0,
+            "questions": [], "stages": {}, "artifacts": {},
+            "candidate": None, "contract_candidate": None,
+            "blocking_stage": "intent_extraction",
+            "blocking_diagnostics": [
+                "same Stage 2B error categories did not improve across two attempts; "
+                "revise the repair strategy or clarify the requirement before another call"],
+            "recorded_at_utc": datetime.now(timezone.utc).isoformat(),
+        }
+        _write_exclusive(evidence_path, payload)
+        print(f"case {index:02d}: BLOCKED repair_stalled; new physical calls=0; "
+              f"evidence={evidence_path}", flush=True)
+        return payload
 
     def before_request(phase: str) -> None:
         with physical_journal.open("a", encoding="utf-8") as writer:
@@ -252,6 +313,9 @@ def run_case(index: int, *, answers: list[str] | None = None,
         "repair_attempts": repair_attempts,
         "model_usage_this_attempt": transport.usage_summary(),
         "model_call_log_this_attempt": transport.call_log,
+        "case_physical_calls_total": (
+            len(physical_journal.read_text(encoding="utf-8").splitlines())
+            if physical_journal.exists() else 0),
         "harness_error_type": error_type,
         "harness_error_locations": error_locations,
         **(snapshot or {"status": "HARNESS_ERROR", "requirement_history": history or [

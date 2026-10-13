@@ -1,7 +1,10 @@
 """Offline checks for the research-only semantic extraction contract."""
 
 from research.stage2b import shadow_extractor
-from research.stage2b.intent_spec import CORE_SCHEMA_VERSION
+from research.stage2b.intent_spec import (
+    CORE_SCHEMA_VERSION, CORE_SCHEMA_VERSION_V3, ShadowSemanticCore,
+    _absolute_deadline_mismatch, explicit_utc_instants,
+)
 
 
 def _prompt(message):
@@ -47,6 +50,88 @@ def test_time_release_does_not_require_transaction_submitter_clarification():
     assert "do not ask" in system.lower() and "activates payment" in system
     assert "destination_account_owner" in system
     assert "outside-taxonomy unscored behavior" in system
+
+
+def test_terminal_outcome_and_lovelace_prompt_invariants():
+    system, user = shadow_extractor.build_prompt(
+        [{"version": 1, "messages": ["Grace and Jack contribute 47.5 ADA each; refund if incomplete."]}],
+        core_schema_version=CORE_SCHEMA_VERSION_V3,
+    )
+    assert "final outcome on its path, omit continuation_scope_id" in system
+    assert "never use its own scope_id as continuation_scope_id" in system
+    assert "the runtime converts it to 47500000 lovelace" in user
+    assert "If neither exists," in system
+    assert "use accepted_interpretation, not clarification_required" in system
+    assert "two unrelated root transitions" in system
+    assert "two distinct terminal_outcome scopes in sequence" in system
+
+
+def test_v3_rejects_disconnected_transition_roots():
+    core = ShadowSemanticCore({
+        "schema_version": CORE_SCHEMA_VERSION_V3,
+        "requirement_history": [{"version": 1, "messages": ["Grace and Jack deposit."]}],
+        "behavior_scopes": [
+            {"scope_id": "global", "scope_type": "global"},
+            {"scope_id": "deposit-grace", "scope_type": "transition", "transition_kind": "deposit"},
+            {"scope_id": "deposit-jack", "scope_type": "transition", "transition_kind": "deposit"},
+        ],
+        "claims": [], "required_clarifications": [], "unscored_observations": [],
+        "predicted_resolution": "accepted_interpretation",
+    })
+    assert any("multiple root transitions" in error for error in core.validation_errors())
+
+
+def test_optional_null_continuation_does_not_create_a_successor():
+    core = ShadowSemanticCore({
+        "schema_version": CORE_SCHEMA_VERSION_V3,
+        "requirement_history": [{"version": 1, "messages": ["Grace deposits."]}],
+        "behavior_scopes": [
+            {"scope_id": "global", "scope_type": "global"},
+            {"scope_id": "deposit-grace", "scope_type": "transition", "transition_kind": "deposit",
+             "continuation_scope_id": "done"},
+            {"scope_id": "done", "scope_type": "terminal_outcome", "outcome_id": "done",
+             "parent_scope_id": "deposit-grace", "continuation_scope_id": None},
+        ],
+        "claims": [], "required_clarifications": [], "unscored_observations": [],
+        "predicted_resolution": "accepted_interpretation",
+    })
+    assert not any("invalid continuation_scope_id" in error
+                   for error in core.validation_errors())
+
+
+def test_v3_rejects_orphan_terminal_outcome():
+    core = ShadowSemanticCore({
+        "schema_version": CORE_SCHEMA_VERSION_V3,
+        "requirement_history": [{"version": 1, "messages": ["Grace deposits."]}],
+        "behavior_scopes": [
+            {"scope_id": "global", "scope_type": "global"},
+            {"scope_id": "deposit-grace", "scope_type": "transition", "transition_kind": "deposit"},
+            {"scope_id": "unused", "scope_type": "terminal_outcome", "outcome_id": "unused",
+             "parent_scope_id": "deposit-grace"},
+        ],
+        "claims": [], "required_clarifications": [], "unscored_observations": [],
+        "predicted_resolution": "accepted_interpretation",
+    })
+    assert "scope unused: terminal outcome has no incoming continuation" in core.validation_errors()
+
+
+def test_ict_named_date_is_an_exact_instant_for_deadline_validation():
+    span = "Grace's deadline is 23:59 ICT on 10 January 2027"
+    assert [value for _, _, value in explicit_utc_instants(span)] == [1799600340000]
+    claim = {"value": 1799552340000, "evidence": [{"span": span, "relation": "supports"}]}
+    assert _absolute_deadline_mismatch(claim)
+    claim["value"] = 1799600340000
+    assert not _absolute_deadline_mismatch(claim)
+    date_first = "11 January 2027 at 23:59 ICT (UTC+7)"
+    assert [value for _, _, value in explicit_utc_instants(date_first)] == [1799686740000]
+    assert _absolute_deadline_mismatch({
+        "value": 1799692740000,
+        "evidence": [{"span": date_first, "relation": "supports"}],
+    })
+    vietnamese = "23:59 giờ Việt Nam (ICT, UTC+7) ngày 12/01/2027"
+    short_ict = "23:59 ICT ngày 19/01/2027"
+    assert [value for _, _, value in explicit_utc_instants(vietnamese)] == [1799773140000]
+    assert [value for _, _, value in explicit_utc_instants(short_ict)] == [1800377940000]
 
 
 def test_correction_conflict_and_resolution_order_policy():

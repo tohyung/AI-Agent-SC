@@ -23,8 +23,10 @@ class Stage2BExtractionPort:
         from research.stage2b.projector import classify_projection, project_intent_spec
         from research.stage2b.shadow_extractor import IntentShadowExtractor
         from research.stage2b.intent_spec import CORE_SCHEMA_VERSION
+        from research.stage2b.repair_policy import REPAIR_POLICY_VERSION, diagnostic_codes
 
         history = source.payload
+        call_start = getattr(self.model, "llm_calls", None)
         try:
             repairs = context.options.get("max_core_validation_repairs", 0)
             extractor = IntentShadowExtractor(
@@ -64,6 +66,16 @@ class Stage2BExtractionPort:
                 StageRunStatus.FAILED, semantic_status="PROJECTOR_BUG",
                 input_artifacts=[source.artifact_id],
                 diagnostics=["deterministic projection failed"]))
+        telemetry = {
+            "repair_policy_version": REPAIR_POLICY_VERSION,
+            "physical_calls": (getattr(self.model, "llm_calls", 0) - call_start
+                               if type(call_start) is int else None),
+            "initial_error_codes": diagnostic_codes(initial_errors),
+            "final_error_codes": diagnostic_codes(core_errors),
+            "final_error_count": len(set(core_errors)),
+            "normalization_actions": extractor.normalization_actions,
+            "repair_trace": extractor.repair_trace,
+        }
         payload = {"semantic_core": core.to_dict(), "intent_spec": projection.intent_spec.to_dict(),
                    "initial_core_validation_errors": initial_errors,
                    "source_history": history, "source_artifact_id": source.artifact_id,
@@ -84,5 +96,6 @@ class Stage2BExtractionPort:
             StageRunStatus.SUCCEEDED, semantic_status=classification,
             input_artifacts=[source.artifact_id],
             authority_level=AuthorityLevel.MODEL_CANDIDATE,
+            telemetry=telemetry,
             diagnostics=core_errors + full_errors,
             limitations=["structural validity is not semantic acceptance"]), [candidate])

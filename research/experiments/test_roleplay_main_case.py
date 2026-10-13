@@ -8,6 +8,7 @@ import pytest
 from research.experiments import roleplay_main_case
 from research.integrations.smt_driver import DRIVER_VERSION, UPSTREAM_COMMIT
 from research.stage2b.intent_spec import CORE_SCHEMA_VERSION_V3
+from research.stage2b.repair_policy import REPAIR_POLICY_VERSION
 from research.stage3.test_funded_choice_v1 import funded_choice_core
 
 
@@ -35,6 +36,33 @@ def test_interrupted_outbound_attempt_number_is_never_reused(tmp_path):
     (tmp_path / "outbound-attempts.jsonl").write_text(
         '{"attempt": 2, "phase": "generation"}\n', encoding="utf-8")
     assert roleplay_main_case._next_attempt(tmp_path) == 3
+
+
+def test_repeated_nonprogressing_case_pauses_before_model_call(monkeypatch, tmp_path):
+    prompt = "Minh lends Quynh 101 ADA."
+    history = [{"version": 1, "messages": [prompt]}]
+    monkeypatch.setattr(roleplay_main_case, "load_batch", lambda: ({}, [
+        {"id": "case-1", "prompt": prompt}]))
+    monkeypatch.setattr(roleplay_main_case, "ModelTransport", lambda **_kwargs:
+                        (_ for _ in ()).throw(AssertionError("model must not initialize")))
+    case_dir = tmp_path / "case-01"
+    case_dir.mkdir()
+    for attempt, count in ((1, 2), (2, 3)):
+        record = {"case_id": "case-1", "requirement_history": history,
+                  "simulation_transcript": [], "stop_reason": "invalid_candidate",
+                  "stages": {"intent_extraction": {"telemetry": {
+                      "repair_policy_version": REPAIR_POLICY_VERSION,
+                      "final_error_codes": ["SCOPE_GRAPH"],
+                      "final_error_count": count}}}}
+        roleplay_main_case._write_exclusive(
+            case_dir / f"attempt-{attempt:03d}.json", record)
+    assert roleplay_main_case._repair_stalled(case_dir, history)
+    assert not roleplay_main_case._repair_stalled(
+        case_dir, history + [{"version": 2, "messages": ["Clarified."]}])
+    result = roleplay_main_case.run_case(1, run_dir=tmp_path)
+    assert result["stop_reason"] == "repair_stalled"
+    assert result["model_usage_this_attempt"]["api_calls"] == 0
+    assert (case_dir / "attempt-003.json").exists()
 
 
 @pytest.mark.parametrize("needs_repair", [False, True])
@@ -87,11 +115,14 @@ def test_restarting_reviewed_case_replays_candidate_without_new_calls(
     assert first["status"] == "WAITING_RESEARCH_REVIEW"
     first_calls = 2 if needs_repair else 1
     assert FakeTransport.total_calls == first_calls
+    assert first["stages"]["intent_extraction"]["telemetry"]["physical_calls"] == first_calls
     assert bool(first["candidate"]["initial_core_validation_errors"]) is needs_repair
 
     second = roleplay_main_case.run_case(1, reviewed_candidate_id=candidate_id,
                                          run_dir=tmp_path)
     assert second["status"] == "SIMULATED_CANDIDATE_ONLY"
+    assert second["stages"]["intent_extraction"]["telemetry"]["physical_calls"] == 0
+    assert second["stages"]["compile"]["telemetry"]["physical_calls"] == 1
     assert second["stages"]["intent_extraction"]["output_artifacts"][0] == candidate_id
     assert second["model_usage_this_attempt"]["api_calls"] == 1
     assert FakeTransport.total_calls == first_calls + 1
@@ -102,6 +133,7 @@ def test_restarting_reviewed_case_replays_candidate_without_new_calls(
                                         run_dir=tmp_path)
     assert third["status"] == "SIMULATED_CANDIDATE_ONLY"
     assert third["stages"]["compile"]["output_artifacts"] == [contract_id]
+    assert third["stages"]["compile"]["telemetry"]["physical_calls"] == 0
     assert third["model_usage_this_attempt"]["api_calls"] == 0
     assert FakeTransport.total_calls == first_calls + 1
 

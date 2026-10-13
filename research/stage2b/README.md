@@ -1,5 +1,31 @@
 # Stage 2B IntentSpec shadow foundation
 
+## Current v3 extraction route
+
+The live route may receive a five-field internal fact/event draft from the
+model: `behavior_scopes`, `claims`, `required_clarifications`,
+`unscored_observations`, and `predicted_resolution`. The runtime attaches the
+exact source history and core schema version, and deterministically converts
+only source-quoted ADA amounts and explicit timezone instants. Unprovable
+values remain invalid or unresolved; the existing seven-field
+`ShadowSemanticCore` validator and public artifact schema are unchanged.
+Legacy full-core model outputs remain accepted for compatibility, without
+silent normalization.
+
+Stage execution telemetry records physical calls, normalization actions,
+stable diagnostic categories, and bounded repair progress outside immutable
+candidate payloads. Two non-improving repair steps stop the current repair
+attempt. The roleplay batch runner also pauses repeated same-history failures
+under the same repair-policy version, requiring a new user clarification or
+an updated harness strategy before further calls. A pause is not acceptance.
+
+`fixtures/semantic_variants.jsonl` is a small offline regression corpus used
+only by pytest. Production does not load it or select behavior by case ID or
+contract family. It measures source grounding and normalization invariants,
+not model accuracy or general Marlowe completeness.
+
+The sections below document the earlier shadow baseline and remain historical.
+
 Stage 2B is research-only shadow extraction and evaluation. The current
 production path remains prompt -> ContractDraft/Marlowe generation -> semantic
 verification -> Node 3. In parallel, Stage 2B runs requirement history ->

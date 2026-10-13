@@ -333,6 +333,28 @@ def explicit_utc_instants(text: str) -> list[tuple[int, int, int]]:
         r"(?::(?P<offset_minute>\d{2}))?\b",
         re.IGNORECASE,
     )
+    ict_named = re.compile(
+        r"(?<!\d)(?P<hour>\d{1,2}):(?P<minute>\d{2})\s+"
+        r"(?:ICT|Vietnam time)\s+(?:on\s+)?(?P<day>\d{1,2})\s+"
+        r"(?P<month>January|February|March|April|May|June|July|August|"
+        r"September|October|November|December)\s+(?P<year>\d{4})(?!\d)",
+        re.IGNORECASE,
+    )
+    ict_date_first = re.compile(
+        r"(?<!\d)(?P<day>\d{1,2})\s+"
+        r"(?P<month>January|February|March|April|May|June|July|August|"
+        r"September|October|November|December)\s+(?P<year>\d{4})\s+"
+        r"at\s+(?P<hour>\d{1,2}):(?P<minute>\d{2})\s+"
+        r"(?:ICT|Vietnam time)\b",
+        re.IGNORECASE,
+    )
+    ict_numeric = re.compile(
+        r"(?<!\d)(?P<hour>\d{1,2}):(?P<minute>\d{2})\s+"
+        r"(?:ICT|giờ Việt Nam\s*\(ICT,\s*UTC\+7\))\s+"
+        r"(?:ngày\s+)?(?P<day>\d{1,2})/(?P<month>\d{1,2})/"
+        r"(?P<year>\d{4})(?!\d)",
+        re.IGNORECASE,
+    )
     for match in iso.finditer(text):
         try:
             instant = datetime.fromisoformat(match.group().replace("Z", "+00:00"))
@@ -351,6 +373,27 @@ def explicit_utc_instants(text: str) -> list[tuple[int, int, int]]:
         try:
             instant = datetime(parts["year"], parts["month"], parts["day"],
                                parts["hour"], parts["minute"], tzinfo=offset)
+        except ValueError:
+            continue
+        found.append((match.start(), match.end(), int(instant.timestamp() * 1000)))
+    months = {name: index for index, name in enumerate((
+        "january", "february", "march", "april", "may", "june", "july",
+        "august", "september", "october", "november", "december"), 1)}
+    for match in [*ict_named.finditer(text), *ict_date_first.finditer(text)]:
+        try:
+            instant = datetime(int(match.group("year")), months[match.group("month").lower()],
+                               int(match.group("day")), int(match.group("hour")),
+                               int(match.group("minute")),
+                               tzinfo=timezone(timedelta(hours=7)))
+        except ValueError:
+            continue
+        found.append((match.start(), match.end(), int(instant.timestamp() * 1000)))
+    for match in ict_numeric.finditer(text):
+        try:
+            instant = datetime(int(match.group("year")), int(match.group("month")),
+                               int(match.group("day")), int(match.group("hour")),
+                               int(match.group("minute")),
+                               tzinfo=timezone(timedelta(hours=7)))
         except ValueError:
             continue
         found.append((match.start(), match.end(), int(instant.timestamp() * 1000)))
@@ -410,7 +453,7 @@ def _absolute_deadline_mismatch(claim: dict[str, Any]) -> bool:
     if exact_instants:
         if value in exact_instants:
             return False
-        if len(set(cited_dates)) == 1:
+        if (len(set(exact_instants)) == 1 and len(set(cited_dates)) <= 1):
             return True
         # A shared timezone after several dates may attach to a date the parser missed.
         # In that case only a calendar contradiction is provable from this span.
@@ -551,7 +594,7 @@ def validate_shadow_semantic_core(spec: Any, *,
             errors.append(f"scope {scope_id}: outcome_id required")
     for scope_id, scope in scopes.items():
         decision = scope.get("decision_id")
-        if v2 and "continuation_scope_id" in scope:
+        if v2 and scope.get("continuation_scope_id") is not None:
             successor_id = scope["continuation_scope_id"]
             successor = scopes.get(successor_id) if isinstance(successor_id, str) else None
             if (successor is None or successor_id == scope_id or
@@ -594,6 +637,19 @@ def validate_shadow_semantic_core(spec: Any, *,
                       and isinstance(bounds.get("to"), int)
                       and not bounds["from"] <= guard["value"] <= bounds["to"]):
                     errors.append(f"scope {scope_id}: choice_guard outside choice_bounds")
+
+    if v3:
+        transitions = {scope_id for scope_id, scope in scopes.items()
+                       if scope.get("scope_type") == "transition"}
+        incoming = {scope.get("continuation_scope_id") for scope in scopes.values()
+                    if isinstance(scope.get("continuation_scope_id"), str)}
+        roots = transitions - incoming
+        if len(roots) > 1:
+            errors.append(f"multiple root transitions without predecessor: {sorted(roots)}")
+        if transitions:
+            for scope_id, scope in scopes.items():
+                if scope.get("scope_type") == "terminal_outcome" and scope_id not in incoming:
+                    errors.append(f"scope {scope_id}: terminal outcome has no incoming continuation")
 
     claims: dict[str, dict[str, Any]] = {}
     raw_claims = spec.get("claims")

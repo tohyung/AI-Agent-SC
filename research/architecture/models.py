@@ -23,6 +23,7 @@ class StageResult:
     blocked_by: list[str] = field(default_factory=list)
     authority_level: AuthorityLevel = AuthorityLevel.NO_AUTHORITY
     safe_error: dict[str, Any] | None = None
+    telemetry: dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
         result = {"stage": self.stage, "implementation_status": self.implementation_status.value,
@@ -38,6 +39,8 @@ class StageResult:
             if set(self.safe_error) != allowed:
                 raise ValueError("safe_error must use the closed normalized schema")
             result["safe_error"] = dict(self.safe_error)
+        if self.telemetry:
+            result["telemetry"] = dict(self.telemetry)
         return result
 
 
