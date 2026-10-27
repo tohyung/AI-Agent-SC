@@ -23,10 +23,41 @@ def _contract():
 
 def _template():
     return {"era": "babbage", "tx": {
+        "roles": {"unCurrencySymbol": "0" * 56},
         "contract": "close", "state": {"accounts": [{"stale": True}],
                                        "choices": [], "boundValues": [], "minTime": 99},
         "inputs": [], "payments": [], "continuations": [], "range": None,
     }}
+
+
+def test_empty_roles_currency_fails_before_analyzer(tmp_path, monkeypatch):
+    binary = tmp_path / "cli"
+    binary.write_bytes(b"pinned cli")
+    socket = tmp_path / "sock"
+    socket.write_bytes(b"")
+    template = tmp_path / "initialized.json"
+    data = _template()
+    data["tx"]["roles"]["unCurrencySymbol"] = ""
+    template.write_text(json.dumps(data), encoding="utf-8")
+    monkeypatch.setattr(Path, "is_socket", lambda self: self == socket)
+
+    def fake_run(command, **kwargs):
+        if command[1:3] == ["query", "tip"]:
+            return CompletedProcess(command, 0, json.dumps({
+                "block": 1, "slot": 10, "era": "Babbage", "syncProgress": "100.00",
+            }), "")
+        assert command[-1] == "--version"
+        return CompletedProcess(command, 0, "marlowe-cli 0.2.0.0", "")
+
+    monkeypatch.setattr("research.final_validation.marlowe_cli.subprocess.run", fake_run)
+    config = MarloweCliSizeConfig(binary, socket, template,
+                                  hashlib.sha256(binary.read_bytes()).hexdigest(),
+                                  "pinned-source", hashlib.sha256(template.read_bytes()).hexdigest(),
+                                  testnet_magic=42, node_cli_binary=binary)
+    result = MarloweCliSizeAnalysisPort(config).execute([_contract()], StageContext("test"))
+    assert result.result.run_status == StageRunStatus.UNAVAILABLE
+    assert result.result.semantic_status == "LEDGER_INFRASTRUCTURE_UNAVAILABLE"
+    assert "--roles-currency" in result.result.diagnostics[0]
 
 
 def test_missing_socket_is_infrastructure_unavailable_not_contract_failure(tmp_path):

@@ -23,7 +23,9 @@ from research.final_validation.marlowe_cli import (
     MarloweCliSizeAnalysisPort,
     MarloweCliSizeConfig,
 )
-from research.stage2b.intent_spec import CORE_SCHEMA_VERSION_V2, CORE_SCHEMA_VERSION_V3
+from research.stage2b.intent_spec import (
+    CORE_SCHEMA_VERSION_V2, CORE_SCHEMA_VERSION_V3, CORE_SCHEMA_VERSION_V4,
+)
 from research.stage2c.models import IntentDecision, IntentDecisionStatus
 from research.stage3.comparison import SemanticComparisonPort
 from research.stage3.reference import PinnedMarloweReference
@@ -43,7 +45,7 @@ class SessionOptions:
     expectation: dict[str, Any] | None = None
     simulated_expectation: dict[str, Any] | None = None
     smt_binary: str | None = None
-    core_schema_version: str = CORE_SCHEMA_VERSION_V3
+    core_schema_version: str = CORE_SCHEMA_VERSION_V4
     roleplay: bool = False
     roleplay_reviewed_candidate_id: str | None = None
     max_core_validation_repairs: int | None = None
@@ -69,7 +71,8 @@ class SessionOptions:
                 (type(self.max_core_validation_repairs) is not int
                  or not 0 <= self.max_core_validation_repairs <= 3)):
             raise ValueError("max_core_validation_repairs must be 0 through 3")
-        if self.core_schema_version not in {CORE_SCHEMA_VERSION_V2, CORE_SCHEMA_VERSION_V3}:
+        if self.core_schema_version not in {CORE_SCHEMA_VERSION_V2, CORE_SCHEMA_VERSION_V3,
+                                            CORE_SCHEMA_VERSION_V4}:
             raise ValueError("unsupported session core schema version")
         if self.property_dataset_path is not None and not self.property_dataset_path.strip():
             raise ValueError("property dataset path must be nonempty")
@@ -238,6 +241,52 @@ def _reference_counterexample_feedback(report: dict[str, Any]) -> list[str]:
             "payments": step.get("payments"),
             "error": step.get("error"),
         }, ensure_ascii=False, sort_keys=True))
+        if (step.get("status") == "TransactionError"
+                and isinstance(step.get("error"), dict)
+                and step["error"].get("type") == "TEApplyNoMatchError"
+                and isinstance(inputs, list) and len(inputs) == 1
+                and isinstance(inputs[0], dict)
+                and inputs[0].get("type") == "Deposit"):
+            previous = steps[index - 1] if index > 0 else None
+            active = (previous.get("contract") if isinstance(previous, dict)
+                      else raw.get("final_contract"))
+            if isinstance(active, dict) and isinstance(active.get("when"), list):
+                submitted = inputs[0]
+                active_cases = [item.get("case") for item in active["when"]
+                                if isinstance(item, dict) and isinstance(item.get("case"), dict)
+                                and isinstance(item["case"].get("deposits"), int)]
+                field_pairs = (("party", "party"), ("account", "into_account"),
+                               ("token", "of_token"), ("amount", "deposits"))
+                field_mismatches = []
+                for case_index, action in enumerate(active_cases):
+                    for input_field, case_field in field_pairs:
+                        expected = submitted.get(input_field)
+                        observed = action.get(case_field)
+                        if input_field in {"party", "account"}:
+                            expected = (expected.get("role_token")
+                                        if isinstance(expected, dict) else expected)
+                            observed = (observed.get("role_token")
+                                        if isinstance(observed, dict) else observed)
+                        if expected != observed:
+                            field_mismatches.append({
+                                "case_index": case_index,
+                                "field": input_field,
+                                "expected_from_scenario": expected,
+                                "ast_case_value": observed,
+                            })
+                feedback.append(
+                    f"At transaction {index}, the accepted scenario supplies a Deposit "
+                    "but the active contract has no matching Deposit Case. "
+                    "Preserve the independent scenario and repair the AST Case, not the "
+                    "expected input. Match the source-stated party, account, token and "
+                    "amount exactly, and keep the action on the success continuation "
+                    "before its timeout. Do not replace a deposit with a Choice or an "
+                    "empty-input timeout. Declared input: "
+                    + json.dumps(submitted, ensure_ascii=False, sort_keys=True)
+                    + "; active Deposit Cases: "
+                    + json.dumps(active_cases, ensure_ascii=False, sort_keys=True)
+                    + "; field differences: "
+                    + json.dumps(field_mismatches, ensure_ascii=False, sort_keys=True))
         if index == 0 or not isinstance(inputs, list) or inputs:
             continue
         previous = steps[index - 1]

@@ -9,6 +9,7 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import re
 import subprocess
 import tempfile
 from typing import Any
@@ -185,6 +186,13 @@ class MarloweCliSizeAnalysisPort:
             template = json.loads(config.initialized_template.read_text(encoding="utf-8"))
             if not isinstance(template, dict) or not isinstance(template.get("tx"), dict):
                 raise ValueError("invalid initialized Marlowe transaction envelope")
+            roles = template["tx"].get("roles")
+            currency = roles.get("unCurrencySymbol") if isinstance(roles, dict) else None
+            if not isinstance(currency, str) or re.fullmatch(r"[0-9a-fA-F]{56}", currency) is None:
+                return self._result(contract, StageRunStatus.UNAVAILABLE,
+                                    "LEDGER_INFRASTRUCTURE_UNAVAILABLE", evidence,
+                                    "initialized template requires a 56-hex roles currency; "
+                                    "pass --roles-currency to marlowe-cli run initialize")
             transaction = template["tx"]
             if (not isinstance(transaction.get("state"), dict)
                     or transaction.get("inputs") != []

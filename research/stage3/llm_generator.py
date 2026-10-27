@@ -101,6 +101,16 @@ class LLMContractGeneratorPort:
             "because reaching a timeout takes timeout_continuation and does not "
             "match a Notify case. Do not replace a source-stated approval or "
             "other required input with an automatic timeout payout. "
+            "For a payment_release_time_ms claim, the time is an EARLIEST allowed "
+            "release time, not a deadline/latest time. Never put an actionable "
+            "payment case in a When whose timeout is that release time: cases are "
+            "available before timeout and its timeout continuation runs at/after "
+            "timeout. Instead use a time gate with an empty cases array and timeout "
+            "equal to the release time; its timeout_continuation must lead to the "
+            "post-release payment/action state. Any participant action required "
+            "by the intent must be reachable only after this gate. Keep deposit, "
+            "choice, and other latest deadlines as ordinary upper-bound When "
+            "timeouts with the source-grounded timeout continuation. "
             "Return JSON only.\n" + describe_marlowe_grammar()
         )
         user = json.dumps({

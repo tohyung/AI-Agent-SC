@@ -20,6 +20,56 @@ def test_exact_local_utc_offset_deadline_uses_instant_not_utc_calendar_day():
     assert explicit_utc_instants("trước ngày 03/01/2027") == []
 
 
+def test_second_precision_and_shared_offset_validate_cited_deadlines():
+    message = ("Uyên nạp trước 19:00:00 ngày 20/01/2027 giờ Đà Nẵng (UTC+7). "
+               "Đạt trả trước 19:00:00 ngày 27/01/2027 cùng múi giờ.")
+    expected = [int(datetime(2027, 1, day, 12, tzinfo=timezone.utc).timestamp() * 1000)
+                for day in (20, 27)]
+    assert [value for _, _, value in explicit_utc_instants(message)] == expected
+    messages = {(2, 0): message}
+    for span, instant in zip((
+            "19:00:00 ngày 20/01/2027 giờ Đà Nẵng (UTC+7)",
+            "19:00:00 ngày 27/01/2027 cùng múi giờ"), expected):
+        claim = {"value": instant, "evidence": [{"requirement_version": 2,
+                 "message_index": 0, "relation": "supports", "span": span}]}
+        assert not _absolute_deadline_mismatch(claim, messages)
+        claim["value"] = instant - 19 * 3_600_000
+        assert _absolute_deadline_mismatch(claim, messages)
+
+
+def test_english_named_calendar_date_rejects_wrong_posix_year():
+    for day in (10, 17, 24):
+        span = f"no earlier than {day} February 2027 at 12:00 noon"
+        evidence = [{"relation": "supports", "span": span}]
+        correct = int(datetime(2027, 2, day, 5, tzinfo=timezone.utc).timestamp() * 1000)
+        wrong = int(datetime(2024, 2, day, 5, tzinfo=timezone.utc).timestamp() * 1000)
+        assert not _absolute_deadline_mismatch({"value": correct, "evidence": evidence})
+        assert _absolute_deadline_mismatch({"value": wrong, "evidence": evidence})
+
+
+def test_explicit_recipient_requires_named_source_span():
+    from research.stage2b.intent_spec import CORE_SCHEMA_VERSION_V4, validate_shadow_semantic_core
+
+    message = "Maya deposits. If she does not deposit, close without paying Paul. When funded, pay Paul."
+    history = [{"version": 1, "messages": [message]}]
+    core = {
+        "schema_version": CORE_SCHEMA_VERSION_V4, "requirement_history": history,
+        "behavior_scopes": [{"scope_id": "global", "scope_type": "global"}],
+        "claims": [{"claim_id": "refund", "kind": "refund_recipient", "value": "none",
+                    "status": "explicit", "criticality": "financial", "scope_id": "global",
+                    "evidence": [{"requirement_version": 1, "message_index": 0,
+                                  "span": "close without paying Paul", "relation": "supports"}]}],
+        "required_clarifications": [], "unscored_observations": [],
+        "predicted_resolution": "accepted_interpretation",
+    }
+    errors = validate_shadow_semantic_core(core, expected_history=history)
+    assert "claim refund: explicit recipient absent from cited evidence" in errors
+    core["claims"][0].update(value="Paul", kind="payment_recipient")
+    core["claims"][0]["evidence"][0]["span"] = "When funded, pay Paul"
+    errors = validate_shadow_semantic_core(core, expected_history=history)
+    assert "claim refund: explicit recipient absent from cited evidence" not in errors
+
+
 def test_shared_timezone_across_two_dates_is_not_a_false_deadline_error():
     span = ("Hà duyệt chặng đầu trước 00:00 ngày 14/01/2027 và chặng sau trước "
             "00:00 ngày 21/01/2027, đều theo giờ Việt Nam (UTC+7).")

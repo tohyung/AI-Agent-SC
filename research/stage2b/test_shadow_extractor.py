@@ -12,6 +12,7 @@ import pytest
 from marlowe_ai_agent.marlowe_agent.models import LLMConfigError, LLMTransientError
 from marlowe_ai_agent.marlowe_agent.openai_reasoner import summarize_call_log
 from research.stage2b import intent_spec, run_shadow, shadow_extractor
+from research.stage2b.repair_policy import REPAIR_POLICY_VERSION
 from research.stage2b.test_intent_spec import simple_payment
 from research.stage3.test_funded_choice_v1 import funded_choice_core
 
@@ -136,7 +137,40 @@ def test_scope_repair_changes_only_model_proposed_scopes():
     assert core.to_dict()["claims"] == source["claims"]
     assert len(model.calls) == 2
     assert "funding deposit is followed by a repayment deposit" in model.calls[1][0]
+    assert "the first is not terminal" in model.calls[1][0]
+    assert "a transition may not point to its timeout scope" in model.calls[1][0]
+    assert "Do not preserve any invalid continuation_scope_id" in model.calls[1][0]
+    assert "becoming available on or after a date is not a timeout" in model.calls[1][0]
     assert "allowed_fields_by_type" in json.loads(model.calls[1][1])["scope_schema_contract"]
+
+
+@pytest.mark.parametrize("wrapped", [True, False])
+def test_invalid_derived_from_repair_changes_only_links(wrapped):
+    core = intent_spec.extract_core_view(simple_payment())
+    invalid = deepcopy(core)
+    amount = next(claim for claim in invalid["claims"] if claim["claim_id"] == "amount")
+    amount["derived_from"] = ["asset"]
+
+    class LinkModel:
+        def __init__(self):
+            self.calls = []
+
+        def generate(self, system, user):
+            self.calls.append((system, user))
+            if len(self.calls) == 1:
+                return invalid
+            mapping = {"amount": None}
+            return {"derived_from": mapping} if wrapped else mapping
+
+    model = LinkModel()
+    result, initial = shadow_extractor.IntentShadowExtractor(model).extract_with_validation_feedback(
+        core["requirement_history"])
+    assert any("invalid derived_from source claim" in error for error in initial)
+    assert result.validation_errors(expected_history=core["requirement_history"]) == []
+    assert result.to_dict() == core
+    assert len(model.calls) == 2
+    assert "Return exactly one JSON object with derived_from mapping" in model.calls[1][0]
+    assert f"Repair policy {REPAIR_POLICY_VERSION}." in model.calls[1][0]
 
 
 def test_orphan_repair_revalidates_model_proposed_scopes_and_claims():
@@ -210,7 +244,8 @@ def test_deadline_repair_preserves_other_core_fields():
     assert any("deadline value contradicts" in error for error in initial)
     assert core.validation_errors(expected_history=history) == []
     assert core.to_dict()["behavior_scopes"] == source["behavior_scopes"]
-    assert model.calls[1][0].startswith("Repair only numeric POSIX millisecond values")
+    assert f"Repair policy {REPAIR_POLICY_VERSION}." in model.calls[1][0]
+    assert "Repair only numeric POSIX millisecond values" in model.calls[1][0]
 
 
 def test_requested_core_version_is_repaired_and_cannot_silently_downgrade():
@@ -285,6 +320,120 @@ def test_repair_stalls_on_identical_core_and_never_exceeds_cap():
             valid["requirement_history"], max_repairs=4)
 
 
+def test_business_decision_repair_preserves_source_claims_and_graph():
+    from research.stage2b.test_core_v4 import payment_release_core
+
+    valid = payment_release_core()
+    invalid = deepcopy(valid)
+    invalid["predicted_resolution"] = "clarification_required"
+    invalid["required_clarifications"] = ["What is the deadline?"]
+
+    class Model:
+        def __init__(self):
+            self.calls = []
+
+        def generate(self, system, user):
+            self.calls.append((system, user))
+            if len(self.calls) == 1:
+                return deepcopy(invalid)
+            return {"predicted_resolution": "accepted_interpretation",
+                    "required_clarifications": []}
+
+    model = Model()
+    extractor = shadow_extractor.IntentShadowExtractor(
+        model, core_schema_version=intent_spec.CORE_SCHEMA_VERSION_V4)
+    core, initial = extractor.extract_with_validation_feedback(
+        valid["requirement_history"], max_repairs=1)
+    assert initial == ["clarification prediction requires an unresolved claim or "
+                       "unrepresented behavior observation"]
+    assert core.validation_errors(expected_history=valid["requirement_history"]) == []
+    assert core.to_dict()["claims"] == valid["claims"]
+    assert core.to_dict()["behavior_scopes"] == valid["behavior_scopes"]
+    assert extractor.repair_trace[0]["repair_kind"] == "BUSINESS_DECISION"
+    assert "predicted_resolution and required_clarifications" in model.calls[1][0]
+
+
+def test_evidence_repair_targets_allow_independent_observation_error():
+    core = {"claims": [{"claim_id": "depositor"}]}
+    errors = ["claim depositor: invalid evidence target/span",
+              "claim depositor: supporting evidence required",
+              "invalid unscored_observation"]
+    assert shadow_extractor._evidence_repair_targets(core, errors) == {"depositor"}
+    assert shadow_extractor._evidence_repair_targets(
+        core, errors + ["scope deposit: invalid continuation_scope_id"]) == set()
+
+
+def test_observation_repair_retries_rejected_span_without_changing_claims():
+    from research.stage2b.test_core_v4 import payment_release_core
+
+    valid = payment_release_core()
+    invalid = deepcopy(valid)
+    invalid["unscored_observations"] = [{
+        "observation_id": "obs-1", "text": "Unrelated note.",
+        "reason": "irrelevant_context",
+        "source_evidence": [{"requirement_version": 1, "message_index": 0,
+                             "span": "not in source", "relation": "supports"}],
+    }]
+
+    class Model:
+        def __init__(self):
+            self.calls = []
+
+        def generate(self, system, user):
+            self.calls.append((system, user))
+            if len(self.calls) == 1:
+                return deepcopy(invalid)
+            return {"claim_evidence_or_drop": {},
+                    "observation_or_drop": {"obs-1": (
+                        deepcopy(invalid["unscored_observations"][0])
+                        if len(self.calls) == 2 else None)}}
+
+    model = Model()
+    extractor = shadow_extractor.IntentShadowExtractor(
+        model, core_schema_version=intent_spec.CORE_SCHEMA_VERSION_V4)
+    core, initial = extractor.extract_with_validation_feedback(
+        valid["requirement_history"], max_repairs=1)
+    assert initial == ["invalid unscored_observation"]
+    assert core.validation_errors(expected_history=valid["requirement_history"]) == []
+    assert core.to_dict()["claims"] == valid["claims"]
+    assert len(model.calls) == 3
+    assert "rejected_repair" in model.calls[2][1]
+
+
+def test_depositor_scope_repair_drops_source_negation_only_on_model_decision():
+    from research.stage2b.test_core_v4 import payment_release_core
+
+    valid = payment_release_core()
+    invalid = deepcopy(valid)
+    invalid["requirement_history"][0]["messages"][0] += " Ann does not deposit."
+    invalid["claims"].append({
+        "claim_id": "non-depositor", "kind": "depositing_party",
+        "value": "Ann does not deposit", "criticality": "nonfinancial",
+        "status": "explicit", "scope_id": "global",
+        "evidence": [{"requirement_version": 1, "message_index": 0,
+                      "span": "Ann does not deposit", "relation": "supports"}],
+    })
+
+    class Model:
+        def __init__(self):
+            self.calls = []
+
+        def generate(self, system, user):
+            self.calls.append((system, user))
+            return deepcopy(invalid) if len(self.calls) == 1 else {
+                "scope_or_drop": {"non-depositor": None}}
+
+    model = Model()
+    extractor = shadow_extractor.IntentShadowExtractor(
+        model, core_schema_version=intent_spec.CORE_SCHEMA_VERSION_V4)
+    core, initial = extractor.extract_with_validation_feedback(
+        invalid["requirement_history"], max_repairs=1)
+    assert initial == ["claim non-depositor: depositing party must scope a deposit transition"]
+    assert core.validation_errors(expected_history=invalid["requirement_history"]) == []
+    assert core.to_dict()["claims"] == valid["claims"]
+    assert extractor.repair_trace[0]["repair_kind"] == "PARTY_SCOPE"
+
+
 def test_repair_stops_after_two_distinct_nonprogressing_outputs():
     valid = intent_spec.extract_core_view(simple_payment())
 
@@ -307,6 +456,150 @@ def test_repair_stops_after_two_distinct_nonprogressing_outputs():
     assert len(extractor.repair_trace) == 2
     assert all(step["progressed"] is False for step in extractor.repair_trace)
     assert extractor.repair_trace[0]["before_codes"] == ["BUSINESS_DECISION"]
+
+
+def test_worse_full_regeneration_does_not_replace_best_candidate():
+    initial = intent_spec.extract_core_view(simple_payment())
+    initial["predicted_resolution"] = "invalid-initial"
+    worse = deepcopy(initial)
+    worse["claims"][0]["kind"] = "not-a-claim-kind"
+
+    class Model:
+        calls = 0
+
+        def generate(self, _system, _user):
+            self.calls += 1
+            return deepcopy(initial if self.calls == 1 else worse)
+
+    model = Model()
+    extractor = shadow_extractor.IntentShadowExtractor(model)
+    result, errors = extractor.extract_with_validation_feedback(
+        initial["requirement_history"], max_repairs=1)
+    assert model.calls == 2
+    assert errors == ["invalid predicted_resolution"]
+    assert result.to_dict() == initial
+    assert extractor.repair_trace[0]["progressed"] is False
+
+
+def test_unchanged_targeted_repair_falls_back_to_full_regeneration_once():
+    valid = intent_spec.extract_core_view(simple_payment())
+    invalid = deepcopy(valid)
+    amount = next(item for item in invalid["claims"] if item["claim_id"] == "amount")
+    amount["derived_from"] = "missing-source"
+    amount["evidence"] = []
+
+    class Model:
+        calls = 0
+
+        def generate(self, system, user):
+            self.calls += 1
+            if self.calls == 1:
+                return deepcopy(invalid)
+            if "Repair only invalid derived_from references" in system:
+                return {"derived_from": {"amount": "missing-source"}}
+            assert "Regenerate the complete seven-field core" in user
+            return deepcopy(valid)
+
+    model = Model()
+    extractor = shadow_extractor.IntentShadowExtractor(model)
+    result, initial = extractor.extract_with_validation_feedback(
+        valid["requirement_history"], max_repairs=3)
+
+    assert "claim amount: invalid derived_from source claim" in initial
+    assert result.validation_errors(expected_history=valid["requirement_history"]) == []
+    assert model.calls == 3
+    assert [item["repair_kind"] for item in extractor.repair_trace] == [
+        "PROVENANCE_LINK", "FULL_REGENERATION_FALLBACK"]
+    assert extractor.repair_trace[0]["progressed"] is False
+    assert extractor.repair_trace[1]["progressed"] is True
+
+
+def test_v4_choice_evidence_repair_keeps_existing_graph_and_values():
+    history = [{"version": 1, "messages": [
+        "Tina may choose integer 1 to cancel or integer 0 to confirm."]}]
+    source = {
+        "schema_version": intent_spec.CORE_SCHEMA_VERSION_V4,
+        "requirement_history": history,
+        "behavior_scopes": [
+            {"scope_id": "global", "scope_type": "global"},
+            {"scope_id": "choice", "scope_type": "transition", "transition_kind": "choice",
+             "choice_bounds": {"from": 0, "to": 1, "source_evidence": [{
+                 "requirement_version": 1, "message_index": 0,
+                 "span": "integer 1 to cancel or integer 0", "relation": "supports"}]}},
+            {"scope_id": "confirm", "scope_type": "branch", "decision_id": "choice",
+             "branch_id": "confirm", "choice_guard": {"operator": "eq", "value": 0,
+                 "source_evidence": [{"requirement_version": 1, "message_index": 0,
+                                     "span": "Tina may choose 0 confirmed",
+                                     "relation": "supports"}]}}
+        ],
+        "claims": [], "required_clarifications": [], "unscored_observations": [],
+        "predicted_resolution": "accepted_interpretation",
+    }
+    replacement = [{"requirement_version": 1, "message_index": 0,
+                    "span": "integer 0 to confirm", "relation": "supports"}]
+
+    class Model:
+        calls = 0
+
+        def generate(self, _system, _user):
+            self.calls += 1
+            return (deepcopy(source) if self.calls == 1 else
+                    {"evidence_by_scope": {"confirm": replacement}})
+
+    model = Model()
+    extractor = shadow_extractor.IntentShadowExtractor(
+        model, core_schema_version=intent_spec.CORE_SCHEMA_VERSION_V4)
+    result, errors = extractor.extract_with_validation_feedback(history)
+    assert errors == ["scope confirm: invalid choice_guard"]
+    assert result.validation_errors(expected_history=history) == []
+    assert result.to_dict()["behavior_scopes"][2]["choice_guard"] == {
+        **source["behavior_scopes"][2]["choice_guard"], "source_evidence": replacement}
+    assert extractor.repair_trace[0]["repair_kind"] == "CHOICE_EVIDENCE"
+
+
+def test_v4_choice_evidence_retries_one_noncontiguous_span():
+    history = [{"version": 1, "messages": [
+        "Tina chooses integer 1 to cancel or integer 0 to confirm."]}]
+    draft = {
+        "behavior_scopes": [
+            {"scope_id": "global", "scope_type": "global"},
+            {"scope_id": "choice", "scope_type": "transition", "transition_kind": "choice",
+             "choice_bounds": {"from": 0, "to": 1, "source_evidence": [{
+                 "requirement_version": 1, "message_index": 0,
+                 "span": "integer 1 to cancel or integer 0", "relation": "supports"}]}},
+            {"scope_id": "confirm", "scope_type": "branch", "decision_id": "choice",
+             "branch_id": "confirm", "choice_guard": {"operator": "eq", "value": 0,
+                 "source_evidence": [{"requirement_version": 1, "message_index": 0,
+                                     "span": "Tina chooses 0 confirmed",
+                                     "relation": "supports"}]}}
+        ],
+        "claims": [], "required_clarifications": [], "unscored_observations": [],
+        "predicted_resolution": "accepted_interpretation",
+    }
+
+    class Model:
+        calls = 0
+
+        def generate(self, _system, user):
+            self.calls += 1
+            if self.calls == 1:
+                return deepcopy(draft)
+            if self.calls == 2:
+                return {"evidence_by_scope": {"confirm": [{
+                    "requirement_version": 1, "message_index": 0,
+                    "span": "Tina chooses 0 confirmed", "relation": "supports"}]}}
+            assert "rejected_evidence_by_scope" in user
+            return {"evidence_by_scope": {"confirm": [{
+                "requirement_version": 1, "message_index": 0,
+                "span": "integer 0 to confirm", "relation": "supports"}]}}
+
+    model = Model()
+    extractor = shadow_extractor.IntentShadowExtractor(
+        model, core_schema_version=intent_spec.CORE_SCHEMA_VERSION_V4)
+    result, _ = extractor.extract_with_validation_feedback(history)
+    assert model.calls == 3
+    assert result.validation_errors(expected_history=history) == []
+    assert extractor.repair_trace[0]["repair_kind"] == "CHOICE_EVIDENCE"
 
 
 def test_repair_guidance_keeps_approval_evidence_and_questions_source_grounded():
@@ -497,6 +790,18 @@ def test_choice_prompt_forbids_transition_to_its_branch():
         core_schema_version=intent_spec.CORE_SCHEMA_VERSION_V3)
     assert "Omit continuation_scope_id on the Choice transition itself" in system
     assert "source_evidence is a NONEMPTY JSON ARRAY" in system
+
+
+def test_loan_prompt_distinguishes_account_owner_from_disbursement_recipient():
+    system, _ = shadow_extractor.build_prompt(
+        [{"version": 1, "messages": ["Alice lends Bob 10 ADA, then Bob repays 12 ADA."]}],
+        core_schema_version=intent_spec.CORE_SCHEMA_VERSION_V4)
+    assert "deposit into a Marlowe account is not a transfer to the borrower" in system
+    assert "distinct Pay" in system
+    assert "destination_account_owner merely because they receive" in system
+    assert "preserving Unicode accents and case" in system
+    assert "Never duplicate that same normalized amount" in system
+    assert "amount_lovelace claim on EACH corresponding terminal" in system
 
 
 def test_choice_prompt_contract_matches_evidence_array_validator():

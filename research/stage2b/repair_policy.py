@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 
-REPAIR_POLICY_VERSION = "source-draft-v1"
+REPAIR_POLICY_VERSION = "source-draft-v44"
 
 
 def diagnostic_code(error: str) -> str:

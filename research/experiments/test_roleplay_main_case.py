@@ -7,7 +7,7 @@ import pytest
 
 from research.experiments import roleplay_main_case
 from research.integrations.smt_driver import DRIVER_VERSION, UPSTREAM_COMMIT
-from research.stage2b.intent_spec import CORE_SCHEMA_VERSION_V3
+from research.stage2b.intent_spec import CORE_SCHEMA_VERSION_V3, CORE_SCHEMA_VERSION_V4
 from research.stage2b.repair_policy import REPAIR_POLICY_VERSION
 from research.stage3.test_funded_choice_v1 import funded_choice_core
 
@@ -36,6 +36,31 @@ def test_interrupted_outbound_attempt_number_is_never_reused(tmp_path):
     (tmp_path / "outbound-attempts.jsonl").write_text(
         '{"attempt": 2, "phase": "generation"}\n', encoding="utf-8")
     assert roleplay_main_case._next_attempt(tmp_path) == 3
+
+
+def test_implicit_core_replay_requires_current_policy_version(tmp_path):
+    history = [{"version": 1, "messages": ["Initial"]}]
+    candidate_id = "intent-candidate:older-policy"
+    candidate = {"semantic_core": {"schema_version": CORE_SCHEMA_VERSION_V3,
+                                   "requirement_history": history},
+                 "initial_core_validation_errors": []}
+    record = {"candidate": candidate,
+              "stages": {"intent_extraction": {
+                  "output_artifacts": [candidate_id],
+                  "telemetry": {"repair_policy_version": "older-policy"}}},
+              "artifacts": {candidate_id: {"payload": candidate}}}
+    roleplay_main_case._write_exclusive(tmp_path / "attempt-001.json", record)
+    assert roleplay_main_case._reusable_core(
+        tmp_path, history, require_policy_version=REPAIR_POLICY_VERSION) is None
+    assert roleplay_main_case._reusable_core(
+        tmp_path, history, candidate_id=candidate_id)[1] == candidate_id
+    replayed = deepcopy(record)
+    replayed["replayed_core_candidate_id"] = candidate_id
+    replayed["stages"]["intent_extraction"]["telemetry"]["repair_policy_version"] = (
+        REPAIR_POLICY_VERSION)
+    roleplay_main_case._write_exclusive(tmp_path / "attempt-002.json", replayed)
+    assert roleplay_main_case._reusable_core(
+        tmp_path, history, require_policy_version=REPAIR_POLICY_VERSION) is None
 
 
 def test_repeated_nonprogressing_case_pauses_before_model_call(monkeypatch, tmp_path):
@@ -69,7 +94,7 @@ def test_repeated_nonprogressing_case_pauses_before_model_call(monkeypatch, tmp_
 def test_restarting_reviewed_case_replays_candidate_without_new_calls(
         monkeypatch, tmp_path, needs_repair):
     core = funded_choice_core()
-    core["schema_version"] = CORE_SCHEMA_VERSION_V3
+    core["schema_version"] = CORE_SCHEMA_VERSION_V4
     prompt = core["requirement_history"][0]["messages"][0]
     monkeypatch.setattr(roleplay_main_case, "load_batch", lambda: ({}, [{"id": "case-1",
                                                                      "prompt": prompt}]))
@@ -140,7 +165,7 @@ def test_restarting_reviewed_case_replays_candidate_without_new_calls(
 
 def test_repair_reuses_exact_invalid_candidate_without_rewriting_it(monkeypatch, tmp_path):
     core = funded_choice_core()
-    core["schema_version"] = CORE_SCHEMA_VERSION_V3
+    core["schema_version"] = CORE_SCHEMA_VERSION_V4
     prompt = core["requirement_history"][0]["messages"][0]
     monkeypatch.setattr(roleplay_main_case, "load_batch", lambda: ({}, [
         {"id": "case-1", "prompt": prompt}]))

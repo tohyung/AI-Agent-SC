@@ -1,6 +1,6 @@
 # Stage 2B IntentSpec shadow foundation
 
-## Current v3 extraction route
+## Current v4 extraction route
 
 The live route may receive a five-field internal fact/event draft from the
 model: `behavior_scopes`, `claims`, `required_clarifications`,
@@ -11,6 +11,12 @@ values remain invalid or unresolved; the existing seven-field
 `ShadowSemanticCore` validator and public artifact schema are unchanged.
 Legacy full-core model outputs remain accepted for compatibility, without
 silent normalization.
+
+Core v4 adds `payment_release_time_ms` for an earliest allowed payment time.
+It is projected as a POSIX-millisecond `release_time` parameter and linked to
+the payment transition through `release_time_parameter_id`. It means
+"not before", so it must not be encoded as `timeout_ms` or a latest deadline.
+Core v1-v3 continue to reject this v4 claim kind.
 
 Stage execution telemetry records physical calls, normalization actions,
 stable diagnostic categories, and bounded repair progress outside immutable

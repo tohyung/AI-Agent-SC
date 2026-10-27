@@ -229,10 +229,10 @@ class SemanticComparisonPort:
                     unavailable.append(field)
                 elif observed_items != list(expected_items):
                     mismatches.append(field)
-            if unavailable:
-                verdict, run_status = "INCONCLUSIVE", StageRunStatus.INCONCLUSIVE
-            elif mismatches:
+            if mismatches:
                 verdict, run_status = "VIOLATED", StageRunStatus.FAILED
+            elif unavailable:
+                verdict, run_status = "INCONCLUSIVE", StageRunStatus.INCONCLUSIVE
             else:
                 verdict, run_status = "SATISFIED", StageRunStatus.SUCCEEDED
         payload = {"reference_result": raw, "reference_identity": reference_identity,

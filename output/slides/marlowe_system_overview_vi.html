@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>Hệ thống Marlowe AI Agent — Giải thích luồng hoạt động</title>
+  <style>
+    :root{--paper:#f7f5ef;--ink:#172b35;--muted:#547078;--teal:#087e83;--deep:#07545b;--line:#cbd7d3;--amber:#b2732d;--pink:#b84d55;--white:#fff;--shadow:0 24px 70px rgba(11,46,52,.13)}
+    *{box-sizing:border-box}html,body{margin:0;min-height:100%;background:#e2e8e5;color:var(--ink);font-family:Arial,"Segoe UI",sans-serif}button{font:inherit}
+    .deck{width:100%;min-height:100vh;display:grid;place-items:center;padding:28px 68px 80px}
+    .slide{display:none;position:relative;width:min(1280px,100%);aspect-ratio:16/9;min-height:690px;overflow:hidden;background:var(--paper);box-shadow:var(--shadow);padding:64px 76px 60px}
+    .slide.active{display:flex;flex-direction:column}.slide:before{content:"";position:absolute;inset:0 0 auto;height:7px;background:linear-gradient(90deg,var(--deep),var(--teal) 65%,#75c4ae)}
+    .eyebrow{font-size:18px;letter-spacing:.16em;text-transform:uppercase;font-weight:800;color:var(--teal);margin:0 0 18px}.slide h1{font-size:64px;line-height:1.08;letter-spacing:-.045em;max-width:1020px;margin:0}.slide h2{font-size:48px;line-height:1.12;letter-spacing:-.035em;margin:0 0 28px;max-width:1070px}.slide h3{font-size:29px;line-height:1.18;margin:0 0 16px}.lead{font-size:30px;line-height:1.35;max-width:980px;margin:0;color:var(--muted)}.body{font-size:25px;line-height:1.4}.small{font-size:19px;line-height:1.35;color:var(--muted)}.bold{font-weight:800;color:var(--ink)}.accent{color:var(--teal)}.warn{color:var(--pink)}
+    .stage{display:flex;gap:15px;align-items:center;margin-bottom:18px}.stage .num{font-size:16px;font-weight:800;letter-spacing:.08em;color:white;background:var(--teal);padding:8px 13px;border-radius:3px}.stage .meaning{font-size:19px;color:var(--muted);font-weight:700}
+    .qa{display:grid;grid-template-columns:1fr 1fr;gap:52px;margin-top:30px}.qa>div{border-top:3px solid var(--teal);padding-top:18px}.qa .q{font-size:19px;font-weight:800;color:var(--teal);text-transform:uppercase;letter-spacing:.08em;margin:0 0 16px}.qa p{font-size:28px;line-height:1.32;margin:0}.qa ul{font-size:24px;line-height:1.34;padding-left:26px;margin:0}.qa li{margin:0 0 12px}.example{margin-top:auto;border-left:5px solid var(--amber);padding:12px 0 12px 24px;font-size:21px;line-height:1.35;color:#4d5b5e}.example strong{color:var(--ink)}
+    .footer{position:absolute;left:76px;right:76px;bottom:26px;display:flex;justify-content:space-between;align-items:center;color:#627a7c;font-size:15px}.footer .brand{font-weight:800;letter-spacing:.07em}.footer .n{font-variant-numeric:tabular-nums}
+    .title-slide{background:linear-gradient(132deg,#f7f5ef 0%,#f7f5ef 60%,#d8ebe3 100%)}.title-slide .eyebrow{margin-top:46px}.title-slide h1{margin-bottom:32px}.title-slide .lead{font-size:31px;color:#375860}.title-slide .takeaway{margin-top:auto;font-size:24px;color:var(--deep);font-weight:700;padding-bottom:44px}
+    .split{display:grid;grid-template-columns:1.05fr .95fr;gap:70px;align-items:center;flex:1}.statement{font-size:35px;line-height:1.28;margin:0}.contrast{border-left:4px solid var(--line);padding-left:28px;display:grid;gap:32px}.contrast b{font-size:20px;text-transform:uppercase;letter-spacing:.08em;color:var(--teal)}.contrast p{font-size:26px;line-height:1.3;margin:8px 0 0}.contrast .risk b{color:var(--pink)}
+    .flow{display:flex;align-items:stretch;gap:0;margin-top:36px}.flow-step{position:relative;flex:1;min-width:0;padding:18px 14px 18px 18px;border-top:5px solid var(--teal);background:#edf4ef;margin-right:12px}.flow-step:last-child{margin-right:0}.flow-step:not(:last-child):after{content:"";position:absolute;right:-12px;top:50%;transform:translateY(-50%);border-top:11px solid transparent;border-bottom:11px solid transparent;border-left:11px solid var(--teal);z-index:1}.flow-step b{display:block;color:var(--deep);font-size:17px;margin-bottom:10px}.flow-step span{font-size:20px;line-height:1.24;display:block}.flow-note{font-size:22px;margin-top:32px;line-height:1.35}.flow-note strong{color:var(--deep)}
+    .roles{display:grid;grid-template-columns:repeat(3,1fr);gap:28px;margin:22px 0 32px}.role{border-top:4px solid var(--teal);padding-top:16px}.role b{font-size:22px;color:var(--deep)}.role p{font-size:24px;line-height:1.3;margin:8px 0 0}.branch{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-top:auto;padding-bottom:45px}.branch>div{background:#eaf1ed;border-top:3px solid var(--amber);padding:18px 15px;font-size:21px;line-height:1.25}.branch strong{display:block;color:#80531f;margin-bottom:6px}
+    .token-flow{display:flex;align-items:center;gap:14px;margin:30px 0 18px}.token-flow>div{flex:1;text-align:center;border-bottom:4px solid var(--teal);padding:18px 12px;background:#e8f2ed;font-size:25px;font-weight:700}.token-flow>span{font-size:36px;color:var(--teal)}.token-flow .output{background:#dcebe3}.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:28px;margin:25px 0 0}.steps>div{border-top:3px solid var(--teal);padding-top:15px;font-size:24px;line-height:1.3}.steps b{display:block;color:var(--teal);font-size:18px;margin-bottom:12px}.evidence{display:grid;grid-template-columns:1fr 1fr;gap:42px;margin-top:20px}.evidence>div{border-top:3px solid var(--teal);padding-top:19px}.evidence h3{color:var(--deep)}.evidence p{font-size:24px;line-height:1.34;margin:0}.mini{font-size:19px!important;color:var(--muted);margin-top:14px!important}.status-row{display:grid;grid-template-columns:repeat(3,1fr);gap:30px;margin-top:42px}.status-row>div{border-top:5px solid var(--teal);padding-top:19px}.status-row>div:nth-child(2){border-color:var(--amber)}.status-row>div:nth-child(3){border-color:var(--pink)}.status-row b{font-size:27px;line-height:1.2;display:block;margin-bottom:14px}.status-row p{font-size:23px;line-height:1.33;margin:0}.gloss{display:grid;grid-template-columns:repeat(2,1fr);column-gap:54px;row-gap:22px;margin-top:20px}.gloss>div{border-top:2px solid var(--line);padding-top:12px;display:grid;grid-template-columns:170px 1fr;gap:15px;align-items:start}.gloss strong{font-size:23px;color:var(--deep)}.gloss span{font-size:23px;line-height:1.3}.truth{font-size:25px;line-height:1.42;margin-top:25px;max-width:1030px}.truth strong{color:var(--deep)}.callout{font-size:27px;line-height:1.35;border-left:6px solid var(--teal);padding:4px 0 4px 24px;margin-top:28px}
+    .stack-list{display:grid;grid-template-columns:1fr 1fr;column-gap:56px;row-gap:20px;margin-top:15px}.stack-list>div{border-top:3px solid var(--line);padding-top:13px}.stack-list b{display:block;color:var(--deep);font-size:24px;margin-bottom:7px}.stack-list p{font-size:21px;line-height:1.28;margin:0}.method{display:grid;grid-template-columns:repeat(3,1fr);gap:28px;margin:25px 0}.method>div{border-top:4px solid var(--teal);padding-top:16px}.method b{font-size:19px;color:var(--deep)}.method p{font-size:23px;line-height:1.32;margin:9px 0 0}.method .sub{font-size:18px;color:var(--muted);margin-top:11px}.tech-foot{margin-top:auto;font-size:20px;line-height:1.34;border-left:5px solid var(--amber);padding-left:18px;color:#475f62}
+    .controls{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:18px;border:1px solid #cbd8d4;background:rgba(255,255,255,.97);box-shadow:0 12px 38px #16373d25;border-radius:999px;padding:8px 12px;z-index:20}.controls button{width:38px;height:38px;border:0;border-radius:50%;background:#e5f1ec;color:var(--deep);font-size:23px;cursor:pointer}.controls button:hover,.controls button:focus-visible{background:var(--teal);color:white;outline:none}.controls .count{font-size:16px;font-weight:700;color:var(--deep);min-width:64px;text-align:center}.progress{position:fixed;bottom:0;left:0;height:5px;background:var(--teal);width:0;z-index:25;transition:width .2s}.key-hint{position:fixed;right:22px;bottom:26px;font-size:14px;color:#4c696a}
+    @media(max-width:900px){.deck{padding:0 0 70px;display:block}.slide{width:100%;aspect-ratio:auto;min-height:calc(100svh - 70px);padding:36px 28px 52px;box-shadow:none}.slide h1{font-size:clamp(43px,8vw,64px)}.slide h2{font-size:clamp(33px,6vw,48px)}.lead{font-size:25px}.qa{gap:24px}.qa p{font-size:23px}.qa ul{font-size:21px}.roles{gap:15px}.role p,.branch>div,.steps>div,.evidence p,.gloss span,.gloss strong{font-size:20px}.footer{left:28px;right:28px}.key-hint{display:none}.flow-step span{font-size:16px}.flow-step b{font-size:14px}.split{gap:28px}.statement{font-size:28px}.contrast p{font-size:21px}.method p{font-size:20px}}
+    @media(max-width:620px){.slide{min-height:calc(100svh - 70px);overflow:auto}.qa,.split,.evidence,.gloss,.stack-list{grid-template-columns:1fr}.qa{gap:22px}.qa p{font-size:22px}.flow{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}.flow-step{margin-right:0}.flow-step:after{display:none}.roles,.steps,.status-row,.method{grid-template-columns:1fr}.roles{margin:5px 0}.role{padding-top:8px}.role p{margin:2px 0}.branch{grid-template-columns:repeat(2,1fr);padding-bottom:30px}.token-flow>div{font-size:16px}.token-flow>span{font-size:22px}.gloss>div{grid-template-columns:110px 1fr}.footer{position:static;margin-top:auto;padding-top:24px}.example{margin-top:22px}.controls{bottom:12px}.slide h2{margin-bottom:16px}}
+    @media print{html,body{background:white}.deck{display:block;padding:0}.slide,.slide.active{display:flex;flex-direction:column;box-shadow:none;width:100%;height:7.5in;min-height:0;aspect-ratio:auto;break-after:page;page-break-after:always}.controls,.progress,.key-hint{display:none}@page{size:13.333in 7.5in;margin:0}}
+  </style>
+</head>
+<body>
+<main class="deck" aria-label="Bộ slide giới thiệu hệ thống Marlowe AI Agent">
+  <section class="slide title-slide active" aria-label="Trang bìa">
+    <p class="eyebrow">Giới thiệu hệ thống</p>
+    <h1>Từ yêu cầu bằng lời đến hợp đồng Marlowe</h1>
+    <p class="lead">Một luồng có người xác nhận, máy tạo bản nháp và nhiều lớp kiểm tra trước khi kết luận.</p>
+    <p class="takeaway">Ví dụ xuyên suốt: ký quỹ 100 ADA giữa người mua và người bán.</p>
+    <div class="footer"><span class="brand">MARLOWE AI AGENT</span><span class="n">01</span></div>
+  </section>
+
+  <section class="slide" aria-label="Vấn đề mà hệ thống giải quyết">
+    <p class="eyebrow">Vì sao cần nhiều bước?</p>
+    <h2>Hợp đồng chạy được vẫn có thể hiểu sai yêu cầu</h2>
+    <div class="split"><p class="statement">Người dùng nói: “Giữ 100 ADA. Khi trọng tài đồng ý, trả cho người bán. Nếu từ chối, hoàn cho người mua.”</p><div class="contrast"><div><b>Máy có thể tạo mã hợp lệ</b><p>Hợp đồng có cú pháp đúng và chạy được trong Marlowe.</p></div><div class="risk"><b>Nhưng vẫn có thể sai</b><p>Ví dụ nhầm người nhận tiền, nhầm hạn chót hoặc bỏ sót nhánh hoàn tiền.</p></div></div></div>
+    <div class="footer"><span class="brand">MARLOWE AI AGENT</span><span class="n">02</span></div>
+  </section>
+
+  <section class="slide" aria-label="Toàn bộ luồng">
+    <p class="eyebrow">Nhìn toàn cảnh</p><h2>Một yêu cầu đi qua sáu chặng</h2>
+    <div class="flow"><div class="flow-step"><b>2B</b><span>Hiểu yêu cầu và chỗ còn mơ hồ</span></div><div class="flow-step"><b>2C</b><span>Người dùng chốt cách hiểu</span></div><div class="flow-step"><b>3</b><span>Đề xuất hợp đồng</span></div><div class="flow-step"><b>3</b><span>Kiểm cấu trúc và tình huống mẫu</span></div><div class="flow-step"><b>4</b><span>Thử thêm các nhánh</span></div><div class="flow-step"><b>5</b><span>Ghi nhận quy tắc cần xét</span></div></div>
+    <p class="flow-note"><strong>Cửa chặn quan trọng:</strong> Nếu yêu cầu chưa rõ hoặc người dùng chưa xác nhận, hệ thống dừng trước khi tạo hợp đồng. Sau Stage 5 có thể kiểm thêm kích thước giao dịch tại môi trường cục bộ khi đã cấu hình.</p>
+    <p class="small" style="margin-top:auto">Stage 2A là bộ dữ liệu và chú giải phục vụ nghiên cứu, không nằm trong tuyến chạy chính này.</p>
+    <div class="footer"><span class="brand">MARLOWE AI AGENT</span><span class="n">03</span></div>
+  </section>
+
+  <section class="slide" aria-label="Tình huống ví dụ">
+    <p class="eyebrow">Ví dụ xuyên suốt</p><h2>Ký quỹ 100 ADA: ai quyết định tiền đi đâu?</h2>
+    <div class="roles"><div class="role"><b>Người mua</b><p>Đặt 100 ADA vào hợp đồng.</p></div><div class="role"><b>Người bán</b><p>Nhận tiền khi điều kiện được chấp thuận.</p></div><div class="role"><b>Trọng tài</b><p>Chọn chấp thuận hoặc từ chối trước hạn.</p></div></div>
+    <div class="branch"><div><strong>Chấp thuận</strong>100 ADA đến người bán.</div><div><strong>Từ chối</strong>100 ADA về người mua.</div><div><strong>Quá hạn quyết định</strong>Cần một cách xử lý đã được chốt.</div><div><strong>Không đặt tiền</strong>Không thể tự ý trả tiền chưa có.</div></div>
+    <div class="footer"><span class="brand">MARLOWE AI AGENT</span><span class="n">04</span></div>
+  </section>
+
+  <section class="slide" aria-label="Stage 2B">
+    <div class="stage"><span class="num">STAGE 2B</span><span class="meaning">Hiểu yêu cầu</span></div><h2>Người dùng thực sự muốn điều gì?</h2>
+    <div class="qa"><div><p class="q">Câu hỏi cần trả lời</p><p>Ai đưa tiền, ai nhận tiền, điều kiện nào kích hoạt từng nhánh? Phần nào chưa rõ?</p></div><div><p class="q">Hệ thống làm thế nào?</p><ul><li>Tách yêu cầu thành các ý nhỏ.</li><li>Gắn mỗi ý với câu chữ gốc.</li><li>Nêu câu hỏi làm rõ khi thiếu thông tin.</li></ul></div></div>
+    <p class="example"><strong>Ví dụ:</strong> “Nếu trọng tài không trả lời trước hạn thì tiền về ai?” là câu hỏi phải làm rõ, không tự đoán.</p>
+    <div class="footer"><span class="brand">MARLOWE AI AGENT</span><span class="n">05</span></div>
+  </section>
+
+  <section class="slide" aria-label="Stage 2C">
+    <div class="stage"><span class="num">STAGE 2C</span><span class="meaning">Chốt cách hiểu</span></div><h2>Người dùng có đồng ý với bản tóm tắt này?</h2>
+    <div class="qa"><div><p class="q">Câu hỏi cần trả lời</p><p>Bản mô tả của hệ thống đã khớp với ý người dùng chưa?</p></div><div><p class="q">Hệ thống làm thế nào?</p><ul><li>Đưa từng ý và chỗ chưa rõ ra để xem.</li><li>Yêu cầu xác nhận rõ ràng với đúng bản nội dung.</li><li>Lưu bản đã chốt để các bước sau cùng dựa vào.</li></ul></div></div>
+    <p class="example"><strong>Điểm dừng:</strong> Chưa chốt thì không đi tiếp. Việc tự giả làm người xác nhận trong thử nghiệm không thay thế được người dùng thật.</p>
+    <div class="footer"><span class="brand">MARLOWE AI AGENT</span><span class="n">06</span></div>
+  </section>
+
+  <section class="slide" aria-label="Stage 3 tạo hợp đồng">
+    <div class="stage"><span class="num">STAGE 3 · PHẦN 1</span><span class="meaning">Tạo bản hợp đồng đề xuất</span></div><h2>Ý định đã chốt được viết thành Marlowe ra sao?</h2>
+    <div class="token-flow"><div>Yêu cầu đã chốt</div><span aria-hidden="true">›</span><div>Mô hình đề xuất</div><span aria-hidden="true">›</span><div class="output">Hợp đồng Marlowe</div></div>
+    <div class="steps"><div><b>01 · TẠO</b>Mô hình tạo bản hợp đồng theo cấu trúc Marlowe Core V1.</div><div><b>02 · SOÁT</b>Bộ kiểm tra từ chối cấu trúc sai hoặc nhánh không hợp lệ.</div><div><b>03 · SỬA CÓ GIỚI HẠN</b>Phát hiện được gửi lại để tạo phiên bản mới trong số lượt cho phép.</div></div>
+    <p class="example"><strong>Marlowe là gì?</strong> Một ngôn ngữ chuyên cho hợp đồng tài chính, với các hành động như gửi tiền, lựa chọn và chờ đến hạn. Bản do mô hình tạo vẫn chỉ là <strong>bản đề xuất</strong>.</p>
+    <div class="footer"><span class="brand">MARLOWE AI AGENT</span><span class="n">07</span></div>
+  </section>
+
+  <section class="slide" aria-label="Stage 3 kiểm tra tự động">
+    <div class="stage"><span class="num">STAGE 3 · PHẦN 2</span><span class="meaning">Kiểm tra tự động</span></div><h2>Hợp đồng có vấn đề kỹ thuật dễ nhận ra không?</h2>
+    <div class="evidence"><div><h3>Kiểm tra cấu trúc</h3><p>Các phần của hợp đồng có đúng dạng Marlowe Core V1 và nối với nhau hợp lệ không?</p><p class="mini">Ví dụ: nhánh quyết định, người nhận tiền và thời hạn phải nằm ở vị trí hợp lệ.</p></div><div><h3>Kiểm tra cảnh báo</h3><p>Công cụ phân tích tìm những cảnh báo Marlowe có thể mô hình hóa, như vấn đề ở một giao dịch.</p><p class="mini">Kết quả tốt ở đây chỉ nói về loại cảnh báo đã kiểm, chưa nói hợp đồng đúng ý người dùng.</p></div></div>
+    <p class="example"><strong>Hiểu đơn giản:</strong> “Mã có hợp lệ và có cảnh báo kỹ thuật không?” là câu hỏi khác với “Mã có trả đúng người không?”.</p>
+    <div class="footer"><span class="brand">MARLOWE AI AGENT</span><span class="n">08</span></div>
+  </section>
+
+  <section class="slide" aria-label="Stage 3 kiểm tình huống mẫu">
+    <div class="stage"><span class="num">STAGE 3 · PHẦN 3</span><span class="meaning">Đối chiếu hành vi</span></div><h2>Trong tình huống mẫu, tiền có đi đúng nơi?</h2>
+    <div class="qa"><div><p class="q">Câu hỏi cần trả lời</p><p>Nếu trọng tài chọn “chấp thuận”, hợp đồng thực sự trả 100 ADA cho người bán chứ?</p></div><div><p class="q">Hệ thống làm thế nào?</p><ul><li>Chạy hợp đồng bằng bộ thực thi tham chiếu Marlowe.</li><li>So kết quả với tình huống mong đợi đã được xác nhận riêng.</li><li>Đối chiếu người nhận, số tiền và trạng thái kết thúc.</li></ul></div></div>
+    <p class="example"><strong>Giới hạn:</strong> Một tình huống đạt chỉ xác nhận đường chạy đó. Các nhánh khác vẫn cần được thử riêng.</p>
+    <div class="footer"><span class="brand">MARLOWE AI AGENT</span><span class="n">09</span></div>
+  </section>
+
+  <section class="slide" aria-label="Stage 4">
+    <div class="stage"><span class="num">STAGE 4</span><span class="meaning">Thử thêm các nhánh</span></div><h2>Nếu lựa chọn khác hoặc quá hạn thì sao?</h2>
+    <div class="qa"><div><p class="q">Câu hỏi cần trả lời</p><p>Có đường chạy nào trong tập thử đã khai báo dẫn đến cảnh báo hoặc kết quả đáng nghi?</p></div><div><p class="q">Hệ thống làm thế nào?</p><ul><li>Thử các hành động đã khai báo: đặt tiền, chọn phương án, chờ hết hạn.</li><li>Ghi lại từng đường chạy và kiểm các dấu hiệu sai.</li><li>Báo phạm vi đã thử và phần còn bỏ ngỏ.</li></ul></div></div>
+    <p class="example"><strong>Giới hạn:</strong> Đây là thử có giới hạn, không phải duyệt hết mọi tình huống. Nếu thiếu dữ liệu để thử, kết quả là “chưa đủ căn cứ”.</p>
+    <div class="footer"><span class="brand">MARLOWE AI AGENT</span><span class="n">10</span></div>
+  </section>
+
+  <section class="slide" aria-label="Stage 5">
+    <div class="stage"><span class="num">STAGE 5</span><span class="meaning">Ghi nhận quy tắc cần kiểm</span></div><h2>Phát hiện nào đáng giữ lại để kiểm sau này?</h2>
+    <div class="qa"><div><p class="q">Câu hỏi cần trả lời</p><p>Có thể diễn đạt một phát hiện thành quy tắc rõ ràng, gắn với bằng chứng và phiên bản hợp đồng không?</p></div><div><p class="q">Hệ thống làm thế nào?</p><ul><li>Tạo “quy tắc ứng viên” từ phát hiện.</li><li>Ghi trạng thái, bằng chứng và người xem xét.</li><li>Chỉ nâng trạng thái khi có bộ kiểm độc lập và duyệt rõ ràng.</li></ul></div></div>
+    <p class="example"><strong>Hiện trạng:</strong> Sổ lưu ứng viên đang ở bộ nhớ trong lúc chạy. Chưa có kho nhớ bền vững để các bộ kiểm tự lấy quy tắc dùng lại mặc định.</p>
+    <div class="footer"><span class="brand">MARLOWE AI AGENT</span><span class="n">11</span></div>
+  </section>
+
+  <section class="slide" aria-label="Kiểm tra kích thước và kết quả">
+    <p class="eyebrow">Sau các stage</p><h2>Kết quả cuối cùng nói được đến đâu?</h2>
+    <div class="status-row"><div><b>Đạt một phép kiểm cục bộ</b><p>Ví dụ: một tình huống chạy đúng, hoặc kích thước giao dịch nằm dưới ngưỡng cấu hình.</p></div><div><b>Cần làm rõ</b><p>Yêu cầu, kỳ vọng hoặc một nhánh xử lý còn thiếu câu trả lời.</p></div><div><b>Chưa đủ căn cứ</b><p>Bộ thực thi, tình huống thử hay quy tắc kiểm chưa được cấu hình hoặc đánh giá đủ.</p></div></div>
+    <p class="example"><strong>Phạm vi hiện tại:</strong> Kiểm tra kích thước dùng Marlowe CLI và môi trường cục bộ khi được cấu hình. Hệ thống không tự ký, gửi hay triển khai giao dịch lên testnet công khai.</p>
+    <div class="footer"><span class="brand">MARLOWE AI AGENT</span><span class="n">12</span></div>
+  </section>
+
+  <section class="slide" aria-label="Bản đồ công nghệ">
+    <p class="eyebrow">Công nghệ phía sau</p><h2>Mỗi công cụ phụ trách một việc cụ thể</h2>
+    <div class="stack-list"><div><b>Python</b><p>Điều phối các stage, kiểm dữ liệu đầu vào và quyết định lúc nào dừng.</p></div><div><b>Mô hình ngôn ngữ qua API</b><p>Đọc yêu cầu tiếng Việt và đề xuất dữ liệu JSON hoặc hợp đồng.</p></div><div><b>Marlowe Core V1</b><p>Ngôn ngữ hợp đồng tài chính với các hành động và nhánh được xác định rõ.</p></div><div><b>Marlowe + Z3</b><p>Chạy thử hợp đồng và tìm cảnh báo kỹ thuật trong phạm vi đã mô hình hóa.</p></div><div><b>Marlowe CLI + nút cục bộ</b><p>Ước lượng kích thước giao dịch khi đủ cấu hình, chưa gửi lên mạng.</p></div><div><b>JSONL và sổ ứng viên</b><p>Ghi lịch sử chạy ra file; quy tắc ứng viên Stage 5 hiện giữ trong bộ nhớ.</p></div></div>
+    <div class="footer"><span class="brand">MARLOWE AI AGENT</span><span class="n">13</span></div>
+  </section>
+
+  <section class="slide" aria-label="Công nghệ hiểu yêu cầu và tạo hợp đồng">
+    <p class="eyebrow">Công nghệ ở Stage 2B, 2C và 3</p><h2>Mô hình đề xuất; Python giữ các cửa kiểm soát</h2>
+    <div class="method"><div><b>2B · MÔ HÌNH + JSON</b><p>Mô hình trả về bản mô tả có cấu trúc, mặc định theo Core V3, kèm đoạn văn nguồn cho từng ý.</p><p class="sub">Python kiểm dạng dữ liệu, mâu thuẫn và thông tin còn thiếu.</p></div><div><b>2C · XÁC NHẬN TRÊN TERMINAL</b><p>Người dùng xem đúng bản tóm tắt rồi xác nhận rõ ràng. Hệ thống lưu bản đã chốt theo nội dung.</p><p class="sub">Chế độ không tương tác sẽ dừng nếu cần hỏi hoặc cần duyệt.</p></div><div><b>3 · MÔ HÌNH + MARLOWE</b><p>Mô hình tạo cây hợp đồng Core V1. Bộ kiểm tra Python soát cấu trúc và các nhánh.</p><p class="sub">Nếu sai, mô hình có thể tạo lại trong giới hạn lượt gọi.</p></div></div>
+    <p class="tech-foot">Hệ thống đang gọi mô hình đã có qua API tương thích OpenAI. <strong>Chưa có quá trình fine-tuning</strong> hay huấn luyện lại mô hình bằng dữ liệu của dự án.</p>
+    <div class="footer"><span class="brand">MARLOWE AI AGENT</span><span class="n">14</span></div>
+  </section>
+
+  <section class="slide" aria-label="Công nghệ kiểm tra hợp đồng">
+    <p class="eyebrow">Công nghệ kiểm tra ở Stage 3 và 4</p><h2>Hai công cụ trả lời hai câu hỏi khác nhau</h2>
+    <div class="evidence"><div><h3>SMT + Z3: có cảnh báo kỹ thuật?</h3><p>Trình phân tích Marlowe, chạy qua chương trình tham chiếu đã cố định phiên bản, dùng Z3 để tìm đường chạy gây cảnh báo.</p><p class="mini">Nếu tìm thấy, hệ thống nối cảnh báo với vị trí trong hợp đồng. “Không thấy cảnh báo” không chứng minh đúng ý người dùng.</p></div><div><h3>Bộ thực thi Marlowe: tiền đi đâu?</h3><p>Công cụ tham chiếu chạy các giao dịch cụ thể. Python so kết quả với kịch bản mong đợi do người dùng xác nhận riêng.</p><p class="mini">Stage 4 dùng lại công cụ này để thử thêm các hành động đã khai báo, rồi áp dụng quy tắc phát hiện dấu hiệu sai.</p></div></div>
+    <p class="example"><strong>Trên Windows:</strong> Các chương trình Marlowe/Haskell và Z3 có thể được gọi qua WSL. Nếu công cụ không chạy được, hệ thống báo “chưa đánh giá” thay vì báo đạt.</p>
+    <div class="footer"><span class="brand">MARLOWE AI AGENT</span><span class="n">15</span></div>
+  </section>
+
+  <section class="slide" aria-label="Công nghệ lưu bằng chứng và kiểm tra kích thước">
+    <p class="eyebrow">Bằng chứng và giới hạn triển khai</p><h2>Hệ thống lưu gì, và kiểm được gì sau Stage 5?</h2>
+    <div class="method"><div><b>NHẬT KÝ JSONL</b><p>Python ghi yêu cầu, kết quả từng stage, mã định danh bản hợp đồng và thông tin lượt gọi mô hình đã lọc bí mật.</p><p class="sub">Mỗi lần chạy có một file trong thư mục runs/.</p></div><div><b>SỔ QUY TẮC STAGE 5</b><p>Ứng viên quy tắc gắn với phát hiện, phiên bản và bằng chứng. Mặc định sổ này sống trong bộ nhớ của lượt chạy.</p><p class="sub">Chưa có cơ chế tự lấy lại quy tắc cho các bộ kiểm ở lần chạy sau.</p></div><div><b>MARLOWE CLI</b><p>Khi có nút cục bộ đã đồng bộ và công cụ đã cấu hình, CLI phân tích kích thước giao dịch.</p><p class="sub">Nó không ký, gửi hay xác nhận giao dịch trên testnet.</p></div></div>
+    <p class="tech-foot">Nhờ tách từng công cụ, báo cáo có thể chỉ rõ kết quả nào đến từ mô hình, kết quả nào do chương trình kiểm tra tạo ra, và bước nào chưa có bằng chứng.</p>
+    <div class="footer"><span class="brand">MARLOWE AI AGENT</span><span class="n">16</span></div>
+  </section>
+
+  <section class="slide" aria-label="Từ điển thuật ngữ">
+    <p class="eyebrow">Từ điển nhanh</p><h2>Nói theo cách dễ hiểu</h2>
+    <div class="gloss"><div><strong>Intent</strong><span>Bản chốt “người dùng muốn gì”.</span></div><div><strong>Candidate</strong><span>Bản hợp đồng đề xuất, chưa được phép triển khai.</span></div><div><strong>Trace</strong><span>Một đường chạy thử theo các hành động cụ thể.</span></div><div><strong>Oracle</strong><span>Quy tắc nhìn kết quả và báo dấu hiệu sai.</span></div><div><strong>Property</strong><span>Một điều ta muốn hợp đồng luôn tuân thủ.</span></div><div><strong>SMT</strong><span>Công cụ toán học tìm cảnh báo trong phạm vi đã mô hình hóa.</span></div></div>
+    <div class="footer"><span class="brand">MARLOWE AI AGENT</span><span class="n">17</span></div>
+  </section>
+
+  <section class="slide" aria-label="Thông điệp kết thúc">
+    <p class="eyebrow">Kết luận</p><h2>Hệ thống giúp người dùng kiểm soát từng quyết định</h2>
+    <p class="truth"><strong>Con người chốt ý định.</strong> Mô hình đề xuất hợp đồng Marlowe. Các bộ kiểm tra trả lời từng câu hỏi nhỏ với bằng chứng và phạm vi rõ ràng.</p>
+    <p class="callout">Vì vậy, một kết quả “đạt” luôn đi kèm câu hỏi: <strong>đã kiểm điều gì, trên những tình huống nào?</strong></p>
+    <p class="small" style="margin-top:auto">Hướng phát triển: đánh giá chất lượng hiểu yêu cầu trên dữ liệu đã được chuyên gia duyệt, mở rộng tình huống thử và xây kho quy tắc có kiểm chứng để tái sử dụng.</p>
+    <div class="footer"><span class="brand">MARLOWE AI AGENT</span><span class="n">18</span></div>
+  </section>
+</main>
+<nav class="controls" aria-label="Điều khiển slide"><button id="prev" type="button" aria-label="Slide trước">‹</button><span id="count" class="count" aria-live="polite">1 / 18</span><button id="next" type="button" aria-label="Slide sau">›</button></nav>
+<div id="progress" class="progress" aria-hidden="true"></div><div class="key-hint">Dùng phím ← → hoặc vuốt để chuyển slide</div>
+<script>
+  (()=>{const slides=[...document.querySelectorAll('.slide')], count=document.getElementById('count'),progress=document.getElementById('progress');let index=0,startX=null;
+    function show(n){index=Math.max(0,Math.min(slides.length-1,n));slides.forEach((s,i)=>{s.classList.toggle('active',i===index);s.setAttribute('aria-hidden',i===index?'false':'true')});count.textContent=`${index+1} / ${slides.length}`;progress.style.width=`${(index+1)/slides.length*100}%`;document.title=`${index+1}/${slides.length} · Marlowe AI Agent`;history.replaceState(null,'',`#slide-${index+1}`)}
+    document.getElementById('prev').addEventListener('click',()=>show(index-1));document.getElementById('next').addEventListener('click',()=>show(index+1));
+    document.addEventListener('keydown',e=>{if(['ArrowRight','PageDown',' '].includes(e.key)){e.preventDefault();show(index+1)}else if(['ArrowLeft','PageUp'].includes(e.key)){e.preventDefault();show(index-1)}else if(e.key==='Home')show(0);else if(e.key==='End')show(slides.length-1)});
+    document.addEventListener('touchstart',e=>{startX=e.touches[0]?.clientX??null},{passive:true});document.addEventListener('touchend',e=>{if(startX===null)return;const d=(e.changedTouches[0]?.clientX??startX)-startX;if(Math.abs(d)>60)show(index+(d<0?1:-1));startX=null},{passive:true});
+    const hash=Number((location.hash.match(/^#slide-(\d+)$/)||[])[1]);show(Number.isFinite(hash)&&hash>0?hash-1:0);window.addEventListener('hashchange',()=>{const n=Number((location.hash.match(/^#slide-(\d+)$/)||[])[1]);if(n>0)show(n-1)});
+  })();
+</script>
+</body>
+</html>

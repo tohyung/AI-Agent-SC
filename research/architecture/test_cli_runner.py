@@ -11,7 +11,9 @@ from research.architecture.status import AuthorityLevel, ImplementationStatus
 from research.stage2c.models import IntentDecision, IntentDecisionStatus
 from research.stage4.declared_domain import DeclaredActionDomain
 from research.stage3.test_funded_choice_v1 import funded_choice_core
-from research.stage2b.intent_spec import CORE_SCHEMA_VERSION_V2, CORE_SCHEMA_VERSION_V3
+from research.stage2b.intent_spec import (
+    CORE_SCHEMA_VERSION_V2, CORE_SCHEMA_VERSION_V4,
+)
 
 
 class StaticModel:
@@ -79,9 +81,9 @@ def test_interactive_acceptance_uses_model_contract_without_claiming_ledger(monk
     assert "Đang chạy: compile" in progress
 
 
-def test_default_cli_core_schema_is_v3_and_rejects_v2_output():
+def test_default_cli_core_schema_is_v4_and_rejects_v3_output():
     core = funded_choice_core()
-    assert SessionOptions().core_schema_version == CORE_SCHEMA_VERSION_V3
+    assert SessionOptions().core_schema_version == CORE_SCHEMA_VERSION_V4
     result = run_session(core["requirement_history"][0]["messages"][0], StaticModel(core))
     assert result["status"] == "BLOCKED"
     assert result["stop_reason"] == "invalid_candidate"
@@ -89,19 +91,19 @@ def test_default_cli_core_schema_is_v3_and_rejects_v2_output():
                for item in result["candidate"]["core_validation_errors"])
 
 
-def test_default_cli_core_schema_v3_reaches_human_acceptance_gate():
+def test_default_cli_core_schema_v4_reaches_human_acceptance_gate():
     core = funded_choice_core()
-    core["schema_version"] = CORE_SCHEMA_VERSION_V3
+    core["schema_version"] = CORE_SCHEMA_VERSION_V4
     result = run_session(core["requirement_history"][0]["messages"][0], StaticModel(core))
     assert result["status"] == "WAITING_USER"
     assert result["stop_reason"] == "explicit_acceptance_required"
-    assert result["candidate"]["semantic_core"]["schema_version"] == CORE_SCHEMA_VERSION_V3
+    assert result["candidate"]["semantic_core"]["schema_version"] == CORE_SCHEMA_VERSION_V4
     assert "compile" not in result["stages"]
 
 
 def test_roleplay_runs_main_ports_without_claiming_human_acceptance(monkeypatch):
     core = funded_choice_core()
-    core["schema_version"] = CORE_SCHEMA_VERSION_V3
+    core["schema_version"] = CORE_SCHEMA_VERSION_V4
     prompt = core["requirement_history"][0]["messages"][0]
 
     def unexpected_ask(_question):

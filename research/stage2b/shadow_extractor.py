@@ -10,12 +10,34 @@ from typing import Any, Protocol
 
 from research.stage2b.intent_spec import (
     CORE_SCHEMA_VERSION, CORE_SCHEMA_VERSION_V2, CORE_SCHEMA_VERSION_V3,
+    CORE_SCHEMA_VERSION_V4,
     ShadowSemanticCore,
+    UNSCORED_OBSERVATION_FIELDS,
+    _evidence_valid,
     core_prompt_schema_contract,
     explicit_utc_instants,
 )
-from research.stage2b.core_draft import DRAFT_FIELDS, materialize_core_draft
-from research.stage2b.repair_policy import diagnostic_codes, repair_progress
+from research.stage2b.core_draft import (DRAFT_FIELDS, collapse_automatic_success_branches,
+                                         connect_skipped_terminal_outcomes,
+                                         drop_dangling_amount_derivations,
+                                         drop_decision_to_own_branch_or_timeout,
+                                         derive_unambiguous_token_assets,
+                                         materialize_core_draft,
+                                         drop_explicitly_absent_refund_recipient,
+                                         drop_resolved_time_format_questions,
+                                         normalize_clarification_question_aliases,
+                                         normalize_choice_metadata,
+                                         normalize_explicit_deadline_instants,
+                                         normalize_grounded_numeric_amounts,
+                                         normalize_actor_scoped_deadlines,
+                                         normalize_dot_native_asset_ids,
+                                         normalize_vietnamese_noon_deadlines,
+                                         prune_unverifiable_evidence,
+                                         prune_unreachable_duplicate_outcomes,
+                                         retarget_unique_evidence_spans)
+from research.stage2b.repair_policy import (
+    REPAIR_POLICY_VERSION, diagnostic_codes, repair_progress,
+)
 
 
 class ShadowModel(Protocol):
@@ -24,6 +46,10 @@ class ShadowModel(Protocol):
 
 class InvalidModelOutput(ValueError):
     """The model returned a JSON value other than a semantic core object."""
+
+
+def _repair_system(prompt: str) -> str:
+    return f"Repair policy {REPAIR_POLICY_VERSION}.\n{prompt}"
 
 
 SYSTEM_PROMPT = """Extract user intent only as one JSON ShadowSemanticCore object.
@@ -76,15 +102,35 @@ Follow this semantic order before selecting a resolution:
    because the source states an ADA amount. Do not emit the raw ADA numeral
    as a second amount_lovelace claim: 20 ADA supports one normalized value
    20000000 lovelace, not both 20 and 20000000 lovelace in the same scope.
+   Never duplicate that same normalized amount with different statuses in
+   one scope; choose the one source-grounded claim and its correct status.
    A directly named asset may remain
    explicit. `derived_from` is optional and must prove the same kind of fact;
-   asset=ADA does not prove an amount. Omit `derived_from` entirely when there
-   is no valid same-kind source claim; never emit `derived_from=[]`.
+   asset=ADA does not prove an amount. `derived_from` is one claim_id string,
+   never an array. Omit it entirely when there is no valid same-kind source
+   claim; never emit `derived_from=[]`.
 4. Keep distinct depositing_party, choice_owner, destination_account_owner,
    payment_source_account_owner, payment_recipient, refund_recipient, and
    release_recipient. A depositor does not establish a deposit account owner
    or payment source; a payment recipient does not establish either account
    owner. Never invent a funding source, actor, recipient, or success state.
+   Copy named parties and account owners exactly from source evidence,
+   preserving Unicode accents and case. Marlowe role names are identifiers;
+   do not transliterate or silently substitute an ASCII spelling.
+   A deposit into a Marlowe account is not a transfer to the borrower. If the
+   source says a lender funds a loan and the contract disburses it to a
+   borrower before repayment, represent the disbursement as a distinct Pay
+   outcome between the funding Deposit and repayment Deposit. Do not label
+   the borrower as destination_account_owner merely because they receive the
+   disbursement; that claim needs source evidence for account ownership.
+   When the source specifies the amount of a payout or refund, put one
+   source-grounded amount_lovelace claim on EACH corresponding terminal
+   outcome. Every terminal outcome with a positive payout amount also needs
+   an active, source-grounded payment_recipient, refund_recipient, or
+   release_recipient claim on that same scope. If the recipient is unknown,
+   ask the user instead of omitting the claim or guessing the payee.
+   A global amount or funding Deposit amount does not by itself
+   state the amount paid on each branch; preserve distinct branch outcomes.
    When a branch or timeout returns the funded amount to its original payer,
    classify that outcome's recipient as refund_recipient, even if the return
    is selected by an explicit Choice. Use payment_recipient for a transfer
@@ -143,7 +189,7 @@ Return JSON only, with all top-level fields shown in the user instruction.
 def build_prompt(requirement_history: list[dict[str, Any]], *,
                  core_schema_version: str = CORE_SCHEMA_VERSION) -> tuple[str, str]:
     if core_schema_version not in {CORE_SCHEMA_VERSION, CORE_SCHEMA_VERSION_V2,
-                                   CORE_SCHEMA_VERSION_V3}:
+                                   CORE_SCHEMA_VERSION_V3, CORE_SCHEMA_VERSION_V4}:
         raise ValueError("unsupported core schema version")
     template = {
         "schema_version": core_schema_version,
@@ -152,7 +198,7 @@ def build_prompt(requirement_history: list[dict[str, Any]], *,
         "required_clarifications": [], "unscored_observations": [],
         "predicted_resolution": "clarification_required",
     }
-    if core_schema_version == CORE_SCHEMA_VERSION_V3:
+    if core_schema_version in {CORE_SCHEMA_VERSION_V3, CORE_SCHEMA_VERSION_V4}:
         template = {key: value for key, value in template.items() if key in DRAFT_FIELDS}
     user = (
         "Requirement history is the only source of user intent:\n"
@@ -165,7 +211,7 @@ def build_prompt(requirement_history: list[dict[str, Any]], *,
                      ensure_ascii=False, sort_keys=True)
         + ("\nOutput only these five internal draft fields; the runtime binds "
            "schema_version and requirement_history from trusted input:\n"
-           if core_schema_version == CORE_SCHEMA_VERSION_V3 else
+           if core_schema_version in {CORE_SCHEMA_VERSION_V3, CORE_SCHEMA_VERSION_V4} else
            "\nOutput all fields in this JSON shape (replace example values):\n")
         + json.dumps(template, ensure_ascii=False)
         + "\nEvery claim uses claim_id, kind, value, criticality, status, scope_id, "
@@ -177,8 +223,9 @@ def build_prompt(requirement_history: list[dict[str, Any]], *,
           "evidence. Unresolved claims use value=null and may use evidence=[]. "
           "Assumed claims require assumption_reason and should use evidence=[]; "
           "never fabricate a source span. Derived financial claims require "
-          "normalization_basis; derived_from is optional and must prove the "
-          "same kind of fact. Omit derived_from when no source claim qualifies; "
+          "normalization_basis; derived_from is an optional single claim_id string "
+          "that must prove the same kind of fact, never an array. Omit derived_from "
+          "when no source claim qualifies; "
           "do not emit derived_from=[]. Do not link amount_lovelace to asset evidence "
           "as proof of quantity. For an explicit source amount such as 47.5 ADA, "
           "value may be that exact quoted source phrase in the internal draft; "
@@ -205,7 +252,7 @@ def build_prompt(requirement_history: list[dict[str, Any]], *,
           "facts must go in claims, not unscored_observations."
     )
     system = SYSTEM_PROMPT
-    if core_schema_version == CORE_SCHEMA_VERSION_V3:
+    if core_schema_version in {CORE_SCHEMA_VERSION_V3, CORE_SCHEMA_VERSION_V4}:
         system = system.replace(
             "Output only the seven semantic core fields. Python deterministically projects",
             "Output only five internal draft fields: behavior_scopes, claims, "
@@ -215,14 +262,15 @@ def build_prompt(requirement_history: list[dict[str, Any]], *,
         system = system.replace(
             "Convert 1 ADA to 1000000 integer lovelace and POSIX times\n"
             "   to integer milliseconds.",
-            "For amount_lovelace and deadline claims, prefer an exact quoted source "
+            "For amount_lovelace, deadline and payment release time claims, prefer an exact quoted source "
             "expression as value; runtime normalizes source-backed ADA units and "
             "explicit timezone instants. An already explicit lovelace or POSIX value "
             "may be an integer. Never calculate or guess an unsupported value.")
         system = system.replace(
             "Normalize\n   the answer yourself once those facts are known.",
             "The runtime normalizes source-grounded values once those facts are known.")
-    if core_schema_version in {CORE_SCHEMA_VERSION_V2, CORE_SCHEMA_VERSION_V3}:
+    if core_schema_version in {CORE_SCHEMA_VERSION_V2, CORE_SCHEMA_VERSION_V3,
+                               CORE_SCHEMA_VERSION_V4}:
         system += (
             "\nFor each numeric Choice, include inclusive choice_bounds with exact source "
             "evidence on its transition scope. Every branch of that Choice needs a "
@@ -255,6 +303,9 @@ def build_prompt(requirement_history: list[dict[str, Any]], *,
             "do not put both recipients into one outcome as conflicting claims. "
             "When one event leads to another, include continuation_scope_id on "
             "the predecessor scope to name the next transition or outcome. "
+            "A branch decision belongs to Choice or Notify, not Deposit or Pay; "
+            "Deposit success continues directly to its next transition while its "
+            "timeout remains a separate timeout scope. "
             "A single contract has one entry transition. Every later transition "
             "must have an incoming continuation_scope_id from its predecessor; "
             "two unrelated root transitions do not encode sequential events. "
@@ -271,7 +322,7 @@ def build_prompt(requirement_history: list[dict[str, Any]], *,
             "biography). Any unrepresented contract behavior must use "
             "outside_stage2b_v2_claim_taxonomy and remain non-compilable.\n"
         )
-    if core_schema_version == CORE_SCHEMA_VERSION_V3:
+    if core_schema_version in {CORE_SCHEMA_VERSION_V3, CORE_SCHEMA_VERSION_V4}:
         system = system.replace("outside_stage2b_v2_claim_taxonomy",
                                 "outside_stage2b_v3_claim_taxonomy")
         system = system.replace(
@@ -295,7 +346,12 @@ def build_prompt(requirement_history: list[dict[str, Any]], *,
             "Do not invent a policy ID or infer one from a display name. ADA still "
             "uses amount_lovelace and asset=ADA. Keep asset and quantity on the "
             "same actual funding or payout scope; two different assets on two "
-            "different obligations are not a conflict. An exchange that executes "
+            "different obligations are not a conflict. "
+            "A destination_account_owner claim must be scoped to its actual "
+            "deposit transition, never global or inferred from seller identity. "
+            "A negative ownership statement is not supporting evidence for a "
+            "positive account-owner claim. "
+            "An exchange that executes "
             "automatically after both deposits is sequential deposits and payments, "
             "not an invented user Choice. On a missing second deposit, refund only "
             "the asset actually funded; on a missing first deposit, no refund is due. "
@@ -348,6 +404,21 @@ def build_prompt(requirement_history: list[dict[str, Any]], *,
             "model automatic Pay or timeout reduction; submitter/fees are "
             "ledger-operation concerns outside this contract-intent profile."
         )
+    if core_schema_version == CORE_SCHEMA_VERSION_V4:
+        system = system.replace("outside_stage2b_v3_claim_taxonomy",
+                                "outside_stage2b_v4_claim_taxonomy")
+        system += (
+            "\nA depositing_party claim must name the actual depositor and scope "
+            "that depositor's deposit transition. A statement that someone does "
+            "not deposit is not a positive depositing_party claim; never put a "
+            "negated sentence in a party value. "
+            "\nFor v4, represent the earliest allowed payment execution time with a "
+            "source-backed payment_release_time_ms claim scoped to that payment "
+            "transition. This is a not-before time, not timeout_ms or a latest deadline. "
+            "Do not create a timeout/failure branch unless the source states what happens "
+            "when an action misses a deadline. Keep timeout_ms only for an actual "
+            "latest-time boundary with source-stated timeout behavior.\n"
+        )
     return system, user
 
 
@@ -379,6 +450,25 @@ def _calendar_hints(history: list[dict[str, Any]]) -> list[dict[str, Any]]:
                               "source_span": f"{day}/{month}/{year}",
                               "calendar_date": calendar_date.isoformat(),
                               "timezone_unresolved": True})
+            month_names = {name: number for number, name in enumerate((
+                "january", "february", "march", "april", "may", "june", "july",
+                "august", "september", "october", "november", "december"), 1)}
+            for match in re.finditer(
+                    r"(?<!\w)(\d{1,2})\s+(January|February|March|April|May|June|July|"
+                    r"August|September|October|November|December)\s+(\d{4})(?!\w)",
+                    message, re.IGNORECASE):
+                if any(start <= match.start() and match.end() <= end
+                       for start, end, _ in exact):
+                    continue
+                day, month, year = match.groups()
+                try:
+                    calendar_date = date(int(year), month_names[month.lower()], int(day))
+                except ValueError:
+                    continue
+                hints.append({"requirement_version": revision.get("version"),
+                              "message_index": index, "source_span": match.group(),
+                              "calendar_date": calendar_date.isoformat(),
+                              "timezone_unresolved": True})
     return hints
 
 
@@ -403,8 +493,28 @@ class IntentShadowExtractor:
         parsed = parse_model_output(output)
         data, actions = materialize_core_draft(
             parsed.to_dict(), history, self.core_schema_version)
+        messages = {(revision["version"], index): message
+                    for revision in history
+                    for index, message in enumerate(revision["messages"])}
+        actions.extend(normalize_explicit_deadline_instants(data, messages))
+        actions.extend(normalize_actor_scoped_deadlines(data, history))
+        actions.extend(normalize_dot_native_asset_ids(data))
+        actions.extend(derive_unambiguous_token_assets(data))
         self.normalization_actions = actions
         return ShadowSemanticCore(data)
+
+    def _normalize_questions(self, data: dict[str, Any]) -> bool:
+        aliases = normalize_clarification_question_aliases(data)
+        removed = drop_resolved_time_format_questions(data)
+        if aliases:
+            self.normalization_actions.append({
+                "kind": "clarification_question_aliases", "normalized_count": aliases,
+            })
+        if removed:
+            self.normalization_actions.append({
+                "kind": "resolved_time_format_questions", "removed_count": removed,
+            })
+        return bool(aliases or removed)
 
     def extract(self, requirement_history: list[dict[str, Any]]) -> ShadowSemanticCore:
         system, user = build_prompt(requirement_history,
@@ -427,12 +537,75 @@ class IntentShadowExtractor:
                                     core_schema_version=self.core_schema_version)
         self.repair_trace = []
         core = self._materialize(self.model.generate(system, user), requirement_history)
+        normalized_core = core.to_dict()
+        messages = {(revision["version"], index): message
+                    for revision in requirement_history
+                    for index, message in enumerate(revision["messages"])}
+        retarget_actions = retarget_unique_evidence_spans(normalized_core, messages)
+        choice_actions = normalize_choice_metadata(normalized_core, messages)
+        evidence_actions = prune_unverifiable_evidence(normalized_core, messages)
+        amount_actions = normalize_grounded_numeric_amounts(normalized_core, messages)
+        derivation_actions = drop_dangling_amount_derivations(normalized_core, messages)
+        self.normalization_actions.extend(retarget_actions + choice_actions
+                                          + evidence_actions + amount_actions
+                                          + derivation_actions)
+        normalized_deadlines = normalize_vietnamese_noon_deadlines(normalized_core, messages)
+        self.normalization_actions.extend(normalized_deadlines)
+        collapsed_branches = collapse_automatic_success_branches(normalized_core)
+        self.normalization_actions.extend({
+            "scope_id": scope_id, "kind": "automatic_success_branch",
+        } for scope_id in collapsed_branches)
+        removed_branch_links = drop_decision_to_own_branch_or_timeout(normalized_core)
+        self.normalization_actions.extend({
+            "scope_id": scope_id, "kind": "decision_to_own_branch",
+        } for scope_id in removed_branch_links)
+        connected_outcomes = connect_skipped_terminal_outcomes(normalized_core)
+        self.normalization_actions.extend({
+            "scope_id": scope_id, "kind": "skipped_terminal_outcome",
+        } for scope_id in connected_outcomes)
+        questions_changed = self._normalize_questions(normalized_core)
+        removed_refunds = drop_explicitly_absent_refund_recipient(normalized_core, messages)
+        if (removed_refunds or questions_changed or normalized_deadlines
+                or removed_branch_links or collapsed_branches or connected_outcomes
+                or retarget_actions or choice_actions or evidence_actions or amount_actions
+                or derivation_actions):
+            core = parse_model_output(normalized_core)
+        if removed_refunds:
+            self.normalization_actions.extend({
+                "claim_id": claim_id, "kind": "absent_refund_recipient",
+                "reason": "source explicitly negates refund; none is not a party",
+            } for claim_id in removed_refunds)
         initial_errors = self.validation_errors(core, requirement_history)
         if not initial_errors or max_repairs == 0:
             return core, initial_errors
+        best_core = core
+        best_error_count = len(set(initial_errors))
         seen = {json.dumps(core.to_dict(), sort_keys=True, ensure_ascii=False)}
         no_progress = 0
-        for _ in range(max_repairs):
+        full_regeneration_fallback_used = False
+        force_full_regeneration = False
+
+        def full_regenerate(current_core: ShadowSemanticCore,
+                            current_errors: list[str]) -> ShadowSemanticCore:
+            guidance = _repair_guidance(
+                current_core.to_dict(), current_errors, requirement_history)
+            feedback = (
+                "The previous semantic core failed deterministic validation. "
+                "Regenerate the complete seven-field core from the original requirement only. "
+                "Do not infer new facts, omit financial claims, or change the resolution "
+                "merely to satisfy validation. Fix only errors justified by the original text. "
+                "Keep source spans verbatim and case-sensitive; never use ellipses. "
+                "If derived_from points to a different claim kind, omit derived_from "
+                "unless a valid same-kind source exists. Return JSON only.\n"
+                "Validation errors:\n" + json.dumps(current_errors, ensure_ascii=False)
+                + "\nTyped diagnostics (diagnosis only; regenerate from source):\n"
+                + json.dumps(_group_repair_guidance(guidance), ensure_ascii=False)
+            )
+            return self._materialize(
+                self.model.generate(_repair_system(system), user + "\n" + feedback),
+                requirement_history)
+
+        for repair_index in range(max_repairs):
             current_errors = self.validation_errors(core, requirement_history)
             if not current_errors:
                 break
@@ -443,7 +616,12 @@ class IntentShadowExtractor:
                 if error.startswith("claim ")
                 and error.endswith(": deadline value contradicts cited calendar date")
             }
-            if deadline_ids:
+            if force_full_regeneration:
+                repair_kind = "FULL_REGENERATION_FALLBACK"
+                core = full_regenerate(core, current_errors)
+                force_full_regeneration = False
+                full_regeneration_fallback_used = True
+            elif deadline_ids:
                 repair_kind = "NORMALIZATION"
                 deadline_request = {
                     "requirement_history": requirement_history,
@@ -453,11 +631,11 @@ class IntentShadowExtractor:
                     "validation_errors": current_errors,
                 }
                 proposed = self.model.generate(
-                    "Repair only numeric POSIX millisecond values for the listed deadline "
+                    _repair_system("Repair only numeric POSIX millisecond values for the listed deadline "
                     "claims. Return exactly one JSON object with deadline_values mapping "
                     "each listed claim_id to one integer. Derive the instant from the "
                     "cited date, clock time, and timezone; never change the business "
-                    "deadline or invent a timezone. Do not return a new semantic core.",
+                    "deadline or invent a timezone. Do not return a new semantic core."),
                     json.dumps(deadline_request, ensure_ascii=False),
                 )
                 values = proposed.get("deadline_values") if isinstance(proposed, dict) else None
@@ -471,6 +649,49 @@ class IntentShadowExtractor:
                     if claim.get("claim_id") in deadline_ids:
                         claim["value"] = values[claim["claim_id"]]
                 core = parse_model_output(patched)
+            elif any(error.startswith("claim ") and
+                     error.endswith(": invalid derived_from source claim")
+                     for error in current_errors):
+                repair_kind = "PROVENANCE_LINK"
+                link_ids = {
+                    error[len("claim "):-len(": invalid derived_from source claim")]
+                    for error in current_errors
+                    if error.startswith("claim ") and
+                    error.endswith(": invalid derived_from source claim")
+                }
+                proposed = self.model.generate(
+                    _repair_system("Repair only invalid derived_from references. Return exactly one JSON "
+                    "object with derived_from mapping every listed claim_id to either one "
+                    "valid source claim_id string or null to omit the link. A source must "
+                    "have the same claim kind and a supporting source span accepted by the "
+                    "validator. Never change claim values, evidence, status, scopes, or "
+                    "business facts. A calculation explained by normalization_basis does "
+                    "not justify an invalid provenance link; use null if no valid link exists."),
+                    json.dumps({"requirement_history": requirement_history,
+                                "claims": core.to_dict()["claims"],
+                                "claim_ids": sorted(link_ids),
+                                "validation_errors": current_errors},
+                               ensure_ascii=False),
+                )
+                links = None
+                if isinstance(proposed, dict):
+                    if set(proposed) == {"derived_from"}:
+                        links = proposed["derived_from"]
+                    elif set(proposed) == link_ids:
+                        links = proposed
+                if (not isinstance(links, dict) or set(links) != link_ids
+                        or any(value is not None and not isinstance(value, str)
+                               for value in links.values())):
+                    break
+                patched = deepcopy(core.to_dict())
+                for claim in patched["claims"]:
+                    claim_id = claim.get("claim_id")
+                    if claim_id in link_ids:
+                        if links[claim_id] is None:
+                            claim.pop("derived_from", None)
+                        else:
+                            claim["derived_from"] = links[claim_id]
+                core = parse_model_output(patched)
             elif any(error.endswith(": terminal outcome has no incoming continuation")
                    for error in current_errors):
                 repair_kind = "SCOPE_GRAPH"
@@ -483,14 +704,20 @@ class IntentShadowExtractor:
                     "validation_errors": current_errors,
                 }
                 proposed = self.model.generate(
-                    "Repair orphan terminal outcomes only. Return exactly one JSON object "
+                    _repair_system("Repair orphan terminal outcomes only. Return exactly one JSON object "
                     "with behavior_scopes and claims. parent_scope_id alone does not "
                     "establish reachability: the predecessor branch, timeout, or transition "
                     "must name the outcome in continuation_scope_id. An outcome must be "
                     "reached by a source-supported continuation. If it has no valid path, remove that "
                     "outcome and only its dependent claims; otherwise add the actual "
-                    "continuation. Preserve all unrelated scopes and claims. Do not "
-                    "invent a payment, refund, or user fact to satisfy validation.",
+                    "continuation. Deposit success is not a branch decision: remove a "
+                    "redundant success branch under a Deposit and put its actual next "
+                    "transition or outcome on the Deposit continuation directly. Keep "
+                    "the separate Deposit timeout path. A payout outcome after a "
+                    "payment event may continue to the next source-stated deposit; "
+                    "do not leave it orphaned or erase the payout. Preserve all "
+                    "unrelated scopes and claims. Do not "
+                    "invent a payment, refund, or user fact to satisfy validation."),
                     json.dumps(outcome_request, ensure_ascii=False),
                 )
                 if (not isinstance(proposed, dict)
@@ -513,16 +740,35 @@ class IntentShadowExtractor:
                     "validation_errors": current_errors,
                 }
                 proposed = self.model.generate(
-                    "Repair only behavior_scopes in this semantic core. Return exactly one "
+                    _repair_system("Repair only behavior_scopes in this semantic core. Return exactly one "
                     "JSON object with behavior_scopes. Keep existing scope IDs and semantic "
-                    "roles; add only source-supported causal continuation_scope_id links. "
+                    "roles except a redundant terminal_outcome with no dependent claims "
+                    "that incorrectly interrupts a source-stated sequence; it may be "
+                    "removed. Add only source-supported causal continuation_scope_id links. "
+                    "A continuation_scope_id may target only a transition or terminal_outcome, "
+                    "never a timeout; a transition may not point to its timeout scope. "
+                    "Do not preserve any invalid continuation_scope_id listed by validation. "
+                    "When a transition incorrectly points to its timeout scope, redirect its "
+                    "continuation to the next source-stated transition or terminal outcome; "
+                    "the timeout's decision_id already identifies the deciding transition. "
+                    "Connect source-stated sequential actions directly, transition to the "
+                    "next transition or terminal outcome. A payment becoming available on "
+                    "or after a date is not a timeout or failure deadline; do not create a "
+                    "timeout scope for it unless the source states timeout behavior. "
                     "A single Marlowe contract has one entry transition. Do not infer "
                     "control flow from array order alone or invent a business event. "
+                    "If source text says a deposit is followed by a buyer approval, "
+                    "link that deposit to the approval Choice. If the source also "
+                    "specifies no deposit by its deadline, preserve a separate deposit "
+                    "timeout continuation for that outcome; the success continuation "
+                    "must not point into its own timeout. "
                     "If source text states that a funding deposit is followed by a "
                     "repayment deposit, link the funding transition to the repayment "
-                    "transition. Resolve every listed multiple-root error by naming "
+                    "transition. If a first payment is followed by a second payment, "
+                    "link the first payment to the second; the first is not terminal. "
+                    "Resolve every listed multiple-root error by naming "
                     "the actual predecessor in continuation_scope_id; returning the "
-                    "same disconnected scopes is not a repair.",
+                    "same disconnected scopes is not a repair."),
                     json.dumps(scope_request, ensure_ascii=False),
                 )
                 if (not isinstance(proposed, dict)
@@ -531,6 +777,156 @@ class IntentShadowExtractor:
                     break
                 patched = core.to_dict().copy()
                 patched["behavior_scopes"] = proposed["behavior_scopes"]
+                core = parse_model_output(patched)
+            elif current_errors and all(error.startswith("scope ") and error.endswith(
+                    ": deposit amount claim missing") for error in current_errors):
+                repair_kind = "CLAIM_COMPLETENESS"
+                missing_scopes = {
+                    error[len("scope "):-len(": deposit amount claim missing")]
+                    for error in current_errors
+                }
+                original = core.to_dict()
+                proposed = self.model.generate(
+                    _repair_system(
+                        "Repair only missing source-backed deposit amounts. Return exactly "
+                        "one JSON object with new_claims, a list containing one amount_lovelace "
+                        "or amount_token_units claim for each listed deposit scope. Include a "
+                        "unique claim_id, integer value in the token's smallest unit, "
+                        "scope_id, status, criticality, exact source evidence and "
+                        "normalization_basis when derived. 1 ADA = 1000000 lovelace. "
+                        "Do not invent an amount absent from requirement_history. "
+                        "Do not return or change existing claims, graph, or resolution."),
+                    json.dumps({
+                        "requirement_history": requirement_history,
+                        "missing_deposit_scopes": [scope for scope in original["behavior_scopes"]
+                                                   if scope.get("scope_id") in missing_scopes],
+                        "existing_claims": original["claims"],
+                        "validation_errors": current_errors,
+                    }, ensure_ascii=False))
+                new_claims = proposed.get("new_claims") if isinstance(proposed, dict) else None
+                if (not isinstance(proposed, dict) or set(proposed) != {"new_claims"}
+                        or not isinstance(new_claims, list)
+                        or len(new_claims) != len(missing_scopes)
+                        or any(not isinstance(item, dict)
+                               or item.get("kind") not in {"amount_lovelace", "amount_token_units"}
+                               or type(item.get("value")) is not int
+                               or not isinstance(item.get("claim_id"), str)
+                               or not item["claim_id"]
+                               for item in new_claims)
+                        or {item["scope_id"] for item in new_claims
+                            if isinstance(item.get("scope_id"), str)} != missing_scopes
+                        or len({item["claim_id"] for item in new_claims}) != len(new_claims)
+                        or {item["claim_id"] for item in new_claims} & {
+                            item.get("claim_id") for item in original["claims"]}):
+                    break
+                patched = original.copy()
+                patched["claims"] = [*original["claims"], *new_claims]
+                core = parse_model_output(patched)
+            elif current_errors and all(
+                    error == "invalid unscored_observation"
+                    or (error.startswith("claim ") and error.endswith(
+                        ": explicit recipient absent from cited evidence"))
+                    for error in current_errors):
+                repair_kind = "SOURCE_EVIDENCE"
+                recipient_ids = {
+                    error[len("claim "):-len(": explicit recipient absent from cited evidence")]
+                    for error in current_errors if error.startswith("claim ")
+                }
+                original = core.to_dict()
+                observation_contract = core_prompt_schema_contract(
+                    version=self.core_schema_version)["unscored_observation"]
+                messages = {(revision["version"], index): message
+                            for revision in requirement_history
+                            for index, message in enumerate(revision["messages"])}
+                invalid_observations = {
+                    item.get("observation_id") for item in original["unscored_observations"]
+                    if isinstance(item, dict) and isinstance(item.get("observation_id"), str)
+                    and (not UNSCORED_OBSERVATION_FIELDS <= item.keys()
+                         or not item.get("text")
+                         or item.get("reason") not in observation_contract["reason"]
+                         or not _evidence_valid(item.get("source_evidence"), messages))
+                }
+                if ("invalid unscored_observation" in current_errors
+                        and not invalid_observations):
+                    break
+                request = {
+                    "requirement_history": requirement_history,
+                    "recipient_claims": [item for item in original["claims"]
+                                         if item.get("claim_id") in recipient_ids],
+                    "invalid_observations": [item for item in original["unscored_observations"]
+                                             if item.get("observation_id") in invalid_observations],
+                    "allowed_observation_reasons": observation_contract["reason"],
+                    "validation_errors": current_errors,
+                }
+                for retry in range(2):
+                    proposed = self.model.generate(
+                        _repair_system(
+                        "Return exactly one JSON object with claim_evidence_or_drop and "
+                        "observation_or_drop maps. Include every listed target ID exactly once. "
+                        "For a recipient claim, return null if the source does not actually "
+                        "name that recipient for that action. A claim whose value is the "
+                        "literal string 'none' MUST map to null; it is not a party. "
+                        "Otherwise return a replacement array of evidence OBJECTS, each "
+                        "with requirement_version (integer), message_index (integer), "
+                        "span (one verbatim substring), and relation='supports'. "
+                        "For an observation, return null if redundant/irrelevant, or its "
+                        "corrected full object with a contiguous verbatim source span. "
+                        "Never combine text from different messages or revisions. "
+                        "Do not change any other claim, observation, graph, amount, or deadline. "
+                        "Example shape: {\"claim_evidence_or_drop\":{\"claim-id\":null},"
+                        "\"observation_or_drop\":{\"observation-id\":null}}."),
+                        json.dumps(request, ensure_ascii=False))
+                    if (not isinstance(proposed, dict)
+                        or set(proposed) != {"claim_evidence_or_drop", "observation_or_drop"}
+                        or not isinstance(proposed["claim_evidence_or_drop"], dict)
+                        or not isinstance(proposed["observation_or_drop"], dict)
+                        or set(proposed["claim_evidence_or_drop"]) != recipient_ids
+                        or set(proposed["observation_or_drop"]) != invalid_observations):
+                        break
+                    claim_changes = proposed["claim_evidence_or_drop"]
+                    observation_changes = proposed["observation_or_drop"]
+                    original_claims_by_id = {item["claim_id"]: item for item in original["claims"]
+                                             if isinstance(item, dict) and "claim_id" in item}
+                    valid = not (
+                        any(value is not None and not isinstance(value, list)
+                            for value in claim_changes.values())
+                        or any(value is not None and not _evidence_valid(value, messages)
+                               for value in claim_changes.values())
+                        or any(original_claims_by_id.get(claim_id, {}).get("value") == "none"
+                               and value is not None
+                               for claim_id, value in claim_changes.items())
+                        or any(value is not None and (not isinstance(value, dict)
+                            or value.get("observation_id") != observation_id
+                            or not UNSCORED_OBSERVATION_FIELDS <= value.keys()
+                            or not value.get("text")
+                            or value.get("reason") not in observation_contract["reason"]
+                            or not _evidence_valid(value.get("source_evidence"), messages))
+                            for observation_id, value in observation_changes.items()))
+                    if valid:
+                        break
+                    request["rejected_repair"] = proposed
+                    request["retry_reason"] = (
+                        "A proposed evidence span is not an exact case-sensitive "
+                        "substring of its indexed source message. Copy a valid "
+                        "contiguous span or use null for an irrelevant observation.")
+                else:
+                    break
+                if not valid:
+                    break
+                patched = original.copy()
+                patched["claims"] = []
+                for item in original["claims"]:
+                    claim_id = item.get("claim_id")
+                    if claim_id not in recipient_ids:
+                        patched["claims"].append(item)
+                    elif claim_changes[claim_id] is not None:
+                        patched["claims"].append({**item, "evidence": claim_changes[claim_id]})
+                patched["unscored_observations"] = [
+                    item if item.get("observation_id") not in invalid_observations else
+                    observation_changes[item["observation_id"]]
+                    for item in original["unscored_observations"]
+                    if (item.get("observation_id") not in invalid_observations
+                        or observation_changes[item["observation_id"]] is not None)]
                 core = parse_model_output(patched)
             elif target_ids:
                 repair_kind = "SOURCE_EVIDENCE"
@@ -542,7 +938,7 @@ class IntentShadowExtractor:
                         core.to_dict(), target_ids, requirement_history),
                     "validation_errors": current_errors,
                 }
-                repair_system = (
+                repair_system = _repair_system(
                     "Repair only the evidence of the listed claims. Return one JSON object "
                     "with exactly evidence_by_claim mapping each listed claim_id to its "
                     "replacement evidence array. Each evidence item must have "
@@ -561,26 +957,196 @@ class IntentShadowExtractor:
                 if patched is None:
                     break
                 core = parse_model_output(patched)
+            elif (self.core_schema_version == CORE_SCHEMA_VERSION_V4
+                  and current_errors and all(
+                      error.startswith("scope ") and error.endswith((
+                          ": invalid choice_guard", ": invalid choice_bounds"))
+                      for error in current_errors)):
+                repair_kind = "CHOICE_EVIDENCE"
+                original = core.to_dict()
+                targets = {error.split(": invalid choice_", 1)[0].removeprefix("scope "):
+                           "choice_guard" if error.endswith("choice_guard")
+                           else "choice_bounds" for error in current_errors}
+                if (set(targets) != {scope.get("scope_id") for scope in original["behavior_scopes"]
+                                     if scope.get("scope_id") in targets}
+                        or any(not isinstance(scope.get(targets[scope["scope_id"]]), dict)
+                               for scope in original["behavior_scopes"]
+                               if scope.get("scope_id") in targets)):
+                    break
+                request = {"requirement_history": requirement_history,
+                           "target_scopes": [scope for scope in original["behavior_scopes"]
+                                             if scope.get("scope_id") in targets],
+                           "validation_errors": current_errors}
+                for retry in range(2):
+                    proposed = self.model.generate(
+                        _repair_system(
+                            "Repair only source_evidence for the listed Choice scopes. Return one "
+                            "JSON object with evidence_by_scope mapping each listed scope_id to "
+                            "a nonempty array of evidence objects. Each span must be one exact "
+                            "contiguous substring of its indexed requirement message and must "
+                            "support that scope's existing bound or guard value. Preserve every "
+                            "operator, numeric value, claim, graph edge, and business fact."),
+                        json.dumps(request, ensure_ascii=False))
+                    evidence = (proposed.get("evidence_by_scope")
+                                if isinstance(proposed, dict) else None)
+                    valid = (isinstance(proposed, dict)
+                             and set(proposed) == {"evidence_by_scope"}
+                             and isinstance(evidence, dict) and set(evidence) == set(targets)
+                             and all(isinstance(items, list) and items
+                                     and _evidence_valid(items, messages)
+                                     and all(item.get("relation") == "supports" for item in items)
+                                     for items in evidence.values()))
+                    if valid:
+                        break
+                    if retry == 0:
+                        request["rejected_evidence_by_scope"] = evidence
+                        request["retry_reason"] = (
+                            "The previous span was not an exact contiguous substring of "
+                            "the indexed source message. Copy only a shorter exact span "
+                            "that contains the existing guard or bound value.")
+                else:
+                    break
+                patched = deepcopy(original)
+                for scope in patched["behavior_scopes"]:
+                    if scope.get("scope_id") in targets:
+                        scope[targets[scope["scope_id"]]]["source_evidence"] = evidence[scope["scope_id"]]
+                core = parse_model_output(patched)
+            elif current_errors and all(
+                    error.startswith("claim ") and error.endswith(
+                        ": depositing party must scope a deposit transition")
+                    for error in current_errors):
+                repair_kind = "PARTY_SCOPE"
+                original = core.to_dict()
+                target_ids = {
+                    error[len("claim "):-len(": depositing party must scope a deposit transition")]
+                    for error in current_errors
+                }
+                deposit_scopes = {
+                    scope["scope_id"] for scope in original["behavior_scopes"]
+                    if scope.get("scope_type") == "transition"
+                    and scope.get("transition_kind") == "deposit"
+                }
+                proposed = self.model.generate(
+                    _repair_system(
+                        "Repair only depositing_party claims listed in target_claims. "
+                        "Return exactly one JSON object with scope_or_drop, mapping "
+                        "each target claim_id to a deposit transition scope_id or null. "
+                        "Use null when source evidence explicitly says that person "
+                        "does not deposit; a negation is not a positive depositor. "
+                        "Otherwise choose only the actual source-backed deposit "
+                        "transition for that person. Do not change any other claim, "
+                        "value, graph edge, or business fact."),
+                    json.dumps({
+                        "requirement_history": requirement_history,
+                        "target_claims": [claim for claim in original["claims"]
+                                          if claim.get("claim_id") in target_ids],
+                        "deposit_scopes": [scope for scope in original["behavior_scopes"]
+                                           if scope.get("scope_id") in deposit_scopes],
+                        "validation_errors": current_errors,
+                    }, ensure_ascii=False))
+                choices = proposed.get("scope_or_drop") if isinstance(proposed, dict) else None
+                if (not isinstance(proposed, dict) or set(proposed) != {"scope_or_drop"}
+                        or not isinstance(choices, dict) or set(choices) != target_ids
+                        or any(value is not None and value not in deposit_scopes
+                               for value in choices.values())):
+                    break
+                patched = original.copy()
+                patched["claims"] = [
+                    ({**claim, "scope_id": choices[claim["claim_id"]]}
+                     if claim.get("claim_id") in target_ids else claim)
+                    for claim in original["claims"]
+                    if claim.get("claim_id") not in target_ids
+                    or choices[claim["claim_id"]] is not None
+                ]
+                core = parse_model_output(patched)
+            elif current_errors == [
+                    "clarification prediction requires an unresolved claim or "
+                    "unrepresented behavior observation"]:
+                repair_kind = "BUSINESS_DECISION"
+                original = core.to_dict()
+                proposed = self.model.generate(
+                    _repair_system(
+                        "Review only the business decision against requirement_history "
+                        "and the existing semantic core. Return exactly one JSON object "
+                        "with predicted_resolution and required_clarifications. "
+                        "Use clarification_required only if a specific critical fact "
+                        "remains unresolved or a source-grounded behavior observation "
+                        "requires an answer. An already supplied answer is not missing. "
+                        "If the source fully resolves those matters, use "
+                        "accepted_interpretation with an empty question list. "
+                        "Do not change claims, evidence, scopes, amounts, deadlines, or "
+                        "invent a fact merely to obtain acceptance."),
+                    json.dumps({
+                        "requirement_history": requirement_history,
+                        "semantic_core": original,
+                        "validation_errors": current_errors,
+                    }, ensure_ascii=False))
+                if (not isinstance(proposed, dict)
+                        or set(proposed) != {"predicted_resolution", "required_clarifications"}
+                        or not isinstance(proposed["predicted_resolution"], str)
+                        or not isinstance(proposed["required_clarifications"], list)):
+                    break
+                patched = original.copy()
+                patched.update(proposed)
+                core = parse_model_output(patched)
             else:
                 repair_kind = "FULL_REGENERATION"
-                guidance = _repair_guidance(core.to_dict(), current_errors, requirement_history)
-                feedback = (
-                    "The previous semantic core failed deterministic validation. "
-                    "Regenerate the complete seven-field core from the original requirement only. "
-                    "Do not infer new facts, omit financial claims, or change the resolution "
-                    "merely to satisfy validation. Fix only errors justified by the original text. "
-                    "Keep source spans verbatim and case-sensitive; never use ellipses. "
-                    "If derived_from points to a different claim kind, omit derived_from "
-                    "unless a valid same-kind source exists. Return JSON only.\n"
-                    "Validation errors:\n" + json.dumps(current_errors, ensure_ascii=False)
-                    + "\nTyped diagnostics (diagnosis only; regenerate from source):\n"
-                    + json.dumps(_group_repair_guidance(guidance), ensure_ascii=False)
-                )
-                core = self._materialize(
-                    self.model.generate(system, user + "\n" + feedback),
-                    requirement_history)
+                core = full_regenerate(core, current_errors)
+            repaired = core.to_dict()
+            retarget_actions = retarget_unique_evidence_spans(repaired, messages)
+            choice_actions = normalize_choice_metadata(repaired, messages)
+            evidence_actions = prune_unverifiable_evidence(repaired, messages)
+            amount_actions = normalize_grounded_numeric_amounts(repaired, messages)
+            derivation_actions = drop_dangling_amount_derivations(repaired, messages)
+            self.normalization_actions.extend(retarget_actions + choice_actions
+                                              + evidence_actions + amount_actions
+                                              + derivation_actions)
+            if (retarget_actions or choice_actions or evidence_actions
+                    or amount_actions or derivation_actions):
+                core = parse_model_output(repaired)
+            normalized_deadlines = normalize_vietnamese_noon_deadlines(repaired, messages)
+            self.normalization_actions.extend(normalized_deadlines)
+            if normalized_deadlines:
+                core = parse_model_output(repaired)
+            collapsed_branches = collapse_automatic_success_branches(repaired)
+            if collapsed_branches:
+                core = parse_model_output(repaired)
+                self.normalization_actions.extend({
+                    "scope_id": scope_id, "kind": "automatic_success_branch",
+                } for scope_id in collapsed_branches)
+            removed_branch_links = drop_decision_to_own_branch_or_timeout(repaired)
+            if removed_branch_links:
+                core = parse_model_output(repaired)
+                self.normalization_actions.extend({
+                    "scope_id": scope_id, "kind": "decision_to_own_branch",
+                } for scope_id in removed_branch_links)
+            connected_outcomes = connect_skipped_terminal_outcomes(repaired)
+            if connected_outcomes:
+                core = parse_model_output(repaired)
+                self.normalization_actions.extend({
+                    "scope_id": scope_id, "kind": "skipped_terminal_outcome",
+                } for scope_id in connected_outcomes)
+            removed_outcomes = prune_unreachable_duplicate_outcomes(repaired)
+            if removed_outcomes:
+                core = parse_model_output(repaired)
+                self.normalization_actions.extend({
+                    "scope_id": scope_id, "kind": "unreachable_duplicate_outcome",
+                    "reason": "no references; parent already continues to same successor",
+                } for scope_id in removed_outcomes)
+            if self._normalize_questions(repaired):
+                core = parse_model_output(repaired)
+            removed_refunds = drop_explicitly_absent_refund_recipient(repaired, messages)
+            if removed_refunds:
+                core = parse_model_output(repaired)
+                self.normalization_actions.extend({
+                    "claim_id": claim_id, "kind": "absent_refund_recipient",
+                    "reason": "source explicitly negates refund; none is not a party",
+                } for claim_id in removed_refunds)
             after_errors = self.validation_errors(core, requirement_history)
             progressed = repair_progress(current_errors, after_errors)
+            if len(set(after_errors)) < best_error_count:
+                best_core = core
+                best_error_count = len(set(after_errors))
             self.repair_trace.append({
                 "repair_kind": repair_kind,
                 "before_error_count": len(set(current_errors)),
@@ -591,10 +1157,17 @@ class IntentShadowExtractor:
             })
             no_progress = 0 if progressed else no_progress + 1
             fingerprint = json.dumps(core.to_dict(), sort_keys=True, ensure_ascii=False)
-            if fingerprint in seen or no_progress >= 2:
+            if fingerprint in seen:
+                if (repair_kind != "FULL_REGENERATION"
+                        and not full_regeneration_fallback_used
+                        and repair_index + 1 < max_repairs):
+                    force_full_regeneration = True
+                    continue
+                break
+            if no_progress >= 2:
                 break
             seen.add(fingerprint)
-        return core, initial_errors
+        return best_core, initial_errors
 
 
 def _verbatim_source_messages(core: dict[str, Any], target_ids: set[str],
@@ -633,6 +1206,8 @@ def _evidence_repair_targets(core: dict[str, Any], errors: list[str]) -> set[str
     claim_ids = {claim.get("claim_id") for claim in claims if isinstance(claim, dict)}
     targets = set()
     for error in errors:
+        if error == "invalid unscored_observation":
+            continue
         if not (error.startswith("claim ") and (error.endswith(": invalid evidence target/span")
                 or error.endswith(": supporting evidence required"))):
             return set()

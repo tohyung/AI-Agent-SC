@@ -17,7 +17,11 @@ SCHEMA_VERSION_V2 = "stage2b-shadow-v2"
 CORE_SCHEMA_VERSION_V2 = "stage2b-shadow-core-v2"
 SCHEMA_VERSION_V3 = "stage2b-shadow-v3"
 CORE_SCHEMA_VERSION_V3 = "stage2b-shadow-core-v3"
+SCHEMA_VERSION_V4 = "stage2b-shadow-v4"
+CORE_SCHEMA_VERSION_V4 = "stage2b-shadow-core-v4"
 CLAIM_KINDS_V3 = CLAIM_KINDS | {"amount_token_units", "ledger_history_deletion"}
+CLAIM_KINDS_V4 = CLAIM_KINDS_V3 | {"payment_release_time_ms"}
+PAYMENT_RELEASE_TIME_KINDS = {"payment_release_time_ms"}
 NATIVE_ASSET_ID = re.compile(r"native:([0-9a-f]{56})/([0-9a-f]{2,64})\Z")
 
 
@@ -37,6 +41,7 @@ REQUIRED_FIELDS = {
 ACTIVE_STATUSES = {"explicit", "derived", "assumed", "user_confirmed", "conflicted"}
 CRITICALITIES = {"financial", "nonfinancial"}
 PARAMETER_KINDS = {"amount", "deadline", "asset"}
+PARAMETER_KINDS_V4 = PARAMETER_KINDS | {"release_time"}
 EVIDENCE_RELATIONS = {"supports", "contradicts"}
 EVIDENCE_FIELDS = {"requirement_version", "message_index", "span", "relation"}
 SUPPORTING_EVIDENCE_STATUSES = {"explicit", "user_confirmed", "superseded", "conflicted", "derived"}
@@ -56,6 +61,7 @@ TRANSITION_DEADLINE_KINDS = {
     "choice": {"choice_deadline_ms", "timeout_ms"},
     "notify": {"timeout_ms"},
 }
+TRANSITION_RELEASE_TIME_KINDS = {"payment": {"payment_release_time_ms"}}
 RECIPIENT_KINDS = {"payment_recipient", "refund_recipient", "release_recipient"}
 BACKING_STATUSES = {"explicit", "derived", "user_confirmed"}
 TRANSITION_KINDS = {"choice", "deposit", "notify", "payment"}
@@ -92,6 +98,9 @@ UNSCORED_OBSERVATION_REASONS_V2 = {
 UNSCORED_OBSERVATION_REASONS_V3 = {
     "irrelevant_context", "outside_stage2b_v3_claim_taxonomy",
 }
+UNSCORED_OBSERVATION_REASONS_V4 = {
+    "irrelevant_context", "outside_stage2b_v4_claim_taxonomy",
+}
 STATE_CLAIM_KINDS = {
     "funded": {"depositing_party"},
     "awaiting_choice": {"choice_owner", "choice_deadline_ms"},
@@ -111,6 +120,9 @@ PARAMETER_CLAIM_KINDS = {
     "amount": {"amount_lovelace", "amount_token_units"},
     "deadline": DEADLINE_KINDS, "asset": {"asset"},
 }
+PARAMETER_CLAIM_KINDS_V4 = {
+    **PARAMETER_CLAIM_KINDS, "release_time": PAYMENT_RELEASE_TIME_KINDS,
+}
 TRANSITION_ACTOR_KINDS = {"choice": {"choice_owner"}, "deposit": {"depositing_party"}}
 RICH_FIELDS = {
     "participants": {"participant_id", "name", "claim_refs"},
@@ -121,6 +133,7 @@ RICH_FIELDS = {
     "parameters": {"parameter_id", "kind", "normalized_value", "unit", "claim_refs"},
     "states": {"state_id", "claim_refs"},
     "transitions": {"transition_id", "kind", "actor", "deadline_parameter_id",
+                    "release_time_parameter_id",
                     "transaction_submitter", "claim_refs"},
     "obligations_and_outcomes": {"outcome_id", "kind", "recipient", "scope_id", "claim_refs"},
     "conflicts": {"conflict_id", "kind", "scope_id", "claim_refs"},
@@ -133,11 +146,13 @@ def prompt_schema_contract(*, core_version: str = CORE_SCHEMA_VERSION) -> dict[s
     return {
         "schema_version": {CORE_SCHEMA_VERSION: SCHEMA_VERSION,
                            CORE_SCHEMA_VERSION_V2: SCHEMA_VERSION_V2,
-                           CORE_SCHEMA_VERSION_V3: SCHEMA_VERSION_V3}[core_version],
+                           CORE_SCHEMA_VERSION_V3: SCHEMA_VERSION_V3,
+                           CORE_SCHEMA_VERSION_V4: SCHEMA_VERSION_V4}[core_version],
         "required_top_level_fields": sorted(REQUIRED_FIELDS),
         "claim": {
             "fields": sorted(CLAIM_FIELDS),
-            "kinds": sorted(CLAIM_KINDS_V3 if core_version == CORE_SCHEMA_VERSION_V3
+            "kinds": sorted(CLAIM_KINDS_V4 if core_version == CORE_SCHEMA_VERSION_V4
+                            else CLAIM_KINDS_V3 if core_version == CORE_SCHEMA_VERSION_V3
                             else CLAIM_KINDS),
             "statuses": sorted(CLAIM_STATUSES),
             "criticalities": sorted(CRITICALITIES),
@@ -157,12 +172,14 @@ def prompt_schema_contract(*, core_version: str = CORE_SCHEMA_VERSION) -> dict[s
             "types": sorted(SCOPE_TYPES),
             "allowed_fields_by_type": {key: sorted(value) for key, value in
                                        (SCOPE_FIELDS_V2 if core_version in {
-                                           CORE_SCHEMA_VERSION_V2, CORE_SCHEMA_VERSION_V3}
+                                           CORE_SCHEMA_VERSION_V2, CORE_SCHEMA_VERSION_V3,
+                                           CORE_SCHEMA_VERSION_V4}
                                         else SCOPE_FIELDS).items()},
         },
         "assets_and_accounts_fields": sorted(ASSETS_ACCOUNTS_FIELDS),
         "rich_fields": {key: sorted(value) for key, value in RICH_FIELDS.items()},
-        "parameter_kinds": sorted(PARAMETER_KINDS),
+        "parameter_kinds": sorted(PARAMETER_KINDS_V4 if core_version == CORE_SCHEMA_VERSION_V4
+                                   else PARAMETER_KINDS),
         "outcome_kinds": sorted(OUTCOME_KINDS),
         "state_ids": sorted(STATE_IDS),
         "state_claim_kinds": {key: sorted(value) for key, value in STATE_CLAIM_KINDS.items()},
@@ -170,10 +187,13 @@ def prompt_schema_contract(*, core_version: str = CORE_SCHEMA_VERSION) -> dict[s
         "deadline_kinds": sorted(DEADLINE_KINDS),
         "transition_deadline_kinds": {
             key: sorted(value) for key, value in TRANSITION_DEADLINE_KINDS.items()},
+        "transition_release_time_kinds": {
+            key: sorted(value) for key, value in TRANSITION_RELEASE_TIME_KINDS.items()},
         "party_kinds": sorted(PARTY_KINDS),
         "account_owner_kinds": sorted(ACCOUNT_OWNER_KINDS),
         "parameter_claim_kinds": {
-            key: sorted(value) for key, value in PARAMETER_CLAIM_KINDS.items()},
+            key: sorted(value) for key, value in (PARAMETER_CLAIM_KINDS_V4
+                if core_version == CORE_SCHEMA_VERSION_V4 else PARAMETER_CLAIM_KINDS).items()},
         "transition_actor_kinds": {
             key: sorted(value) for key, value in TRANSITION_ACTOR_KINDS.items()},
         "derived_source_statuses": sorted(DERIVED_SOURCE_STATUSES),
@@ -182,7 +202,8 @@ def prompt_schema_contract(*, core_version: str = CORE_SCHEMA_VERSION) -> dict[s
 
 
 def core_prompt_schema_contract(*, version: str = CORE_SCHEMA_VERSION) -> dict[str, Any]:
-    if version not in {CORE_SCHEMA_VERSION, CORE_SCHEMA_VERSION_V2, CORE_SCHEMA_VERSION_V3}:
+    if version not in {CORE_SCHEMA_VERSION, CORE_SCHEMA_VERSION_V2, CORE_SCHEMA_VERSION_V3,
+                       CORE_SCHEMA_VERSION_V4}:
         raise ValueError("unsupported core schema version")
     contract = prompt_schema_contract(core_version=version)
     contract["schema_version"] = version
@@ -208,11 +229,18 @@ def core_prompt_schema_contract(*, version: str = CORE_SCHEMA_VERSION) -> dict[s
     contract["unsupported_signals"] = [
         {"kind": kind, "value": value, "requires_supporting_evidence": True}
         for kind, value in sorted(
-            UNSUPPORTED_SIGNALS_V3 if version == CORE_SCHEMA_VERSION_V3
+            UNSUPPORTED_SIGNALS_V3 if version in {CORE_SCHEMA_VERSION_V3, CORE_SCHEMA_VERSION_V4}
             else UNSUPPORTED_SIGNALS_V1
         )
     ]
-    if version in {CORE_SCHEMA_VERSION_V2, CORE_SCHEMA_VERSION_V3}:
+    if version == CORE_SCHEMA_VERSION_V4:
+        contract["payment_release_time"] = {
+            "claim_kind": "payment_release_time_ms",
+            "meaning": "earliest time a payment may be released; not a timeout or latest deadline",
+            "unit": "POSIX milliseconds",
+            "scope_type": "payment transition",
+        }
+    if version in {CORE_SCHEMA_VERSION_V2, CORE_SCHEMA_VERSION_V3, CORE_SCHEMA_VERSION_V4}:
         contract["scope"]["choice_bounds"] = {
             "fields": ["from", "to", "source_evidence"],
             "required_for": "choice transition", "integer_inclusive": True,
@@ -231,7 +259,7 @@ def core_prompt_schema_contract(*, version: str = CORE_SCHEMA_VERSION) -> dict[s
             "field": "parent_scope_id", "required": True,
             "target_collection": "behavior_scopes", "target_id_field": "scope_id",
             "target_scope_types": (["branch", "timeout", "transition", "terminal_outcome"]
-                                   if version == CORE_SCHEMA_VERSION_V3 else
+                                   if version in {CORE_SCHEMA_VERSION_V3, CORE_SCHEMA_VERSION_V4} else
                                    ["branch", "timeout", "transition"]),
         }
         contract["scope"]["continuation"] = {
@@ -242,7 +270,9 @@ def core_prompt_schema_contract(*, version: str = CORE_SCHEMA_VERSION) -> dict[s
         }
     contract["unscored_observation"] = {
         "fields": sorted(UNSCORED_OBSERVATION_FIELDS),
-        "reason": (sorted(UNSCORED_OBSERVATION_REASONS_V3)
+        "reason": (sorted(UNSCORED_OBSERVATION_REASONS_V4)
+                   if version == CORE_SCHEMA_VERSION_V4 else
+                   sorted(UNSCORED_OBSERVATION_REASONS_V3)
                    if version == CORE_SCHEMA_VERSION_V3 else
                    sorted(UNSCORED_OBSERVATION_REASONS_V2)
                    if version == CORE_SCHEMA_VERSION_V2 else UNSCORED_OBSERVATION_REASON),
@@ -257,6 +287,7 @@ def core_prompt_schema_contract(*, version: str = CORE_SCHEMA_VERSION) -> dict[s
     for key in ("assets_and_accounts_fields", "rich_fields", "parameter_kinds",
                 "outcome_kinds", "state_ids", "state_claim_kinds",
                 "outcome_recipient_kinds", "transition_deadline_kinds",
+                "transition_release_time_kinds",
                 "party_kinds", "account_owner_kinds", "parameter_claim_kinds",
                 "transition_actor_kinds"):
         contract.pop(key)
@@ -292,7 +323,8 @@ class ShadowSemanticCore:
 def extract_core_view(spec: dict[str, Any]) -> dict[str, Any]:
     core_version = {SCHEMA_VERSION: CORE_SCHEMA_VERSION,
                     SCHEMA_VERSION_V2: CORE_SCHEMA_VERSION_V2,
-                    SCHEMA_VERSION_V3: CORE_SCHEMA_VERSION_V3}.get(
+                    SCHEMA_VERSION_V3: CORE_SCHEMA_VERSION_V3,
+                    SCHEMA_VERSION_V4: CORE_SCHEMA_VERSION_V4}.get(
                         spec.get("schema_version"), CORE_SCHEMA_VERSION)
     return {key: (core_version if key == "schema_version" else spec[key])
             for key in CORE_FIELDS if key in spec}
@@ -327,7 +359,8 @@ def explicit_utc_instants(text: str) -> list[tuple[int, int, int]]:
     found: list[tuple[int, int, int]] = []
     iso = re.compile(r"(?<!\d)\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?Z(?!\d)")
     local = re.compile(
-        r"(?<!\d)(?P<hour>\d{1,2}):(?P<minute>\d{2})\s+(?:(?:ngày|on)\s+)?"
+        r"(?<!\d)(?P<hour>\d{1,2}):(?P<minute>\d{2})(?::(?P<second>\d{2}))?\s+"
+        r"(?:(?:ngày|on)\s+)?"
         r"(?P<day>\d{1,2})/(?P<month>\d{1,2})/(?P<year>\d{4})"
         r"[^.;\n]{0,80}?\bUTC(?P<sign>[+-])(?P<offset_hour>\d{1,2})"
         r"(?::(?P<offset_minute>\d{2}))?\b",
@@ -348,6 +381,14 @@ def explicit_utc_instants(text: str) -> list[tuple[int, int, int]]:
         r"(?:ICT|Vietnam time)\b",
         re.IGNORECASE,
     )
+    ict_time_first = re.compile(
+        r"(?<!\d)(?P<hour>\d{1,2}):(?P<minute>\d{2})\s+(?:on\s+)?"
+        r"(?P<day>\d{1,2})\s+"
+        r"(?P<month>January|February|March|April|May|June|July|August|"
+        r"September|October|November|December)\s+(?P<year>\d{4})\s+"
+        r"(?:in\s+Vietnam\s+time\s*\(ICT,\s*UTC\+7\)|ICT)(?!\w)",
+        re.IGNORECASE,
+    )
     ict_numeric = re.compile(
         r"(?<!\d)(?P<hour>\d{1,2}):(?P<minute>\d{2})\s+"
         r"(?:ICT|giờ Việt Nam\s*\(ICT,\s*UTC\+7\))\s+"
@@ -364,6 +405,7 @@ def explicit_utc_instants(text: str) -> list[tuple[int, int, int]]:
     for match in local.finditer(text):
         parts = {name: int(match.group(name)) for name in (
             "hour", "minute", "day", "month", "year", "offset_hour")}
+        second = int(match.group("second") or 0)
         offset_minute = int(match.group("offset_minute") or 0)
         if parts["offset_hour"] > 23 or offset_minute > 59:
             continue
@@ -372,14 +414,15 @@ def explicit_utc_instants(text: str) -> list[tuple[int, int, int]]:
                                            minutes=offset_minute))
         try:
             instant = datetime(parts["year"], parts["month"], parts["day"],
-                               parts["hour"], parts["minute"], tzinfo=offset)
+                               parts["hour"], parts["minute"], second, tzinfo=offset)
         except ValueError:
             continue
         found.append((match.start(), match.end(), int(instant.timestamp() * 1000)))
     months = {name: index for index, name in enumerate((
         "january", "february", "march", "april", "may", "june", "july",
         "august", "september", "october", "november", "december"), 1)}
-    for match in [*ict_named.finditer(text), *ict_date_first.finditer(text)]:
+    for match in [*ict_named.finditer(text), *ict_date_first.finditer(text),
+                  *ict_time_first.finditer(text)]:
         try:
             instant = datetime(int(match.group("year")), months[match.group("month").lower()],
                                int(match.group("day")), int(match.group("hour")),
@@ -408,7 +451,7 @@ def explicit_utc_instants(text: str) -> list[tuple[int, int, int]]:
             shared_offset = timezone(sign * timedelta(hours=offset_hour,
                                                       minutes=offset_minute))
             shared = re.compile(
-                r"(?<!\d)(?P<hour>\d{1,2}):(?P<minute>\d{2})\s+"
+                r"(?<!\d)(?P<hour>\d{1,2}):(?P<minute>\d{2})(?::(?P<second>\d{2}))?\s+"
                 r"(?:(?:ngày|on)\s+)?(?P<day>\d{1,2})/(?P<month>\d{1,2})/"
                 r"(?P<year>\d{4})[^.;\n]{0,80}?\b(?:same timezone|cùng múi giờ)\b",
                 re.IGNORECASE,
@@ -419,14 +462,17 @@ def explicit_utc_instants(text: str) -> list[tuple[int, int, int]]:
                 try:
                     instant = datetime(int(match.group("year")), int(match.group("month")),
                                        int(match.group("day")), int(match.group("hour")),
-                                       int(match.group("minute")), tzinfo=shared_offset)
+                                       int(match.group("minute")), int(match.group("second") or 0),
+                                       tzinfo=shared_offset)
                 except ValueError:
                     continue
                 found.append((match.start(), match.end(), int(instant.timestamp() * 1000)))
     return sorted(found)
 
 
-def _absolute_deadline_mismatch(claim: dict[str, Any]) -> bool:
+def _absolute_deadline_mismatch(
+        claim: dict[str, Any],
+        messages: dict[tuple[int, int], str] | None = None) -> bool:
     """Reject a date claim whose cited calendar year/day contradicts its POSIX value."""
     value = claim.get("value")
     if type(value) is not int:
@@ -440,6 +486,14 @@ def _absolute_deadline_mismatch(claim: dict[str, Any]) -> bool:
         if not isinstance(span, str):
             continue
         exact_instants.extend(value for _, _, value in explicit_utc_instants(span))
+        if messages is not None:
+            message = messages.get((item.get("requirement_version"), item.get("message_index")))
+            if isinstance(message, str) and message.count(span) == 1:
+                span_start = message.index(span)
+                span_end = span_start + len(span)
+                exact_instants.extend(instant for start, end, instant
+                                      in explicit_utc_instants(message)
+                                      if span_start <= start and end <= span_end)
         for day, month, year in re.findall(r"(?<!\d)(\d{1,2})/(\d{1,2})/(\d{4})(?!\d)", span):
             try:
                 cited_dates.append(date(int(year), int(month), int(day)))
@@ -448,6 +502,19 @@ def _absolute_deadline_mismatch(claim: dict[str, Any]) -> bool:
         for year, month, day in re.findall(r"(?<!\d)(\d{4})-(\d{1,2})-(\d{1,2})(?!\d)", span):
             try:
                 cited_dates.append(date(int(year), int(month), int(day)))
+            except ValueError:
+                continue
+        month_names = {name: index for index, name in enumerate((
+            "January", "February", "March", "April", "May", "June", "July",
+            "August", "September", "October", "November", "December"), 1)}
+        named_date = re.compile(
+            r"(?<!\w)(\d{1,2})\s+(January|February|March|April|May|June|July|"
+            r"August|September|October|November|December)\s+(\d{4})(?!\w)",
+            re.IGNORECASE)
+        for match in named_date.finditer(span):
+            day, month, year = match.groups()
+            try:
+                cited_dates.append(date(int(year), month_names[month.capitalize()], int(day)))
             except ValueError:
                 continue
     if exact_instants:
@@ -544,10 +611,11 @@ def validate_shadow_semantic_core(spec: Any, *,
     if "mutation" in spec or "parent_case_id" in spec:
         errors.append("mutation-specific knowledge is not allowed in IntentSpec")
     version = spec.get("schema_version")
-    if version not in {CORE_SCHEMA_VERSION, CORE_SCHEMA_VERSION_V2, CORE_SCHEMA_VERSION_V3}:
+    if version not in {CORE_SCHEMA_VERSION, CORE_SCHEMA_VERSION_V2, CORE_SCHEMA_VERSION_V3,
+                       CORE_SCHEMA_VERSION_V4}:
         errors.append("invalid schema_version")
-    v2 = version in {CORE_SCHEMA_VERSION_V2, CORE_SCHEMA_VERSION_V3}
-    v3 = version == CORE_SCHEMA_VERSION_V3
+    v2 = version in {CORE_SCHEMA_VERSION_V2, CORE_SCHEMA_VERSION_V3, CORE_SCHEMA_VERSION_V4}
+    v3 = version in {CORE_SCHEMA_VERSION_V3, CORE_SCHEMA_VERSION_V4}
     resolution = spec.get("predicted_resolution")
     if not _allowed(resolution, RESOLUTIONS):
         errors.append("invalid predicted_resolution")
@@ -605,6 +673,10 @@ def validate_shadow_semantic_core(spec: Any, *,
             errors.append(f"scope {scope_id}: decision_id does not reference transition")
         if scope.get("scope_type") == "branch" and decision is None:
             errors.append(f"scope {scope_id}: branch requires decision_id")
+        if (v2 and scope.get("scope_type") == "branch" and isinstance(decision, str)
+                and decision in scopes and scopes[decision].get("scope_type") == "transition"
+                and scopes[decision].get("transition_kind") not in {"choice", "notify"}):
+            errors.append(f"scope {scope_id}: branch decision must be choice or notify")
         if v2 and scope.get("scope_type") == "terminal_outcome":
             parent_id = scope.get("parent_scope_id")
             parent = scopes.get(parent_id) if isinstance(parent_id, str) else None
@@ -670,12 +742,30 @@ def validate_shadow_semantic_core(spec: Any, *,
         unknown = claim.keys() - CLAIM_FIELDS
         if unknown:
             errors.append(f"claim {claim_id}: unsupported claim fields {sorted(unknown)}")
-        if not _allowed(claim.get("kind"), CLAIM_KINDS_V3 if v3 else CLAIM_KINDS):
+        claim_kinds = (CLAIM_KINDS_V4 if version == CORE_SCHEMA_VERSION_V4 else
+                       CLAIM_KINDS_V3 if v3 else CLAIM_KINDS)
+        if not _allowed(claim.get("kind"), claim_kinds):
             errors.append(f"claim {claim_id}: unknown claim kind")
         if not _allowed(claim.get("status"), CLAIM_STATUSES):
             errors.append(f"claim {claim_id}: invalid status")
         if not isinstance(claim.get("scope_id"), str) or claim["scope_id"] not in scopes:
             errors.append(f"claim {claim_id}: scope_id not found")
+        elif (isinstance(claim.get("kind"), str)
+              and claim["kind"] in PAYMENT_RELEASE_TIME_KINDS):
+            release_scope = scopes[claim["scope_id"]]
+            if (release_scope.get("scope_type") != "transition"
+                    or release_scope.get("transition_kind") != "payment"):
+                errors.append(f"claim {claim_id}: payment release time must scope a payment transition")
+        if (version == CORE_SCHEMA_VERSION_V4
+                and claim.get("kind") in {"destination_account_owner", "depositing_party"}
+                and isinstance(claim.get("scope_id"), str)
+                and claim["scope_id"] in scopes):
+            account_scope = scopes[claim["scope_id"]]
+            if (account_scope.get("scope_type") != "transition"
+                    or account_scope.get("transition_kind") != "deposit"):
+                label = ("deposit account owner" if claim["kind"] == "destination_account_owner"
+                         else "depositing party")
+                errors.append(f"claim {claim_id}: {label} must scope a deposit transition")
         if not _allowed(claim.get("criticality"), CRITICALITIES):
             errors.append(f"claim {claim_id}: invalid criticality")
         status = claim.get("status")
@@ -685,7 +775,8 @@ def validate_shadow_semantic_core(spec: Any, *,
             if _allowed(kind, PARTY_KINDS | {"asset"}) and (
                     not isinstance(value, str) or not value):
                 errors.append(f"claim {claim_id}: party/asset value must be nonempty text")
-            if _allowed(kind, DEADLINE_KINDS | {"amount_lovelace", "amount_token_units"}) and (
+            if _allowed(kind, DEADLINE_KINDS | PAYMENT_RELEASE_TIME_KINDS |
+                        {"amount_lovelace", "amount_token_units"}) and (
                     not isinstance(value, int) or isinstance(value, bool)):
                 errors.append(f"claim {claim_id}: numeric value must be integer")
             if v3 and kind == "amount_token_units" and type(value) is int and value <= 0:
@@ -705,6 +796,14 @@ def validate_shadow_semantic_core(spec: Any, *,
             if not valid_supporting_evidence(claim, messages):
                 errors.append(f"claim {claim_id}: supporting evidence required")
         evidence_items = evidence if isinstance(evidence, list) else []
+        if (status == "explicit" and _allowed(kind, RECIPIENT_KINDS)
+                and isinstance(value, str) and value.strip()
+                and not any(isinstance(item, dict) and item.get("relation") == "supports"
+                            and isinstance(item.get("span"), str)
+                            and re.search(r"(?<!\w)" + re.escape(value.strip()) + r"(?!\w)",
+                                          item["span"], re.IGNORECASE)
+                            for item in evidence_items)):
+            errors.append(f"claim {claim_id}: explicit recipient absent from cited evidence")
         if status == "user_confirmed" and not any(
             isinstance(item, dict) and isinstance(item.get("requirement_version"), int)
             and item["requirement_version"] > 1 for item in evidence_items):
@@ -715,11 +814,22 @@ def validate_shadow_semantic_core(spec: Any, *,
             errors.append(f"claim {claim_id}: assumption_reason required")
         if status == "unresolved" and claim.get("value") is not None:
             errors.append(f"claim {claim_id}: unresolved value must be null")
-        if v2 and _allowed(kind, DEADLINE_KINDS) and _absolute_deadline_mismatch(claim):
+        if (v2 and _allowed(kind, DEADLINE_KINDS | PAYMENT_RELEASE_TIME_KINDS)
+                and _absolute_deadline_mismatch(claim, messages)):
             errors.append(f"claim {claim_id}: deadline value contradicts cited calendar date")
         if status == "derived":
             if claim.get("criticality") == "financial" and not claim.get("normalization_basis"):
                 errors.append(f"claim {claim_id}: normalization_basis required")
+    if version == CORE_SCHEMA_VERSION_V4:
+        for scope_id, scope in scopes.items():
+            if (scope.get("scope_type") == "transition"
+                    and scope.get("transition_kind") == "deposit"
+                    and not any(isinstance(claim, dict)
+                                and claim.get("scope_id") == scope_id
+                                and claim.get("kind") in {"amount_lovelace", "amount_token_units"}
+                                and claim.get("status") != "superseded"
+                                for claim in raw_claims)):
+                errors.append(f"scope {scope_id}: deposit amount claim missing")
     for claim in raw_claims:
         if not isinstance(claim, dict):
             continue
@@ -764,9 +874,31 @@ def validate_shadow_semantic_core(spec: Any, *,
             deadline_claim = claims.get(deadline_id) if isinstance(deadline_id, str) else None
             if deadline_claim is None or not _allowed(deadline_claim.get("kind"), DEADLINE_KINDS):
                 errors.append(f"scope {scope_id}: deadline_claim_id must reference deadline claim")
+        if version == CORE_SCHEMA_VERSION_V4 and scope.get("scope_type") == "terminal_outcome":
+            scoped_claims = [claim for claim in claims.values()
+                             if claim.get("scope_id") == scope_id
+                             and _allowed(claim.get("status"), ACTIVE_STATUSES)]
+            has_payment = any(claim.get("kind") in {"amount_lovelace", "amount_token_units"}
+                              and type(claim.get("value")) is int and claim["value"] > 0
+                              for claim in scoped_claims)
+            has_recipient = any(claim.get("kind") in RECIPIENT_KINDS
+                                and isinstance(claim.get("value"), str)
+                                and claim["value"].strip() for claim in scoped_claims)
+            if has_payment and not has_recipient:
+                errors.append(f"scope {scope_id}: payout amount requires same-scope recipient")
+    explicitly_conflicted_asset_scopes = {
+        str(claim.get("scope_id")) for claim in raw_claims
+        if isinstance(claim, dict) and claim.get("kind") == "asset"
+        and claim.get("status") == "conflicted"
+    }
     by_scope: dict[tuple[str, str], set[str]] = {}
     for claim in raw_claims:
         if isinstance(claim, dict) and _allowed(claim.get("status"), ACTIVE_STATUSES):
+            # A contract may mention several assets; only an explicit conflicted label
+            # makes same-scope asset alternatives a scalar ambiguity.
+            if (claim.get("kind") == "asset"
+                    and str(claim.get("scope_id")) not in explicitly_conflicted_asset_scopes):
+                continue
             key = (str(claim.get("kind")), str(claim.get("scope_id")))
             by_scope.setdefault(key, set()).add(json.dumps(claim.get("value"), sort_keys=True))
     conflicting = {key for key, values in by_scope.items() if len(values) > 1}
@@ -819,8 +951,10 @@ def validate_shadow_semantic_core(spec: Any, *,
         )
         has_unrepresented_behavior = isinstance(spec.get("unscored_observations"), list) and any(
             isinstance(item, dict) and
-            item.get("reason") == ("outside_stage2b_v3_claim_taxonomy" if v3
-                                   else "outside_stage2b_v2_claim_taxonomy")
+            item.get("reason") == ("outside_stage2b_v4_claim_taxonomy"
+                                   if version == CORE_SCHEMA_VERSION_V4 else
+                                   "outside_stage2b_v3_claim_taxonomy" if v3 else
+                                   "outside_stage2b_v2_claim_taxonomy")
             for item in spec["unscored_observations"]
         )
         if not has_unresolved_claim and not has_unrepresented_behavior:
@@ -842,9 +976,12 @@ def validate_shadow_semantic_core(spec: Any, *,
             if (not isinstance(item, dict) or not UNSCORED_OBSERVATION_FIELDS <= item.keys()
                     or not item.get("observation_id")
                     or not item.get("text") or
-                    item.get("reason") not in (UNSCORED_OBSERVATION_REASONS_V3 if v3 else
-                                               UNSCORED_OBSERVATION_REASONS_V2 if v2 else
-                                               {UNSCORED_OBSERVATION_REASON})
+                     item.get("reason") not in (
+                         UNSCORED_OBSERVATION_REASONS_V4
+                         if version == CORE_SCHEMA_VERSION_V4 else
+                         UNSCORED_OBSERVATION_REASONS_V3 if v3 else
+                         UNSCORED_OBSERVATION_REASONS_V2 if v2 else
+                         {UNSCORED_OBSERVATION_REASON})
                     or not _evidence_valid(item.get("source_evidence"), messages)):
                 errors.append("invalid unscored_observation")
     return errors
@@ -864,7 +1001,7 @@ def validate_intent_spec(spec: Any, *,
     if extra:
         errors.append(f"unknown top-level fields: {sorted(extra)}")
     if spec.get("schema_version") not in {SCHEMA_VERSION, SCHEMA_VERSION_V2,
-                                          SCHEMA_VERSION_V3}:
+                                          SCHEMA_VERSION_V3, SCHEMA_VERSION_V4}:
         errors.append("invalid schema_version")
     scopes = {scope["scope_id"]: scope for scope in spec.get("behavior_scopes", [])
               if isinstance(scope, dict) and isinstance(scope.get("scope_id"), str)} if isinstance(
@@ -872,9 +1009,16 @@ def validate_intent_spec(spec: Any, *,
     claims = {claim["claim_id"]: claim for claim in spec.get("claims", [])
               if isinstance(claim, dict) and isinstance(claim.get("claim_id"), str)} if isinstance(
                   spec.get("claims"), list) else {}
+    explicitly_conflicted_asset_scopes = {
+        str(claim.get("scope_id")) for claim in claims.values()
+        if claim.get("kind") == "asset" and claim.get("status") == "conflicted"
+    }
     by_scope: dict[tuple[str, str], set[str]] = {}
     for claim in claims.values():
         if _allowed(claim.get("status"), ACTIVE_STATUSES):
+            if (claim.get("kind") == "asset"
+                    and str(claim.get("scope_id")) not in explicitly_conflicted_asset_scopes):
+                continue
             by_scope.setdefault((str(claim.get("kind")), str(claim.get("scope_id"))), set()).add(
                 json.dumps(claim.get("value"), sort_keys=True))
     conflicting = {key for key, values in by_scope.items() if len(values) > 1}
@@ -947,11 +1091,15 @@ def validate_intent_spec(spec: Any, *,
                                                     PARAMETER_CLAIM_KINDS["asset"]):
                         errors.append("funding asset_id lacks matching asset and claim_ref")
             if name == "parameters" and item.get("normalized_value") is not None:
-                kinds = PARAMETER_CLAIM_KINDS.get(item.get("kind"), set())
+                allowed_parameter_claims = (PARAMETER_CLAIM_KINDS_V4
+                                            if spec.get("schema_version") == SCHEMA_VERSION_V4
+                                            else PARAMETER_CLAIM_KINDS)
+                kinds = allowed_parameter_claims.get(item.get("kind"), set())
                 if not _backed(item["normalized_value"], refs, kinds):
                     errors.append("parameter value lacks matching claim_ref")
             if name == "parameters" and not _allowed(
-                    item.get("kind"), PARAMETER_KINDS):
+                    item.get("kind"), PARAMETER_KINDS_V4 if spec.get("schema_version") ==
+                    SCHEMA_VERSION_V4 else PARAMETER_KINDS):
                 errors.append("parameter kind is unsupported")
             if name == "states" and item.get("state_id") != "initial":
                 state_id = item.get("state_id")
@@ -962,6 +1110,9 @@ def validate_intent_spec(spec: Any, *,
                              _allowed(claim.get("status"), BACKING_STATUSES) for claim in refs):
                     errors.append("business state lacks matching claim_ref")
             if name == "transitions":
+                if (spec.get("schema_version") != SCHEMA_VERSION_V4
+                        and item.get("release_time_parameter_id") is not None):
+                    errors.append("release_time_parameter_id requires Stage 2B schema v4")
                 transition_id = item.get("transition_id")
                 if (not isinstance(transition_id, str) or transition_id not in scopes or
                         scopes[transition_id].get("scope_type") != "transition"):
@@ -985,6 +1136,21 @@ def validate_intent_spec(spec: Any, *,
                                  and claim.get("claim_id") in parameter["claim_refs"]
                                  for claim in refs):
                         errors.append("transition deadline lacks matching scoped claim_ref")
+                if item.get("release_time_parameter_id") is not None:
+                    parameter_id = item["release_time_parameter_id"]
+                    parameter = parameters.get(parameter_id) if isinstance(parameter_id, str) else None
+                    if parameter is None or parameter.get("kind") != "release_time":
+                        errors.append("transition release_time_parameter_id must reference release_time")
+                    elif not any(_allowed(
+                                 claim.get("kind"), TRANSITION_RELEASE_TIME_KINDS.get(
+                                     item.get("kind"), set()) if isinstance(item.get("kind"), str)
+                                     else set())
+                                 and claim.get("scope_id") == transition_id
+                                 and claim.get("value") == parameter.get("normalized_value")
+                                 and isinstance(parameter.get("claim_refs"), list)
+                                 and claim.get("claim_id") in parameter["claim_refs"]
+                                 for claim in refs):
+                        errors.append("transition release time lacks matching scoped claim_ref")
             if name == "transitions" and item.get("actor") is not None:
                 kind = item.get("kind")
                 kinds = TRANSITION_ACTOR_KINDS.get(kind, set()) if isinstance(kind, str) else set()
@@ -1050,7 +1216,10 @@ def validate_intent_spec(spec: Any, *,
             mandatory.append(("accounts", "owner", value))
         if _allowed(kind, RECIPIENT_KINDS):
             mandatory.append(("obligations_and_outcomes", "recipient", value))
-        if _allowed(kind, PARAMETER_CLAIM_KINDS["amount"] | DEADLINE_KINDS):
+        release_time_kinds = (PAYMENT_RELEASE_TIME_KINDS
+                              if spec.get("schema_version") == SCHEMA_VERSION_V4 else set())
+        if _allowed(kind, PARAMETER_CLAIM_KINDS["amount"] | DEADLINE_KINDS |
+                    release_time_kinds):
             mandatory.append(("parameters", "normalized_value", value))
         for section, field, expected in mandatory:
             if not any(isinstance(item, dict) and item.get(field) == expected

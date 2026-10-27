@@ -9,21 +9,26 @@ from typing import Any
 from research.stage2b.intent_spec import (
     BACKING_STATUSES, DEADLINE_KINDS, IntentSpec,
     OUTCOME_RECIPIENT_KINDS, PARTY_KINDS, SCHEMA_VERSION, SCHEMA_VERSION_V2,
-    SCHEMA_VERSION_V3, CORE_SCHEMA_VERSION_V2, CORE_SCHEMA_VERSION_V3,
+    SCHEMA_VERSION_V3, SCHEMA_VERSION_V4, CORE_SCHEMA_VERSION_V2,
+    CORE_SCHEMA_VERSION_V3, CORE_SCHEMA_VERSION_V4,
     TRANSITION_ACTOR_KINDS, TRANSITION_DEADLINE_KINDS,
+    TRANSITION_RELEASE_TIME_KINDS,
     validate_shadow_semantic_core,
 )
 
 
 PARAMETER_KINDS = {"amount_lovelace": "amount", "amount_token_units": "amount",
                    "asset": "asset",
-                   **{kind: "deadline" for kind in DEADLINE_KINDS}}
+                   **{kind: "deadline" for kind in DEADLINE_KINDS},
+                   "payment_release_time_ms": "release_time"}
 UNITS = {"amount_lovelace": "lovelace", "amount_token_units": "token_units",
-         **{kind: "posix_ms" for kind in DEADLINE_KINDS}}
+         **{kind: "posix_ms" for kind in DEADLINE_KINDS},
+         "payment_release_time_ms": "posix_ms"}
 OUTCOMES = {kind: outcome for outcome, kinds in OUTCOME_RECIPIENT_KINDS.items()
             for kind in kinds}
 CATEGORIES = ("participant", "asset", "account", "parameter", "transition",
-              "transition_actor", "deadline", "outcome", "conflict", "assumption")
+              "transition_actor", "deadline", "release_time", "outcome",
+              "conflict", "assumption")
 
 
 @dataclass
@@ -54,7 +59,8 @@ def _backed(claim: dict[str, Any]) -> bool:
 def _new_spec(core: dict[str, Any]) -> dict[str, Any]:
     return {
         "schema_version": {CORE_SCHEMA_VERSION_V2: SCHEMA_VERSION_V2,
-                           CORE_SCHEMA_VERSION_V3: SCHEMA_VERSION_V3}.get(
+                           CORE_SCHEMA_VERSION_V3: SCHEMA_VERSION_V3,
+                           CORE_SCHEMA_VERSION_V4: SCHEMA_VERSION_V4}.get(
                                core.get("schema_version"), SCHEMA_VERSION),
         "requirement_history": core.get("requirement_history"),
         "participants": [],
@@ -177,11 +183,26 @@ def project_intent_spec(core: dict[str, Any] | Any, *,
         else:
             record("deadline", scope_id, mandatory=False, projected=False,
                    reason="no_compatible_same_scope_deadline")
-        spec["transitions"].append({"transition_id": scope_id, "kind": kind,
+        release_claims = [claim for release_kind in TRANSITION_RELEASE_TIME_KINDS.get(kind, set())
+                          for claim in grouped.get((release_kind, scope_id), [])]
+        release_time_id = None
+        if len(release_claims) == 1:
+            release_time_id = f"parameter:{release_claims[0]['claim_id']}"
+            record("release_time", scope_id, mandatory=True, projected=True)
+        elif release_claims:
+            record("release_time", scope_id, mandatory=True, projected=False,
+                   reason="ambiguous_release_time")
+        claim_refs = actor_refs + ([deadline_claims[0]["claim_id"]]
+                                   if deadline_id is not None else [])
+        if release_time_id is not None:
+            claim_refs.append(release_claims[0]["claim_id"])
+        transition = {"transition_id": scope_id, "kind": kind,
             "actor": actor, "deadline_parameter_id": deadline_id,
             "transaction_submitter": None,
-            "claim_refs": sorted(set(actor_refs + ([deadline_claims[0]["claim_id"]]
-                                  if deadline_id is not None else [])))})
+            "claim_refs": sorted(set(claim_refs))}
+        if source.get("schema_version") == CORE_SCHEMA_VERSION_V4:
+            transition["release_time_parameter_id"] = release_time_id
+        spec["transitions"].append(transition)
         record("transition", scope_id, mandatory=True, projected=True)
         if kind == "deposit":
             record("funding_relation", scope_id, mandatory=False, projected=False,

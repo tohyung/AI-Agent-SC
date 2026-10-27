@@ -53,6 +53,8 @@ def test_model_generator_uses_accepted_spec_and_keeps_candidate_authority():
     assert 'never {"constant": 1}' in model.requests[0][0]
     assert 'Never wrap that Contract in {"pay": {...}}' in model.requests[0][0]
     assert "Never put a scheduled payment behind Notify" in model.requests[0][0]
+    assert "payment_release_time_ms claim" in model.requests[0][0]
+    assert "empty cases array" in model.requests[0][0]
     assert "Do not replace a source-stated approval" in model.requests[0][0]
     assert "Conserve funds per account and asset on every path" in model.requests[0][0]
     assert "never pay 95 ADA from each account" in model.requests[0][0]
@@ -78,6 +80,55 @@ def test_reference_feedback_explains_timeout_path_without_rewriting_scenario():
                for item in feedback)
     assert any("35000000" in item and "Huy" in item for item in feedback)
     assert any("17500000" in item and "Nga" in item for item in feedback)
+
+
+def test_reference_feedback_identifies_missing_repayment_deposit_case():
+    repayment = {"type": "Deposit", "party": {"role_token": "Yến"},
+                 "account": {"role_token": "Yến"},
+                 "token": {"currency_symbol": "", "token_name": ""},
+                 "amount": 83000000}
+    report = {
+        "expectation": {"expected_status": "Success"},
+        "bound_transactions": [
+            {"interval": {"from": 10, "to": 10}, "inputs": [{"type": "Deposit"}]},
+            {"interval": {"from": 20, "to": 20}, "inputs": [repayment]}],
+        "reference_result": {"status": "TransactionError", "steps": [
+            {"status": "Success", "contract": {"when": [], "timeout": 30,
+                                               "timeout_continuation": "close"}},
+            {"status": "TransactionError", "error": {"type": "TEApplyNoMatchError"}}]},
+    }
+    feedback = _reference_counterexample_feedback(report)
+    assert any("no matching Deposit Case" in item and "83000000" in item
+               and "Yến" in item for item in feedback)
+
+
+def test_reference_feedback_explains_first_transaction_deposit_field_mismatch():
+    submitted = {"type": "Deposit", "party": {"role_token": "Quỳnh"},
+                 "account": {"role_token": "Quỳnh"},
+                 "token": {"currency_symbol": "", "token_name": ""},
+                 "amount": 170000000}
+    report = {
+        "expectation": {"expected_status": "Success"},
+        "bound_transactions": [{
+            "interval": {"from": 10, "to": 10}, "inputs": [submitted]}],
+        "reference_result": {"status": "TransactionError",
+                             "final_contract": {"when": [{"case": {
+                                 "deposits": 170000000,
+                                 "party": {"role_token": "Quỹnh"},
+                                 "into_account": {"role_token": "Quỹnh"},
+                                 "of_token": {"currency_symbol": "", "token_name": ""},
+                             }, "then": "close"}], "timeout": 20,
+                                 "timeout_continuation": "close"},
+                             "steps": [{"status": "TransactionError",
+                                        "error": {"type": "TEApplyNoMatchError"}}]},
+    }
+
+    feedback = _reference_counterexample_feedback(report)
+
+    mismatch = next(item for item in feedback if "field differences" in item)
+    assert "expected_from_scenario" in mismatch
+    assert "Quỳnh" in mismatch and "Quỹnh" in mismatch
+    assert "repair the AST Case, not the expected input" in mismatch
 
 
 def test_model_generator_rejects_noncanonical_token_when_intent_only_uses_ada():

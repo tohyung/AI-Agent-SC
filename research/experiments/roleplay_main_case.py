@@ -17,7 +17,7 @@ from research.final_validation.marlowe_cli import config_from_environment
 from research.integrations.model_replay import (FirstCoreReplayModel, JournaledModel,
                                                 SavedContractReplayModel)
 from research.integrations.model_transport import ModelTransport
-from research.stage2b.intent_spec import CORE_SCHEMA_VERSION_V3
+from research.stage2b.intent_spec import CORE_SCHEMA_VERSION_V3, CORE_SCHEMA_VERSION_V4
 from research.stage2b.repair_policy import REPAIR_POLICY_VERSION
 
 
@@ -112,18 +112,25 @@ def _source_transcript(history: list[dict[str, Any]] | None,
 
 
 def _reusable_core(case_dir: Path, history: list[dict[str, Any]], *,
-                   candidate_id: str | None = None) -> tuple[dict, str, list[str]] | None:
+                   candidate_id: str | None = None,
+                   require_policy_version: str | None = None) -> tuple[dict, str, list[str]] | None:
     for path in sorted(case_dir.glob("attempt-*.json"), reverse=True):
         record = json.loads(path.read_text(encoding="utf-8"))
         candidate = record.get("candidate")
         core = candidate.get("semantic_core") if isinstance(candidate, dict) else None
         if (not isinstance(core, dict)
-                or core.get("schema_version") != CORE_SCHEMA_VERSION_V3
+                or core.get("schema_version") not in {CORE_SCHEMA_VERSION_V3,
+                                                       CORE_SCHEMA_VERSION_V4}
                 or core.get("requirement_history") != history):
             continue
         ids = (record.get("stages", {}).get("intent_extraction", {})
                .get("output_artifacts", []))
         if candidate_id is not None and ids != [candidate_id]:
+            continue
+        if (require_policy_version is not None and
+                (record.get("stages", {}).get("intent_extraction", {}).get(
+                    "telemetry", {}).get("repair_policy_version") != require_policy_version
+                 or record.get("replayed_core_candidate_id") in ids)):
             continue
         if len(ids) != 1 or record.get("artifacts", {}).get(ids[0], {}).get("payload") != candidate:
             raise ValueError("stored candidate artifact differs from replay payload")
@@ -209,7 +216,9 @@ def run_case(index: int, *, answers: list[str] | None = None,
     selected_candidate_id = reviewed_candidate_id or repair_candidate_id
     replay = _reusable_core(case_dir, history or [
         {"version": 1, "messages": [case["prompt"]]}],
-        candidate_id=selected_candidate_id)
+        candidate_id=selected_candidate_id,
+        require_policy_version=(REPAIR_POLICY_VERSION
+                                if selected_candidate_id is None else None))
     if selected_candidate_id is not None and replay is None:
         raise ValueError("selected candidate is not stored for this requirement history")
     contract_replay = (_reusable_contract(case_dir, replay_contract_id,

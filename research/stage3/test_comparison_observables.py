@@ -95,6 +95,23 @@ def test_missing_requested_reference_observable_is_inconclusive(field):
     assert field in result.artifacts[0].payload["unavailable_observables"]
 
 
+def test_decisive_mismatch_is_violated_even_when_other_observables_are_unavailable():
+    raw = {
+        "status": "TransactionError",
+        "meta": {"upstream_commit": "unit", "reference_driver_version": "v1"},
+        "steps": [{"status": "TransactionError", "error": {"type": "TEApplyNoMatchError"}}],
+        "final_contract": {"when": []},
+    }
+
+    result = _run(raw)
+
+    assert result.result.run_status == StageRunStatus.FAILED
+    assert result.result.semantic_status == "VIOLATED"
+    assert "status" in result.artifacts[0].payload["mismatches"]
+    assert {"warnings", "payments"} <= set(
+        result.artifacts[0].payload["unavailable_observables"])
+
+
 def test_all_observables_match_or_name_only_mismatched_fields():
     raw = _raw()
     assert _run(raw, final_state={"accounts": []}).result.run_status == StageRunStatus.SUCCEEDED
