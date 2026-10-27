@@ -1,11 +1,14 @@
 {
   "schema_version": "research-architecture-v1",
-  "status": "ARCHITECTURE_SPECIFIED_AND_SCAFFOLDED",
+  "status": "IMPLEMENTED_UNVALIDATED",
   "production_authority_changed": false,
-  "default_route": "legacy",
+  "default_route": "assurance_pipeline",
+  "legacy_route": "archived_research_legacy_not_exposed_by_cli",
+  "contract_generation": "llm_model_candidate",
   "artifact_hash_basis": "canonical_json_v1_payload_only",
   "shared_lifecycle_enum": "ImplementationStatus",
   "compiler_authority_default": "CANDIDATE_ONLY",
-  "external_adapters_default": "disabled",
-  "validation_state": "offline_contract_smoke_only"
+  "external_adapters_default": "ledger_size_opt_in_testnet_deployment_disabled",
+  "validation_state": "offline_tests_and_simulated_roleplay_ledger_size_only",
+  "status_source": "docs/research/production-cutover-report.md"
 }

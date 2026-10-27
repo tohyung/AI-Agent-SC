@@ -22,8 +22,9 @@ The CLI reads the model and endpoint configuration from `.env` through
 for an interactive session, or use `--interactive` with a supplied prompt.
 Noninteractive calls stop when clarification or explicit intent approval is
 needed.
-The main route requests Stage 2B Core V3 by default; use
-`--core-schema-version v2` only when reproducing a V2 run. A model response
+The main route requests Stage 2B Core V4 by default, matching the roleplay
+batch runner; use `--core-schema-version v3` or `v2` only when reproducing an
+older run. A model response
 with the wrong core version is repaired or blocked, never silently downgraded.
 
 ```powershell

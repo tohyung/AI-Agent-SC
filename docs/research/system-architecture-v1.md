@@ -1,8 +1,30 @@
 # Research assurance architecture v1
 
-Status: `ARCHITECTURE_SPECIFIED_AND_SCAFFOLDED`. This is not model, compiler,
-reference, oracle, ledger, or production validation. Legacy Node 1/2/3 remains
-the default production route.
+> **Current-status note (2026-10-27).** The body below is the 2026-10-01/02
+> baseline and is kept unchanged as history. Since the cutover in `4e74599`
+> ([production-cutover-report.md](production-cutover-report.md),
+> [production-route-transition.md](production-route-transition.md)):
+>
+> - The supported CLI runs only this pipeline. Legacy Node 1/2/3 lives in
+>   `research/legacy/` and is no longer a route; `--research-mode` was removed.
+> - The `compile` stage is `LLMContractGeneratorPort`: the model generates a
+>   Core V1 AST with `MODEL_CANDIDATE` authority. Deterministic profile
+>   compilers remain for experiments only. `compiler_authority` is
+>   `CandidateGatePort`, which always records `CANDIDATE_ONLY`.
+> - `smt_verification` (graph lint plus pinned SMT) runs between `compile` and
+>   `semantic_comparison`; findings feed bounded model regeneration.
+> - `ledger_validation` is the opt-in `MarloweCliSizeAnalysisPort`
+>   (transaction-size analysis against a local node, no signing). Testnet and
+>   deployment remain disabled.
+> - Stage 2B defaults to core v4. Stage 5 records oracle observations in a
+>   local SQLite store during `oracle_evaluation`, before the ledger stage.
+>
+> The evidence limits below still apply: nothing here is verified, proven,
+> ledger-valid or production-ready.
+
+Status (baseline): `ARCHITECTURE_SPECIFIED_AND_SCAFFOLDED`. This is not model,
+compiler, reference, oracle, ledger, or production validation. At this
+baseline, legacy Node 1/2/3 was the default production route.
 
 ## Objective and evidence scope
 

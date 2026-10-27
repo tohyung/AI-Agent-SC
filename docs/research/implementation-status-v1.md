@@ -1,10 +1,32 @@
 # Architecture v1: implementation and evidence status
 
-Baseline: `3294c703f0636614c12daaaae8bb9d63ca4f886f`. The official
-architecture status is `ARCHITECTURE_SPECIFIED_AND_SCAFFOLDED` in
-[`manifest.json`](../../research/architecture/manifest.json). This document is
-an evidence inventory for a research report, not a promotion decision. The
-default production route remains legacy Node 1/2/3.
+> **Current-status note (2026-10-27).** This inventory describes baseline
+> `3294c70` and is kept unchanged as history. The current
+> [`manifest.json`](../../research/architecture/manifest.json) records the
+> post-cutover state (`4e74599`; see
+> [production-cutover-report.md](production-cutover-report.md)). Rows that
+> changed since this baseline:
+>
+> - **Research CLI / route:** the CLI has no `--research-mode`; the assurance
+>   pipeline is the only supported route and legacy is archived.
+> - **Stage 3 compiler:** the main route uses LLM generation
+>   (`MODEL_CANDIDATE`), not a deterministic plugin; authority is always
+>   `CANDIDATE_ONLY` via `CandidateGatePort`.
+> - **Node 3/SMT:** runs by default in the main route as `smt_verification`.
+> - **Stage 3 reference/comparison and Stage 4:** exercised against the real
+>   pinned binary in simulated roleplay batches (one reviewed expectation per
+>   run; exploration covers only that expectation's declared transactions).
+> - **Ledger validation:** opt-in transaction-size analysis on a local private
+>   node; no signing or submission. Testnet/deployment stay disabled.
+> - **Stage 5:** a local SQLite observation store exists; simulation-only
+>   observations are ineligible for export.
+>
+> None of these changes is E5/E6 evidence or a production authorization.
+
+Baseline: `3294c703f0636614c12daaaae8bb9d63ca4f886f`. At this baseline the
+official architecture status was `ARCHITECTURE_SPECIFIED_AND_SCAFFOLDED`. This
+document is an evidence inventory for a research report, not a promotion
+decision. At this baseline, the default production route was legacy Node 1/2/3.
 
 ## Evidence labels used here
 

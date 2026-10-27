@@ -3,6 +3,8 @@
 import subprocess
 import sys
 
+from research.stage2b.intent_spec import CORE_SCHEMA_VERSION_V4
+
 
 def test_cli_import_does_not_load_legacy_pipeline():
     probe = (
@@ -34,10 +36,10 @@ def test_main_calls_only_assurance_session(monkeypatch, capsys):
     monkeypatch.setattr(cli, "config_from_environment", lambda: None)
 
     def fake_session(prompt, _model, *, options, ask, emit):
-        calls.append((prompt, options.max_iterations, ask, emit))
+        calls.append((prompt, options.max_iterations, options.core_schema_version, ask, emit))
         return {"status": "WAITING_USER", "stop_reason": "explicit_acceptance_required"}
 
     monkeypatch.setattr(cli, "run_session", fake_session)
     assert cli.main() == 2
-    assert calls == [("Alice pays Bob", 8, None, None)]
+    assert calls == [("Alice pays Bob", 8, CORE_SCHEMA_VERSION_V4, None, None)]
     assert '"stop_reason": "explicit_acceptance_required"' in capsys.readouterr().out
