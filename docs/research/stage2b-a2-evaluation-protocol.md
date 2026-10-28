@@ -54,6 +54,29 @@ Chỉ số chính, tự động, không cần người chấm:
    `conflict_requires_resolution`; `infeasible` →
    `unsupported_for_current_study`.
 
+### Chỉ số điều chỉnh (thêm ngày 2026-10-29, sau khi chấm 16 case BASE)
+
+Mọi `timeout` trong `reference_contract` là 12:00 UTC của ngày được nêu, nhưng
+không prompt nào nói giờ hay múi giờ. Pipeline (cả BASE và A2) được thiết kế
+để không đoán giờ, nên recall mốc ở M3 và M4 của case `complete` luôn bằng 0
+và không phân biệt được hai nhánh. Hai chỉ số phụ, báo cáo **bên cạnh** chỉ số
+chính, không thay thế:
+
+- **M3 mốc đã nhận ra:** một mốc tham chiếu được tính khi có claim thời gian
+  (kể cả `unresolved`) trích đúng ngày lịch của nó, có giá trị rơi vào đúng
+  ngày UTC đó, hoặc trích cụm "N ngày/tuần sau" bằng đúng khoảng cách tới một
+  mốc tham chiếu khác. Không yêu cầu giờ.
+- **M4 điều chỉnh:** case `complete` được tính đúng nếu resolution là
+  `clarification_required` và mọi claim tài chính `unresolved` đều là mốc thời
+  gian, không có claim `conflicted`, và không có observation hành vi chưa biểu
+  diễn được (observation `irrelevant_context` không phải câu hỏi mở).
+
+Ghi chú minh bạch: các chỉ số này được chốt sau khi đã thấy kết quả 16 case
+BASE (recall mốc 0, M4 complete 0). Bản cài đặt đầu tiên loại cả observation
+`irrelevant_context`, chặt hơn định nghĩa đã thống nhất; lỗi cài đặt này được
+sửa sau khi xem bản ghi BASE. Kết quả trên 16 case: recall/precision mốc
+0,9/0,8; M4 điều chỉnh 0,875 (complete 0,78).
+
 Chỉ số phụ: số dòng lớp chuẩn hóa tất định (`core_draft.py` và tương đương),
 kích thước prompt system/user, số loại mã lỗi.
 

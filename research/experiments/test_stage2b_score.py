@@ -4,7 +4,6 @@ import json
 
 from research.experiments import stage2b_score
 
-
 REFERENCE = {"when": [{"case": {"party": {"role_token": "Bob"}, "deposits": 20000000,
                                 "into_account": {"role_token": "Bob"},
                                 "of_token": {"currency_symbol": "", "token_name": ""}},
@@ -55,3 +54,36 @@ def test_arm_metrics_and_decision_expectation_by_info_mode(tmp_path):
     assert summary["M3_complete_cases"] == 1
     assert summary["M3_fact_agreement"]["roles"] == {"recall": 1.0, "precision": 1.0}
     assert summary["M4_by_info_mode"] == {"complete": 1.0, "missing": 0.0}
+
+
+def test_adjusted_deadline_identified_by_date_or_relative_phrase_without_time():
+    noon_jan_3, noon_jan_10 = 1798977600000, 1799582400000  # 2027-01-03/10 12:00 UTC
+    core = {"claims": [
+        {"kind": "deposit_deadline_ms", "value": None, "status": "unresolved",
+         "evidence": [{"span": "trước ngày 03/01/2027"}]},
+        {"kind": "choice_deadline_ms", "value": None, "status": "unresolved",
+         "evidence": [{"span": "bảy ngày sau hạn nạp"}]},
+        {"kind": "timeout_ms", "value": None, "status": "unresolved",
+         "evidence": [{"span": "khi nào tiện"}]}]}
+    assert stage2b_score.identified_deadlines(core, {noon_jan_3, noon_jan_10}) == (2, 2)
+
+
+def test_adjusted_m4_accepts_complete_case_that_only_asks_about_time():
+    deadline_only = {"predicted_resolution": "clarification_required", "semantic_core": {
+        "claims": [_claim("deposit_deadline_ms", None, "unresolved") | {"criticality": "financial"}],
+        "unscored_observations": []}}
+    amount_open = {"predicted_resolution": "clarification_required", "semantic_core": {
+        "claims": [_claim("amount_lovelace", None, "unresolved") | {"criticality": "financial"}],
+        "unscored_observations": []}}
+    assert stage2b_score.time_only_open(deadline_only) is True
+    assert stage2b_score.time_only_open(amount_open) is False
+
+
+def test_adjusted_m4_ignores_side_context_but_not_unrepresented_behavior():
+    def record(reason):
+        return {"predicted_resolution": "clarification_required", "semantic_core": {
+            "claims": [_claim("deposit_deadline_ms", None, "unresolved")
+                       | {"criticality": "financial"}],
+            "unscored_observations": [{"reason": reason}]}}
+    assert stage2b_score.time_only_open(record("irrelevant_context")) is True
+    assert stage2b_score.time_only_open(record("outside_stage2b_v4_claim_taxonomy")) is False
