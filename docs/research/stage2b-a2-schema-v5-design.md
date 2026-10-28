@@ -67,6 +67,10 @@ Bước (`steps`), tham chiếu bằng ID:
  "on_timeout": ["o_refund_all"], "evidence": [...]}
 ```
 
+Nguồn tự mâu thuẫn: quantity/instant dùng `"alternatives": [{"expr": …,
+"evidence": […]}, …]` thay cho `expr`; trường party (`by`, `into`,
+`from_account`, `to`) dùng danh sách ID.
+
 `then`/`on_timeout` là danh sách outcome rồi (tùy chọn) một bước kế tiếp,
 hoặc `"end"`. Model **không** viết `scope_id`, `continuation_scope_id`,
 `decision_id`, `claim_id` hay giá trị lovelace/ms.
@@ -325,8 +329,13 @@ native, conflict, `notes.unsupported`, câu hỏi theo ngôn ngữ prompt.
    1 không thể ra `unsupported_for_current_study`; builder dùng observation +
    clarification (mục 4 đã sửa).
 5. **Draft v5 chưa diễn đạt được mâu thuẫn.** v4 cần hai claim `conflicted`
-   cùng kind/scope. Cần thêm `alternatives` cho quantity/instant/party trước
-   khi chạy live, vì tập dev có case `ambiguous`.
+   cùng kind/scope. **Đã xử lý (2026-10-29):** quantity/instant có thể thay
+   `expr` bằng `"alternatives": [{expr, evidence}, …]` (mỗi cách đọc có span
+   riêng); trường party trong bước/outcome có thể là danh sách ID. Cách đọc
+   cho giá trị khác nhau → mỗi cách một claim `conflicted` cùng scope,
+   `conflict_requires_resolution`, kèm câu hỏi. Cách đọc trùng giá trị không
+   phải mâu thuẫn. Giá trị tính từ mục đang tranh chấp (một nửa, số dư còn lại)
+   thành `unresolved` thay vì chọn một cách đọc. 3 test mới.
 
 Bước tiếp theo trong mục 9: mở rộng builder (notify, conflict, unsupported,
 token native, DAG), viết `fact_prompt.py`, rồi property test và ma trận độ phủ.

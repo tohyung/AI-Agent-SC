@@ -145,3 +145,46 @@ def test_v4_conflict_offset_deadline_cannot_cite_its_base_date():
     claim["evidence"] += ev("00:00 ngày 02/03/2027 (UTC+7)")
     errors = validate_shadow_semantic_core(broken, expected_history=HISTORY)
     assert errors == ["claim t_s2:choice_deadline_ms: deadline value contradicts cited calendar date"]
+
+
+CONFLICT_HISTORY = [{"version": 1, "messages": [MESSAGE + " Tổng cộng 70 ADA nhé."]}]
+
+
+def _with_total_readings(*readings):
+    draft = milestone_draft()
+    del draft["quantities"][0]["expr"]
+    draft["quantities"][0]["alternatives"] = [
+        {"expr": {"ada": amount}, "evidence": ev(span)} for amount, span in readings]
+    return draft
+
+
+def test_distinct_readings_become_conflicted_claims_and_a_conflict_resolution():
+    draft = _with_total_readings(("60", "tổng 60 ADA"), ("70", "Tổng cộng 70 ADA"))
+    core = build_core(draft, CONFLICT_HISTORY)
+    assert validate_shadow_semantic_core(core, expected_history=CONFLICT_HISTORY) == []
+    assert core["predicted_resolution"] == "conflict_requires_resolution"
+    assert core["required_clarifications"]
+    deposit = [claim for claim in core["claims"]
+               if claim["scope_id"] == "t_s1" and claim["kind"] == "amount_lovelace"]
+    assert {(claim["status"], claim["value"]) for claim in deposit} == {
+        ("conflicted", 60_000_000), ("conflicted", 70_000_000)}
+    # Amounts computed from the disputed total stay open instead of picking a reading.
+    assert _values(core, "amount_lovelace")["o_o_pay1"] is None
+
+
+def test_equal_readings_are_not_a_conflict():
+    draft = _with_total_readings(("60", "tổng 60 ADA"), ("60", "tổng 60 ADA"))
+    core = build_core(draft, CONFLICT_HISTORY)
+    assert validate_shadow_semantic_core(core, expected_history=CONFLICT_HISTORY) == []
+    assert core["predicted_resolution"] == "accepted_interpretation"
+
+
+def test_two_parties_for_one_role_is_a_conflict():
+    draft = milestone_draft()
+    draft["steps"][1]["by"] = ["p_lan", "p_tu"]
+    core = build_core(draft, HISTORY)
+    assert validate_shadow_semantic_core(core, expected_history=HISTORY) == []
+    assert core["predicted_resolution"] == "conflict_requires_resolution"
+    owners = {claim["value"] for claim in core["claims"]
+              if claim["scope_id"] == "t_s2" and claim["kind"] == "choice_owner"}
+    assert owners == {"Lan", "Tú"}

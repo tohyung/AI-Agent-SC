@@ -53,7 +53,9 @@ class _Builder:
         self.questions: list[dict[str, str]] = []
         self.used: set[str] = set()
         self._quantity_cache: dict[str, tuple[int | None, str, list[dict[str, Any]]]] = {}
-        self._instant_cache: dict[str, tuple[int | None, str | None]] = {}
+        self._instant_cache: dict[str, tuple[int | None, str | None, list[dict[str, Any]]]] = {}
+        # Draft item id -> distinct readings (value, basis, evidence) the source gives.
+        self.conflicts: dict[str, list[tuple[Any, Any, list[dict[str, Any]]]]] = {}
         self._visiting: set[str] = set()
 
     # -- draft checks ------------------------------------------------------
@@ -98,6 +100,27 @@ class _Builder:
 
     # -- expressions -------------------------------------------------------
 
+    def _alternatives(self, item_id: str, item: dict[str, Any], evaluate) -> Any:
+        """Evaluate each source reading; distinct results become a recorded conflict."""
+        readings = []
+        for index, alternative in enumerate(item["alternatives"], 1):
+            if not isinstance(alternative, dict):
+                self.problems.append((item_id, f"alternative {index} must be an object"))
+                continue
+            evidence = self._evidence(item_id, alternative.get("evidence"))
+            readings.append(evaluate(alternative.get("expr") or {}, evidence))
+        if len(readings) < 2:
+            self.problems.append((item_id, "alternatives need at least two readings"))
+            if not readings:
+                return None, "", []
+        distinct = {reading[0] for reading in readings}
+        if len(distinct) > 1 and None not in distinct:
+            self.conflicts[item_id] = readings
+            merged = [entry for reading in readings for entry in reading[-1]]
+            return (None, *readings[0][1:-1], merged)
+        # Equal readings agree; an unknown reading leaves the value open.
+        return readings[0] if len(distinct) == 1 else (None, *readings[0][1:])
+
     def quantity(self, qid: str) -> tuple[int | None, str, list[dict[str, Any]]]:
         """Return (lovelace or None if unresolved, basis, evidence of the whole tree)."""
         if qid in self._quantity_cache:
@@ -108,11 +131,21 @@ class _Builder:
             return None, "", []
         self._visiting.add(qid)
         self.used.add(qid)
-        expr = item.get("expr") or {}
-        evidence = list(item.get("evidence") or [])
+        if "alternatives" in item:
+            result = self._alternatives(qid, item, lambda expr, evidence: self._quantity_expr(
+                qid, expr, evidence))
+        else:
+            result = self._quantity_expr(qid, item.get("expr") or {}, item.get("evidence") or [])
+        self._visiting.discard(qid)
+        self._quantity_cache[qid] = result
+        return result
+
+    def _quantity_expr(self, qid: str, expr: dict[str, Any], item_evidence: list[dict[str, Any]]
+                       ) -> tuple[int | None, str, list[dict[str, Any]]]:
+        evidence = list(item_evidence)
         value: int | None = None
         basis = ""
-        spans = self._spans(item)
+        spans = " ".join(entry.get("span", "") for entry in item_evidence)
 
         def sub(ref: Any) -> int | None:
             if self._ref(self.quantities, ref, qid) is None:
@@ -178,20 +211,29 @@ class _Builder:
             value = None
         else:
             self.problems.append((qid, f"unsupported quantity expression {sorted(expr)}"))
-        self._visiting.discard(qid)
-        self._quantity_cache[qid] = (value, basis, evidence)
         return value, basis, evidence
 
-    def instant(self, iid: str) -> tuple[int | None, str | None]:
-        """Return (POSIX ms or None if unresolved, basis or None when explicit)."""
+    def instant(self, iid: str) -> tuple[int | None, str | None, list[dict[str, Any]]]:
+        """Return (POSIX ms or None if unresolved, basis or None when explicit, evidence)."""
         if iid in self._instant_cache:
             return self._instant_cache[iid]
         if iid in self._visiting:
             self.problems.append((iid, "circular instant reference"))
-            return None, None
+            return None, None, []
         self._visiting.add(iid)
         self.used.add(iid)
-        expr = self.instants[iid].get("expr") or {}
+        item = self.instants[iid]
+        if "alternatives" in item:
+            result = self._alternatives(iid, item, lambda expr, evidence: (
+                *self._instant_expr(iid, expr), evidence))
+        else:
+            result = (*self._instant_expr(iid, item.get("expr") or {}),
+                      list(item.get("evidence") or []))
+        self._visiting.discard(iid)
+        self._instant_cache[iid] = result
+        return result
+
+    def _instant_expr(self, iid: str, expr: dict[str, Any]) -> tuple[int | None, str | None]:
         value: int | None = None
         basis: str | None = None
         if "date" in expr:
@@ -217,52 +259,74 @@ class _Builder:
             if type(days) is not int or days <= 0:
                 self.problems.append((iid, "offset.days must be a positive integer"))
             elif self._ref(self.instants, spec.get("from"), iid) is not None:
-                base, _ = self.instant(spec["from"])
+                base = self.instant(spec["from"])[0]
                 value = None if base is None else base + days * DAY_MS
                 basis = f"{spec['from']} + {days} days"
         elif expr.get("unknown") is not True:
             self.problems.append((iid, f"unsupported instant expression {sorted(expr)}"))
-        self._visiting.discard(iid)
-        self._instant_cache[iid] = (value, basis)
         return value, basis
 
     # -- core emission -----------------------------------------------------
 
     def claim(self, scope_id: str, kind: str, value: Any, evidence: list[dict[str, Any]],
-              basis: str | None = None) -> str:
-        claim_id = f"{scope_id}:{kind}"
+              basis: str | None = None, *, reading: int | None = None) -> str:
+        claim_id = f"{scope_id}:{kind}" + (f":{reading}" if reading else "")
         result = {"claim_id": claim_id, "kind": kind, "value": value,
                   "criticality": "financial", "scope_id": scope_id, "evidence": evidence}
-        if value is None:
-            result["status"] = "unresolved"
-        elif basis:
-            result["status"] = "derived"
+        if basis and value is not None:
             result["normalization_basis"] = basis
+        if reading:
+            result["status"] = "conflicted"
+        elif value is None:
+            result["status"] = "unresolved"
         else:
-            result["status"] = "explicit"
+            result["status"] = "derived" if basis else "explicit"
         self.claims.append(result)
         return claim_id
 
-    def party_claim(self, scope_id: str, kind: str, party_id: Any, owner: dict[str, Any]) -> None:
-        party = self._ref(self.parties, party_id, owner.get("id", "?"))
-        if party is None:
-            return
-        self.used.add(party_id)
-        evidence = list(owner.get("evidence") or [])
-        evidence.extend(entry for entry in party.get("evidence") or [] if entry not in evidence)
-        self.claim(scope_id, kind, party["name"], evidence)
+    def value_claim(self, scope_id: str, kind: str, ref: str,
+                    reading: tuple[Any, Any, list[dict[str, Any]]]) -> str:
+        """One claim, or one `conflicted` claim per distinct source reading."""
+        if ref not in self.conflicts:
+            value, basis, evidence = reading
+            return self.claim(scope_id, kind, value, evidence, basis)
+        self.ask(ref, "The request gives different values here; which one applies?")
+        claim_ids = [self.claim(scope_id, kind, value, evidence, basis, reading=index)
+                     for index, (value, basis, evidence) in enumerate(self.conflicts[ref], 1)]
+        return claim_ids[0]
+
+    def ask(self, target_id: str, question: str) -> None:
+        if not any(item["target_id"] == target_id for item in self.questions):
+            self.questions.append({"target_id": target_id, "question": question})
+
+    def party_claim(self, scope_id: str, kind: str, party_ref: Any, owner: dict[str, Any]) -> None:
+        # A list of party ids means the source names more than one party for this role.
+        refs = party_ref if isinstance(party_ref, list) else [party_ref]
+        readings = []
+        for ref in refs:
+            party = self._ref(self.parties, ref, owner.get("id", "?"))
+            if party is None:
+                continue
+            self.used.add(ref)
+            evidence = list(owner.get("evidence") or [])
+            evidence.extend(entry for entry in party.get("evidence") or [] if entry not in evidence)
+            readings.append((party["name"], None, evidence))
+        if len({name for name, _, _ in readings}) > 1:
+            target = f"{owner.get('id', '?')}:{kind}"
+            self.conflicts[target] = readings
+            self.value_claim(scope_id, kind, target, readings[0])
+        elif readings:
+            self.claim(scope_id, kind, readings[0][0], readings[0][2])
 
     def deadline_claim(self, scope_id: str, kind: str, instant_id: Any, owner: str) -> str | None:
-        item = self._ref(self.instants, instant_id, owner)
-        if item is None:
+        if self._ref(self.instants, instant_id, owner) is None:
             return None
-        value, basis = self.instant(instant_id)
-        if value is None:
-            self.questions.append({"target_id": instant_id,
-                                   "question": "Which exact time and timezone is this deadline?"})
+        reading = self.instant(instant_id)
+        if reading[0] is None and instant_id not in self.conflicts:
+            self.ask(instant_id, "Which exact time and timezone is this deadline?")
         # Cite only the instant's own phrase: a derived deadline citing its base
         # date would contradict that calendar date under the v4 date check.
-        return self.claim(scope_id, kind, value, list(item.get("evidence") or []), basis)
+        return self.value_claim(scope_id, kind, instant_id, reading)
 
     def amount_claim(self, scope_id: str, amount: Any, owner: dict[str, Any],
                      balance: int | None) -> int | None:
@@ -273,8 +337,11 @@ class _Builder:
             return balance
         if self._ref(self.quantities, amount, owner.get("id", "?")) is None:
             return None
-        value, basis, evidence = self.quantity(amount)
-        self.claim(scope_id, "amount_lovelace", value, evidence, basis)
+        reading = self.quantity(amount)
+        value = reading[0]
+        if value is None and amount not in self.conflicts:
+            self.ask(amount, "What exact amount applies here?")
+        self.value_claim(scope_id, "amount_lovelace", amount, reading)
         return value
 
     def chain(self, parent: dict[str, Any], items: Any, balances: dict[str, int | None],
@@ -307,11 +374,14 @@ class _Builder:
         if kind is None:
             self.problems.append((oid, f"unknown outcome kind {item.get('kind')!r}"))
             return scope
-        source = item.get("from_account")
-        self.party_claim(scope["scope_id"], "payment_source_account_owner", source, item)
+        self.party_claim(scope["scope_id"], "payment_source_account_owner",
+                         item.get("from_account"), item)
         self.party_claim(scope["scope_id"], kind, item.get("to"), item)
-        balance = balances.get(source)
+        source = item.get("from_account") if isinstance(item.get("from_account"), str) else None
+        balance = balances.get(source) if source is not None else None
         paid = self.amount_claim(scope["scope_id"], item.get("amount"), item, balance)
+        if source is None:
+            return scope
         if paid is not None and balance is not None:
             if paid > balance:
                 self.problems.append((oid, f"pays {paid} but the account holds {balance}"))
@@ -334,12 +404,13 @@ class _Builder:
         if kind == "deposit":
             self.party_claim(scope["scope_id"], "depositing_party", item.get("by"), item)
             self.party_claim(scope["scope_id"], "destination_account_owner", item.get("into"), item)
-            if self._ref(self.quantities, item.get("amount"), sid) is not None:
-                value, basis, amount_evidence = self.quantity(item["amount"])
-                self.claim(scope["scope_id"], "amount_lovelace", value, amount_evidence, basis)
-                current = balances.get(item.get("into"), 0)
-                balances[item.get("into")] = (None if value is None or current is None
-                                              else current + value)
+            value = self.amount_claim(scope["scope_id"], item.get("amount"), item, None)
+            # A disputed account owner leaves no single account to track.
+            account = item.get("into") if isinstance(item.get("into"), str) else None
+            if account is not None:
+                current = balances.get(account, 0)
+                balances[account] = (None if value is None or current is None
+                                     else current + value)
             deadline_kind = "deposit_deadline_ms"
         elif kind == "choice":
             self.party_claim(scope["scope_id"], "choice_owner", item.get("by"), item)
@@ -401,9 +472,12 @@ class _Builder:
                 self.questions.append({"target_id": item.get("target_id"),
                                        "question": item["question"]})
         unresolved = any(claim["status"] == "unresolved" for claim in self.claims)
+        conflicted = any(claim["status"] == "conflicted" for claim in self.claims)
         # Resolution follows from the facts; the model's resolution_hint is advisory only.
-        resolution = "clarification_required" if unresolved else "accepted_interpretation"
-        questions = [question["question"] for question in self.questions] if unresolved else []
+        resolution = ("conflict_requires_resolution" if conflicted else
+                      "clarification_required" if unresolved else "accepted_interpretation")
+        questions = ([question["question"] for question in self.questions]
+                     if conflicted or unresolved else [])
         return {"schema_version": CORE_SCHEMA_VERSION_V4,
                 "requirement_history": self.history,
                 "behavior_scopes": self.scopes, "claims": self.claims,
