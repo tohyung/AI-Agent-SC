@@ -343,9 +343,11 @@ native, conflict, `notes.unsupported`, câu hỏi theo ngôn ngữ prompt.
    41, 47, 50, 51) chỉ nói "GOLD", không có policy. Builder làm đúng luật: asset
    `unresolved`, số token `unresolved` và hỏi policy ID, nên các case swap
    `complete` sẽ thành `clarification_required`. BASE cũng không qua được ở
-   đây (bịa `simulated-gold`, `GOLD reward points`). Cần bạn quyết: giữ luật
-   (hỏi policy là hành vi đúng cho hợp đồng thật) hay cho phép số token
-   explicit khi danh tính token còn `unresolved`.
+   đây (bịa `simulated-gold`, `GOLD reward points`). **Quyết định 2026-10-30:**
+   giữ luật v4 (hỏi policy là hành vi đúng; nới luật vẫn không đổi được M4 vì
+   asset `unresolved` chặn `accepted_interpretation`). Thước đo M4 điều chỉnh
+   coi danh tính token là thông tin dataset giữ lại (`currency_symbol:
+   "benchmark"`), xem giao thức đánh giá.
 
 **Đã bổ sung sau spike (2026-10-30):** `notes.unsupported` (`ledger_history_deletion`
 → claim tín hiệu v4; mục khác và `{"dynamic": …}` → observation + câu hỏi);

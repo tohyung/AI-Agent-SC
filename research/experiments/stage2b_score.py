@@ -143,14 +143,27 @@ def identified_deadlines(core: dict[str, Any], reference: set[int]) -> tuple[int
     return len(identified), matching_claims
 
 
-def time_only_open(record: dict[str, Any]) -> bool:
-    """Adjusted M4: a complete case may ask only about deadline time or timezone."""
+def _withheld(claim: dict[str, Any], unresolved_asset_scopes: set[Any]) -> bool:
+    """Facts the dataset withholds by convention: deadline time/timezone, token identity."""
+    kind = claim.get("kind")
+    return (kind in TIME_KINDS or kind == "asset"
+            # A token count left open only because its token identity is open.
+            or kind == "amount_token_units" and claim.get("scope_id") in unresolved_asset_scopes)
+
+
+def only_withheld_open(record: dict[str, Any]) -> bool:
+    """Adjusted M4: a complete case may ask only about facts the dataset withholds.
+
+    References use an unstated 12:00 UTC time and the placeholder currency
+    symbol "benchmark" for GOLD, which no prompt states.
+    """
     core = record.get("semantic_core") or {}
     claims = [claim for claim in core.get("claims") or [] if isinstance(claim, dict)]
     unresolved = [claim for claim in claims if claim.get("status") == "unresolved"
                   and claim.get("criticality") == "financial"]
+    asset_scopes = {claim.get("scope_id") for claim in unresolved if claim.get("kind") == "asset"}
     return (record.get("predicted_resolution") == "clarification_required"
-            and bool(unresolved) and all(claim.get("kind") in TIME_KINDS for claim in unresolved)
+            and bool(unresolved) and all(_withheld(claim, asset_scopes) for claim in unresolved)
             and not any(claim.get("status") == "conflicted" for claim in claims)
             # Side context is not an open question; unrepresented behavior is.
             and not any(isinstance(item, dict) and item.get("reason") != "irrelevant_context"
@@ -188,7 +201,7 @@ def score_arm(arm_dir: Path, cases: dict[str, dict[str, Any]] | None = None) -> 
             "physical_calls": record["physical_calls"],
             "decision_correct": decision_correct,
             "decision_correct_adjusted": decision_correct or (
-                case["info_mode"] == "complete" and time_only_open(record)),
+                case["info_mode"] == "complete" and only_withheld_open(record)),
             "facts": {kind: {"expected": len(expected[kind]), "found": len(found[kind]),
                              "matched": len(expected[kind] & found[kind])}
                       for kind in FACT_KINDS},

@@ -77,6 +77,17 @@ BASE (recall mốc 0, M4 complete 0). Bản cài đặt đầu tiên loại cả
 sửa sau khi xem bản ghi BASE. Kết quả trên 16 case: recall/precision mốc
 0,9/0,8; M4 điều chỉnh 0,875 (complete 0,78).
 
+Mở rộng ngày 2026-10-30, sau khi chấm 30 case BASE: `reference_contract` của
+mọi case có GOLD dùng `currency_symbol: "benchmark"`, không phải policy ID
+hợp lệ, và không prompt nào nêu policy. v4 (giữ nguyên, không nới luật) chỉ
+chấp nhận số lượng token bên cạnh native id đầy đủ, nên hỏi lại danh tính token
+là hành vi đúng. M4 điều chỉnh vì vậy coi **danh tính token** (claim `asset`
+`unresolved`, và số token `unresolved` cùng scope với nó) là thông tin bị giữ
+lại, giống giờ/múi giờ. Một số token `unresolved` mà danh tính token vẫn rõ thì
+không được miễn. Ảnh hưởng: case 4, 7, 16 thành đúng; M4 complete điều chỉnh
+0,75 → 0,80 trên 30 case. Thay đổi chỉ ở thước đo, áp dụng như nhau cho hai
+nhánh, không chạy lại case nào.
+
 Chỉ số phụ: số dòng lớp chuẩn hóa tất định (`core_draft.py` và tương đương),
 kích thước prompt system/user, số loại mã lỗi.
 

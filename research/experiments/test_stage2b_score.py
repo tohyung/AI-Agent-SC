@@ -75,8 +75,8 @@ def test_adjusted_m4_accepts_complete_case_that_only_asks_about_time():
     amount_open = {"predicted_resolution": "clarification_required", "semantic_core": {
         "claims": [_claim("amount_lovelace", None, "unresolved") | {"criticality": "financial"}],
         "unscored_observations": []}}
-    assert stage2b_score.time_only_open(deadline_only) is True
-    assert stage2b_score.time_only_open(amount_open) is False
+    assert stage2b_score.only_withheld_open(deadline_only) is True
+    assert stage2b_score.only_withheld_open(amount_open) is False
 
 
 def test_adjusted_m4_ignores_side_context_but_not_unrepresented_behavior():
@@ -85,5 +85,17 @@ def test_adjusted_m4_ignores_side_context_but_not_unrepresented_behavior():
             "claims": [_claim("deposit_deadline_ms", None, "unresolved")
                        | {"criticality": "financial"}],
             "unscored_observations": [{"reason": reason}]}}
-    assert stage2b_score.time_only_open(record("irrelevant_context")) is True
-    assert stage2b_score.time_only_open(record("outside_stage2b_v4_claim_taxonomy")) is False
+    assert stage2b_score.only_withheld_open(record("irrelevant_context")) is True
+    assert stage2b_score.only_withheld_open(record("outside_stage2b_v4_claim_taxonomy")) is False
+
+
+def test_adjusted_m4_accepts_open_token_identity_but_not_an_open_token_count():
+    def record(*claims):
+        return {"predicted_resolution": "clarification_required", "semantic_core": {
+            "claims": [claim | {"criticality": "financial"} for claim in claims],
+            "unscored_observations": []}}
+    identity = record(_claim("asset", None, "unresolved") | {"scope_id": "deposit"},
+                      _claim("amount_token_units", None, "unresolved") | {"scope_id": "deposit"})
+    count_only = record(_claim("amount_token_units", None, "unresolved") | {"scope_id": "deposit"})
+    assert stage2b_score.only_withheld_open(identity) is True
+    assert stage2b_score.only_withheld_open(count_only) is False
