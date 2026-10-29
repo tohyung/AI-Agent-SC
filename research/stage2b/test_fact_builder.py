@@ -228,3 +228,78 @@ def test_dynamic_value_is_an_observation_and_a_question_in_phase_1():
 def test_empty_draft_is_a_draft_error():
     with pytest.raises(DraftError, match="expected one first step"):
         build_core({"schema_version": FACT_DRAFT_VERSION}, HISTORY)
+
+
+POLICY = "ab" * 28
+SWAP = ("Minh đổi 20 ADA lấy 5 điểm GOLD của Hoa. Minh nạp 20 ADA trước 00:00 ngày "
+        "05/04/2027 (UTC+7); sau đó Hoa nạp 5 GOLD trước 00:00 ngày 06/04/2027 (UTC+7). "
+        "Khi đủ, Minh nhận 5 GOLD, Hoa nhận 20 ADA. Nếu Hoa không nạp, hoàn 20 ADA cho Minh. "
+        f"GOLD có policy {POLICY}.")
+SWAP_HISTORY = [{"version": 1, "messages": [SWAP]}]
+
+
+def swap_draft(native):
+    deadline = {"y": 2027, "m": 4, "h": 0, "min": 0, "tz": "+07:00"}
+    return {
+        "schema_version": FACT_DRAFT_VERSION,
+        "parties": [{"id": "p_minh", "name": "Minh", "evidence": ev("Minh đổi 20 ADA")},
+                    {"id": "p_hoa", "name": "Hoa", "evidence": ev("5 điểm GOLD của Hoa")}],
+        "assets": [{"id": "a_ada", "ada": True, "evidence": ev("Minh đổi 20 ADA")},
+                   {"id": "a_gold", "name": "GOLD", "native": native,
+                    "evidence": ev("5 điểm GOLD", f"GOLD có policy {POLICY}")}],
+        "quantities": [
+            {"id": "q_ada", "expr": {"ada": "20"}, "evidence": ev("Minh nạp 20 ADA")},
+            {"id": "q_gold", "expr": {"tokens": "5", "asset": "a_gold"},
+             "evidence": ev("Hoa nạp 5 GOLD")}],
+        "instants": [
+            {"id": "i1", "expr": {"date": {**deadline, "d": 5}},
+             "evidence": ev("00:00 ngày 05/04/2027 (UTC+7)")},
+            {"id": "i2", "expr": {"date": {**deadline, "d": 6}},
+             "evidence": ev("00:00 ngày 06/04/2027 (UTC+7)")}],
+        "steps": [
+            {"id": "s1", "kind": "deposit", "by": "p_minh", "into": "p_minh",
+             "amount": "q_ada", "deadline": "i1", "on_timeout": "end", "then": "s2",
+             "evidence": ev("Minh nạp 20 ADA")},
+            {"id": "s2", "kind": "deposit", "by": "p_hoa", "into": "p_hoa",
+             "amount": "q_gold", "deadline": "i2", "on_timeout": ["o_refund"],
+             "then": ["o_gold", "o_ada"], "evidence": ev("Hoa nạp 5 GOLD")}],
+        "outcomes": [
+            {"id": "o_gold", "kind": "payment", "from_account": "p_hoa", "to": "p_minh",
+             "amount": "q_gold", "evidence": ev("Minh nhận 5 GOLD")},
+            {"id": "o_ada", "kind": "payment", "from_account": "p_minh", "to": "p_hoa",
+             "amount": "q_ada", "evidence": ev("Hoa nhận 20 ADA")},
+            {"id": "o_refund", "kind": "refund", "from_account": "p_minh", "to": "p_minh",
+             "amount": "remaining", "evidence": ev("hoàn 20 ADA cho Minh")}],
+        "notes": {},
+    }
+
+
+def test_native_token_swap_with_policy_in_source_is_accepted():
+    core = build_core(swap_draft(f"native:{POLICY}/474f4c44"), SWAP_HISTORY)
+    errors = validate_shadow_semantic_core(core, expected_history=SWAP_HISTORY)
+    assert errors == []
+    projection = project_intent_spec(core, expected_history=SWAP_HISTORY)
+    full = validate_intent_spec(projection.intent_spec.to_dict(),
+                                expected_history=SWAP_HISTORY, projected_core=core)
+    assert classify_projection(errors, full, projection.projection_diagnostics) == "PASS"
+    assert core["predicted_resolution"] == "accepted_interpretation"
+    assert _values(core, "amount_token_units") == {"t_s2": 5, "o_o_gold": 5}
+    assert _values(core, "amount_lovelace") == {"t_s1": 20_000_000, "o_o_ada": 20_000_000,
+                                                "o_o_refund": 20_000_000}
+
+
+def test_token_without_source_policy_asks_for_it():
+    core = build_core(swap_draft(None), SWAP_HISTORY)
+    assert validate_shadow_semantic_core(core, expected_history=SWAP_HISTORY) == []
+    assert core["predicted_resolution"] == "clarification_required"
+    assert any("policy ID" in question for question in core["required_clarifications"])
+
+
+def test_native_id_not_in_source_and_unit_mixing_are_draft_errors():
+    draft = swap_draft("native:" + "cd" * 28 + "/474f4c44")
+    draft["quantities"].append({"id": "q_mix", "expr": {"sum": ["q_ada", "q_gold"]},
+                                "evidence": ev("Minh đổi 20 ADA")})
+    draft["outcomes"][1]["amount"] = "q_mix"
+    with pytest.raises(DraftError) as raised:
+        build_core(draft, SWAP_HISTORY)
+    assert {item for item, _ in raised.value.problems} == {"a_gold", "q_mix"}

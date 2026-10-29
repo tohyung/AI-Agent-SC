@@ -13,7 +13,7 @@ from datetime import datetime, timedelta, timezone
 from decimal import Decimal, InvalidOperation
 from typing import Any
 
-from research.stage2b.intent_spec import CORE_SCHEMA_VERSION_V4
+from research.stage2b.intent_spec import CORE_SCHEMA_VERSION_V4, parse_native_asset_id
 
 FACT_DRAFT_VERSION = "stage2b-fact-draft-v5"
 LOVELACE_PER_ADA = 1_000_000
@@ -44,6 +44,7 @@ class _Builder:
         self.messages = _messages(history)
         self.problems: list[tuple[str, str]] = []
         self.parties = self._index("parties")
+        self.assets = self._index("assets")
         self.quantities = self._index("quantities")
         self.instants = self._index("instants")
         self.steps = self._index("steps")
@@ -57,6 +58,8 @@ class _Builder:
         self._instant_cache: dict[str, tuple[int | None, str | None, list[dict[str, Any]]]] = {}
         # Draft item id -> distinct readings (value, basis, evidence) the source gives.
         self.conflicts: dict[str, list[tuple[Any, Any, list[dict[str, Any]]]]] = {}
+        # Quantity id -> "lovelace" or the id of the native asset it counts.
+        self.units: dict[str, str] = {}
         self._visiting: set[str] = set()
 
     # -- draft checks ------------------------------------------------------
@@ -69,7 +72,7 @@ class _Builder:
                 self.problems.append((field, "item without id"))
             elif item_id in items or any(item_id in other for other in (
                     getattr(self, name, {}) for name in
-                    ("parties", "quantities", "instants", "steps", "outcomes"))):
+                    ("parties", "assets", "quantities", "instants", "steps", "outcomes"))):
                 self.problems.append((item_id, "duplicate id"))
             else:
                 items[item_id] = {**item,
@@ -147,15 +150,28 @@ class _Builder:
         value: int | None = None
         basis = ""
         spans = " ".join(entry.get("span", "") for entry in item_evidence)
+        units: set[str] = set()
 
         def sub(ref: Any) -> int | None:
             if self._ref(self.quantities, ref, qid) is None:
                 return None
             sub_value, _, sub_evidence = self.quantity(ref)
             evidence.extend(entry for entry in sub_evidence if entry not in evidence)
+            units.add(self.units.get(ref, "lovelace"))
             return sub_value
 
-        if "ada" in expr or "lovelace" in expr:
+        if "tokens" in expr:
+            text = str(expr["tokens"])
+            if self._ref(self.assets, expr.get("asset"), qid) is not None:
+                self.used.add(expr["asset"])
+                units.add(expr["asset"])
+            if not re.search(r"(?<![\d.,])" + re.escape(text) + r"(?![\d.,])", spans):
+                self.problems.append((qid, f"literal {text} not in evidence"))
+            if text.isdigit() and int(text) > 0:
+                value = int(text)
+            else:
+                self.problems.append((qid, f"not a positive whole token quantity: {text}"))
+        elif "ada" in expr or "lovelace" in expr:
             unit = "ada" if "ada" in expr else "lovelace"
             text = str(expr[unit])
             pattern = r"(?<![\d.,])" + re.escape(text) + r"\s*" + unit + r"\b"
@@ -204,17 +220,24 @@ class _Builder:
                 if (base * num) % den == 0:
                     value = base * num // den
                 else:
-                    self.questions.append({"target_id": qid, "question": (
-                        f"{base * num / den / LOVELACE_PER_ADA} ADA is not a whole lovelace "
-                        "amount; how should it be rounded?")})
+                    self.ask(qid, f"{num}/{den} of {spec.get('of')} is not a whole number "
+                                  "of the smallest unit; how should it be rounded?")
             basis = f"{spec.get('of')} * {num} / {den} (exact)"
-        elif expr.get("unknown") is True:
-            value = None
-        elif "dynamic" in expr:
-            # Known only while the contract runs (ChoiceValue, Cond, ...): phase 2.
-            self.observe(qid, expr["dynamic"], item_evidence)
+        elif expr.get("unknown") is True or "dynamic" in expr:
+            if "asset" in expr and self._ref(self.assets, expr["asset"], qid) is not None:
+                self.used.add(expr["asset"])
+                units.add(expr["asset"])
+            if "dynamic" in expr:
+                # Known only while the contract runs (ChoiceValue, Cond, ...): phase 2.
+                self.observe(qid, expr["dynamic"], item_evidence)
         else:
             self.problems.append((qid, f"unsupported quantity expression {sorted(expr)}"))
+        if len(units) > 1:
+            self.problems.append((qid, f"mixes units {sorted(units)}"))
+            value = None
+        unit = next(iter(units), "lovelace")
+        if self.units.setdefault(qid, unit) != unit:
+            self.problems.append((qid, "readings use different units"))
         return value, basis, evidence
 
     def instant(self, iid: str) -> tuple[int | None, str | None, list[dict[str, Any]]]:
@@ -333,22 +356,46 @@ class _Builder:
         return self.value_claim(scope_id, kind, instant_id, reading)
 
     def amount_claim(self, scope_id: str, amount: Any, owner: dict[str, Any],
-                     balance: int | None) -> int | None:
+                     balances: dict[tuple[str, str], int | None],
+                     account: str | None) -> tuple[str, int | None]:
+        """Emit the amount (and native asset) claims; return (unit, value or None)."""
+        owner_id = owner.get("id", "?")
         if amount == "remaining":
-            evidence = list(owner.get("evidence") or [])
-            self.claim(scope_id, "amount_lovelace", balance, evidence,
-                       "remaining balance of the source account on this path")
-            return balance
-        if self._ref(self.quantities, amount, owner.get("id", "?")) is None:
-            return None
-        reading = self.quantity(amount)
-        value = reading[0]
-        if value is None and amount not in self.conflicts:
-            self.ask(amount, "What exact amount applies here?")
-        self.value_claim(scope_id, "amount_lovelace", amount, reading)
-        return value
+            unit = owner.get("asset") or "lovelace"
+            if unit != "lovelace" and self._ref(self.assets, unit, owner_id) is None:
+                unit = "lovelace"
+            balance = balances.get((account, unit)) if account is not None else None
+            reading = (balance, "remaining balance of the source account on this path",
+                       list(owner.get("evidence") or []))
+            ref = None
+        elif self._ref(self.quantities, amount, owner_id) is None:
+            return "lovelace", None
+        else:
+            reading = self.quantity(amount)
+            unit, ref = self.units.get(amount, "lovelace"), amount
+            if reading[0] is None and amount not in self.conflicts:
+                self.ask(amount, "What exact amount applies here?")
+        kind = "amount_lovelace"
+        if unit != "lovelace":
+            kind = "amount_token_units"
+            self.used.add(unit)
+            asset = self.assets[unit]
+            native = asset.get("native")
+            if isinstance(native, str) and parse_native_asset_id(native) is not None:
+                self.claim(scope_id, "asset", native, list(asset["evidence"]))
+            else:
+                # v4 backs a token count only beside a full native id (design 11, conflict 6).
+                self.claim(scope_id, "asset", None, list(asset["evidence"]))
+                self.ask(unit, f"Which policy ID and token name identify "
+                               f"{asset.get('name', unit)}?")
+                reading = (None, *reading[1:])
+        if ref is not None and ref in self.conflicts:
+            self.value_claim(scope_id, kind, ref, reading)
+        else:
+            self.claim(scope_id, kind, reading[0], reading[2], reading[1])
+        return unit, reading[0]
 
-    def chain(self, parent: dict[str, Any], items: Any, balances: dict[str, int | None],
+    def chain(self, parent: dict[str, Any], items: Any, balances: dict[tuple[str, str], int | None],
               owner: str) -> None:
         if items == "end" or items is None:
             return
@@ -366,7 +413,7 @@ class _Builder:
                 self.problems.append((owner, f"invalid continuation item {ref!r}"))
 
     def outcome(self, oid: str, parent: dict[str, Any],
-                balances: dict[str, int | None]) -> dict[str, Any]:
+                balances: dict[tuple[str, str], int | None]) -> dict[str, Any]:
         if oid in self.used:
             self.problems.append((oid, "outcome reached by more than one path"))
         self.used.add(oid)
@@ -382,19 +429,20 @@ class _Builder:
                          item.get("from_account"), item)
         self.party_claim(scope["scope_id"], kind, item.get("to"), item)
         source = item.get("from_account") if isinstance(item.get("from_account"), str) else None
-        balance = balances.get(source) if source is not None else None
-        paid = self.amount_claim(scope["scope_id"], item.get("amount"), item, balance)
+        unit, paid = self.amount_claim(scope["scope_id"], item.get("amount"), item,
+                                       balances, source)
         if source is None:
             return scope
+        balance = balances.get((source, unit))
         if paid is not None and balance is not None:
             if paid > balance:
                 self.problems.append((oid, f"pays {paid} but the account holds {balance}"))
-            balances[source] = balance - paid
+            balances[(source, unit)] = balance - paid
         else:
-            balances[source] = None
+            balances[(source, unit)] = None
         return scope
 
-    def step(self, sid: str, balances: dict[str, int | None]) -> str:
+    def step(self, sid: str, balances: dict[tuple[str, str], int | None]) -> str:
         if sid in self.used:
             self.problems.append((sid, "step reached by more than one path"))
         self.used.add(sid)
@@ -408,13 +456,14 @@ class _Builder:
         if kind == "deposit":
             self.party_claim(scope["scope_id"], "depositing_party", item.get("by"), item)
             self.party_claim(scope["scope_id"], "destination_account_owner", item.get("into"), item)
-            value = self.amount_claim(scope["scope_id"], item.get("amount"), item, None)
+            unit, value = self.amount_claim(scope["scope_id"], item.get("amount"), item,
+                                            balances, None)
             # A disputed account owner leaves no single account to track.
             account = item.get("into") if isinstance(item.get("into"), str) else None
             if account is not None:
-                current = balances.get(account, 0)
-                balances[account] = (None if value is None or current is None
-                                     else current + value)
+                current = balances.get((account, unit), 0)
+                balances[(account, unit)] = (None if value is None or current is None
+                                             else current + value)
             deadline_kind = "deposit_deadline_ms"
         elif kind == "choice":
             self.party_claim(scope["scope_id"], "choice_owner", item.get("by"), item)
@@ -474,10 +523,28 @@ class _Builder:
     def build(self) -> dict[str, Any]:
         self.unsupported()
         asset = self.draft.get("asset") or {}
+        ada = [item for item in self.assets.values() if item.get("ada") is True]
         if asset.get("ada") is True:
             self.claim("global", "asset", "ADA", self._evidence("asset", asset.get("evidence")))
-        elif asset or self.steps:
-            self.problems.append(("asset", "only ADA is inside the spike"))
+        elif ada:
+            self.used.add(ada[0]["id"])
+            self.claim("global", "asset", "ADA", list(ada[0]["evidence"]))
+        elif asset:
+            self.problems.append(("asset", "use assets[] for native tokens"))
+        for asset_id, item in self.assets.items():
+            if item.get("ada") is True:
+                continue
+            spans = self._spans(item)
+            name, native = item.get("name"), item.get("native")
+            if not isinstance(name, str) or not name or name not in spans:
+                self.problems.append((asset_id, f"token name {name!r} not in evidence"))
+            parsed = parse_native_asset_id(native) if isinstance(native, str) else None
+            # The policy id must be in the source; the token name is its hex spelling.
+            if native is not None and (parsed is None or parsed[0] not in spans
+                                       or bytes.fromhex(parsed[1]).decode("utf-8", "replace")
+                                       != name):
+                message = "native id must be native:<policy in evidence>/<hex of name>, or null"
+                self.problems.append((asset_id, message))
         referenced = {ref for step in self.steps.values()
                       for ref in _step_refs(step)}
         roots = [sid for sid in self.steps if sid not in referenced]

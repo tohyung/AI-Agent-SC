@@ -337,5 +337,20 @@ native, conflict, `notes.unsupported`, câu hỏi theo ngôn ngữ prompt.
    phải mâu thuẫn. Giá trị tính từ mục đang tranh chấp (một nửa, số dư còn lại)
    thành `unresolved` thay vì chọn một cách đọc. 3 test mới.
 
+6. **Số lượng token chỉ được "backed" khi cùng scope có native id đầy đủ.**
+   v4 đòi claim `asset` dạng `native:<policy 56 hex>/<tên hex>` bên cạnh mỗi
+   `amount_token_units` explicit. Tám prompt dev có GOLD (case 4, 7, 16, 19,
+   41, 47, 50, 51) chỉ nói "GOLD", không có policy. Builder làm đúng luật: asset
+   `unresolved`, số token `unresolved` và hỏi policy ID, nên các case swap
+   `complete` sẽ thành `clarification_required`. BASE cũng không qua được ở
+   đây (bịa `simulated-gold`, `GOLD reward points`). Cần bạn quyết: giữ luật
+   (hỏi policy là hành vi đúng cho hợp đồng thật) hay cho phép số token
+   explicit khi danh tính token còn `unresolved`.
+
+**Đã bổ sung sau spike (2026-10-30):** `notes.unsupported` (`ledger_history_deletion`
+→ claim tín hiệu v4; mục khác và `{"dynamic": …}` → observation + câu hỏi);
+token native qua `assets[]` và `{"tokens": "5", "asset": "a_gold"}`, số dư theo
+từng (tài khoản, tài sản), cấm trộn đơn vị trong biểu thức.
+
 Bước tiếp theo trong mục 9: mở rộng builder (notify, conflict, unsupported,
 token native, DAG), viết `fact_prompt.py`, rồi property test và ma trận độ phủ.
