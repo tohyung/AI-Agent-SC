@@ -355,5 +355,10 @@ từng (tài khoản, tài sản), cấm trộn đơn vị trong biểu thức. 
 nhánh timeout). Bước/outcome tới được bằng nhiều đường sinh một scope riêng cho
 mỗi đường (`t_s3`, `t_s3#2`) với số dư riêng; vòng lặp là lỗi draft.
 
-Bước tiếp theo trong mục 9: viết `fact_prompt.py` (schema v5 + ví dụ tổng hợp),
-nối vào `Stage2BExtractionPort`, rồi property test và ma trận độ phủ.
+Prompt và vòng lặp A2: `research/stage2b/fact_extractor.py` (prompt
+`stage2b-fact-prompt-v1`, một ví dụ tổng hợp là mục 7, repair theo ID mục với
+tối đa 3 lần; core builder dựng mà validator vẫn từ chối được ghi `BUILDER_BUG`,
+không gửi lại model). `stage2b_eval --arm A2` dùng đường này; chưa nối vào
+`Stage2BExtractionPort` của pipeline chính, việc đó chỉ làm nếu A2 được giữ.
+
+Bước tiếp theo: property test, ma trận độ phủ, rồi chạy nhánh A2.

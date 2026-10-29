@@ -9,12 +9,12 @@ written exclusively, so an interrupted run resumes at the next missing case.
 from __future__ import annotations
 
 import argparse
-from collections.abc import Callable
-from datetime import datetime, timezone
 import json
 import os
-from pathlib import Path
 import subprocess
+from collections.abc import Callable
+from datetime import UTC, datetime
+from pathlib import Path
 from typing import Any
 
 from research.architecture.artifacts import ArtifactEnvelope
@@ -25,7 +25,6 @@ from research.integrations.model_replay import JournaledModel
 from research.integrations.stage2b import Stage2BExtractionPort
 from research.stage2b.intent_spec import CORE_SCHEMA_VERSION_V4
 from research.stage2b.repair_policy import REPAIR_POLICY_VERSION
-
 
 ROOT = Path(__file__).resolve().parents[2]
 DEV_CASES = tuple(index for index in range(1, 57))
@@ -85,6 +84,44 @@ def evaluate_case(model: Any, index: int, case_id: str, prompt: str, *,
     return record
 
 
+def evaluate_case_a2(model: Any, index: int, case_id: str, prompt: str) -> dict[str, Any]:
+    """A2 arm: FactDraft v5 + deterministic builder, scored with the same v4 checks."""
+    from research.stage2b.fact_extractor import FACT_PROMPT_VERSION, extract_fact_core
+    from research.stage2b.model_errors import sanitized_model_error
+
+    history = [{"version": 1, "messages": [prompt]}]
+    calls_before = model.llm_calls
+    record: dict[str, Any] = {"case_index": index, "case_id": case_id,
+                              "schema_version": CORE_SCHEMA_VERSION_V4,
+                              "prompt_version": FACT_PROMPT_VERSION}
+    try:
+        result = extract_fact_core(model, history, max_repairs=MAX_REPAIRS)
+    except (RuntimeError, ValueError) as exc:
+        record.update({"run_status": "FAILED", "semantic_status": "MODEL_ERROR",
+                       "safe_error": sanitized_model_error(exc),
+                       "physical_calls": model.llm_calls - calls_before})
+        return record
+    attempts = result["attempts"]
+    core = result["semantic_core"]
+    final_valid = core is not None and result["projection_classification"] == "PASS"
+    record.update({
+        "run_status": "SUCCEEDED" if core is not None else "FAILED",
+        "semantic_status": ("BUILDER_BUG" if result["builder_bug"] else
+                            "VALID" if final_valid else "DRAFT_INVALID"),
+        "safe_error": None, "physical_calls": model.llm_calls - calls_before,
+        "first_pass_valid": final_valid and len(attempts) == 1,
+        "first_pass_error_count": len(attempts[0]["problems"]) if attempts else 0,
+        "final_valid": final_valid,
+        "final_core_error_count": len(result["core_validation_errors"]),
+        "final_full_error_count": len(result["full_validation_errors"]),
+        "projection_classification": result["projection_classification"],
+        "predicted_resolution": (core or {}).get("predicted_resolution"),
+        "semantic_core": core,
+        "fact_draft_attempts": attempts,
+    })
+    return record
+
+
 def _git_head() -> str | None:
     try:
         return subprocess.run(["git", "rev-parse", "HEAD"], cwd=ROOT, capture_output=True,
@@ -104,7 +141,7 @@ def run_arm(arm_dir: Path, model_factory: Callable[[Callable[[str], None]], Any]
     def before_request(phase: str) -> None:
         with journal.open("a", encoding="utf-8") as writer:
             writer.write(json.dumps({"case_id": current.get("case_id"), "phase": phase,
-                                     "reserved_at_utc": datetime.now(timezone.utc).isoformat()},
+                                     "reserved_at_utc": datetime.now(UTC).isoformat()},
                                     ensure_ascii=False) + "\n")
             writer.flush()
             os.fsync(writer.fileno())
@@ -116,7 +153,8 @@ def run_arm(arm_dir: Path, model_factory: Callable[[Callable[[str], None]], Any]
         if target.exists():
             continue
         current["case_id"] = case_id
-        record = evaluate_case(model, index, case_id, prompt)
+        evaluate = evaluate_case_a2 if arm == "A2" else evaluate_case
+        record = evaluate(model, index, case_id, prompt)
         error = record["safe_error"] or {}
         if error and error.get("model_content_received") is not True:
             # Provider, network or configuration failure: not a model result.
@@ -124,7 +162,7 @@ def run_arm(arm_dir: Path, model_factory: Callable[[Callable[[str], None]], Any]
             return 3
         record.update({"arm": arm, "code_head": head, "model": getattr(model, "model", None),
                        "repair_policy_version": REPAIR_POLICY_VERSION,
-                       "recorded_at_utc": datetime.now(timezone.utc).isoformat()})
+                       "recorded_at_utc": datetime.now(UTC).isoformat()})
         with target.open("x", encoding="utf-8") as writer:
             json.dump(record, writer, ensure_ascii=False, indent=2)
             writer.write("\n")

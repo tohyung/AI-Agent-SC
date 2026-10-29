@@ -110,3 +110,22 @@ def test_invalid_model_json_is_a_recorded_model_result(tmp_path, monkeypatch):
     code, _, _ = _arm(tmp_path, [failure], monkeypatch)
     record = json.loads((tmp_path / "case-01.json").read_text(encoding="utf-8"))
     assert code == 0 and record["run_status"] == "FAILED"
+
+
+def test_a2_arm_records_draft_attempts_with_the_same_metrics(tmp_path, monkeypatch):
+    from research.stage2b.fact_extractor import EXAMPLE_DRAFT, EXAMPLE_REQUEST
+
+    monkeypatch.setattr(stage2b_eval, "dev_prompts", lambda selected: [
+        (index, f"case-{index}", EXAMPLE_REQUEST) for index in selected])
+    created = []
+
+    def factory(before_request):
+        created.append(FakeModel([EXAMPLE_DRAFT], before_request))
+        return created[0]
+
+    code = stage2b_eval.run_arm(tmp_path, factory, arm="A2", indices=(1,), emit=lambda _: None)
+    record = json.loads((tmp_path / "case-01.json").read_text(encoding="utf-8"))
+    assert code == 0 and record["arm"] == "A2"
+    assert record["first_pass_valid"] is True and record["final_valid"] is True
+    assert record["predicted_resolution"] == "accepted_interpretation"
+    assert record["fact_draft_attempts"][0]["problems"] == []
