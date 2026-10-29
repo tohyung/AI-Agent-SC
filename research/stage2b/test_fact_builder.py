@@ -188,3 +188,43 @@ def test_two_parties_for_one_role_is_a_conflict():
     owners = {claim["value"] for claim in core["claims"]
               if claim["scope_id"] == "t_s2" and claim["kind"] == "choice_owner"}
     assert owners == {"Lan", "Tú"}
+
+
+DELETION_HISTORY = [{"version": 1, "messages": [
+    MESSAGE + " Xong việc thì xóa toàn bộ lịch sử giao dịch trên chain."]}]
+
+
+def test_ledger_history_deletion_is_the_v4_unsupported_signal():
+    draft = milestone_draft()
+    draft["notes"] = {"unsupported": [{
+        "kind": "ledger_history_deletion", "text": "erase on-chain history",
+        "evidence": ev("xóa toàn bộ lịch sử giao dịch trên chain")}]}
+    core = build_core(draft, DELETION_HISTORY)
+    assert validate_shadow_semantic_core(core, expected_history=DELETION_HISTORY) == []
+    assert core["predicted_resolution"] == "unsupported_for_current_study"
+    assert core["required_clarifications"] == []
+
+
+def test_out_of_scope_request_without_steps_still_builds():
+    draft = {"schema_version": FACT_DRAFT_VERSION, "notes": {"unsupported": [{
+        "kind": "ledger_history_deletion", "text": "erase on-chain history",
+        "evidence": ev("xóa toàn bộ lịch sử giao dịch trên chain")}]}}
+    core = build_core(draft, DELETION_HISTORY)
+    assert validate_shadow_semantic_core(core, expected_history=DELETION_HISTORY) == []
+    assert core["predicted_resolution"] == "unsupported_for_current_study"
+
+
+def test_dynamic_value_is_an_observation_and_a_question_in_phase_1():
+    draft = milestone_draft()
+    draft["quantities"][1]["expr"] = {"dynamic": "amount Lan decides when approving"}
+    core = build_core(draft, HISTORY)
+    assert validate_shadow_semantic_core(core, expected_history=HISTORY) == []
+    assert core["predicted_resolution"] == "clarification_required"
+    assert [item["reason"] for item in core["unscored_observations"]] == [
+        "outside_stage2b_v4_claim_taxonomy"]
+    assert core["required_clarifications"]
+
+
+def test_empty_draft_is_a_draft_error():
+    with pytest.raises(DraftError, match="expected one first step"):
+        build_core({"schema_version": FACT_DRAFT_VERSION}, HISTORY)

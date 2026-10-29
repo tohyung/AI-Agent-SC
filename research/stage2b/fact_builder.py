@@ -51,6 +51,7 @@ class _Builder:
         self.scopes: list[dict[str, Any]] = [{"scope_id": "global", "scope_type": "global"}]
         self.claims: list[dict[str, Any]] = []
         self.questions: list[dict[str, str]] = []
+        self.observations: list[dict[str, Any]] = []
         self.used: set[str] = set()
         self._quantity_cache: dict[str, tuple[int | None, str, list[dict[str, Any]]]] = {}
         self._instant_cache: dict[str, tuple[int | None, str | None, list[dict[str, Any]]]] = {}
@@ -209,6 +210,9 @@ class _Builder:
             basis = f"{spec.get('of')} * {num} / {den} (exact)"
         elif expr.get("unknown") is True:
             value = None
+        elif "dynamic" in expr:
+            # Known only while the contract runs (ChoiceValue, Cond, ...): phase 2.
+            self.observe(qid, expr["dynamic"], item_evidence)
         else:
             self.problems.append((qid, f"unsupported quantity expression {sorted(expr)}"))
         return value, basis, evidence
@@ -442,23 +446,54 @@ class _Builder:
             self.chain(scope, item.get("then"), balances, sid)
         return scope["scope_id"]
 
+    def observe(self, owner: str, text: Any, evidence: Any) -> None:
+        """Record behavior the v4 claim taxonomy cannot carry; it always needs a question."""
+        if not isinstance(text, str) or not text.strip():
+            self.problems.append((owner, "unsupported item needs a text description"))
+            return
+        self.observations.append({
+            "observation_id": f"obs_{len(self.observations) + 1}", "text": text,
+            "reason": "outside_stage2b_v4_claim_taxonomy",
+            "source_evidence": self._evidence(owner, evidence)})
+        self.ask(owner, f"This part cannot be represented yet: {text}. "
+                        "Can it be dropped or restated?")
+
+    def unsupported(self) -> None:
+        notes = self.draft.get("notes") or {}
+        for index, item in enumerate(notes.get("unsupported") or [], 1):
+            owner = f"unsupported_{index}"
+            if not isinstance(item, dict):
+                self.problems.append((owner, "unsupported item must be an object"))
+            elif item.get("kind") == "ledger_history_deletion":
+                # The only v4 signal that yields unsupported_for_current_study.
+                self.claim("global", "ledger_history_deletion", True,
+                           self._evidence(owner, item.get("evidence")))
+            else:
+                self.observe(owner, item.get("text"), item.get("evidence"))
+
     def build(self) -> dict[str, Any]:
+        self.unsupported()
         asset = self.draft.get("asset") or {}
-        if asset.get("ada") is not True:
-            self.problems.append(("asset", "only ADA is inside the spike"))
-        else:
+        if asset.get("ada") is True:
             self.claim("global", "asset", "ADA", self._evidence("asset", asset.get("evidence")))
+        elif asset or self.steps:
+            self.problems.append(("asset", "only ADA is inside the spike"))
         referenced = {ref for step in self.steps.values()
                       for ref in _step_refs(step)}
         roots = [sid for sid in self.steps if sid not in referenced]
-        if len(roots) != 1:
-            self.problems.append(("steps", f"expected one first step, found {roots}"))
-        else:
-            self.step(roots[0], {})
-        for table in (self.parties, self.quantities, self.instants, self.steps, self.outcomes):
-            for item_id in table:
-                if item_id not in self.used:
-                    self.problems.append((item_id, "declared but never used"))
+        # A request that is only out of scope may have no steps; anything else needs one root.
+        out_of_scope_only = not self.steps and (self.observations or any(
+            claim["kind"] == "ledger_history_deletion" for claim in self.claims))
+        if not out_of_scope_only:
+            if len(roots) != 1:
+                self.problems.append(("steps", f"expected one first step, found {roots}"))
+            else:
+                self.step(roots[0], {})
+            for table in (self.parties, self.quantities, self.instants, self.steps,
+                          self.outcomes):
+                for item_id in table:
+                    if item_id not in self.used:
+                        self.problems.append((item_id, "declared but never used"))
         if self.problems:
             raise DraftError(self.problems)
         return self.core()
@@ -473,15 +508,21 @@ class _Builder:
                                        "question": item["question"]})
         unresolved = any(claim["status"] == "unresolved" for claim in self.claims)
         conflicted = any(claim["status"] == "conflicted" for claim in self.claims)
+        deletion = any(claim["kind"] == "ledger_history_deletion" for claim in self.claims)
         # Resolution follows from the facts; the model's resolution_hint is advisory only.
+        # v4 requires a conflict to be answered before anything else.
         resolution = ("conflict_requires_resolution" if conflicted else
-                      "clarification_required" if unresolved else "accepted_interpretation")
+                      "unsupported_for_current_study" if deletion else
+                      "clarification_required" if unresolved or self.observations else
+                      "accepted_interpretation")
         questions = ([question["question"] for question in self.questions]
-                     if conflicted or unresolved else [])
+                     if resolution in {"conflict_requires_resolution",
+                                       "clarification_required"} else [])
         return {"schema_version": CORE_SCHEMA_VERSION_V4,
                 "requirement_history": self.history,
                 "behavior_scopes": self.scopes, "claims": self.claims,
-                "required_clarifications": questions, "unscored_observations": [],
+                "required_clarifications": questions,
+                "unscored_observations": self.observations,
                 "predicted_resolution": resolution}
 
 
