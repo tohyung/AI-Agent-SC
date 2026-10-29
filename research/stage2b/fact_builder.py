@@ -61,6 +61,8 @@ class _Builder:
         # Quantity id -> "lovelace" or the id of the native asset it counts.
         self.units: dict[str, str] = {}
         self._visiting: set[str] = set()
+        self._visits: dict[str, int] = {}
+        self._path: set[str] = set()
 
     # -- draft checks ------------------------------------------------------
 
@@ -414,11 +416,9 @@ class _Builder:
 
     def outcome(self, oid: str, parent: dict[str, Any],
                 balances: dict[tuple[str, str], int | None]) -> dict[str, Any]:
-        if oid in self.used:
-            self.problems.append((oid, "outcome reached by more than one path"))
         self.used.add(oid)
         item = self.outcomes[oid]
-        scope = {"scope_id": f"o_{oid}", "scope_type": "terminal_outcome",
+        scope = {"scope_id": self._path_scope_id("o", oid), "scope_type": "terminal_outcome",
                  "outcome_id": oid, "parent_scope_id": parent["scope_id"]}
         self.scopes.append(scope)
         kind = OUTCOME_RECIPIENT_KIND.get(item.get("kind"))
@@ -443,12 +443,28 @@ class _Builder:
         return scope
 
     def step(self, sid: str, balances: dict[tuple[str, str], int | None]) -> str:
-        if sid in self.used:
-            self.problems.append((sid, "step reached by more than one path"))
+        if sid in self._path:
+            self.problems.append((sid, "step loops back to itself; Marlowe contracts are finite"))
+            return f"t_{sid}"
+        self._path.add(sid)
+        try:
+            return self._step(sid, balances)
+        finally:
+            self._path.discard(sid)
+
+    def _path_scope_id(self, prefix: str, item_id: str) -> str:
+        """A step or outcome reached by several paths gets one scope per path."""
+        self._visits[item_id] = self._visits.get(item_id, 0) + 1
+        count = self._visits[item_id]
+        return f"{prefix}_{item_id}" + (f"#{count}" if count > 1 else "")
+
+    def _step(self, sid: str, balances: dict[tuple[str, str], int | None]) -> str:
         self.used.add(sid)
         item = self.steps[sid]
         kind = item.get("kind")
-        scope = {"scope_id": f"t_{sid}", "scope_type": "transition", "transition_kind": kind}
+        scope = {"scope_id": self._path_scope_id("t", sid), "scope_type": "transition",
+                 "transition_kind": kind}
+        key = scope["scope_id"][2:]
         self.scopes.append(scope)
         evidence = list(item.get("evidence") or [])
         # The timeout path sees balances before this step: a missed deposit funds nothing.
@@ -472,26 +488,35 @@ class _Builder:
                                       "source_evidence": evidence}
             for index, branch in enumerate(item.get("branches") or [], 1):
                 guard = branch.get("guard") or {}
-                branch_scope = {"scope_id": f"b_{sid}_{index}", "scope_type": "branch",
-                                "decision_id": scope["scope_id"], "branch_id": f"{sid}_{index}",
+                branch_scope = {"scope_id": f"b_{key}_{index}", "scope_type": "branch",
+                                "decision_id": scope["scope_id"], "branch_id": f"{key}_{index}",
                                 "choice_guard": {"operator": guard.get("op"),
                                                  "value": guard.get("value"),
                                                  "source_evidence": evidence}}
                 self.scopes.append(branch_scope)
                 self.chain(branch_scope, branch.get("then"), dict(balances), sid)
             deadline_kind = "choice_deadline_ms"
+        elif kind == "notify":
+            deadline_kind = "timeout_ms"
+        elif kind == "wait_until":
+            # Marlowe `When [] t k`: nothing to wait for but time, so no timeout branch.
+            scope["transition_kind"] = "payment"
+            self.deadline_claim(scope["scope_id"], "payment_release_time_ms",
+                                item.get("at"), sid)
+            self.chain(scope, item.get("then"), balances, sid)
+            return scope["scope_id"]
         else:
-            self.problems.append((sid, f"step kind {kind!r} is outside the spike"))
+            self.problems.append((sid, f"step kind {kind!r} is not supported"))
             return scope["scope_id"]
         deadline_id = self.deadline_claim(scope["scope_id"], deadline_kind,
                                           item.get("deadline"), sid)
-        timeout = {"scope_id": f"to_{sid}", "scope_type": "timeout", "timeout_id": f"to_{sid}",
+        timeout = {"scope_id": f"to_{key}", "scope_type": "timeout", "timeout_id": f"to_{key}",
                    "decision_id": scope["scope_id"]}
         if deadline_id:
             timeout["deadline_claim_id"] = deadline_id
         self.scopes.append(timeout)
         self.chain(timeout, item.get("on_timeout"), before, sid)
-        if kind == "deposit":
+        if kind in {"deposit", "notify"}:
             self.chain(scope, item.get("then"), balances, sid)
         return scope["scope_id"]
 

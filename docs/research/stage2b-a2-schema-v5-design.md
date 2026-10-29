@@ -350,7 +350,10 @@ native, conflict, `notes.unsupported`, câu hỏi theo ngôn ngữ prompt.
 **Đã bổ sung sau spike (2026-10-30):** `notes.unsupported` (`ledger_history_deletion`
 → claim tín hiệu v4; mục khác và `{"dynamic": …}` → observation + câu hỏi);
 token native qua `assets[]` và `{"tokens": "5", "asset": "a_gold"}`, số dư theo
-từng (tài khoản, tài sản), cấm trộn đơn vị trong biểu thức.
+từng (tài khoản, tài sản), cấm trộn đơn vị trong biểu thức. Bước `notify` (mốc `timeout_ms`) và
+`wait_until` (transition `payment` có `payment_release_time_ms`, không có
+nhánh timeout). Bước/outcome tới được bằng nhiều đường sinh một scope riêng cho
+mỗi đường (`t_s3`, `t_s3#2`) với số dư riêng; vòng lặp là lỗi draft.
 
-Bước tiếp theo trong mục 9: mở rộng builder (notify, conflict, unsupported,
-token native, DAG), viết `fact_prompt.py`, rồi property test và ma trận độ phủ.
+Bước tiếp theo trong mục 9: viết `fact_prompt.py` (schema v5 + ví dụ tổng hợp),
+nối vào `Stage2BExtractionPort`, rồi property test và ma trận độ phủ.

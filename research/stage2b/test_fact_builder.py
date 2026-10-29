@@ -303,3 +303,85 @@ def test_native_id_not_in_source_and_unit_mixing_are_draft_errors():
     with pytest.raises(DraftError) as raised:
         build_core(draft, SWAP_HISTORY)
     assert {item for item, _ in raised.value.problems} == {"a_gold", "q_mix"}
+
+
+RELEASE = ("Lan nạp 60 ADA cho Tú trước 00:00 ngày 02/03/2027 (UTC+7). Từ 00:00 ngày "
+           "10/03/2027 (UTC+7) Tú nhận 60 ADA. Nếu có thông báo hoàn tất trước 00:00 ngày "
+           "05/03/2027 (UTC+7) thì Tú nhận ngay; không thì hoàn cho Lan.")
+RELEASE_HISTORY = [{"version": 1, "messages": [RELEASE]}]
+
+
+def _instant(iid, day, span):
+    return {"id": iid, "expr": {"date": {"y": 2027, "m": 3, "d": day, "h": 0, "min": 0,
+                                         "tz": "+07:00"}}, "evidence": ev(span)}
+
+
+def _release_base():
+    return {
+        "schema_version": FACT_DRAFT_VERSION,
+        "parties": [{"id": "p_lan", "name": "Lan", "evidence": ev("Lan nạp 60 ADA cho Tú")},
+                    {"id": "p_tu", "name": "Tú", "evidence": ev("Lan nạp 60 ADA cho Tú")}],
+        "asset": {"ada": True, "evidence": ev("Lan nạp 60 ADA")},
+        "quantities": [{"id": "q", "expr": {"ada": "60"}, "evidence": ev("Lan nạp 60 ADA")}],
+        "outcomes": [{"id": "o_pay", "kind": "payment", "from_account": "p_lan", "to": "p_tu",
+                      "amount": "remaining", "evidence": ev("Tú nhận 60 ADA")}],
+        "notes": {},
+    }
+
+
+def test_wait_until_becomes_a_payment_release_time():
+    draft = _release_base()
+    draft["instants"] = [_instant("i1", 2, "00:00 ngày 02/03/2027 (UTC+7)"),
+                         _instant("i_release", 10, "00:00 ngày 10/03/2027 (UTC+7)")]
+    draft["steps"] = [
+        {"id": "s1", "kind": "deposit", "by": "p_lan", "into": "p_lan", "amount": "q",
+         "deadline": "i1", "on_timeout": "end", "then": "s2", "evidence": ev("Lan nạp 60 ADA")},
+        {"id": "s2", "kind": "wait_until", "at": "i_release", "then": ["o_pay"],
+         "evidence": ev("Từ 00:00 ngày 10/03/2027 (UTC+7) Tú nhận 60 ADA")}]
+    core = build_core(draft, RELEASE_HISTORY)
+    errors = validate_shadow_semantic_core(core, expected_history=RELEASE_HISTORY)
+    assert errors == []
+    projection = project_intent_spec(core, expected_history=RELEASE_HISTORY)
+    full = validate_intent_spec(projection.intent_spec.to_dict(),
+                                expected_history=RELEASE_HISTORY, projected_core=core)
+    assert classify_projection(errors, full, projection.projection_diagnostics) == "PASS"
+    assert set(_values(core, "payment_release_time_ms")) == {"t_s2"}
+
+
+def test_notify_step_with_timeout_refund():
+    draft = _release_base()
+    draft["instants"] = [_instant("i1", 2, "00:00 ngày 02/03/2027 (UTC+7)"),
+                         _instant("i_notice", 5, "00:00 ngày 05/03/2027 (UTC+7)")]
+    draft["outcomes"].append({"id": "o_refund", "kind": "refund", "from_account": "p_lan",
+                              "to": "p_lan", "amount": "remaining",
+                              "evidence": ev("không thì hoàn cho Lan")})
+    draft["steps"] = [
+        {"id": "s1", "kind": "deposit", "by": "p_lan", "into": "p_lan", "amount": "q",
+         "deadline": "i1", "on_timeout": "end", "then": "s2", "evidence": ev("Lan nạp 60 ADA")},
+        {"id": "s2", "kind": "notify", "deadline": "i_notice", "then": ["o_pay"],
+         "on_timeout": ["o_refund"], "evidence": ev("Nếu có thông báo hoàn tất")}]
+    core = build_core(draft, RELEASE_HISTORY)
+    assert validate_shadow_semantic_core(core, expected_history=RELEASE_HISTORY) == []
+    assert core["predicted_resolution"] == "accepted_interpretation"
+    assert _values(core, "amount_lovelace")["o_o_refund"] == 60_000_000
+
+
+def test_step_reached_by_two_paths_gets_one_scope_per_path():
+    draft = milestone_draft()
+    draft["steps"][1]["on_timeout"] = ["s3"]
+    draft["outcomes"] = [item for item in draft["outcomes"] if item["id"] != "o_refund_all"]
+    core = build_core(draft, HISTORY)
+    assert validate_shadow_semantic_core(core, expected_history=HISTORY) == []
+    scope_ids = {scope["scope_id"] for scope in core["behavior_scopes"]}
+    assert {"t_s3", "t_s3#2", "to_s3", "to_s3#2"} <= scope_ids
+    # Each path keeps its own balance: 30 ADA left after the first payout, 60 without it.
+    refunds = {value for scope, value in _values(core, "amount_lovelace").items()
+               if scope.startswith("o_o_refund_rest")}
+    assert refunds == {30_000_000, 60_000_000}
+
+
+def test_loop_between_steps_is_a_draft_error():
+    draft = milestone_draft()
+    draft["steps"][2]["branches"][0]["then"] = ["o_pay2", "s2"]
+    with pytest.raises(DraftError, match="loops back"):
+        build_core(draft, HISTORY)
