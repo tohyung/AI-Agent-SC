@@ -1,7 +1,7 @@
 {
   "batch_id": "online-tuning-batch01",
   "baseline_sha": "99484ad5a69dc560b6f3e65a2eb4289c064a5688",
-  "dataset_path": "marlowe_ai_agent/bench/dataset/cases.jsonl",
+  "dataset_path": "dataset/cases.jsonl",
   "dataset_sha256": "e05c23f43a2bd025258ad5e2fa77569874357f79173e98863a8f8d48ee9a907a",
   "selection": "first 20 physical JSONL records",
   "model": "nvidia/nemotron-3-ultra-550b-a55b:free",

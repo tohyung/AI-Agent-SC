@@ -10,5 +10,5 @@
   "compiler_authority_default": "CANDIDATE_ONLY",
   "external_adapters_default": "ledger_size_opt_in_testnet_deployment_disabled",
   "validation_state": "offline_tests_and_simulated_roleplay_ledger_size_only",
-  "status_source": "docs/research/production-cutover-report.md"
+  "status_source": "docs/HISTORY.md"
 }
