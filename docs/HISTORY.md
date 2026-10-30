@@ -193,6 +193,10 @@ ký. "Đạt cổng ledger" luôn chỉ là phân tích kích thước giao dị
 ## 8. Bằng chứng gốc
 
 Dữ liệu chạy nằm trong `runs/` (không đưa vào git). Lượt đã xong được gom 20
-case một file trong `runs/archive/`; lượt đang chạy (`runs/eval/`) giữ
-nguyên. Bản sao toàn bộ `runs/` trước khi gom:
+case một file ngay trong thư mục của lượt đó (`runs/<lượt>/cases-AA-BB.jsonl`,
+mỗi dòng là một file gốc nguyên văn kèm SHA-256); 349 log phiên CLI gom vào
+`runs/cli-sessions.jsonl`. Lượt đang chạy (`runs/eval/`) giữ nguyên. Đọc bằng
+`research.experiments.run_bundles.iter_cases`; khôi phục file gốc bằng
+`python -m research.experiments.run_bundles extract <bundle>`. Replay Stage 2B
+cho kết quả giống hệt trước và sau khi gom. Bản sao toàn bộ `runs/` trước khi gom:
 `D:\code\marlowe_ai_agent-runs-backup-20261030.zip` (1.601 file, đã kiểm).

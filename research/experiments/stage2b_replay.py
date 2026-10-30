@@ -9,19 +9,19 @@ requests depend on repair prompts that changed across policy versions.
 from __future__ import annotations
 
 import argparse
-from collections import Counter
-from datetime import datetime, timezone
 import json
-from pathlib import Path
 import subprocess
+from collections import Counter
+from datetime import UTC, datetime
+from pathlib import Path
 from typing import Any
 
+from research.experiments.run_bundles import iter_cases
 from research.stage2b.core_draft import DRAFT_FIELDS
 from research.stage2b.intent_spec import CORE_FIELDS, CORE_SCHEMA_VERSION_V4
 from research.stage2b.projector import classify_projection, project_intent_spec
 from research.stage2b.repair_policy import REPAIR_POLICY_VERSION, diagnostic_codes
 from research.stage2b.shadow_extractor import IntentShadowExtractor
-
 
 ROOT = Path(__file__).resolve().parents[2]
 RUN_ROOTS = ("runs/roleplay-main-batch20", "runs/roleplay-main-batch80")
@@ -59,9 +59,16 @@ def _cited_version(output: dict[str, Any]) -> int:
     return max([value for value in versions if type(value) is int] or [1])
 
 
-def _attempts(case_dir: Path) -> list[dict[str, Any]]:
-    records = [json.loads(path.read_text(encoding="utf-8"))
-               for path in sorted(case_dir.glob("attempt-*.json"))]
+def _case_files(case: Path | dict[str, str]) -> dict[str, str]:
+    if isinstance(case, dict):
+        return case
+    return {path.name: path.read_text(encoding="utf-8") for path in sorted(case.glob("*"))
+            if path.is_file()}
+
+
+def _attempts(files: dict[str, str]) -> list[dict[str, Any]]:
+    records = [json.loads(text) for name, text in sorted(files.items())
+               if name.startswith("attempt-") and name.endswith(".json")]
     return sorted((item for item in records if item.get("recorded_at_utc")),
                   key=lambda item: item["recorded_at_utc"])
 
@@ -75,14 +82,18 @@ def _schema_version(attempt: dict[str, Any], output: dict[str, Any]) -> str:
     return version if isinstance(version, str) else CORE_SCHEMA_VERSION_V4
 
 
-def pair_outputs(case_dir: Path) -> list[dict[str, Any]]:
-    """Pair each first-pass output with the history prefix it was produced from."""
-    journal = case_dir / "logical-model-outputs.jsonl"
-    if not journal.exists():
+def pair_outputs(case: Path | dict[str, str]) -> list[dict[str, Any]]:
+    """Pair each first-pass output with the history prefix it was produced from.
+
+    `case` is a case directory or a {file name: text} mapping from a bundle.
+    """
+    files = _case_files(case)
+    journal = files.get("logical-model-outputs.jsonl")
+    if journal is None:
         return []
-    attempts = _attempts(case_dir)
+    attempts = _attempts(files)
     paired = []
-    for line_number, line in enumerate(journal.read_text(encoding="utf-8").splitlines(), 1):
+    for line_number, line in enumerate(journal.splitlines(), 1):
         record = json.loads(line)
         output = record["output"]
         kind = output_kind(output)
@@ -137,9 +148,9 @@ def replay_output(output: dict[str, Any], history: list[dict[str, Any]],
 def replay_runs(roots: list[Path]) -> dict[str, Any]:
     cases: dict[str, dict[str, Any]] = {}
     for root in roots:
-        for case_dir in sorted(root.glob("case-*")):
+        for name, files in iter_cases(root):
             rows = []
-            for item in pair_outputs(case_dir):
+            for item in pair_outputs(files):
                 row = {key: item[key] for key in ("line", "kind", "paired", "recorded_at_utc")}
                 if item["paired"]:
                     row.update(attempt=item["attempt"], schema_version=item["schema_version"],
@@ -148,7 +159,7 @@ def replay_runs(roots: list[Path]) -> dict[str, Any]:
                         row[mode] = replay_output(item["output"], item["history"],
                                                   item["schema_version"], mode)
                 rows.append(row)
-            cases[case_dir.name] = {"outputs": rows}
+            cases[name] = {"outputs": rows}
     return {"cases": cases, "summary": summarize(cases)}
 
 
@@ -202,7 +213,7 @@ def main() -> int:
     args = parser.parse_args()
     roots = args.run_root or [ROOT / item for item in RUN_ROOTS]
     report = {"record_type": "stage2b_offline_replay_v1",
-              "recorded_at_utc": datetime.now(timezone.utc).isoformat(),
+              "recorded_at_utc": datetime.now(UTC).isoformat(),
               "code_head": _git_head(), "repair_policy_version": REPAIR_POLICY_VERSION,
               "model_calls": 0, **replay_runs(roots)}
     args.output.parent.mkdir(parents=True, exist_ok=True)

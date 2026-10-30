@@ -88,6 +88,9 @@ python -m research.experiments.stage2b_replay --output runs/replay/<file>.json
 ```
 
 The protocol, metrics and the dev/test split are in [docs/A2.md](docs/A2.md).
+Finished run folders are bundled 20 cases per file with
+`python -m research.experiments.run_bundles bundle runs/<batch>`; `extract`
+restores the original files.
 Stage 2A commands: `python research/stage2a/foundation.py validate|stats`, and
 `python research/stage2a/verify_freeze.py research/stage2a/freeze/stage2a-v1.manifest.json`
 to check the frozen corpus hashes.
