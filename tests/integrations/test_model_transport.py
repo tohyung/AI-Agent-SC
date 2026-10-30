@@ -237,7 +237,7 @@ def test_gemini_profile_ignores_shared_settings_and_uses_reasoning_effort(monkey
     assert model.model == "gemini-test-model"
     assert model.base_url.startswith("https://generativelanguage.googleapis.com/")
     assert observed[0]["model"] == "gemini-test-model"
-    assert observed[0]["reasoning_effort"] == "minimal"
+    assert observed[0]["reasoning_effort"] == "low"
     assert "extra_body" not in observed[0]
     assert "secret" not in str(model.call_log)
 

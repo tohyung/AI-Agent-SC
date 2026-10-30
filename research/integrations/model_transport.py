@@ -16,7 +16,7 @@ from typing import Any
 PROVIDERS: dict[str, dict[str, str]] = {
     "gemini": {"base_url": "https://generativelanguage.googleapis.com/v1beta/openai/",
                "key_env": "GEMINI_API_KEY", "model_env": "GEMINI_MODEL",
-               "effort_env": "GEMINI_REASONING_EFFORT", "default_effort": "minimal"},
+               "effort_env": "GEMINI_REASONING_EFFORT", "default_effort": "low"},
 }
 REASONING_EFFORTS = {"none", "minimal", "low", "medium", "high"}
 
