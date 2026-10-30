@@ -37,7 +37,7 @@ from research.stage4.oracles import NoWarningsOracle, OraclePort
 ROOT = Path(__file__).resolve().parents[2]
 MANIFEST = ROOT / "docs/research/online-tuning-batch01.manifest.json"
 BUDGET_EXTENSION = ROOT / "docs/research/online-tuning-batch01-budget-extension.json"
-DATASET = ROOT / "marlowe_ai_agent/bench/dataset/cases.jsonl"
+DATASET = ROOT / "dataset/cases.jsonl"
 RUN_DIR = ROOT / "runs/online-tuning-batch01"
 MODEL_REQUEST_WALL_SECONDS = 300
 EXTRACTION_SOURCES = (ROOT / "research/stage2b/shadow_extractor.py",

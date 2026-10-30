@@ -23,7 +23,7 @@ class ModelTransportError(RuntimeError):
 
 
 def _load_env() -> None:
-    project = Path(__file__).resolve().parents[2] / "marlowe_ai_agent" / ".env"
+    project = Path(__file__).resolve().parents[2] / ".env"
     for path in (Path.cwd() / ".env", project):
         if not path.is_file():
             continue
