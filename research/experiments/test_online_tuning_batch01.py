@@ -6,7 +6,7 @@ import signal
 
 import pytest
 
-from marlowe_ai_agent.marlowe_agent.models import LLMBudgetError, LLMTransientError
+from research.integrations.reasoner_models import LLMBudgetError, LLMTransientError
 from research.architecture.bootstrap import build_research_pipeline
 from research.architecture.status import AuthorityLevel, StageRunStatus
 from research.experiments.online_tuning_batch01 import (PhysicalCallJournal,

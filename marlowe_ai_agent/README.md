@@ -66,6 +66,6 @@ uvx ruff check --select F401,F841
 ```
 
 `research/marlowe_core/` owns the shared AST validator, graph lint and SMT
-finding mapper. Historical Node 1/2/3 code lives in `research/legacy/` for
-benchmark reproducibility; the supported CLI does not import or invoke it.
-The old README is preserved at `docs/research/legacy-pipeline-readme.md`.
+finding mapper. The archived Node 1/2/3 pipeline and its benchmark runner were
+removed on 2026-10-30 (see git history); its README is preserved at
+`docs/research/legacy-pipeline-readme.md`.

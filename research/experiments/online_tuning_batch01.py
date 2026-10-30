@@ -13,8 +13,8 @@ import threading
 from typing import Any
 from contextlib import contextmanager
 
-from marlowe_ai_agent.marlowe_agent.models import LLMBudgetError, LLMError, LLMTransientError
-from marlowe_ai_agent.marlowe_agent.openai_reasoner import parse_json_text
+from research.integrations.reasoner_models import LLMBudgetError, LLMError, LLMTransientError
+from research.integrations.openai_reasoner import parse_json_text
 from research.architecture.bootstrap import ResearchPipelineWiring, build_research_pipeline
 from research.architecture.status import StageRunStatus
 from research.experiments.batch_scenarios import (SyntheticExpectationPolicy,

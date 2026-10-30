@@ -14,7 +14,7 @@ ROOT = Path(__file__).resolve().parents[2]
 if __package__ in (None, ""):
     sys.path.insert(0, str(ROOT))
 
-from marlowe_ai_agent.marlowe_agent.models import LLMError, LLMBudgetError  # noqa: E402
+from research.integrations.reasoner_models import LLMError, LLMBudgetError  # noqa: E402
 from research.stage2a import verify_freeze  # noqa: E402
 from research.stage2b.intent_spec import CORE_SCHEMA_VERSION, validate_intent_spec  # noqa: E402
 from research.stage2b.live_safety import (  # noqa: E402

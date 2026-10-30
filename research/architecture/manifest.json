@@ -3,7 +3,7 @@
   "status": "IMPLEMENTED_UNVALIDATED",
   "production_authority_changed": false,
   "default_route": "assurance_pipeline",
-  "legacy_route": "archived_research_legacy_not_exposed_by_cli",
+  "legacy_route": "removed_2026_10_30_see_git_history",
   "contract_generation": "llm_model_candidate",
   "artifact_hash_basis": "canonical_json_v1_payload_only",
   "shared_lifecycle_enum": "ImplementationStatus",

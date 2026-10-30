@@ -1,31 +1,19 @@
 # Marlowe benchmark
 
-Run from the Python project directory (`marlowe_ai_agent/`). No default test
-calls a live model.
+The frozen 100-case dataset (`dataset/cases.jsonl`) and the offline tooling
+that builds and validates it. Run from the Python project directory
+(`marlowe_ai_agent/`); nothing here calls a model.
 
 ```text
-python -m pytest -q
 python -m bench.validate_dataset
-python -m bench.run --all --fake
-python -m bench.run --all --fake --fake-wrong
-python -m bench.run --smoke 5 --max-usd 50
-python -m bench.run --case-ids ID1,ID2,ID3 --workers 3 --wall-clock 5400 --max-iterations 500 --max-llm-calls 2000
-python -m bench.run --all --resume bench/results/<smoke-directory> --max-usd 50
-python -m bench.report --run bench/results/<run-directory>
+python -m pytest -q tests/bench
 ```
 
-The live run needs the agent's normal `LLM_MODEL`/`LLM_BASE_URL` and API key
-configuration. Only `OpenAIReasoner` loads `.env`; the benchmark never reads or
-prints it. Set `BENCH_JUDGE_MODEL` to an independent model and optionally set
-`BENCH_USER_MODEL`. If the provider does not return `usage.cost`, provide
-`BENCH_PRICE_IN_PER_M` and `BENCH_PRICE_OUT_PER_M` for USD per million tokens.
-Without cost data, smoke stops and full run is refused. The cost guard prevents
-new cases from being scheduled when the projected budget is exhausted, but
-already-running requests can finish and incur additional charges. The 900s
-wall-clock limit is cooperative and cannot interrupt an in-flight SDK request.
-`--case-ids` is a real-model timing probe: it preserves the supplied ID order,
-does not require a cost flag, skips the auxiliary judge request, and does not
-generate an official benchmark summary.
+`validate_dataset` checks prompt uniqueness and banned wording, rebuilds every
+reference from its template to detect drift, and requires each feasible
+reference to score 100% under `evaluator.py`. The live benchmark runner for
+the archived Node 1/2/3 pipeline was removed on 2026-10-30; current live
+evaluation uses `research/experiments/stage2b_eval.py`.
 
 The Core V1 simulator is an intentionally limited independent instrument,
 grounded in `evalValue`, `evalObservation`, `reduceContractStep`, `applyAction`,

@@ -8,8 +8,8 @@ from types import SimpleNamespace
 
 import pytest
 
-from marlowe_ai_agent.marlowe_agent.models import LLMPhaseError, LLMTransientError
-from marlowe_ai_agent.marlowe_agent.openai_reasoner import OpenAIReasoner
+from research.integrations.reasoner_models import LLMPhaseError, LLMTransientError
+from research.integrations.openai_reasoner import OpenAIReasoner
 from research.stage2b import run_shadow, shadow_extractor
 from research.stage2b.live_safety import summary_path
 from research.stage2b.test_shadow_extractor import FakeTransportBase, live_argv

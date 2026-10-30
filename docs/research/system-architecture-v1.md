@@ -5,8 +5,9 @@
 > ([production-cutover-report.md](production-cutover-report.md),
 > [production-route-transition.md](production-route-transition.md)):
 >
-> - The supported CLI runs only this pipeline. Legacy Node 1/2/3 lives in
->   `research/legacy/` and is no longer a route; `--research-mode` was removed.
+> - The supported CLI runs only this pipeline. Legacy Node 1/2/3 was removed
+>   from the repository on 2026-10-30 (see git history); `--research-mode` was
+>   removed earlier.
 > - The `compile` stage is `LLMContractGeneratorPort`: the model generates a
 >   Core V1 AST with `MODEL_CANDIDATE` authority. Deterministic profile
 >   compilers remain for experiments only. `compiler_authority` is

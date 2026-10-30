@@ -1451,7 +1451,7 @@ class LegacyReasonerTransport:
     """Research-only JSON transport; this does not grant production authority."""
 
     def __init__(self, model: str | None = None) -> None:
-        from marlowe_ai_agent.marlowe_agent.openai_reasoner import OpenAIReasoner
+        from research.integrations.openai_reasoner import OpenAIReasoner
 
         self.reasoner = OpenAIReasoner(model=model)
 
@@ -1465,6 +1465,6 @@ class LegacyReasonerTransport:
         return len(self.reasoner.call_log)
 
     def usage_window(self, start_index: int, end_index: int | None = None) -> dict[str, Any]:
-        from marlowe_ai_agent.marlowe_agent.openai_reasoner import summarize_call_log
+        from research.integrations.openai_reasoner import summarize_call_log
 
         return summarize_call_log(self.reasoner.call_log[start_index:end_index])

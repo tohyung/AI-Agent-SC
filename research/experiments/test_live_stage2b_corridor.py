@@ -5,8 +5,8 @@ import json
 
 import pytest
 
-from marlowe_ai_agent.marlowe_agent.models import LLMConfigError, LLMPhaseError
-from marlowe_ai_agent.marlowe_agent.openai_reasoner import summarize_call_log
+from research.integrations.reasoner_models import LLMConfigError, LLMPhaseError
+from research.integrations.openai_reasoner import summarize_call_log
 from research.experiments import live_stage2b_corridor as corridor
 from research.stage2b import live_safety
 from research.stage2b.live_safety import make_live_budget

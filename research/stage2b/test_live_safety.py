@@ -6,8 +6,8 @@ import sys
 
 import pytest
 
-from marlowe_ai_agent.marlowe_agent.models import LLMConfigError, LLMTransientError
-from marlowe_ai_agent.marlowe_agent.openai_reasoner import summarize_call_log
+from research.integrations.reasoner_models import LLMConfigError, LLMTransientError
+from research.integrations.openai_reasoner import summarize_call_log
 from research.architecture.bootstrap import build_research_pipeline
 from research.architecture.models import StageResult
 from research.architecture.status import ImplementationStatus, StageRunStatus

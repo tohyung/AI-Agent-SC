@@ -1,26 +1,24 @@
 from __future__ import annotations
 
+import json
 from copy import deepcopy
 from dataclasses import replace
-import json
 from pathlib import Path
-from types import SimpleNamespace
-import sys
 
 import pytest
-
 from bench.cases import load_cases
-from bench import run as run_cli
 from bench.evaluator import _run, evaluate
 from bench.marlowe_sim import run_scenario
-from bench.narrator import narrate
-from bench.runner import FakeBenchReasoner, dataset_hash, read_runs, run_case, run_many
-from bench.stats import percentile, spearman, wilson
 from bench.validate_dataset import validate
-from marlowe_agent.marlowe_ast import case, choice_action, close, deposit, escrow_contract, pay, when
-from marlowe_agent.nodes import PromptToDraftNode
-from marlowe_agent.openai_reasoner import OpenAIReasoner
-
+from marlowe_agent.marlowe_ast import (
+    case,
+    choice_action,
+    close,
+    deposit,
+    escrow_contract,
+    pay,
+    when,
+)
 
 CASES = load_cases()
 
@@ -142,7 +140,8 @@ def test_reference_scenarios_cover_swap_vesting_loan():
 
 def test_mutated_amount_degrades_accuracy_and_unit_error_is_labeled():
     item = _case("escrow_2party")
-    doubled = FakeBenchReasoner(item, wrong=True).draft_from_prompt(item.prompt).marlowe_contract
+    doubled = deepcopy(item.reference_contract)
+    doubled["when"][0]["case"]["deposits"] *= 2
     assert evaluate(item, doubled)["overall_accuracy"] < 1
     wrong_unit = deepcopy(item.reference_contract)
     wrong_unit["when"][0]["case"]["deposits"] //= 1000000
@@ -168,118 +167,3 @@ def test_dataset_validator_detects_duplicate_banned_word_and_drift():
     drift = CASES.copy()
     drift[0] = replace(drift[0], reference_contract="close")
     assert any(item.startswith("ground_truth_drift:") for item in validate(drift))
-
-
-def test_narrator_deterministic_and_lists_paths():
-    contract = escrow_contract("a", "b", 10, 100, 200)
-    first = narrate(contract)
-    assert first == narrate(contract)
-    assert len(first.splitlines()) == 4
-
-
-def test_answer_provider_bypasses_stdin(monkeypatch):
-    monkeypatch.setattr("builtins.input", lambda _: pytest.fail("stdin was called"))
-    node = PromptToDraftNode(object(), interactive=True, answer_provider=lambda _: "42 ADA")
-    outcome = node.ask_for_clarifications("Prompt", ["How much?"], "Answers")
-    assert outcome.user_answered and "42 ADA" in outcome.prompt
-
-
-def test_usage_log_counts_real_sdk_request_without_prompt_data():
-    reasoner = object.__new__(OpenAIReasoner)
-    reasoner.model = "requested"
-    reasoner.call_log = []
-    response = SimpleNamespace(model="served", usage=SimpleNamespace(prompt_tokens=12,
-                                completion_tokens=5, cost=0.01))
-    assert reasoner._request(lambda **_: response, secret="do-not-log") is response
-    assert reasoner.usage_summary()["cost"] == 0.01
-    assert reasoner.call_log[0]["model"] == "served"
-    assert "do-not-log" not in str(reasoner.call_log)
-
-
-def test_runner_fake_reference_mutation_resume_and_budget(tmp_path):
-    item = _case("escrow_2party")
-    good = run_case(item, fake=True)
-    bad = run_case(item, fake=True, fake_wrong=True)
-    assert good["evaluation"]["strict_correct"]
-    assert bad["evaluation"]["overall_accuracy"] < 1
-    rows = run_many([item], tmp_path, workers=1, fake=True, dataset_sha256=dataset_hash())
-    assert len(rows) == 1
-    assert len(run_many([item], tmp_path, workers=1, fake=True, dataset_sha256=dataset_hash())) == 1
-    assert len(read_runs(tmp_path / "runs.jsonl")) == 1
-    other = _case("loan")
-    assert len(run_many([other], tmp_path, workers=1, fake=True, dataset_sha256=dataset_hash(),
-                        max_usd=0)) == 1
-
-
-def test_runner_cooperative_timeout_keeps_partial_trace():
-    record = run_case(_case("escrow_2party"), fake=True, wall_clock=1e-12)
-    assert record["stop_reason"] == "wallclock_timeout"
-    assert record["trace"]
-
-
-def test_secret_like_text_is_redacted_from_run_record():
-    item = replace(_case("escrow_2party"), prompt="My key is sk-test-secret-123456789.")
-    record = run_case(item, fake=True)
-    assert "sk-test-secret-123456789" not in str(record)
-
-
-def test_statistics_known_values():
-    lo, hi = wilson(5, 10)
-    assert 0.23 < lo < 0.24 and 0.76 < hi < 0.77
-    assert percentile([1, 2, 3, 4], 50) == 2.5
-    assert spearman([1, 2, 3], [3, 2, 1]) == pytest.approx(-1)
-
-
-def test_case_ids_selection_preserves_order_and_rejects_unknown():
-    ids = [CASES[3].id, CASES[0].id, CASES[8].id]
-    selected = run_cli.select_case_ids(CASES, ",".join(ids))
-    assert [case.id for case in selected] == ids
-    with pytest.raises(ValueError, match="Unknown case ID"):
-        run_cli.select_case_ids(CASES, "does-not-exist")
-    with pytest.raises(ValueError, match="duplicate"):
-        run_cli.select_case_ids(CASES, f"{ids[0]},{ids[0]}")
-
-
-def test_case_ids_cli_is_real_timing_probe_without_budget_or_summary(monkeypatch, tmp_path, capsys):
-    ids = [CASES[3].id, CASES[0].id]
-    captured = {}
-
-    def fake_run_many(selected, directory, **kwargs):
-        captured.update(ids=[item.id for item in selected], options=kwargs)
-        return []
-
-    monkeypatch.setattr(run_cli, "OpenAIReasoner", lambda model=None: SimpleNamespace(model="free:free"))
-    monkeypatch.setattr(run_cli, "run_many", fake_run_many)
-    monkeypatch.setattr(run_cli, "RESULTS", tmp_path)
-    monkeypatch.setattr(run_cli, "generate", lambda _: pytest.fail("official report generated"))
-    monkeypatch.setattr(sys, "argv", ["bench.run", "--case-ids", ",".join(ids)])
-    run_cli.main()
-    assert captured["ids"] == ids
-    assert captured["options"]["preserve_order"] is True
-    assert captured["options"]["timing_probe"] is True
-    assert captured["options"]["max_usd"] is None
-    assert "Timing probe only" in capsys.readouterr().out
-
-
-def test_case_ids_cli_rejects_fake(monkeypatch):
-    monkeypatch.setattr(sys, "argv", ["bench.run", "--case-ids", CASES[0].id, "--fake"])
-    with pytest.raises(SystemExit) as exc:
-        run_cli.main()
-    assert exc.value.code == 2
-
-
-@pytest.mark.parametrize("raw", ["", "does-not-exist"])
-def test_case_ids_cli_rejects_invalid_ids_before_llm_bootstrap(monkeypatch, capsys, raw):
-    monkeypatch.setattr(sys, "argv", ["bench.run", "--case-ids", raw])
-    monkeypatch.setattr(run_cli, "OpenAIReasoner", lambda model=None: pytest.fail("LLM was initialized"))
-    with pytest.raises(SystemExit) as exc:
-        run_cli.main()
-    assert exc.value.code == 2
-    assert "case-ids" in capsys.readouterr().err
-
-
-def test_runner_preserve_order_with_one_worker(tmp_path):
-    selected = [CASES[3], CASES[0]]
-    rows = run_many(selected, tmp_path, workers=1, fake=True,
-                    preserve_order=True, dataset_sha256=dataset_hash())
-    assert [row["case_id"] for row in rows] == [case.id for case in selected]

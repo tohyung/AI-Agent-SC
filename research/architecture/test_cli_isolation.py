@@ -1,4 +1,4 @@
-"""The supported CLI must not load the archived Node 1/2/3 implementation."""
+"""The supported CLI must not load the old Node 1/2/3 reasoner client."""
 
 import subprocess
 import sys
@@ -10,7 +10,7 @@ def test_cli_import_does_not_load_legacy_pipeline():
     probe = (
         "import sys; from marlowe_ai_agent.marlowe_agent.cli import build_parser; "
         "build_parser(); "
-        "assert not any(name.startswith('research.legacy') for name in sys.modules)"
+        "assert 'research.integrations.openai_reasoner' not in sys.modules"
     )
     result = subprocess.run([sys.executable, "-c", probe], stdin=subprocess.DEVNULL,
                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,

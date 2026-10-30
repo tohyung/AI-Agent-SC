@@ -11,7 +11,7 @@ import os
 from pathlib import Path
 import sys
 
-from marlowe_ai_agent.marlowe_agent.models import LLMError
+from research.integrations.reasoner_models import LLMError
 from research.architecture.artifacts import ArtifactEnvelope, canonical_json_v1
 from research.architecture.bootstrap import ResearchPipelineWiring, build_research_pipeline
 from research.stage2b.live_safety import (EXPERIMENT_VERSION, LivePreflightError,

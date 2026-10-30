@@ -9,8 +9,8 @@ from datetime import datetime, timedelta, timezone
 
 import pytest
 
-from marlowe_ai_agent.marlowe_agent.models import LLMConfigError, LLMTransientError
-from marlowe_ai_agent.marlowe_agent.openai_reasoner import summarize_call_log
+from research.integrations.reasoner_models import LLMConfigError, LLMTransientError
+from research.integrations.openai_reasoner import summarize_call_log
 from research.stage2b import intent_spec, run_shadow, shadow_extractor
 from research.stage2b.repair_policy import REPAIR_POLICY_VERSION
 from research.stage2b.test_intent_spec import simple_payment

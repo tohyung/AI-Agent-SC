@@ -10,7 +10,7 @@ from time import perf_counter
 
 from research.marlowe_core.marlowe_ast import normalize_marlowe_ast, prompt_contract_examples
 from research.marlowe_core.marlowe_validator import describe_marlowe_grammar
-from .models import (
+from research.integrations.reasoner_models import (
     ContractDraft,
     LLMBudgetError,
     LLMConfigError,
