@@ -11,6 +11,16 @@ from collections.abc import Callable
 from typing import Any
 
 
+# Secondary providers selected only by an explicit argument, never by the shared
+# LLM_* settings, so no other entry point can reach them by accident.
+PROVIDERS: dict[str, dict[str, str]] = {
+    "gemini": {"base_url": "https://generativelanguage.googleapis.com/v1beta/openai/",
+               "key_env": "GEMINI_API_KEY", "model_env": "GEMINI_MODEL",
+               "effort_env": "GEMINI_REASONING_EFFORT", "default_effort": "minimal"},
+}
+REASONING_EFFORTS = {"none", "minimal", "low", "medium", "high"}
+
+
 class ModelTransportError(RuntimeError):
     def __init__(self, code: str, phase: str, *, content_received: bool = False,
                  repair_attempted: bool = False, status_code: int | None = None) -> None:
@@ -64,13 +74,29 @@ class ModelTransport:
                  before_request: Callable[[str], None] | None = None,
                  api_style: str | None = None, max_tokens: int | None = None,
                  disable_reasoning: bool = False, retry_empty: bool = True,
-                 request_json_object: bool = True) -> None:
+                 request_json_object: bool = True, provider: str | None = None) -> None:
         _load_env()
-        self.model = model or os.getenv("LLM_MODEL") or os.getenv("OPENAI_MODEL")
-        key = os.getenv("LLM_API_KEY") or os.getenv("OPENROUTER_API_KEY") or os.getenv("OPENAI_API_KEY")
-        self.base_url = os.getenv("LLM_BASE_URL")
-        self.api_style = api_style or os.getenv("LLM_API_STYLE") or (
-            "chat" if self.base_url else "responses")
+        self.provider = provider
+        self.reasoning_effort: str | None = None
+        if provider is None:
+            self.model = model or os.getenv("LLM_MODEL") or os.getenv("OPENAI_MODEL")
+            key = (os.getenv("LLM_API_KEY") or os.getenv("OPENROUTER_API_KEY")
+                   or os.getenv("OPENAI_API_KEY"))
+            self.base_url = os.getenv("LLM_BASE_URL")
+            self.api_style = api_style or os.getenv("LLM_API_STYLE") or (
+                "chat" if self.base_url else "responses")
+        elif provider in PROVIDERS:
+            profile = PROVIDERS[provider]
+            self.model = model or os.getenv(profile["model_env"])
+            key = os.getenv(profile["key_env"])
+            self.base_url = profile["base_url"]
+            self.api_style = "chat"
+            self.reasoning_effort = (os.getenv(profile["effort_env"])
+                                     or profile["default_effort"])
+            if self.reasoning_effort not in REASONING_EFFORTS:
+                raise ModelTransportError("invalid_reasoning_effort", "configuration")
+        else:
+            raise ModelTransportError("unknown_provider", "configuration")
         try:
             self.max_tokens = (max_tokens if max_tokens is not None else
                                int(os.getenv("LLM_MAX_TOKENS") or "8000"))
@@ -136,7 +162,11 @@ class ModelTransport:
                                           "max_tokens": self.max_tokens}
                 if json_mode:
                     kwargs["response_format"] = {"type": "json_object"}
-                if self.disable_reasoning:
+                if self.disable_reasoning and self.reasoning_effort is not None:
+                    # Gemini rejects OpenRouter's reasoning switch; some models cannot
+                    # turn thinking off, so use the lowest configured effort instead.
+                    kwargs["reasoning_effort"] = self.reasoning_effort
+                elif self.disable_reasoning:
                     kwargs["extra_body"] = {
                         "reasoning": {"enabled": False},
                         "chat_template_kwargs": {"enable_thinking": False},

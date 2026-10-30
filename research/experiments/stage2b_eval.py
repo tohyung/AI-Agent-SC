@@ -133,7 +133,8 @@ def _git_head() -> str | None:
 def run_arm(arm_dir: Path, model_factory: Callable[[Callable[[str], None]], Any], *,
             arm: str, indices: tuple[int, ...] = DEV_CASES,
             emit: Callable[[str], None] = print) -> int:
-    """Return 0 when every selected case has a record, 3 on a non-model failure."""
+    """Return 0 when every selected case has a record, 3 on a non-model failure,
+    4 when the directory already holds another model's records."""
     arm_dir.mkdir(parents=True, exist_ok=True)
     journal = arm_dir / "outbound-attempts.jsonl"
     current: dict[str, Any] = {}
@@ -146,7 +147,15 @@ def run_arm(arm_dir: Path, model_factory: Callable[[Callable[[str], None]], Any]
             writer.flush()
             os.fsync(writer.fileno())
 
-    model = JournaledModel(model_factory(before_request), arm_dir / "logical-model-outputs.jsonl")
+    delegate = model_factory(before_request)
+    recorded = {json.loads(path.read_text(encoding="utf-8")).get("model")
+                for path in arm_dir.glob("case-*.json")}
+    if recorded - {delegate.model}:
+        # One arm directory holds one model; mixing would make the arm incomparable.
+        emit(f"{arm_dir} already holds records from {sorted(map(str, recorded))}; "
+             f"refusing to add {delegate.model}")
+        return 4
+    model = JournaledModel(delegate, arm_dir / "logical-model-outputs.jsonl")
     head = _git_head()
     for index, case_id, prompt in dev_prompts(indices):
         target = arm_dir / f"case-{index:02d}.json"
@@ -161,6 +170,7 @@ def run_arm(arm_dir: Path, model_factory: Callable[[Callable[[str], None]], Any]
             emit(f"case {index:02d}: {error.get('code')}; stopping without a record")
             return 3
         record.update({"arm": arm, "code_head": head, "model": getattr(model, "model", None),
+                       "provider": getattr(delegate, "provider", None) or "default",
                        "repair_policy_version": REPAIR_POLICY_VERSION,
                        "recorded_at_utc": datetime.now(UTC).isoformat()})
         with target.open("x", encoding="utf-8") as writer:
@@ -176,6 +186,9 @@ def main() -> int:
     parser.add_argument("--arm", required=True, help="Arm label, e.g. BASE or A2")
     parser.add_argument("--out-dir", type=Path, required=True)
     parser.add_argument("--cases", help="Comma-separated dev case indices (default 1-56)")
+    parser.add_argument("--provider", choices=["default", "gemini"], default="default",
+                        help="default = the official LLM_* model; gemini = dev-only "
+                             "secondary provider (GEMINI_* settings)")
     args = parser.parse_args()
     indices = (tuple(int(item) for item in args.cases.split(",")) if args.cases
                else DEV_CASES)
@@ -184,7 +197,8 @@ def main() -> int:
         from research.integrations.model_transport import ModelTransport
         return ModelTransport(before_request=before_request, api_style="chat",
                               max_tokens=16000, disable_reasoning=True,
-                              retry_empty=False, request_json_object=False)
+                              retry_empty=False, request_json_object=False,
+                              provider=None if args.provider == "default" else args.provider)
 
     return run_arm(args.out_dir, factory, arm=args.arm, indices=indices)
 

@@ -129,3 +129,20 @@ def test_a2_arm_records_draft_attempts_with_the_same_metrics(tmp_path, monkeypat
     assert record["first_pass_valid"] is True and record["final_valid"] is True
     assert record["predicted_resolution"] == "accepted_interpretation"
     assert record["fact_draft_attempts"][0]["problems"] == []
+
+
+def test_arm_directory_refuses_a_second_model(tmp_path, monkeypatch):
+    code, _model, _lines = _arm(tmp_path, [funded_choice_core()], monkeypatch)
+    assert code == 0
+    record = json.loads((tmp_path / "case-01.json").read_text(encoding="utf-8"))
+    assert record["model"] == "fake-model" and record["provider"] == "default"
+
+    class OtherModel(FakeModel):
+        model = "other-model"
+
+    lines = []
+    code = stage2b_eval.run_arm(tmp_path, lambda before: OtherModel([], before), arm="BASE",
+                                indices=(1, 2), emit=lines.append)
+    assert code == 4
+    assert "refusing to add other-model" in lines[0]
+    assert not (tmp_path / "case-02.json").exists()

@@ -210,3 +210,50 @@ def test_embedded_provider_503_retries_and_journals_each_physical_call(monkeypat
     assert model.llm_calls == 2
     assert [item.get("provider_error_code") for item in model.call_log] == [503, None]
     assert "sensitive provider body" not in str(model.call_log)
+
+
+def _recording_client(observed):
+    def create(**kwargs):
+        observed.append(kwargs)
+        return SimpleNamespace(
+            choices=[SimpleNamespace(message=SimpleNamespace(content='{"ok":true}'))],
+            usage=SimpleNamespace(prompt_tokens=1, completion_tokens=1, total_tokens=2),
+        )
+
+    return SimpleNamespace(chat=SimpleNamespace(completions=SimpleNamespace(create=create)))
+
+
+def test_gemini_profile_ignores_shared_settings_and_uses_reasoning_effort(monkeypatch):
+    monkeypatch.setenv("LLM_API_KEY", "official-secret-not-for-output")
+    monkeypatch.setenv("LLM_MODEL", "official-model")
+    monkeypatch.setenv("LLM_BASE_URL", "https://example.invalid/v1")
+    monkeypatch.setenv("GEMINI_API_KEY", "gemini-secret-not-for-output")
+    monkeypatch.setenv("GEMINI_MODEL", "gemini-test-model")
+    monkeypatch.delenv("GEMINI_REASONING_EFFORT", raising=False)
+    observed = []
+    model = ModelTransport(client=_recording_client(observed), provider="gemini",
+                           disable_reasoning=True, request_json_object=False)
+    assert model.generate("system", "user") == {"ok": True}
+    assert model.model == "gemini-test-model"
+    assert model.base_url.startswith("https://generativelanguage.googleapis.com/")
+    assert observed[0]["model"] == "gemini-test-model"
+    assert observed[0]["reasoning_effort"] == "minimal"
+    assert "extra_body" not in observed[0]
+    assert "secret" not in str(model.call_log)
+
+
+def test_gemini_profile_needs_its_own_key_and_valid_effort(monkeypatch):
+    monkeypatch.setenv("LLM_API_KEY", "official-secret-not-for-output")
+    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+    monkeypatch.setenv("GEMINI_MODEL", "gemini-test-model")
+    with pytest.raises(ModelTransportError) as caught:
+        ModelTransport(client=_recording_client([]), provider="gemini")
+    assert caught.value.code == "missing_or_invalid_configuration"
+    monkeypatch.setenv("GEMINI_API_KEY", "gemini-secret-not-for-output")
+    monkeypatch.setenv("GEMINI_REASONING_EFFORT", "max")
+    with pytest.raises(ModelTransportError) as caught:
+        ModelTransport(client=_recording_client([]), provider="gemini")
+    assert caught.value.code == "invalid_reasoning_effort"
+    with pytest.raises(ModelTransportError) as caught:
+        ModelTransport(client=_recording_client([]), provider="other")
+    assert caught.value.code == "unknown_provider"
