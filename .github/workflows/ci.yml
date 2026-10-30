@@ -1,0 +1,56 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  offline:
+    # No secrets, no model calls, no ledger: everything here runs offline.
+    name: Offline checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # verify_freeze reads the frozen Stage 2A blobs from their source commit.
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+          cache: pip
+          cache-dependency-path: |
+            requirements.txt
+            requirements-dev.txt
+
+      - name: Install dependencies
+        run: python -m pip install -r requirements.txt -r requirements-dev.txt ruff==0.17.3
+
+      - name: Lint (unused imports and variables)
+        run: ruff check --select F401,F841
+
+      - name: Tests
+        run: |
+          # Real-reference tests need a built Haskell binary and belong to a separate job.
+          # A visible but unbuilt cabal/GHC makes them fail, so hide any preinstalled one.
+          export PATH="$(echo "$PATH" | tr ':' '\n' | grep -v -i -e ghcup -e cabal | paste -sd:)"
+          if command -v cabal >/dev/null || command -v ghc >/dev/null; then
+            echo "Haskell toolchain still on PATH: $(command -v cabal ghc)"; exit 1
+          fi
+          python -m pytest -q -rs
+
+      - name: Validate frozen dataset
+        run: python -m dataset.validate_dataset
+
+      - name: Verify Stage 2A freeze
+        run: python research/stage2a/verify_freeze.py research/stage2a/freeze/stage2a-v1.manifest.json

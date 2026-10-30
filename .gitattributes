@@ -1,0 +1,2 @@
+# The frozen dataset SHA-256 (e05c23f4...) is over CRLF bytes; keep them on every OS.
+dataset/cases.jsonl text eol=crlf
