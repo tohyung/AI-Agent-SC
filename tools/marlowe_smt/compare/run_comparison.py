@@ -14,14 +14,14 @@ from typing import Any
 COMPARE = Path(__file__).resolve().parent
 CORPUS = COMPARE / "corpus"
 REPO = COMPARE.parents[2]
-AGENT = REPO / "marlowe_ai_agent"
+AGENT = REPO
 SMT = REPO / "tools" / "marlowe_smt"
 sys.path.insert(0, str(AGENT))
 sys.path.insert(0, str(SMT))
 sys.setrecursionlimit(max(sys.getrecursionlimit(), 10_000))
 
-from marlowe_agent.logic_graph import LogicGraphVerifier  # noqa: E402
-from marlowe_agent.models import ContractDraft, PartySpec  # noqa: E402
+from research.marlowe_core.logic_graph import LogicGraphVerifier  # noqa: E402
+from research.integrations.reasoner_models import ContractDraft, PartySpec  # noqa: E402
 from run_smt import analyze  # noqa: E402
 
 

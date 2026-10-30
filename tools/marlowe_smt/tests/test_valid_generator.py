@@ -11,12 +11,12 @@ import unittest
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent
 REPO = HERE.parents[2]
-APP = REPO / "marlowe_ai_agent"
+APP = REPO
 sys.path.insert(0, str(APP))
 sys.path.insert(0, str(ROOT / "bench"))
 
 from generate_valid_contracts import FAMILIES, canonical_bytes, generate  # noqa: E402
-from marlowe_agent.marlowe_validator import validate_contract  # noqa: E402
+from research.marlowe_core.marlowe_validator import validate_contract  # noqa: E402
 
 
 class ValidGeneratorTests(unittest.TestCase):

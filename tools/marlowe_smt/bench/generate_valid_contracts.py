@@ -19,7 +19,7 @@ from typing import Any
 TIMEOUT_BASE = 1_900_000_000_000
 FAMILIES = ("F1", "F2", "F3", "F4", "F5", "C1")
 ROOT = Path(__file__).resolve().parents[3]
-MILESTONE = ROOT / "marlowe_ai_agent" / "bench" / "audit" / "vi-milestone-L4-003-full.json"
+MILESTONE = ROOT / "tests" / "dataset" / "fixtures" / "audit" / "vi-milestone-L4-003-full.json"
 
 # F5 deliberately creates deeply sequential contracts. Python's JSON and copy
 # implementations are recursive even though the generated value is acyclic.

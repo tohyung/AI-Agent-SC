@@ -13,7 +13,7 @@ from typing import Any
 COMPARE = Path(__file__).resolve().parent
 CORPUS = COMPARE / "corpus"
 REPO = COMPARE.parents[2]
-AUDIT_SOURCE = REPO / "marlowe_ai_agent" / "bench" / "audit"
+AUDIT_SOURCE = REPO / "tests" / "dataset" / "fixtures" / "audit"
 VALID_SOURCE = REPO / "tools" / "marlowe_smt" / "bench" / "valid-corpus"
 TIMEOUT = 1_893_456_000_000
 ADA = {"currency_symbol": "", "token_name": ""}

@@ -10,10 +10,10 @@ import unittest
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent
 REPO = HERE.parents[2]
-APP = REPO / "marlowe_ai_agent"
+APP = REPO
 sys.path.insert(0, str(APP))
 
-from marlowe_agent.marlowe_validator import validate_contract  # noqa: E402
+from research.marlowe_core.marlowe_validator import validate_contract  # noqa: E402
 
 
 class MarloweSMTGoldenTests(unittest.TestCase):
@@ -55,7 +55,7 @@ class MarloweSMTGoldenTests(unittest.TestCase):
         return output
 
     def test_agent_escrow_fixture_is_valid(self) -> None:
-        fixture = APP / "tests" / "fixtures" / "escrow_golden.json"
+        fixture = APP / "tests" / "marlowe_core" / "fixtures" / "escrow_golden.json"
         process, output = self.run_payload(fixture.read_text(encoding="utf-8"))
         self.assertEqual(process.returncode, 0, process.stderr)
         self.assertEqual(output["status"], "Valid")
@@ -108,7 +108,7 @@ class MarloweSMTGoldenTests(unittest.TestCase):
                 self.assertTrue(process.stderr)
 
     def test_completed_audit_contracts_match_validator_acceptance(self) -> None:
-        audit_dir = APP / "bench" / "audit"
+        audit_dir = APP / "tests" / "dataset" / "fixtures" / "audit"
         checked = 0
         disagreements: list[str] = []
         for path in sorted(audit_dir.glob("*-full.json")):
