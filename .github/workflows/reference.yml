@@ -1,0 +1,125 @@
+name: Reference
+
+# Builds the pinned Haskell SMT analyzer and reference executor, then runs the
+# tests that need the real binaries. Slower than CI, so it runs only when the
+# code on either side of that boundary changes, and weekly.
+on:
+  push:
+    branches: [main]
+    paths:
+      - tools/marlowe_smt/**
+      - research/stage3/**
+      - research/stage4/**
+      - research/integrations/smt*.py
+      - research/integrations/reference_driver.py
+      - tests/stage3/**
+      - tests/stage4/**
+      - .github/workflows/reference.yml
+  pull_request:
+    paths:
+      - tools/marlowe_smt/**
+      - research/stage3/**
+      - research/stage4/**
+      - research/integrations/smt*.py
+      - research/integrations/reference_driver.py
+      - tests/stage3/**
+      - tests/stage4/**
+      - .github/workflows/reference.yml
+  schedule:
+    - cron: "0 3 * * 1"
+  workflow_dispatch:
+
+concurrency:
+  group: reference-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  GHC_VERSION: "9.6.7"
+  CABAL_VERSION: "3.10.3.0"
+  Z3_VERSION: "4.13.3"
+
+jobs:
+  reference:
+    name: Real reference and SMT
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+          cache: pip
+          cache-dependency-path: |
+            requirements.txt
+            requirements-dev.txt
+
+      - name: Install Python dependencies
+        run: python -m pip install -r requirements.txt -r requirements-dev.txt
+
+      - id: haskell
+        uses: haskell-actions/setup@v2
+        with:
+          ghc-version: ${{ env.GHC_VERSION }}
+          cabal-version: ${{ env.CABAL_VERSION }}
+
+      - name: Cache Z3
+        id: z3-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/z3
+          key: z3-${{ env.Z3_VERSION }}-x64-glibc-2.35
+
+      - name: Install Z3 ${{ env.Z3_VERSION }}
+        if: steps.z3-cache.outputs.cache-hit != 'true'
+        run: |
+          curl -fsSL -o /tmp/z3.zip \
+            "https://github.com/Z3Prover/z3/releases/download/z3-${Z3_VERSION}/z3-${Z3_VERSION}-x64-glibc-2.35.zip"
+          unzip -q /tmp/z3.zip -d /tmp/z3
+          mv /tmp/z3/z3-${Z3_VERSION}-x64-glibc-2.35 ~/z3
+
+      - name: Put Z3 on PATH
+        run: |
+          echo "$HOME/z3/bin" >> "$GITHUB_PATH"
+          "$HOME/z3/bin/z3" --version | grep -F "$Z3_VERSION"
+
+      - name: Cache cabal store and build
+        uses: actions/cache@v4
+        with:
+          path: |
+            ${{ steps.haskell.outputs.cabal-store }}
+            ~/.cabal/packages
+            tools/marlowe_smt/dist-newstyle
+          key: cabal-${{ runner.os }}-ghc${{ env.GHC_VERSION }}-${{ hashFiles('tools/marlowe_smt/marlowe-smt.cabal', 'tools/marlowe_smt/cabal.project', 'tools/marlowe_smt/src/**', 'tools/marlowe_smt/app/**') }}
+          restore-keys: |
+            cabal-${{ runner.os }}-ghc${{ env.GHC_VERSION }}-
+
+      - name: Fetch and verify pinned upstream
+        working-directory: tools/marlowe_smt
+        run: ./fetch_upstream.sh
+
+      - name: Build marlowe-smt and marlowe-reference
+        working-directory: tools/marlowe_smt
+        run: |
+          cabal update
+          cabal build exe:marlowe-smt exe:marlowe-reference
+          cabal list-bin exe:marlowe-smt
+          cabal list-bin exe:marlowe-reference
+
+      - name: Tool tests (golden, process states, reference, valid corpus)
+        working-directory: tools/marlowe_smt
+        run: python -m unittest discover -s tests -p "test_*.py" -v
+
+      - name: Repository tests with the real binaries
+        run: |
+          set -o pipefail
+          python -m pytest -q -rs | tee pytest.log
+          # These tests must run here; a toolchain skip would mean the job proved nothing.
+          if grep -E "^SKIPPED .*(unavailable|not available|toolchain|cabal|Cabal)" pytest.log; then
+            echo "Real-reference tests were skipped"; exit 1
+          fi
