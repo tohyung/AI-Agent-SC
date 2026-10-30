@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import importlib.util
+import json
 import os
 from pathlib import Path
 from typing import Any
@@ -23,4 +24,6 @@ def analyze(contract: Any, *, binary: str | None = None) -> dict[str, Any]:
     if os.name == "nt":
         from research.integrations.wsl_driver import run_wrapper
         return run_wrapper("run_smt.py", contract, 90.0, binary)
-    return _MODULE.analyze(contract, binary=binary)
+    # The wrapper treats a str as raw JSON text, so encode the Core V1 value here;
+    # otherwise the contract "close" would be sent as the bare word close.
+    return _MODULE.analyze(json.dumps(contract, ensure_ascii=False), binary=binary)
