@@ -546,6 +546,10 @@ class _Builder:
                 self.observe(owner, item.get("text"), item.get("evidence"))
 
     def build(self) -> dict[str, Any]:
+        for party_id, party in self.parties.items():
+            # Design section 3: a party's name is quoted from its own evidence.
+            if party["name"] not in self._spans(party):
+                self.problems.append((party_id, f"name {party['name']!r} not in its evidence"))
         self.unsupported()
         asset = self.draft.get("asset") or {}
         ada = [item for item in self.assets.values() if item.get("ada") is True]
@@ -629,8 +633,161 @@ def _step_refs(step: dict[str, Any]) -> set[str]:
     return refs
 
 
+STEP_KINDS = {"deposit", "choice", "notify", "wait_until"}
+GUARD_OPERATORS = {"eq", "ge", "gt", "le", "lt"}
+QUANTITY_FORMS = {"ada", "lovelace", "tokens", "sum", "subtract", "times", "fraction",
+                  "unknown", "dynamic"}
+
+
+def _is_id(value: Any) -> bool:
+    return isinstance(value, str) and bool(value)
+
+
+def _party_ref(value: Any) -> bool:
+    # One party id, or a nonempty list of them when the source names several.
+    return _is_id(value) or (isinstance(value, list) and bool(value)
+                             and all(_is_id(item) for item in value))
+
+
+def _continuation(value: Any) -> bool:
+    return value is None or _is_id(value) or (
+        isinstance(value, list) and all(_is_id(item) for item in value))
+
+
+def _quantity_shape(expr: Any) -> str | None:
+    if not isinstance(expr, dict) or len(set(expr) & QUANTITY_FORMS) != 1:
+        return f"expr must be an object with exactly one of {sorted(QUANTITY_FORMS)}"
+    form = next(iter(set(expr) & QUANTITY_FORMS))
+    spec = expr[form]
+    valid = {
+        "ada": isinstance(spec, (str, int)) and type(spec) is not bool,
+        "lovelace": isinstance(spec, (str, int)) and type(spec) is not bool,
+        "tokens": isinstance(spec, (str, int)) and type(spec) is not bool,
+        "sum": isinstance(spec, list) and bool(spec) and all(_is_id(ref) for ref in spec),
+        "subtract": isinstance(spec, dict) and _is_id(spec.get("from"))
+        and isinstance(spec.get("minus"), list) and all(_is_id(ref) for ref in spec["minus"]),
+        "times": isinstance(spec, dict) and _is_id(spec.get("of")),
+        "fraction": isinstance(spec, dict) and _is_id(spec.get("of")),
+        "unknown": spec is True,
+        "dynamic": isinstance(spec, str),
+    }[form]
+    if not valid or ("asset" in expr and not _is_id(expr["asset"])):
+        return f"malformed {form} expression"
+    return None
+
+
+def _instant_shape(expr: Any) -> str | None:
+    if not isinstance(expr, dict):
+        return "expr must be an object"
+    if "date" in expr:
+        spec = expr["date"]
+        if not isinstance(spec, dict) or any(type(spec.get(key)) is not int
+                                             for key in ("y", "m", "d")):
+            return "date needs integer y, m, d"
+        if any(spec.get(key) is not None and type(spec[key]) is not int for key in ("h", "min")):
+            return "date h and min must be integers or null"
+        if spec.get("tz") is not None and not isinstance(spec["tz"], str):
+            return "date tz must be text or null"
+        return None
+    if "offset" in expr:
+        spec = expr["offset"]
+        return None if isinstance(spec, dict) and _is_id(spec.get("from")) else \
+            "offset needs a from instant id"
+    return None if expr.get("unknown") is True else "expr must be date, offset or unknown"
+
+
+def _shape_problems(draft: dict[str, Any]) -> list[tuple[str, str]]:
+    """Type errors in the model's JSON, found before any value is computed.
+
+    Every later step may then assume well-typed items; a malformed draft is a
+    repairable DraftError, never a crash.
+    """
+    problems: list[tuple[str, str]] = []
+    for field in ("parties", "assets", "quantities", "instants", "steps", "outcomes"):
+        items = draft.get(field)
+        if items is not None and not isinstance(items, list):
+            problems.append((field, "must be a list"))
+            continue
+        for item in items or []:
+            if not isinstance(item, dict):
+                problems.append((field, "items must be objects"))
+                continue
+            item_id = item.get("id") if _is_id(item.get("id")) else field
+            if field == "parties" and not _is_id(item.get("name")):
+                problems.append((item_id, "name must be nonempty text"))
+            elif field in {"quantities", "instants"}:
+                shape = _quantity_shape if field == "quantities" else _instant_shape
+                readings = item.get("alternatives")
+                if readings is None:
+                    message = shape(item.get("expr"))
+                elif isinstance(readings, list) and all(isinstance(entry, dict)
+                                                         for entry in readings):
+                    message = next((shape(entry.get("expr")) for entry in readings
+                                    if shape(entry.get("expr"))), None)
+                else:
+                    message = "alternatives must be a list of objects"
+                if message:
+                    problems.append((item_id, message))
+            elif field == "steps":
+                problems.extend((item_id, message) for message in _step_shape(item))
+            elif field == "outcomes":
+                if not (isinstance(item.get("kind"), str)
+                        and item["kind"] in OUTCOME_RECIPIENT_KIND):
+                    problems.append((item_id, f"outcome kind must be one of "
+                                              f"{sorted(OUTCOME_RECIPIENT_KIND)}"))
+                if not (_party_ref(item.get("from_account")) and _party_ref(item.get("to"))):
+                    problems.append((item_id, "from_account and to must be party ids"))
+                if not _is_id(item.get("amount")):
+                    problems.append((item_id, "amount must be a quantity id or \"remaining\""))
+    for key in ("asset", "notes"):
+        if draft.get(key) is not None and not isinstance(draft[key], dict):
+            problems.append((key, "must be an object"))
+    notes = draft.get("notes") if isinstance(draft.get("notes"), dict) else {}
+    for key in ("clarifications", "unsupported"):
+        if notes.get(key) is not None and not isinstance(notes[key], list):
+            problems.append(("notes", f"{key} must be a list"))
+    return problems
+
+
+def _step_shape(step: dict[str, Any]) -> list[str]:
+    kind = step.get("kind")
+    if not isinstance(kind, str) or kind not in STEP_KINDS:
+        return [f"step kind {kind!r} is not supported"]
+    problems = []
+    if kind in {"deposit", "choice"} and not _party_ref(step.get("by")):
+        problems.append("by must be a party id")
+    if kind == "deposit" and not (_party_ref(step.get("into")) and _is_id(step.get("amount"))):
+        problems.append("deposit needs into and amount ids")
+    if not _is_id(step.get("at" if kind == "wait_until" else "deadline")):
+        problems.append("needs an instant id")
+    if not (_continuation(step.get("then")) and _continuation(step.get("on_timeout"))):
+        problems.append("then/on_timeout must be \"end\", an id or a list of ids")
+    if kind == "choice":
+        bounds = step.get("bounds")
+        if not (isinstance(bounds, dict) and type(bounds.get("from")) is int
+                and type(bounds.get("to")) is int and bounds["from"] <= bounds["to"]):
+            return problems + ["bounds need integers from <= to"]
+        branches = step.get("branches")
+        if not isinstance(branches, list) or not branches:
+            return problems + ["choice needs at least one branch"]
+        for index, branch in enumerate(branches, 1):
+            guard = branch.get("guard") if isinstance(branch, dict) else None
+            if not (isinstance(guard, dict) and isinstance(guard.get("op"), str)
+                    and guard["op"] in GUARD_OPERATORS
+                    and type(guard.get("value")) is int
+                    and bounds["from"] <= guard["value"] <= bounds["to"]):
+                problems.append(f"branch {index} needs a guard op in {sorted(GUARD_OPERATORS)} "
+                                "with an integer value inside bounds")
+            elif not _continuation(branch.get("then")):
+                problems.append(f"branch {index} then must be an id or a list of ids")
+    return problems
+
+
 def build_core(draft: dict[str, Any], history: list[dict[str, Any]]) -> dict[str, Any]:
     """Build a v4-tagged core or raise DraftError listing atomic-item defects."""
     if draft.get("schema_version") != FACT_DRAFT_VERSION:
         raise DraftError([("schema_version", f"expected {FACT_DRAFT_VERSION}")])
+    problems = _shape_problems(draft)
+    if problems:
+        raise DraftError(problems)
     return _Builder(draft, history).build()
