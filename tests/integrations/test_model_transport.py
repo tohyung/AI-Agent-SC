@@ -243,6 +243,8 @@ def test_gemini_profile_ignores_shared_settings_and_uses_reasoning_effort(monkey
 
 
 def test_gemini_profile_needs_its_own_key_and_valid_effort(monkeypatch):
+    # The developer's real .env may hold a Gemini key; keep this test hermetic.
+    monkeypatch.setattr("research.integrations.model_transport._load_env", lambda: None)
     monkeypatch.setenv("LLM_API_KEY", "official-secret-not-for-output")
     monkeypatch.delenv("GEMINI_API_KEY", raising=False)
     monkeypatch.setenv("GEMINI_MODEL", "gemini-test-model")
