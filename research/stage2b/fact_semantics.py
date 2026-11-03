@@ -93,7 +93,8 @@ class _Denotation:
     def amount(self, owner: dict[str, Any], account: str | None) -> tuple[Any, dict[str, str]]:
         if owner["amount"] == "remaining":
             unit = owner.get("asset")
-            token = ADA_TOKEN if unit in (None, "lovelace") else self.token_of_asset(unit)
+            ada = unit in (None, "lovelace") or self.items[unit].get("ada") is True
+            token = ADA_TOKEN if ada else self.token_of_asset(unit)
             return {"in_account": _role(self.name(account)), "amount_of_token": token}, token
         return self.value(owner["amount"]), self.token(owner["amount"])
 

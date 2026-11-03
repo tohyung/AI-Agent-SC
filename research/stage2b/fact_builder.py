@@ -364,9 +364,13 @@ class _Builder:
         owner_id = owner.get("id", "?")
         if amount == "remaining":
             unit = owner.get("asset") or "lovelace"
-            if unit != "lovelace" and self._ref(self.assets, unit, owner_id) is None:
+            if unit != "lovelace" and (self._ref(self.assets, unit, owner_id) is None
+                                       or self.assets[unit].get("ada") is True):
                 unit = "lovelace"
-            balance = balances.get((account, unit)) if account is not None else None
+            # Nothing deposited in this unit on this path: the account holds 0 lovelace.
+            # A token count must be positive in v4, so an empty token account stays open.
+            balance = None if account is None else balances.get(
+                (account, unit), 0 if unit == "lovelace" else None)
             reading = (balance, "remaining balance of the source account on this path",
                        list(owner.get("evidence") or []))
             ref = None

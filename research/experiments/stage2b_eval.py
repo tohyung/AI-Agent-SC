@@ -101,14 +101,21 @@ def evaluate_case_a2(model: Any, index: int, case_id: str, prompt: str) -> dict[
                        "safe_error": sanitized_model_error(exc),
                        "physical_calls": model.llm_calls - calls_before})
         return record
+    record.update(a2_result_fields(result))
+    record["physical_calls"] = model.llm_calls - calls_before
+    return record
+
+
+def a2_result_fields(result: dict[str, Any]) -> dict[str, Any]:
+    """Record fields derived from one `extract_fact_core` result."""
     attempts = result["attempts"]
     core = result["semantic_core"]
     final_valid = core is not None and result["projection_classification"] == "PASS"
-    record.update({
+    return {
         "run_status": "SUCCEEDED" if core is not None else "FAILED",
         "semantic_status": ("BUILDER_BUG" if result["builder_bug"] else
                             "VALID" if final_valid else "DRAFT_INVALID"),
-        "safe_error": None, "physical_calls": model.llm_calls - calls_before,
+        "safe_error": None,
         "first_pass_valid": final_valid and len(attempts) == 1,
         "first_pass_error_count": len(attempts[0]["problems"]) if attempts else 0,
         "final_valid": final_valid,
@@ -118,8 +125,7 @@ def evaluate_case_a2(model: Any, index: int, case_id: str, prompt: str) -> dict[
         "predicted_resolution": (core or {}).get("predicted_resolution"),
         "semantic_core": core,
         "fact_draft_attempts": attempts,
-    })
-    return record
+    }
 
 
 def _git_head() -> str | None:

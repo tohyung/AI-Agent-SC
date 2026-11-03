@@ -5,6 +5,7 @@ from copy import deepcopy
 import pytest
 
 from research.stage2b.fact_builder import FACT_DRAFT_VERSION, DraftError, build_core
+from research.stage2b.fact_semantics import denote
 from research.stage2b.intent_spec import (
     validate_intent_spec,
     validate_shadow_semantic_core,
@@ -303,6 +304,30 @@ def test_native_id_not_in_source_and_unit_mixing_are_draft_errors():
     with pytest.raises(DraftError) as raised:
         build_core(draft, SWAP_HISTORY)
     assert {item for item, _ in raised.value.problems} == {"a_gold", "q_mix"}
+
+
+def test_remaining_in_the_declared_ada_asset_is_lovelace_not_a_token():
+    # Live A2 drafts (dev cases 30, 46) name the ADA asset id on a "remaining" outcome.
+    draft = swap_draft(f"native:{POLICY}/474f4c44")
+    draft["outcomes"][2]["asset"] = "a_ada"
+    core = build_core(draft, SWAP_HISTORY)
+    assert validate_shadow_semantic_core(core, expected_history=SWAP_HISTORY) == []
+    assert core["predicted_resolution"] == "accepted_interpretation"
+    assert _values(core, "amount_lovelace")["o_o_refund"] == 20_000_000
+    assert denote(draft)  # the semantics reads it as ADA too
+
+
+def test_remaining_of_an_account_never_funded_on_the_path_is_zero_lovelace():
+    # Live A2 drafts (dev cases 4, 7, 16, 20) refund a party whose deposit timed out.
+    draft = swap_draft(f"native:{POLICY}/474f4c44")
+    draft["outcomes"].append({"id": "o_refund_hoa", "kind": "refund", "from_account": "p_hoa",
+                              "to": "p_hoa", "amount": "remaining",
+                              "evidence": ev("hoàn 20 ADA cho Minh")})
+    draft["steps"][1]["on_timeout"] = ["o_refund", "o_refund_hoa"]
+    core = build_core(draft, SWAP_HISTORY)
+    assert validate_shadow_semantic_core(core, expected_history=SWAP_HISTORY) == []
+    assert core["predicted_resolution"] == "accepted_interpretation"
+    assert _values(core, "amount_lovelace")["o_o_refund_hoa"] == 0
 
 
 RELEASE = ("Lan nạp 60 ADA cho Tú trước 00:00 ngày 02/03/2027 (UTC+7). Từ 00:00 ngày "
