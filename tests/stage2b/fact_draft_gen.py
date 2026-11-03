@@ -228,8 +228,8 @@ def core_path(core: dict[str, Any], moves: tuple[Move, ...]) -> tuple[
             recipient = next(facts[kind] for kind in
                              ("payment_recipient", "refund_recipient", "release_recipient")
                              if kind in facts)
-            payments.append((facts["payment_source_account_owner"], recipient,
-                             facts.get("amount_lovelace")))
+            amount = facts.get("amount_lovelace", facts.get("amount_token_units"))
+            payments.append((facts["payment_source_account_owner"], recipient, amount))
             current = scope.get("continuation_scope_id")
             continue
         if scope["scope_type"] != "transition":

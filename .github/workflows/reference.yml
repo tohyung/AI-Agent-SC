@@ -15,6 +15,7 @@ on:
       - research/stage2b/fact_*.py
       - tests/stage2b/fact_draft_gen.py
       - tests/stage2b/test_fact_reference.py
+      - tests/stage2b/test_fact_families.py
       - tests/stage3/**
       - tests/stage4/**
       - .github/workflows/reference.yml
@@ -28,6 +29,7 @@ on:
       - research/stage2b/fact_*.py
       - tests/stage2b/fact_draft_gen.py
       - tests/stage2b/test_fact_reference.py
+      - tests/stage2b/test_fact_families.py
       - tests/stage3/**
       - tests/stage4/**
       - .github/workflows/reference.yml
