@@ -247,6 +247,7 @@ class ModelTransport:
 
     def generate(self, system: str, user: str) -> dict[str, Any]:
         content = self._retry_request(system, user, phase="generation")
+        generation = dict(self.call_log[-1]) if self.call_log else {}
         try:
             result = _parse_json_content(content)
         except json.JSONDecodeError:
@@ -258,8 +259,11 @@ class ModelTransport:
             try:
                 result = _parse_json_content(repair)
             except json.JSONDecodeError as exc:
-                raise ModelTransportError("invalid_json_after_repair", "model_output_parse",
-                                          content_received=True, repair_attempted=True) from exc
+                error = ModelTransportError("invalid_json_after_repair", "model_output_parse",
+                                            content_received=True, repair_attempted=True)
+                # Kept off the sanitized error; evaluation records a bounded excerpt.
+                error.invalid_outputs = [(content, generation), (repair, dict(self.call_log[-1]))]
+                raise error from exc
         if not isinstance(result, dict):
             raise ModelTransportError("non_object_model_output", "model_output_schema",
                                       content_received=True)

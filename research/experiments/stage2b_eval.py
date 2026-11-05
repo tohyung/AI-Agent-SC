@@ -100,6 +100,15 @@ def evaluate_case_a2(model: Any, index: int, case_id: str, prompt: str) -> dict[
         record.update({"run_status": "FAILED", "semantic_status": "MODEL_ERROR",
                        "safe_error": sanitized_model_error(exc),
                        "physical_calls": model.llm_calls - calls_before})
+        outputs = getattr(exc, "invalid_outputs", None)
+        if outputs:
+            # Enough to tell a truncated output from a malformed one; runs/ stays local.
+            record["invalid_output_diagnostics"] = [
+                {"phase": call.get("phase"), "finish_reason": call.get("finish_reason"),
+                 "completion_tokens": call.get("completion_tokens"),
+                 "chars": len(text or ""), "head": (text or "")[:300],
+                 "tail": (text or "")[-300:]}
+                for text, call in outputs]
         return record
     record.update(a2_result_fields(result))
     record["physical_calls"] = model.llm_calls - calls_before

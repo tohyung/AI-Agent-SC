@@ -65,6 +65,9 @@ def test_bad_json_after_repair_is_typed_without_raw_content(monkeypatch):
     assert caught.value.code == "invalid_json_after_repair"
     assert caught.value.repair_attempted is True
     assert "broken" not in str(caught.value)
+    # The raw outputs ride on the exception for evaluation diagnostics only.
+    assert [(text, call["phase"]) for text, call in caught.value.invalid_outputs] == [
+        ("{broken", "generation"), ("still broken", "json_repair")]
 
 
 def test_request_journal_runs_before_outbound_call_and_limit_stops_retry(monkeypatch):
