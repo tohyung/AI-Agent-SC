@@ -107,9 +107,11 @@ def test_missing_timezone_is_unresolved_and_builder_asks():
     core = build_core(draft, HISTORY)
     assert validate_shadow_semantic_core(core, expected_history=HISTORY) == []
     assert core["predicted_resolution"] == "clarification_required"
-    assert core["required_clarifications"]
-    # The unknown base propagates to every offset deadline built on it.
+    # The unknown base propagates to every offset deadline built on it ...
     assert set(_values(core, "choice_deadline_ms").values()) == {None}
+    # ... and only the base is asked about.
+    assert core["required_clarifications"] == [
+        "\"00:00 ngày 02/03/2027 (UTC+7)\" là chính xác mấy giờ, theo múi giờ nào?"]
 
 
 def test_inexact_division_becomes_a_rounding_question_not_a_quot():
@@ -118,7 +120,7 @@ def test_inexact_division_becomes_a_rounding_question_not_a_quot():
     core = build_core(draft, HISTORY)
     assert validate_shadow_semantic_core(core, expected_history=HISTORY) == []
     assert core["predicted_resolution"] == "clarification_required"
-    assert any("rounded" in question for question in core["required_clarifications"])
+    assert any("làm tròn" in question for question in core["required_clarifications"])
 
 
 def test_ungrounded_literal_and_span_are_draft_errors_by_item_id():
@@ -189,6 +191,67 @@ def test_two_parties_for_one_role_is_a_conflict():
     owners = {claim["value"] for claim in core["claims"]
               if claim["scope_id"] == "t_s2" and claim["kind"] == "choice_owner"}
     assert owners == {"Lan", "Tú"}
+
+
+def test_conflict_question_quotes_each_reading_in_the_request_language():
+    draft = _with_total_readings(("60", "tổng 60 ADA"), ("70", "Tổng cộng 70 ADA"))
+    core = build_core(draft, CONFLICT_HISTORY)
+    # Half of the disputed total is not asked about separately.
+    assert core["required_clarifications"] == [
+        "Yêu cầu nêu các giá trị khác nhau: \"tổng 60 ADA\" / \"Tổng cộng 70 ADA\". "
+        "Giá trị nào áp dụng?"]
+
+
+def test_english_request_with_vietnamese_names_gets_english_questions():
+    message = "Lan pays Tú 60 ADA before 2 March 2027; refund Lan otherwise."
+    history = [{"version": 1, "messages": [message]}]
+    draft = deepcopy(milestone_draft())
+    draft["parties"] = [{"id": "p_lan", "name": "Lan", "evidence": ev("Lan pays Tú")},
+                        {"id": "p_tu", "name": "Tú", "evidence": ev("Lan pays Tú")}]
+    draft["asset"] = {"ada": True, "evidence": ev("60 ADA")}
+    draft["quantities"] = [{"id": "q_total", "expr": {"ada": "60"}, "evidence": ev("60 ADA")}]
+    draft["instants"] = [{"id": "i_d1", "expr": {"date": {"y": 2027, "m": 3, "d": 2, "h": None,
+                                                          "min": None, "tz": None}},
+                          "evidence": ev("2 March 2027")}]
+    draft["steps"] = [{"id": "s1", "kind": "deposit", "by": "p_lan", "into": "p_lan",
+                       "amount": "q_total", "deadline": "i_d1", "on_timeout": "end",
+                       "then": ["o_pay"], "evidence": ev("Lan pays Tú 60 ADA")}]
+    draft["outcomes"] = [{"id": "o_pay", "kind": "payment", "from_account": "p_lan",
+                          "to": "p_tu", "amount": "q_total", "evidence": ev("Lan pays Tú")}]
+    core = build_core(draft, history)
+    assert validate_shadow_semantic_core(core, expected_history=history) == []
+    assert core["required_clarifications"] == [
+        "At what exact time and in which timezone is \"2 March 2027\"?"]
+
+
+def test_identical_questions_for_different_items_are_asked_once():
+    draft = milestone_draft()
+    draft["instants"][0]["expr"]["date"]["tz"] = None
+    question = "Hạn nạp là mấy giờ, múi giờ nào?"
+    draft["notes"] = {"clarifications": [{"target_id": "i_d1", "question": question},
+                                         {"target_id": "i_d2", "question": question}]}
+    core = build_core(draft, HISTORY)
+    assert validate_shadow_semantic_core(core, expected_history=HISTORY) == []
+    assert core["required_clarifications"].count(question) == 1
+
+
+GREETING_HISTORY = [{"version": 1, "messages": ["Chào bác, Lan ở Huế đây. " + MESSAGE]}]
+
+
+def test_side_context_is_kept_without_a_question_and_does_not_block_acceptance():
+    draft = milestone_draft()
+    draft["notes"] = {"unsupported": [{
+        "kind": "context", "text": "lời chào và nơi ở của Lan",
+        "evidence": ev("Chào bác, Lan ở Huế đây.")}]}
+    core = build_core(draft, GREETING_HISTORY)
+    assert validate_shadow_semantic_core(core, expected_history=GREETING_HISTORY) == []
+    assert core["predicted_resolution"] == "accepted_interpretation"
+    assert core["required_clarifications"] == []
+    assert [item["reason"] for item in core["unscored_observations"]] == ["irrelevant_context"]
+    projection = project_intent_spec(core, expected_history=GREETING_HISTORY)
+    full = validate_intent_spec(projection.intent_spec.to_dict(),
+                                expected_history=GREETING_HISTORY, projected_core=core)
+    assert classify_projection([], full, projection.projection_diagnostics) == "PASS"
 
 
 DELETION_HISTORY = [{"version": 1, "messages": [
