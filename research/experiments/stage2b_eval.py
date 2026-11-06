@@ -178,7 +178,11 @@ def run_arm(arm_dir: Path, model_factory: Callable[[Callable[[str], None]], Any]
             continue
         current["case_id"] = case_id
         evaluate = evaluate_case_a2 if arm == "A2" else evaluate_case
+        calls_before = len(getattr(delegate, "call_log", []))
         record = evaluate(model, index, case_id, prompt)
+        record["json_outputs_closed"] = sum(
+            1 for call in getattr(delegate, "call_log", [])[calls_before:]
+            if call.get("json_brackets_closed"))
         error = record["safe_error"] or {}
         if error and error.get("model_content_received") is not True:
             # Provider, network or configuration failure: not a model result.

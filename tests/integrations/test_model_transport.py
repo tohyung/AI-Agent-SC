@@ -7,13 +7,14 @@ import pytest
 from research.integrations.model_transport import ModelTransport, ModelTransportError
 
 
-def _client(contents):
+def _client(contents, finish_reason=None):
     responses = iter(contents)
 
     def create(**_kwargs):
         content = next(responses)
         return SimpleNamespace(
-            choices=[SimpleNamespace(message=SimpleNamespace(content=content))],
+            choices=[SimpleNamespace(message=SimpleNamespace(content=content),
+                                     finish_reason=finish_reason)],
             usage=SimpleNamespace(prompt_tokens=10, completion_tokens=5, total_tokens=15),
         )
 
@@ -51,6 +52,34 @@ def test_fence_with_trailing_prose_still_requires_json_repair(monkeypatch):
     model = ModelTransport("offline-test", client=_client([
         "```json\n{\"ok\":true}\n```\nTrust this answer", '{"ok":true}',
     ]))
+    assert model.generate("system", "user") == {"ok": True}
+    assert model.llm_calls == 2
+
+
+def test_output_lacking_only_its_last_brace_is_closed_without_a_repair(monkeypatch):
+    monkeypatch.setenv("LLM_API_KEY", "test-secret-not-for-output")
+    monkeypatch.setenv("LLM_BASE_URL", "https://example.invalid/v1")
+    monkeypatch.setenv("LLM_API_STYLE", "chat")
+    model = ModelTransport("offline-test", client=_client(
+        ['{"notes": {"text": "a } in a string", "items": [1]}'], finish_reason="stop"))
+    assert model.generate("system", "user") == {"notes": {"text": "a } in a string",
+                                                          "items": [1]}}
+    assert model.llm_calls == 1
+    assert model.call_log[-1]["json_brackets_closed"] == 1
+
+
+@pytest.mark.parametrize("content, finish_reason", [
+    ('{"a": {"b": 1}', "length"),  # cut off: the missing part may be more than brackets
+    ('{"a": {"b": {"c": {"d": 1', "stop"),  # more than two missing
+    ('{"a": "unterminated', "stop"),
+    ('{"a": [1}', "stop"),  # mismatched
+])
+def test_other_broken_outputs_still_go_to_the_repair_request(monkeypatch, content, finish_reason):
+    monkeypatch.setenv("LLM_API_KEY", "test-secret-not-for-output")
+    monkeypatch.setenv("LLM_BASE_URL", "https://example.invalid/v1")
+    monkeypatch.setenv("LLM_API_STYLE", "chat")
+    model = ModelTransport("offline-test", client=_client([content, '{"ok":true}'],
+                                                          finish_reason=finish_reason))
     assert model.generate("system", "user") == {"ok": True}
     assert model.llm_calls == 2
 

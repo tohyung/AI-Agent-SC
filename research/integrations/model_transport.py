@@ -69,6 +69,38 @@ def _parse_json_content(content: str) -> Any:
     return json.loads(source)
 
 
+def _closed_json(content: str) -> tuple[Any, int] | None:
+    """Parse JSON that only lacks closing brackets at its very end, or return None.
+
+    At most two are added: a model that stopped by itself drops the last brace or
+    two, while anything missing more is left to the repair request.
+    """
+    source = content.strip().lstrip("﻿")
+    stack: list[str] = []
+    in_string = escaped = False
+    for char in source:
+        if in_string:
+            if escaped:
+                escaped = False
+            elif char == "\\":
+                escaped = True
+            elif char == '"':
+                in_string = False
+        elif char == '"':
+            in_string = True
+        elif char in "{[":
+            stack.append("}" if char == "{" else "]")
+        elif char in "}]":
+            if not stack or stack.pop() != char:
+                return None
+    if in_string or not 1 <= len(stack) <= 2:
+        return None
+    try:
+        return json.loads(source + "".join(reversed(stack))), len(stack)
+    except json.JSONDecodeError:
+        return None
+
+
 class ModelTransport:
     def __init__(self, model: str | None = None, *, client: Any | None = None,
                  before_request: Callable[[str], None] | None = None,
@@ -251,6 +283,11 @@ class ModelTransport:
         try:
             result = _parse_json_content(content)
         except json.JSONDecodeError:
+            # finish_reason "length" is a cut output: its missing part is not only brackets.
+            closed = _closed_json(content) if generation.get("finish_reason") == "stop" else None
+            if closed is not None and isinstance(closed[0], dict):
+                self.call_log[-1]["json_brackets_closed"] = closed[1]
+                return closed[0]
             repair = self._retry_request(
                 "Return only one complete JSON object. Preserve the original task and meaning.",
                 f"Original system:\n{system}\nOriginal user:\n{user}\nInvalid response:\n{content[:3500]}",
