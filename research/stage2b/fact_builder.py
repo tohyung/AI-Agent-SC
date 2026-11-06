@@ -9,6 +9,7 @@ deposit and choice steps, static `Value` expressions (design doc section 4).
 from __future__ import annotations
 
 import re
+from copy import deepcopy
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal, InvalidOperation
 from typing import Any
@@ -875,11 +876,85 @@ def _step_shape(step: dict[str, Any]) -> list[str]:
     return problems
 
 
+def _readings_evidence(readings: Any) -> list[Any]:
+    return [entry for reading in readings if isinstance(reading, dict)
+            for entry in reading.get("evidence") or []] if isinstance(readings, list) else []
+
+
+def _hoist(draft: dict[str, Any], owner: dict[str, Any], field: str, table: str,
+           hoisted: dict[str, tuple[str, str]]) -> None:
+    """Move a definition written at a reference into `table`, leaving its new id."""
+    value = owner.get(field)
+    if not isinstance(value, dict):
+        return
+    readings = value.get("alternatives")
+    if isinstance(readings, list):
+        # A reading may name a declared quantity; `sum` of one is that quantity.
+        readings = [{**reading, "expr": {"sum": [reading["expr"]]}}
+                    if isinstance(reading, dict) and table == "quantities"
+                    and isinstance(reading.get("expr"), str) else reading
+                    for reading in readings]
+        item: dict[str, Any] = {"alternatives": readings}
+    else:
+        item = {"expr": value.get("expr", value)}
+    taken = {entry.get("id") for name in ("quantities", "instants", "steps", "outcomes",
+                                          "parties", "assets")
+             for entry in draft.get(name) or [] if isinstance(entry, dict)}
+    item_id = f"{owner.get('id', 'item')}_{field}"
+    while item_id in taken:
+        item_id += "_"
+    item["id"] = item_id
+    item["evidence"] = (value.get("evidence") or _readings_evidence(readings)
+                        or owner.get("evidence"))
+    draft.setdefault(table, []).append(item)
+    owner[field] = item_id
+    hoisted[item_id] = (str(owner.get("id", "item")), field)
+
+
+def normalize_draft(draft: dict[str, Any]) -> tuple[dict[str, Any], dict[str, tuple[str, str]]]:
+    """The draft with misplaced definitions moved to where the grammar declares them,
+    and each new item id mapped to the (item, field) the model wrote it in.
+
+    Only placement changes, never a value, and each move has one reading:
+    `alternatives` nested in `expr` belong beside it, and a quantity or instant
+    written at a reference is a new declared item. The builder and the formal
+    semantics see the canonical grammar only.
+    """
+    draft = deepcopy(draft)
+    hoisted: dict[str, tuple[str, str]] = {}
+    if not all(isinstance(draft.get(field) or [], list)
+               for field in ("quantities", "instants", "steps", "outcomes")):
+        return draft, hoisted  # _shape_problems reports it
+    for field in ("quantities", "instants"):
+        for item in draft.get(field) or []:
+            expr = item.get("expr") if isinstance(item, dict) else None
+            if isinstance(expr, dict) and "alternatives" in expr and "alternatives" not in item:
+                item["alternatives"] = item.pop("expr")["alternatives"]
+                item["evidence"] = (item.get("evidence")
+                                    or _readings_evidence(item["alternatives"]))
+    for step in list(draft.get("steps") or []):
+        if isinstance(step, dict):
+            _hoist(draft, step, "amount", "quantities", hoisted)
+            _hoist(draft, step, "deadline", "instants", hoisted)
+            _hoist(draft, step, "at", "instants", hoisted)
+    for outcome in list(draft.get("outcomes") or []):
+        if isinstance(outcome, dict):
+            _hoist(draft, outcome, "amount", "quantities", hoisted)
+    return draft, hoisted
+
+
 def build_core(draft: dict[str, Any], history: list[dict[str, Any]]) -> dict[str, Any]:
     """Build a v4-tagged core or raise DraftError listing atomic-item defects."""
     if draft.get("schema_version") != FACT_DRAFT_VERSION:
         raise DraftError([("schema_version", f"expected {FACT_DRAFT_VERSION}")])
-    problems = _shape_problems(draft)
-    if problems:
-        raise DraftError(problems)
-    return _Builder(draft, history).build()
+    draft, hoisted = normalize_draft(draft)
+    try:
+        problems = _shape_problems(draft)
+        if problems:
+            raise DraftError(problems)
+        return _Builder(draft, history).build()
+    except DraftError as exc:
+        # Repair addresses what the model wrote, not an id it has never seen.
+        raise DraftError([(hoisted[item][0], f"{hoisted[item][1]}: {message}")
+                          if item in hoisted else (item, message)
+                          for item, message in exc.problems]) from None

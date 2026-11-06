@@ -14,7 +14,7 @@ from research.stage2b.fact_builder import FACT_DRAFT_VERSION, DraftError, build_
 from research.stage2b.intent_spec import validate_intent_spec
 from research.stage2b.projector import classify_projection, project_intent_spec
 
-FACT_PROMPT_VERSION = "stage2b-fact-prompt-v2"
+FACT_PROMPT_VERSION = "stage2b-fact-prompt-v3"
 
 SYSTEM = f"""You read a request for a Cardano Marlowe contract and write a FactDraft
 ({FACT_DRAFT_VERSION}) as one JSON object. Code computes every amount, time and
@@ -137,11 +137,12 @@ def build_prompt(history: list[dict[str, Any]]) -> tuple[str, str]:
 
 
 def repair_prompt(history: list[dict[str, Any]], draft: Any,
-                  problems: list[tuple[str, str]]) -> tuple[str, str]:
+                  problems: list[tuple[str, str]], attempt: int) -> tuple[str, str]:
     system, user = build_prompt(history)
     listed = "\n".join(f"- {item}: {message}" for item, message in problems)
     return system, (user + "\n\nYour previous draft:\n" + json.dumps(draft, ensure_ascii=False)
-                    + "\n\nCode rejected these items:\n" + listed
+                    # The attempt number keeps a repeated draft from replaying the journal.
+                    + f"\n\nCode rejected these items (repair attempt {attempt}):\n" + listed
                     + "\n\nReturn the whole corrected draft. Change only the listed items "
                       "and what they reference; keep every other item as it was.")
 
@@ -174,7 +175,7 @@ def extract_fact_core(model: Any, history: list[dict[str, Any]], *,
             attempts.append({"draft": draft, "problems": [list(item) for item in exc.problems]})
             if attempt == max_repairs:
                 break
-            system, user = repair_prompt(history, draft, exc.problems)
+            system, user = repair_prompt(history, draft, exc.problems, attempt + 1)
             continue
         checks = _check_core(core, history)
         attempts.append({"draft": draft, "problems": []})

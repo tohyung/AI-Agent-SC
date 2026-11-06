@@ -254,6 +254,60 @@ def test_side_context_is_kept_without_a_question_and_does_not_block_acceptance()
     assert classify_projection([], full, projection.projection_diagnostics) == "PASS"
 
 
+def test_alternatives_nested_in_expr_are_read_as_alternatives():
+    draft = _with_total_readings(("60", "tổng 60 ADA"), ("70", "Tổng cộng 70 ADA"))
+    quantity = draft["quantities"][0]
+    quantity["expr"] = {"alternatives": quantity.pop("alternatives")}
+    del quantity["evidence"]
+    core = build_core(draft, CONFLICT_HISTORY)
+    assert validate_shadow_semantic_core(core, expected_history=CONFLICT_HISTORY) == []
+    assert core["predicted_resolution"] == "conflict_requires_resolution"
+
+
+def test_alternatives_written_at_an_amount_become_a_declared_quantity():
+    draft = milestone_draft()
+    draft["quantities"].append({"id": "q_other", "expr": {"ada": "70"},
+                                "evidence": ev("Tổng cộng 70 ADA")})
+    # One reading inline, one naming a declared quantity: both forms the model writes.
+    draft["steps"][0]["amount"] = {"alternatives": [
+        {"expr": {"ada": "60"}, "evidence": ev("tổng 60 ADA")},
+        {"expr": "q_other", "evidence": ev("Tổng cộng 70 ADA")}]}
+    core = build_core(draft, CONFLICT_HISTORY)
+    assert validate_shadow_semantic_core(core, expected_history=CONFLICT_HISTORY) == []
+    assert core["predicted_resolution"] == "conflict_requires_resolution"
+    deposit = {claim["value"] for claim in core["claims"]
+               if claim["scope_id"] == "t_s1" and claim["kind"] == "amount_lovelace"}
+    assert deposit == {60_000_000, 70_000_000}
+
+
+def test_a_problem_in_a_moved_definition_names_the_item_the_model_wrote():
+    draft = milestone_draft()
+    draft["steps"][0]["amount"] = {"alternatives": [
+        {"expr": {"ada": "99"}, "evidence": ev("tổng 60 ADA")},
+        {"expr": {"ada": "60"}, "evidence": ev("tổng 60 ADA")}]}
+    with pytest.raises(DraftError) as caught:
+        build_core(draft, HISTORY)
+    assert any(item == "s1" and message.startswith("amount: literal 99")
+               for item, message in caught.value.problems)
+
+
+def test_a_deadline_written_as_unknown_at_the_step_asks_for_it():
+    draft = milestone_draft()
+    draft["steps"][2]["deadline"] = {"unknown": True}
+    del draft["instants"][2]
+    core = build_core(draft, HISTORY)
+    assert validate_shadow_semantic_core(core, expected_history=HISTORY) == []
+    assert core["predicted_resolution"] == "clarification_required"
+
+
+def test_repair_attempts_differ_so_a_repeated_draft_gets_a_new_sample():
+    from research.stage2b.fact_extractor import repair_prompt
+    problems = [("q_total", "bad")]
+    first = repair_prompt(HISTORY, milestone_draft(), problems, 1)
+    second = repair_prompt(HISTORY, milestone_draft(), problems, 2)
+    assert first != second
+
+
 DELETION_HISTORY = [{"version": 1, "messages": [
     MESSAGE + " Xong việc thì xóa toàn bộ lịch sử giao dịch trên chain."]}]
 
