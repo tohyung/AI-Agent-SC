@@ -202,6 +202,17 @@ def score_arm(arm_dir: Path, cases: dict[str, dict[str, Any]] | None = None) -> 
             "decision_correct": decision_correct,
             "decision_correct_adjusted": decision_correct or (
                 case["info_mode"] == "complete" and only_withheld_open(record)),
+            # Disclosed 2026-11-07: a resolution on a core the validator rejects
+            # cannot continue in the pipeline, so it earns nothing here.
+            "decision_on_valid_core": record.get("final_valid") is True and (
+                decision_correct or (
+                    case["info_mode"] == "complete" and only_withheld_open(record))),
+            "conflict_identified": record.get("final_valid") is True and any(
+                isinstance(claim, dict) and claim.get("status") == "conflicted"
+                for claim in core.get("claims") or []),
+            "false_accept": (record.get("final_valid") is True
+                             and record.get("predicted_resolution") == "accepted_interpretation"
+                             and case["info_mode"] != "complete"),
             "facts": {kind: {"expected": len(expected[kind]), "found": len(found[kind]),
                              "matched": len(expected[kind] & found[kind])}
                       for kind in FACT_KINDS},
@@ -251,6 +262,23 @@ def score_arm(arm_dir: Path, cases: dict[str, dict[str, Any]] | None = None) -> 
                 sum(row["decision_correct_adjusted"] for row in rows), total),
             "M4_complete": _ratio(sum(row["decision_correct_adjusted"] for row in complete),
                                   len(complete)),
+        },
+        # Requires a core the validator accepts; reported beside M4, not instead of it.
+        "on_valid_core": {
+            "M4_decision_correct": _ratio(sum(row["decision_on_valid_core"] for row in rows), total),
+            "M4_by_info_mode": {
+                mode: _ratio(sum(row["decision_on_valid_core"] for row in rows
+                                 if row["info_mode"] == mode),
+                             sum(row["info_mode"] == mode for row in rows))
+                for mode in sorted({row["info_mode"] for row in rows})},
+            "conflicts_identified": _ratio(
+                sum(row["conflict_identified"] for row in rows if row["info_mode"] == "ambiguous"),
+                sum(row["info_mode"] == "ambiguous" for row in rows)),
+            "false_conflicts": sum(row["conflict_identified"] for row in rows
+                                   if row["info_mode"] != "ambiguous"),
+            "accepted": sum(row["final_valid"] and row["decision_correct"]
+                            and row["info_mode"] == "complete" for row in rows),
+            "false_accepts": sum(row["false_accept"] for row in rows),
         },
     }
     return {"summary": summary, "cases": rows}

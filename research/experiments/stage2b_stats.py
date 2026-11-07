@@ -21,7 +21,7 @@ from pathlib import Path
 from typing import Any
 
 PRIMARY = ("first_pass_valid", "final_valid", "decision_correct")
-SECONDARY = ("decision_correct_adjusted",)
+SECONDARY = ("decision_correct_adjusted", "decision_on_valid_core", "conflict_identified")
 FACT_KINDS = ("roles", "amounts", "deadlines")
 Z95 = 1.959963984540054
 
@@ -106,10 +106,10 @@ def compare(score_a: dict[str, Any], score_b: dict[str, Any], *,
     pairs = [(rows_a[case], rows_b[case]) for case in shared]
     binary: dict[str, dict[str, Any]] = {}
     for metric in PRIMARY + SECONDARY:
-        hits_a = sum(a[metric] for a, _ in pairs)
-        hits_b = sum(b[metric] for _, b in pairs)
-        only_a = sum(a[metric] and not b[metric] for a, b in pairs)
-        only_b = sum(b[metric] and not a[metric] for a, b in pairs)
+        hits_a = sum(a.get(metric, False) for a, _ in pairs)
+        hits_b = sum(b.get(metric, False) for _, b in pairs)
+        only_a = sum(a.get(metric, False) and not b.get(metric, False) for a, b in pairs)
+        only_b = sum(b.get(metric, False) and not a.get(metric, False) for a, b in pairs)
         binary[metric] = {
             "A": {"rate": round(hits_a / len(pairs), 4) if pairs else None,
                   "ci95": wilson(hits_a, len(pairs))},

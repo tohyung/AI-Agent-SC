@@ -99,3 +99,25 @@ def test_adjusted_m4_accepts_open_token_identity_but_not_an_open_token_count():
     count_only = record(_claim("amount_token_units", None, "unresolved") | {"scope_id": "deposit"})
     assert stage2b_score.only_withheld_open(identity) is True
     assert stage2b_score.only_withheld_open(count_only) is False
+
+
+def test_a_resolution_on_an_invalid_core_earns_nothing_on_the_valid_core_metric(tmp_path):
+    cases = {"a": {"info_mode": "ambiguous", "reference_contract": REFERENCE},
+             "b": {"info_mode": "ambiguous", "reference_contract": REFERENCE},
+             "c": {"info_mode": "missing", "reference_contract": REFERENCE},
+             "d": {"info_mode": "complete", "reference_contract": REFERENCE}}
+    conflicted = {"claims": [_claim("amount_lovelace", 1, status="conflicted")]}
+    _record(tmp_path, 1, "a", conflicted, final_valid=False,
+            predicted_resolution="conflict_requires_resolution")
+    _record(tmp_path, 2, "b", conflicted, final_valid=True,
+            predicted_resolution="conflict_requires_resolution")
+    _record(tmp_path, 3, "c", {"claims": []}, final_valid=True,
+            predicted_resolution="accepted_interpretation")
+    _record(tmp_path, 4, "d", {"claims": []}, final_valid=True,
+            predicted_resolution="accepted_interpretation")
+    summary = stage2b_score.score_arm(tmp_path, cases)["summary"]
+    assert summary["M4_by_info_mode"]["ambiguous"] == 1.0  # the disclosed metric is unchanged
+    strict = summary["on_valid_core"]
+    assert strict["M4_by_info_mode"]["ambiguous"] == 0.5
+    assert strict["conflicts_identified"] == 0.5
+    assert strict["accepted"] == 1 and strict["false_accepts"] == 1
