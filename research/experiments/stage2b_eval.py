@@ -29,6 +29,8 @@ from research.stage2b.repair_policy import REPAIR_POLICY_VERSION
 ROOT = Path(__file__).resolve().parents[2]
 DEV_CASES = tuple(index for index in range(1, 57))
 EXCLUDED_CASES = {57: "evaluator fields were read during roleplay on 2026-10-27"}
+TEST_CASES = tuple(index for index in range(58, 101))
+FREEZE_TAG = "a2-test-freeze"
 MAX_REPAIRS = 3
 SYNTHETIC_POLICY = "a1b2c3d4" * 7
 WITHHELD_TIME = {"vi": "Mọi hạn đều vào 12:00 UTC của ngày được nêu.",
@@ -42,6 +44,17 @@ def dev_prompts(indices: tuple[int, ...] = DEV_CASES) -> list[tuple[int, str, st
     """Return (index, case_id, prompt) only; nothing else from the record is kept."""
     if any(index in EXCLUDED_CASES or not 1 <= index <= 56 for index in indices):
         raise ValueError("evaluation arm accepts only dev cases 1-56")
+    return _dataset_prompts(indices)
+
+
+def test_prompts(indices: tuple[int, ...] = TEST_CASES) -> list[tuple[int, str, str]]:
+    """Return (index, case_id, prompt) of closed test cases; callers check the freeze first."""
+    if any(index not in TEST_CASES for index in indices):
+        raise ValueError("test arm accepts only cases 58-100")
+    return _dataset_prompts(indices)
+
+
+def _dataset_prompts(indices: tuple[int, ...]) -> list[tuple[int, str, str]]:
     with DATASET.open(encoding="utf-8") as source:
         lines = source.read().splitlines()
     if len(lines) != 100:
@@ -170,6 +183,20 @@ def _git_head() -> str | None:
         return None
 
 
+def freeze_problem() -> str | None:
+    """Why the checkout may not run a one-shot set, or None when it is the frozen commit."""
+    try:
+        tags = subprocess.run(["git", "tag", "--points-at", "HEAD"], cwd=ROOT, capture_output=True,
+                              text=True, check=True, timeout=10).stdout.split()
+        dirty = subprocess.run(["git", "status", "--porcelain"], cwd=ROOT, capture_output=True,
+                               text=True, check=True, timeout=10).stdout.strip()
+    except (OSError, subprocess.SubprocessError):
+        return "git state unavailable"
+    if FREEZE_TAG not in tags:
+        return f"HEAD is not tagged {FREEZE_TAG}"
+    return "working tree is not clean" if dirty else None
+
+
 def run_arm(arm_dir: Path, model_factory: Callable[[Callable[[str], None]], Any], *,
             arm: str, indices: tuple[int, ...] = DEV_CASES,
             emit: Callable[[str], None] = print, stated: bool = False,
@@ -235,15 +262,28 @@ def main() -> int:
     parser.add_argument("--out-dir", type=Path, required=True)
     parser.add_argument("--cases", help="Comma-separated dev case indices (default 1-56)")
     parser.add_argument("--provider", choices=["default", "gemini"], default="default",
-                        help="default = the official LLM_* model; gemini = dev-only "
-                             "secondary provider (GEMINI_* settings)")
+                        help="default = the LLM_* model; gemini = the GEMINI_* model")
+    parser.add_argument("--test", action="store_true",
+                        help=f"run closed cases 58-100; only on the {FREEZE_TAG} commit")
     parser.add_argument("--supplement", type=Path,
-                        help="run a dataset/supplement file instead of the dev cases")
+                        help="run a dataset/supplement file instead of the dev cases; "
+                             f"only on the {FREEZE_TAG} commit")
     parser.add_argument("--state-withheld", action="store_true",
-                        help="dev-only variant: state the deadline time and token policy")
+                        help="variant: state the deadline time and token policy")
     args = parser.parse_args()
+    if args.test and args.supplement:
+        parser.error("--test and --supplement are separate runs")
+    if args.test or args.supplement:
+        problem = freeze_problem()
+        if problem:
+            print(f"refusing a one-shot set: {problem}")
+            return 5
     indices = (tuple(int(item) for item in args.cases.split(",")) if args.cases
-               else DEV_CASES)
+               else TEST_CASES if args.test else DEV_CASES)
+    if args.supplement:
+        prompts = supplement_prompts(args.supplement)
+    else:
+        prompts = test_prompts(indices) if args.test else None
 
     def factory(before_request: Callable[[str], None]) -> Any:
         from research.integrations.model_transport import ModelTransport
@@ -254,7 +294,7 @@ def main() -> int:
 
     return run_arm(args.out_dir, factory, arm=args.arm, indices=indices,
                    stated=args.state_withheld,
-                   prompts=supplement_prompts(args.supplement) if args.supplement else None)
+                   prompts=prompts)
 
 
 if __name__ == "__main__":

@@ -97,6 +97,38 @@ def test_dev_prompts_reject_test_and_contaminated_cases():
     assert index == 1 and case_id and isinstance(prompt, str)
 
 
+def test_test_prompts_accept_only_the_closed_cases():
+    with pytest.raises(ValueError):
+        stage2b_eval.test_prompts((56,))
+    with pytest.raises(ValueError):
+        stage2b_eval.test_prompts((57,))
+    assert [row[0] for row in stage2b_eval.test_prompts((58, 100))] == [58, 100]
+
+
+@pytest.mark.parametrize("flag", [["--test"], ["--supplement", "unused.jsonl"]])
+def test_one_shot_sets_refuse_a_checkout_that_is_not_frozen(tmp_path, monkeypatch, flag):
+    monkeypatch.setattr(stage2b_eval, "freeze_problem", lambda: "HEAD is not tagged")
+    monkeypatch.setattr(stage2b_eval, "run_arm", lambda *a, **k: pytest.fail("must not run"))
+    monkeypatch.setattr("sys.argv", ["eval", "--arm", "A2", "--out-dir", str(tmp_path), *flag])
+    assert stage2b_eval.main() == 5
+
+
+@pytest.mark.parametrize(("tags", "status", "expected"), [
+    ("other\n", "", "not tagged"), ("a2-test-freeze\n", " M x.py\n", "not clean"),
+    ("a2-test-freeze\n", "", None)])
+def test_freeze_problem_needs_the_tag_and_a_clean_tree(monkeypatch, tags, status, expected):
+    class Done:
+        def __init__(self, stdout):
+            self.stdout = stdout
+
+    def run(command, **_):
+        return Done(tags if "tag" in command else status)
+
+    monkeypatch.setattr(stage2b_eval.subprocess, "run", run)
+    problem = stage2b_eval.freeze_problem()
+    assert problem is None if expected is None else expected in problem
+
+
 def test_network_failure_stops_without_record(tmp_path, monkeypatch):
     failure = ModelTransportError("provider_request_failed", "generation")
     code, _, lines = _arm(tmp_path, [failure], monkeypatch)
