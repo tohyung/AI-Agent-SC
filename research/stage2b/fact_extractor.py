@@ -14,7 +14,7 @@ from research.stage2b.fact_builder import FACT_DRAFT_VERSION, DraftError, build_
 from research.stage2b.intent_spec import validate_intent_spec
 from research.stage2b.projector import classify_projection, project_intent_spec
 
-FACT_PROMPT_VERSION = "stage2b-fact-prompt-v4"
+FACT_PROMPT_VERSION = "stage2b-fact-prompt-v5"
 
 SYSTEM = f"""You read a request for a Cardano Marlowe contract and write a FactDraft
 ({FACT_DRAFT_VERSION}) as one JSON object. Code computes every amount, time and
@@ -30,6 +30,12 @@ Rules
 - Write only what the request says. If a fact is missing, use {{"unknown": true}}
   and add a question in notes.clarifications. Never guess a time of day, a time
   zone, a token policy id or a rounding rule.
+- A party is someone the request gives an action or money. A writer who only
+  introduces themselves or describes a deal between others is not a party; note
+  that as kind "context".
+- A party's name is a proper name as written. A role word such as "the worker"
+  means a person named in the request, so use that person; if nobody is named for
+  the role, add a note of kind "other".
 - If the request states different values for one fact, give "alternatives"
   instead of "expr": [{{"expr": ..., "evidence": [...]}}, ...]. If it names
   different parties for one role, give a list of party ids.

@@ -357,6 +357,16 @@ def test_a_date_read_as_month_first_is_a_repairable_draft_error():
                for item, message_ in caught.value.problems)
 
 
+def test_a_role_word_is_not_a_party_name():
+    message = MESSAGE + " Một nửa chuyển cho người làm."
+    history = [{"version": 1, "messages": [message]}]
+    draft = milestone_draft()
+    draft["parties"][1] = {"id": "p_tu", "name": "người làm", "evidence": ev("cho người làm")}
+    with pytest.raises(DraftError) as caught:
+        build_core(draft, history)
+    assert any(item == "p_tu" and "role word" in text for item, text in caught.value.problems)
+
+
 def test_out_of_scope_request_without_steps_still_builds():
     draft = {"schema_version": FACT_DRAFT_VERSION, "notes": {"unsupported": [{
         "kind": "ledger_history_deletion", "text": "erase on-chain history",

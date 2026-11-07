@@ -667,6 +667,10 @@ class _Builder:
             # Design section 3: a party's name is quoted from its own evidence.
             if party["name"] not in self._spans(party):
                 self.problems.append((party_id, f"name {party['name']!r} not in its evidence"))
+            if not party["name"][0].isupper():
+                self.problems.append((party_id, f"name {party['name']!r} is a role word, not a "
+                                                "proper name: use the person it means, or add "
+                                                "a note of kind \"other\" if nobody is named"))
         self.unsupported()
         asset = self.draft.get("asset") or {}
         ada = [item for item in self.assets.values() if item.get("ada") is True]
