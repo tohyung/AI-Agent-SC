@@ -121,3 +121,17 @@ def test_a_resolution_on_an_invalid_core_earns_nothing_on_the_valid_core_metric(
     assert strict["M4_by_info_mode"]["ambiguous"] == 0.5
     assert strict["conflicts_identified"] == 0.5
     assert strict["accepted"] == 1 and strict["false_accepts"] == 1
+
+
+def test_supplement_file_is_balanced_stated_and_unique():
+    from pathlib import Path
+
+    from research.experiments.stage2b_eval import supplement_prompts
+
+    path = Path("dataset/supplement/conflicts_author_v1.jsonl")
+    cases = stage2b_score.supplement_cases(path)
+    assert len(cases) == 24 and len(supplement_prompts(path)) == 24
+    modes = [case["info_mode"] for case in cases.values()]
+    assert modes.count("ambiguous") == modes.count("complete") == 12
+    assert all("12:00 UTC" in case["prompt"] and case["provenance"] == "author_written"
+               for case in cases.values())

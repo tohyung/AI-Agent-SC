@@ -180,6 +180,13 @@ def _dataset() -> dict[str, dict[str, Any]]:
     return {case["id"]: case for case in cases[:56]}
 
 
+def supplement_cases(path: Path) -> dict[str, dict[str, Any]]:
+    """Supplement cases carry a decision label and no reference contract."""
+    with path.open(encoding="utf-8") as source:
+        rows = [json.loads(line) for line in source if line.strip()]
+    return {row["id"]: {**row, "reference_contract": {}} for row in rows}
+
+
 def score_arm(arm_dir: Path, cases: dict[str, dict[str, Any]] | None = None) -> dict[str, Any]:
     cases = cases if cases is not None else _dataset()
     records = [json.loads(path.read_text(encoding="utf-8"))
@@ -288,8 +295,10 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Score a Stage 2B evaluation arm")
     parser.add_argument("arm_dir", type=Path)
     parser.add_argument("--output", type=Path)
+    parser.add_argument("--supplement", type=Path, help="score against a supplement file")
     args = parser.parse_args()
-    report = score_arm(args.arm_dir)
+    report = score_arm(args.arm_dir,
+                       supplement_cases(args.supplement) if args.supplement else None)
     if args.output:
         args.output.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n",
                                encoding="utf-8")

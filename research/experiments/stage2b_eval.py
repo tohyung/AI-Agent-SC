@@ -53,6 +53,13 @@ def dev_prompts(indices: tuple[int, ...] = DEV_CASES) -> list[tuple[int, str, st
     return selected
 
 
+def supplement_prompts(path: Path) -> list[tuple[int, str, str]]:
+    """Return (index, case_id, prompt) from a supplement file, outside the frozen dataset."""
+    with path.open(encoding="utf-8") as source:
+        rows = [json.loads(line) for line in source if line.strip()]
+    return [(index, row["id"], row["prompt"]) for index, row in enumerate(rows, 1)]
+
+
 def state_withheld(case_id: str, prompt: str) -> str:
     """The prompt with what the dataset assumes but never says: deadline time, token policy.
 
@@ -165,7 +172,8 @@ def _git_head() -> str | None:
 
 def run_arm(arm_dir: Path, model_factory: Callable[[Callable[[str], None]], Any], *,
             arm: str, indices: tuple[int, ...] = DEV_CASES,
-            emit: Callable[[str], None] = print, stated: bool = False) -> int:
+            emit: Callable[[str], None] = print, stated: bool = False,
+            prompts: list[tuple[int, str, str]] | None = None) -> int:
     """Return 0 when every selected case has a record, 3 on a non-model failure,
     4 when the directory already holds another model's records."""
     arm_dir.mkdir(parents=True, exist_ok=True)
@@ -190,7 +198,7 @@ def run_arm(arm_dir: Path, model_factory: Callable[[Callable[[str], None]], Any]
         return 4
     model = JournaledModel(delegate, arm_dir / "logical-model-outputs.jsonl")
     head = _git_head()
-    for index, case_id, prompt in dev_prompts(indices):
+    for index, case_id, prompt in prompts if prompts is not None else dev_prompts(indices):
         target = arm_dir / f"case-{index:02d}.json"
         if target.exists():
             continue
@@ -229,6 +237,8 @@ def main() -> int:
     parser.add_argument("--provider", choices=["default", "gemini"], default="default",
                         help="default = the official LLM_* model; gemini = dev-only "
                              "secondary provider (GEMINI_* settings)")
+    parser.add_argument("--supplement", type=Path,
+                        help="run a dataset/supplement file instead of the dev cases")
     parser.add_argument("--state-withheld", action="store_true",
                         help="dev-only variant: state the deadline time and token policy")
     args = parser.parse_args()
@@ -243,7 +253,8 @@ def main() -> int:
                               provider=None if args.provider == "default" else args.provider)
 
     return run_arm(args.out_dir, factory, arm=args.arm, indices=indices,
-                   stated=args.state_withheld)
+                   stated=args.state_withheld,
+                   prompts=supplement_prompts(args.supplement) if args.supplement else None)
 
 
 if __name__ == "__main__":
