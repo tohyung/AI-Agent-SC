@@ -36,7 +36,9 @@ class _Denotation:
         self.items = {item["id"]: item for field in
                       ("parties", "assets", "quantities", "instants", "steps", "outcomes")
                       for item in draft.get(field) or []}
-        if (draft.get("notes") or {}).get("unsupported"):
+        # Side context creates no obligation, so it does not change the meaning.
+        if any(not isinstance(item, dict) or item.get("kind") != "context"
+               for item in (draft.get("notes") or {}).get("unsupported") or []):
             raise NotDenotable("unsupported notes")
 
     def name(self, party_id: Any) -> str:

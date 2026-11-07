@@ -114,6 +114,17 @@ def test_missing_timezone_is_unresolved_and_builder_asks():
         "\"00:00 ngày 02/03/2027 (UTC+7)\" là chính xác mấy giờ, theo múi giờ nào?"]
 
 
+def test_a_time_or_timezone_the_evidence_does_not_state_is_a_draft_error():
+    draft = milestone_draft()
+    draft["instants"][0]["expr"]["date"]["h"] = 12
+    draft["instants"][0]["expr"]["date"]["tz"] = "+00:00"
+    draft["instants"][0]["evidence"] = ev("ngày 02/03/2027")
+    with pytest.raises(DraftError) as caught:
+        build_core(draft, HISTORY)
+    assert {message for item, message in caught.value.problems if item == "i_d1"} == {
+        "hour 12 not in evidence", "timezone +00:00 not in evidence"}
+
+
 def test_inexact_division_becomes_a_rounding_question_not_a_quot():
     draft = milestone_draft()
     draft["quantities"][1]["expr"]["fraction"]["den"] = 7

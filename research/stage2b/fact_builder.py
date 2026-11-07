@@ -289,15 +289,17 @@ class _Builder:
         item = self.instants[iid]
         if "alternatives" in item:
             result = self._alternatives(iid, item, lambda expr, evidence: (
-                *self._instant_expr(iid, expr), evidence))
+                *self._instant_expr(iid, expr, evidence), evidence))
         else:
-            result = (*self._instant_expr(iid, item.get("expr") or {}),
+            result = (*self._instant_expr(iid, item.get("expr") or {},
+                                          item.get("evidence") or []),
                       list(item.get("evidence") or []))
         self._visiting.discard(iid)
         self._instant_cache[iid] = result
         return result
 
-    def _instant_expr(self, iid: str, expr: dict[str, Any]) -> tuple[int | None, str | None]:
+    def _instant_expr(self, iid: str, expr: dict[str, Any], evidence: list[dict[str, Any]]
+                      ) -> tuple[int | None, str | None]:
         value: int | None = None
         basis: str | None = None
         if "date" in expr:
@@ -306,6 +308,8 @@ class _Builder:
             match = TZ.fullmatch(tz) if isinstance(tz, str) else None
             # Never infer a timezone or time of day the source does not state.
             if match and type(spec.get("h")) is int and type(spec.get("min")) is int:
+                spans = " ".join(entry.get("span", "") for entry in evidence)
+                self._require_stated_time(iid, spec["h"], match, spans)
                 sign = 1 if match.group(1) == "+" else -1
                 offset = timezone(sign * timedelta(hours=int(match.group(2)),
                                                    minutes=int(match.group(3))))
@@ -329,6 +333,16 @@ class _Builder:
         elif expr.get("unknown") is not True:
             self.problems.append((iid, f"unsupported instant expression {sorted(expr)}"))
         return value, basis
+
+    def _require_stated_time(self, iid: str, hour: int, tz: re.Match[str], spans: str) -> None:
+        """A resolved time decides money, so its hour and timezone must be cited."""
+        if not re.search(rf"(?<!\d)0?{hour}(?!\d)", spans):
+            self.problems.append((iid, f"hour {hour} not in evidence"))
+        offset = int(tz.group(2))
+        stated = (re.search(r"\b(?:UTC|GMT)\b", spans, re.IGNORECASE) if offset == 0 else
+                  re.search(rf"[+-]\s*0?{offset}(?!\d)", spans))
+        if not stated:
+            self.problems.append((iid, f"timezone {tz.group(0)} not in evidence"))
 
     # -- core emission -----------------------------------------------------
 

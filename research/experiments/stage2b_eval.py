@@ -30,6 +30,12 @@ ROOT = Path(__file__).resolve().parents[2]
 DEV_CASES = tuple(index for index in range(1, 57))
 EXCLUDED_CASES = {57: "evaluator fields were read during roleplay on 2026-10-27"}
 MAX_REPAIRS = 3
+SYNTHETIC_POLICY = "a1b2c3d4" * 7
+WITHHELD_TIME = {"vi": "Mọi hạn đều vào 12:00 UTC của ngày được nêu.",
+                 "en": "Every deadline is at 12:00 UTC on the stated day."}
+WITHHELD_TOKEN = {
+    "vi": f"Điểm GOLD là token có policy ID {SYNTHETIC_POLICY}, tên token GOLD.",
+    "en": f"GOLD is the token with policy ID {SYNTHETIC_POLICY} and token name GOLD."}
 
 
 def dev_prompts(indices: tuple[int, ...] = DEV_CASES) -> list[tuple[int, str, str]]:
@@ -45,6 +51,18 @@ def dev_prompts(indices: tuple[int, ...] = DEV_CASES) -> list[tuple[int, str, st
         record = json.loads(lines[index - 1])
         selected.append((index, record["id"], record["prompt"]))
     return selected
+
+
+def state_withheld(case_id: str, prompt: str) -> str:
+    """The prompt with what the dataset assumes but never says: deadline time, token policy.
+
+    This opens the accept path, which no original dev prompt can reach.
+    """
+    language = "vi" if case_id.startswith("vi-") else "en"
+    parts = [prompt, WITHHELD_TIME[language]]
+    if "GOLD" in prompt:
+        parts.append(WITHHELD_TOKEN[language])
+    return " ".join(parts)
 
 
 def evaluate_case(model: Any, index: int, case_id: str, prompt: str, *,
@@ -147,7 +165,7 @@ def _git_head() -> str | None:
 
 def run_arm(arm_dir: Path, model_factory: Callable[[Callable[[str], None]], Any], *,
             arm: str, indices: tuple[int, ...] = DEV_CASES,
-            emit: Callable[[str], None] = print) -> int:
+            emit: Callable[[str], None] = print, stated: bool = False) -> int:
     """Return 0 when every selected case has a record, 3 on a non-model failure,
     4 when the directory already holds another model's records."""
     arm_dir.mkdir(parents=True, exist_ok=True)
@@ -178,6 +196,8 @@ def run_arm(arm_dir: Path, model_factory: Callable[[Callable[[str], None]], Any]
             continue
         current["case_id"] = case_id
         evaluate = evaluate_case_a2 if arm == "A2" else evaluate_case
+        if stated:
+            prompt = state_withheld(case_id, prompt)
         calls_before = len(getattr(delegate, "call_log", []))
         record = evaluate(model, index, case_id, prompt)
         record["json_outputs_closed"] = sum(
@@ -191,6 +211,7 @@ def run_arm(arm_dir: Path, model_factory: Callable[[Callable[[str], None]], Any]
         record.update({"arm": arm, "code_head": head, "model": getattr(model, "model", None),
                        "provider": getattr(delegate, "provider", None) or "default",
                        "repair_policy_version": REPAIR_POLICY_VERSION,
+                       "prompt_variant": "withheld-stated" if stated else None,
                        "recorded_at_utc": datetime.now(UTC).isoformat()})
         with target.open("x", encoding="utf-8") as writer:
             json.dump(record, writer, ensure_ascii=False, indent=2)
@@ -208,6 +229,8 @@ def main() -> int:
     parser.add_argument("--provider", choices=["default", "gemini"], default="default",
                         help="default = the official LLM_* model; gemini = dev-only "
                              "secondary provider (GEMINI_* settings)")
+    parser.add_argument("--state-withheld", action="store_true",
+                        help="dev-only variant: state the deadline time and token policy")
     args = parser.parse_args()
     indices = (tuple(int(item) for item in args.cases.split(",")) if args.cases
                else DEV_CASES)
@@ -219,7 +242,8 @@ def main() -> int:
                               retry_empty=False, request_json_object=False,
                               provider=None if args.provider == "default" else args.provider)
 
-    return run_arm(args.out_dir, factory, arm=args.arm, indices=indices)
+    return run_arm(args.out_dir, factory, arm=args.arm, indices=indices,
+                   stated=args.state_withheld)
 
 
 if __name__ == "__main__":

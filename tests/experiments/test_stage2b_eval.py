@@ -146,3 +146,11 @@ def test_arm_directory_refuses_a_second_model(tmp_path, monkeypatch):
     assert code == 4
     assert "refusing to add other-model" in lines[0]
     assert not (tmp_path / "case-02.json").exists()
+
+
+def test_state_withheld_adds_time_always_and_policy_only_for_gold():
+    from research.experiments.stage2b_eval import SYNTHETIC_POLICY, state_withheld
+    assert state_withheld("vi-loan-L1-001", "Lan cho Tú vay 5 ADA.") == (
+        "Lan cho Tú vay 5 ADA. Mọi hạn đều vào 12:00 UTC của ngày được nêu.")
+    stated = state_withheld("en-swap-L1-001", "Swap 5 ADA for 2 GOLD.")
+    assert "12:00 UTC" in stated and SYNTHETIC_POLICY in stated and len(SYNTHETIC_POLICY) == 56
