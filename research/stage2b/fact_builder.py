@@ -14,7 +14,11 @@ from datetime import datetime, timedelta, timezone
 from decimal import Decimal, InvalidOperation
 from typing import Any
 
-from research.stage2b.intent_spec import CORE_SCHEMA_VERSION_V4, parse_native_asset_id
+from research.stage2b.intent_spec import (
+    CORE_SCHEMA_VERSION_V4,
+    _absolute_deadline_mismatch,
+    parse_native_asset_id,
+)
 
 FACT_DRAFT_VERSION = "stage2b-fact-draft-v5"
 LOVELACE_PER_ADA = 1_000_000
@@ -317,6 +321,11 @@ class _Builder:
                     moment = datetime(spec["y"], spec["m"], spec["d"], spec["h"],
                                       spec["min"], tzinfo=offset)
                     value = int(moment.timestamp() * 1000)
+                    # A misread date is a reading error the model can repair.
+                    if _absolute_deadline_mismatch({"value": value, "evidence": evidence},
+                                                   self.messages):
+                        self.problems.append((iid, "date contradicts the calendar date in its "
+                                                   "evidence, read as day/month/year"))
                 except (KeyError, TypeError, ValueError):
                     self.problems.append((iid, "invalid calendar date"))
             elif tz is not None and not match:
@@ -640,8 +649,14 @@ class _Builder:
                 self.problems.append((owner, "unsupported item must be an object"))
             elif item.get("kind") == "ledger_history_deletion":
                 # The only v4 signal that yields unsupported_for_current_study.
-                self.claim("global", "ledger_history_deletion", True,
-                           self._evidence(owner, item.get("evidence")))
+                evidence = self._evidence(owner, item.get("evidence"))
+                claim = next((claim for claim in self.claims
+                              if claim["kind"] == "ledger_history_deletion"), None)
+                if claim is None:
+                    self.claim("global", "ledger_history_deletion", True, evidence)
+                else:  # one claim per scope: further mentions add evidence
+                    claim["evidence"].extend(entry for entry in evidence
+                                             if entry not in claim["evidence"])
             elif item.get("kind") == "context":
                 self.observe(owner, item.get("text"), item.get("evidence"), context=True)
             else:

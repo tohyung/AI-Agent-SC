@@ -334,6 +334,29 @@ def test_ledger_history_deletion_is_the_v4_unsupported_signal():
     assert core["required_clarifications"] == []
 
 
+def test_two_deletion_notes_make_one_claim():
+    draft = milestone_draft()
+    note = {"kind": "ledger_history_deletion", "text": "erase on-chain history",
+            "evidence": ev("xóa toàn bộ lịch sử giao dịch trên chain")}
+    draft["notes"] = {"unsupported": [note, {**note, "evidence": ev("lịch sử giao dịch")}]}
+    core = build_core(draft, DELETION_HISTORY)
+    assert validate_shadow_semantic_core(core, expected_history=DELETION_HISTORY) == []
+    assert core["predicted_resolution"] == "unsupported_for_current_study"
+
+
+def test_a_date_read_as_month_first_is_a_repairable_draft_error():
+    message = "Lan nạp 60 ADA trước 12:00 UTC ngày 04/01/2027 rồi trả Tú."
+    history = [{"version": 1, "messages": [message]}]
+    draft = milestone_draft()
+    draft["instants"] = [{"id": "i_d1", "expr": {"date": {"y": 2027, "m": 4, "d": 1, "h": 12,
+                                                          "min": 0, "tz": "+00:00"}},
+                          "evidence": ev("12:00 UTC ngày 04/01/2027")}]
+    with pytest.raises(DraftError) as caught:
+        build_core(draft, history)
+    assert any(item == "i_d1" and "day/month/year" in message_
+               for item, message_ in caught.value.problems)
+
+
 def test_out_of_scope_request_without_steps_still_builds():
     draft = {"schema_version": FACT_DRAFT_VERSION, "notes": {"unsupported": [{
         "kind": "ledger_history_deletion", "text": "erase on-chain history",

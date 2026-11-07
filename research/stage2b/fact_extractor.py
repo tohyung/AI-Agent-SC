@@ -14,7 +14,7 @@ from research.stage2b.fact_builder import FACT_DRAFT_VERSION, DraftError, build_
 from research.stage2b.intent_spec import validate_intent_spec
 from research.stage2b.projector import classify_projection, project_intent_spec
 
-FACT_PROMPT_VERSION = "stage2b-fact-prompt-v3"
+FACT_PROMPT_VERSION = "stage2b-fact-prompt-v4"
 
 SYSTEM = f"""You read a request for a Cardano Marlowe contract and write a FactDraft
 ({FACT_DRAFT_VERSION}) as one JSON object. Code computes every amount, time and
@@ -60,11 +60,12 @@ Fields
   "to": "<party id>", "amount": "<quantity id>" or "remaining", "asset": "<asset id, only
   with remaining>", "evidence"}}]. "remaining" is whatever is left in that account on that path.
 - "notes": {{"clarifications": [{{"target_id", "question"}}],
-  "unsupported": [{{"kind": "ledger_history_deletion", "context" or "other", "text", "evidence"}}],
+  "unsupported": [{{"kind": "context|other|ledger_history_deletion", "text", "evidence"}}],
   "resolution_hint": "accept|clarify|conflict|unsupported"}}.
   Use kind "context" for greetings, background or remarks that create no obligation;
   they are kept but never asked about. Use "other" only for contract behavior this
-  draft cannot write; it is always asked about.
+  draft cannot write; it is always asked about. Use "ledger_history_deletion" only
+  when the request asks to erase history already on the chain.
   Write questions in the language of the request.
 
 Do not write scope ids, claim ids, lovelace values or POSIX times."""
