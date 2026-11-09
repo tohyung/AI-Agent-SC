@@ -3,21 +3,21 @@
 import pytest
 from copy import deepcopy
 
-from research.architecture.artifacts import ArtifactEnvelope
-from research.architecture.status import AuthorityLevel, ImplementationStatus
+from research.orchestration.artifacts import ArtifactEnvelope
+from research.orchestration.status import AuthorityLevel, ImplementationStatus
 from research.experiments.batch_scenarios import (SyntheticExpectationPolicy,
                                                  scenario_from_intent)
-from research.stage2b.projector import project_intent_spec
-from tests.stage3.test_direct_payment_v1 import direct_payment_spec
-from tests.stage3.test_funded_choice_v1 import (
+from research.formalization.projector import project_intent_spec
+from tests.synthesis.test_direct_payment_v1 import direct_payment_spec
+from tests.synthesis.test_funded_choice_v1 import (
     _shared_scope_core, funded_choice_core, split_payout_core,
 )
-from tests.stage3.test_funded_swap_v1 import swap_core
-from tests.stage3.test_linear_time_release_v1 import release_core
+from tests.synthesis.test_funded_swap_v1 import swap_core
+from tests.synthesis.test_linear_time_release_v1 import release_core
 
 
 def _accepted(spec):
-    return ArtifactEnvelope("accepted-intent", "simulated-v1", "test",
+    return ArtifactEnvelope("accepted-intent", "Ratification-Simulated-v1", "test",
                             ImplementationStatus.IMPLEMENTED_UNVALIDATED,
                             AuthorityLevel.NO_AUTHORITY,
                             {"accepted_spec": spec, "simulation_only": True})

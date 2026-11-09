@@ -5,7 +5,7 @@ ROOT = Path(__file__).resolve().parents[0]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from research.architecture.cli import main  # noqa: E402
+from research.orchestration.cli import main  # noqa: E402
 
 if __name__ == "__main__":
     raise SystemExit(main())

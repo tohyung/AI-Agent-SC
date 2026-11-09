@@ -10,7 +10,7 @@ from dataset.cases import load_cases
 from dataset.evaluator import _run, evaluate
 from dataset.marlowe_sim import run_scenario
 from dataset.validate_dataset import validate
-from research.marlowe_core.marlowe_ast import (
+from research.analysis.marlowe_ast import (
     case,
     choice_action,
     close,

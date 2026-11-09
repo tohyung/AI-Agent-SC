@@ -4,7 +4,7 @@ from collections import Counter
 
 from research.experiments.batch_capability_matrix import (FAMILY_OPERATIONS,
                                                           build_matrix, summary)
-from research.experiments.online_tuning_batch01 import load_batch
+from research.experiments.online_tuning import load_batch
 
 
 def test_capability_matrix_covers_exactly_frozen_twenty_in_order():

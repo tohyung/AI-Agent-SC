@@ -7,7 +7,7 @@ import random
 from collections import Counter, defaultdict
 from datetime import datetime, timezone
 
-from research.marlowe_core.marlowe_ast import ada_to_lovelace
+from research.analysis.marlowe_ast import ada_to_lovelace
 
 from .cases import Case, save_cases
 from .config import DATASET, TYPE_COUNTS

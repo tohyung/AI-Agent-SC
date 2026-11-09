@@ -9,12 +9,12 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from research.architecture.artifacts import ArtifactEnvelope
-from research.architecture.status import AuthorityLevel, ImplementationStatus
-from research.stage3.comparison import BehaviorExpectation
-from research.stage3.reference import ReferenceRequest
-from research.stage2b.intent_spec import parse_native_asset_id
-from research.stage4.declared_domain import DeclaredActionDomain
+from research.orchestration.artifacts import ArtifactEnvelope
+from research.orchestration.status import AuthorityLevel, ImplementationStatus
+from research.synthesis.comparison import BehaviorExpectation
+from research.synthesis.reference import ReferenceRequest
+from research.formalization.intent_spec import parse_native_asset_id
+from research.exploration.declared_domain import DeclaredActionDomain
 
 
 ADA = {"currency_symbol": "", "token_name": ""}
@@ -106,7 +106,7 @@ class BatchScenario:
 class SyntheticExpectationPolicy:
     def authorize(self, artifact: ArtifactEnvelope) -> bool:
         return (artifact.artifact_type == "behavior-expectation"
-                and artifact.producer_stage == "batch_synthetic_scenario"
+                and artifact.producer_step == "batch_synthetic_scenario"
                 and artifact.authority_level == AuthorityLevel.NO_AUTHORITY
                 and artifact.payload.get("simulation_only") is True
                 and artifact.payload.get("reviewer_id") == SYNTHETIC_REVIEWER
@@ -260,7 +260,7 @@ def scenario_from_intent(accepted: ArtifactEnvelope, profile_id: str) -> BatchSc
         expected_payments = tuple(expected_payments_list)
         transactions = tuple(transactions_list)
         state = dict(EMPTY_STATE)
-        domain = DeclaredActionDomain("batch-timed-release-declared-actions-v1", transactions)
+        domain = DeclaredActionDomain("Exploration-TimedReleaseActions-v1", transactions)
     elif profile_id == "funded-swap":
         deposits = [item for item in spec["behavior_scopes"]
                     if item["scope_type"] == "transition"
@@ -334,7 +334,7 @@ def scenario_from_intent(accepted: ArtifactEnvelope, profile_id: str) -> BatchSc
         expected_payments = tuple(expected_payments)
         transactions = tuple(declared)
         state = dict(EMPTY_STATE)
-        domain = SwapTransactionDomain("batch-funded-swap-declared-deposits-v1",
+        domain = SwapTransactionDomain("Exploration-FundedSwapDeposits-v1",
                                        transactions)
     elif profile_id == "sequential-approval":
         scopes = {item["scope_id"]: item for item in spec["behavior_scopes"]}
@@ -396,7 +396,7 @@ def scenario_from_intent(accepted: ArtifactEnvelope, profile_id: str) -> BatchSc
         expected_payments = tuple(expected_payments)
         transactions = tuple(declared)
         state = dict(EMPTY_STATE)
-        domain = DeclaredActionDomain("batch-sequential-approval-declared-actions-v1",
+        domain = DeclaredActionDomain("Exploration-SequentialApprovalActions-v1",
                                       transactions)
     else:
         raise ValueError("no synthetic scenario for this profile")
@@ -406,7 +406,7 @@ def scenario_from_intent(accepted: ArtifactEnvelope, profile_id: str) -> BatchSc
         SYNTHETIC_REVIEWER, expected_warnings=(), expected_payments=expected_payments)
     payload = {**expectation.to_dict(), "simulation_only": True,
                "scenario_basis": "accepted_intent_claims_not_compiler_ast"}
-    artifact = ArtifactEnvelope("behavior-expectation", "batch-v1", "batch_synthetic_scenario",
+    artifact = ArtifactEnvelope("behavior-expectation", "Synthesis-BatchExpectation-v1", "batch_synthetic_scenario",
                                 ImplementationStatus.IMPLEMENTED_UNVALIDATED,
                                 AuthorityLevel.NO_AUTHORITY, payload)
     if profile_id not in {"funded-swap", "linear-time-release", "sequential-approval"}:

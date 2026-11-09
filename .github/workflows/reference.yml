@@ -8,30 +8,30 @@ on:
     branches: [main]
     paths:
       - tools/marlowe_smt/**
-      - research/stage3/**
-      - research/stage4/**
-      - research/integrations/smt*.py
-      - research/integrations/reference_driver.py
-      - research/stage2b/fact_*.py
-      - tests/stage2b/fact_draft_gen.py
-      - tests/stage2b/test_fact_reference.py
-      - tests/stage2b/test_fact_families.py
-      - tests/stage3/**
-      - tests/stage4/**
+      - research/synthesis/**
+      - research/exploration/**
+      - research/adapters/smt*.py
+      - research/adapters/reference_driver.py
+      - research/formalization/fact_*.py
+      - tests/formalization/fact_draft_gen.py
+      - tests/formalization/test_fact_reference.py
+      - tests/formalization/test_fact_families.py
+      - tests/synthesis/**
+      - tests/exploration/**
       - .github/workflows/reference.yml
   pull_request:
     paths:
       - tools/marlowe_smt/**
-      - research/stage3/**
-      - research/stage4/**
-      - research/integrations/smt*.py
-      - research/integrations/reference_driver.py
-      - research/stage2b/fact_*.py
-      - tests/stage2b/fact_draft_gen.py
-      - tests/stage2b/test_fact_reference.py
-      - tests/stage2b/test_fact_families.py
-      - tests/stage3/**
-      - tests/stage4/**
+      - research/synthesis/**
+      - research/exploration/**
+      - research/adapters/smt*.py
+      - research/adapters/reference_driver.py
+      - research/formalization/fact_*.py
+      - tests/formalization/fact_draft_gen.py
+      - tests/formalization/test_fact_reference.py
+      - tests/formalization/test_fact_families.py
+      - tests/synthesis/**
+      - tests/exploration/**
       - .github/workflows/reference.yml
   schedule:
     - cron: "0 3 * * 1"

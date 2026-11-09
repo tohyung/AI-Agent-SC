@@ -10,7 +10,7 @@ from collections import Counter
 from dataclasses import asdict, dataclass
 import json
 
-from research.experiments.online_tuning_batch01 import load_batch
+from research.experiments.online_tuning import load_batch
 
 
 FAMILY_OPERATIONS: dict[str, tuple[str, ...]] = {

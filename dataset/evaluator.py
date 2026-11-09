@@ -5,7 +5,7 @@ from __future__ import annotations
 from itertools import permutations
 from typing import Any
 
-from research.marlowe_core.marlowe_validator import validate_contract
+from research.analysis.marlowe_validator import validate_contract
 
 from .config import WEIGHTS
 from .marlowe_sim import run_scenario, timeouts, token_id

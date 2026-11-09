@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from research.marlowe_core.marlowe_ast import (ada, case, choice_action, close, deposit,
+from research.analysis.marlowe_ast import (ada, case, choice_action, close, deposit,
                                        escrow_contract, if_, let, pay, role, when)
 
 

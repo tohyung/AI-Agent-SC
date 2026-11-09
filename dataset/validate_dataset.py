@@ -8,8 +8,8 @@ import unicodedata
 from collections import Counter, defaultdict
 from pathlib import Path
 
-from research.marlowe_core.logic_graph import LogicGraphVerifier
-from research.marlowe_core.marlowe_validator import validate_contract
+from research.analysis.logic_graph import LogicGraphVerifier
+from research.analysis.marlowe_validator import validate_contract
 
 from .cases import Case, load_cases
 from .config import (DATASET, DIFFICULTY_COUNTS, INFO_COUNTS, LANGUAGE_COUNTS,

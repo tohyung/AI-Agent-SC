@@ -2,7 +2,7 @@
 
 import pytest
 
-from research.experiments import run_bundles, stage2b_replay
+from research.experiments import run_bundles, formalization_replay
 
 
 def _write(path, text):
@@ -52,4 +52,4 @@ def test_bundle_refuses_to_overwrite_and_extract_refuses_existing_files(tmp_path
 def test_replay_reads_bundled_cases(tmp_path):
     _write(tmp_path / "case-01" / "logical-model-outputs.jsonl", "")
     run_bundles.bundle(tmp_path)
-    assert stage2b_replay.replay_runs([tmp_path])["cases"] == {"case-01": {"outputs": []}}
+    assert formalization_replay.replay_runs([tmp_path])["cases"] == {"case-01": {"outputs": []}}

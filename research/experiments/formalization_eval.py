@@ -1,0 +1,301 @@
+"""Live Formalization arm for the AFF protocol: original prompt only, no roleplay.
+
+Each dev case gets one extraction through the production Formalization port with up
+to three validation repairs. Only the case ID and prompt leave the dataset;
+evaluator fields are read later by a separate scorer. One record per case is
+written exclusively, so an interrupted run resumes at the next missing case.
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import subprocess
+from collections.abc import Callable
+from datetime import UTC, datetime
+from pathlib import Path
+from typing import Any
+
+from research.orchestration.artifacts import ArtifactEnvelope
+from research.orchestration.ports import StepContext
+from research.orchestration.status import AuthorityLevel, ImplementationStatus
+from research.experiments.online_tuning import DATASET
+from research.adapters.model_replay import JournaledModel
+from research.adapters.formalization_adapter import FormalizationPort
+from research.formalization.intent_spec import CORE_SCHEMA_VERSION_V4
+from research.formalization.repair_policy import REPAIR_POLICY_VERSION
+
+ROOT = Path(__file__).resolve().parents[2]
+DEV_CASES = tuple(index for index in range(1, 57))
+EXCLUDED_CASES = {57: "evaluator fields were read during roleplay on 2026-10-27"}
+TEST_CASES = tuple(index for index in range(58, 101))
+FREEZE_TAG = "a2-test-freeze"
+MAX_REPAIRS = 3
+SYNTHETIC_POLICY = "a1b2c3d4" * 7
+WITHHELD_TIME = {"vi": "Mọi hạn đều vào 12:00 UTC của ngày được nêu.",
+                 "en": "Every deadline is at 12:00 UTC on the stated day."}
+WITHHELD_TOKEN = {
+    "vi": f"Điểm GOLD là token có policy ID {SYNTHETIC_POLICY}, tên token GOLD.",
+    "en": f"GOLD is the token with policy ID {SYNTHETIC_POLICY} and token name GOLD."}
+
+
+def dev_prompts(indices: tuple[int, ...] = DEV_CASES) -> list[tuple[int, str, str]]:
+    """Return (index, case_id, prompt) only; nothing else from the record is kept."""
+    if any(index in EXCLUDED_CASES or not 1 <= index <= 56 for index in indices):
+        raise ValueError("evaluation arm accepts only dev cases 1-56")
+    return _dataset_prompts(indices)
+
+
+def test_prompts(indices: tuple[int, ...] = TEST_CASES) -> list[tuple[int, str, str]]:
+    """Return (index, case_id, prompt) of closed test cases; callers check the freeze first."""
+    if any(index not in TEST_CASES for index in indices):
+        raise ValueError("test arm accepts only cases 58-100")
+    return _dataset_prompts(indices)
+
+
+def _dataset_prompts(indices: tuple[int, ...]) -> list[tuple[int, str, str]]:
+    with DATASET.open(encoding="utf-8") as source:
+        lines = source.read().splitlines()
+    if len(lines) != 100:
+        raise ValueError("frozen dataset must contain 100 cases")
+    selected = []
+    for index in indices:
+        record = json.loads(lines[index - 1])
+        selected.append((index, record["id"], record["prompt"]))
+    return selected
+
+
+def supplement_prompts(path: Path) -> list[tuple[int, str, str]]:
+    """Return (index, case_id, prompt) from a supplement file, outside the frozen dataset."""
+    with path.open(encoding="utf-8") as source:
+        rows = [json.loads(line) for line in source if line.strip()]
+    return [(index, row["id"], row["prompt"]) for index, row in enumerate(rows, 1)]
+
+
+def state_withheld(case_id: str, prompt: str) -> str:
+    """The prompt with what the dataset assumes but never says: deadline time, token policy.
+
+    This opens the accept path, which no original dev prompt can reach.
+    """
+    language = "vi" if case_id.startswith("vi-") else "en"
+    parts = [prompt, WITHHELD_TIME[language]]
+    if "GOLD" in prompt:
+        parts.append(WITHHELD_TOKEN[language])
+    return " ".join(parts)
+
+
+def evaluate_case(model: Any, index: int, case_id: str, prompt: str, *,
+                  schema_version: str = CORE_SCHEMA_VERSION_V4) -> dict[str, Any]:
+    history = [{"version": 1, "messages": [prompt]}]
+    source = ArtifactEnvelope("requirement-history", "v1", "user_input",
+                              ImplementationStatus.IMPLEMENTED_UNVALIDATED,
+                              AuthorityLevel.NO_AUTHORITY, history)
+    calls_before = model.llm_calls
+    execution = FormalizationPort(model).execute(
+        [source], StepContext(f"formalization-eval:{case_id}", {
+            "core_schema_version": schema_version,
+            "max_core_validation_repairs": MAX_REPAIRS,
+        }))
+    result = execution.result
+    candidate = execution.artifacts[0].payload if execution.artifacts else None
+    record: dict[str, Any] = {
+        "case_index": index, "case_id": case_id, "schema_version": schema_version,
+        "run_status": result.run_status.value, "semantic_status": result.semantic_status,
+        "safe_error": result.safe_error, "physical_calls": model.llm_calls - calls_before,
+        "telemetry": result.telemetry,
+    }
+    if candidate is not None:
+        initial = candidate["initial_core_validation_errors"]
+        final_valid = not candidate["core_validation_errors"] and not candidate[
+            "full_validation_errors"] and candidate["projection_classification"] == "PASS"
+        record.update({
+            "first_pass_valid": not initial and final_valid,
+            "first_pass_error_count": len(set(initial)),
+            "final_valid": final_valid,
+            "final_core_error_count": len(set(candidate["core_validation_errors"])),
+            "final_full_error_count": len(set(candidate["full_validation_errors"])),
+            "projection_classification": candidate["projection_classification"],
+            "predicted_resolution": candidate["semantic_core"].get("predicted_resolution"),
+            "semantic_core": candidate["semantic_core"],
+        })
+    return record
+
+
+def evaluate_case_aff(model: Any, index: int, case_id: str, prompt: str) -> dict[str, Any]:
+    """AFF arm: FactDraft v5 + deterministic builder, scored with the same v4 checks."""
+    from research.formalization.fact_extractor import FACT_PROMPT_VERSION, extract_fact_core
+    from research.formalization.model_errors import sanitized_model_error
+
+    history = [{"version": 1, "messages": [prompt]}]
+    calls_before = model.llm_calls
+    record: dict[str, Any] = {"case_index": index, "case_id": case_id,
+                              "schema_version": CORE_SCHEMA_VERSION_V4,
+                              "prompt_version": FACT_PROMPT_VERSION}
+    try:
+        result = extract_fact_core(model, history, max_repairs=MAX_REPAIRS)
+    except (RuntimeError, ValueError) as exc:
+        record.update({"run_status": "FAILED", "semantic_status": "MODEL_ERROR",
+                       "safe_error": sanitized_model_error(exc),
+                       "physical_calls": model.llm_calls - calls_before})
+        outputs = getattr(exc, "invalid_outputs", None)
+        if outputs:
+            # Enough to tell a truncated output from a malformed one; runs/ stays local.
+            record["invalid_output_diagnostics"] = [
+                {"phase": call.get("phase"), "finish_reason": call.get("finish_reason"),
+                 "completion_tokens": call.get("completion_tokens"),
+                 "chars": len(text or ""), "head": (text or "")[:300],
+                 "tail": (text or "")[-300:]}
+                for text, call in outputs]
+        return record
+    record.update(aff_result_fields(result))
+    record["physical_calls"] = model.llm_calls - calls_before
+    return record
+
+
+def aff_result_fields(result: dict[str, Any]) -> dict[str, Any]:
+    """Record fields derived from one `extract_fact_core` result."""
+    attempts = result["attempts"]
+    core = result["semantic_core"]
+    final_valid = core is not None and result["projection_classification"] == "PASS"
+    return {
+        "run_status": "SUCCEEDED" if core is not None else "FAILED",
+        "semantic_status": ("BUILDER_BUG" if result["builder_bug"] else
+                            "VALID" if final_valid else "DRAFT_INVALID"),
+        "safe_error": None,
+        "first_pass_valid": final_valid and len(attempts) == 1,
+        "first_pass_error_count": len(attempts[0]["problems"]) if attempts else 0,
+        "final_valid": final_valid,
+        "final_core_error_count": len(result["core_validation_errors"]),
+        "final_full_error_count": len(result["full_validation_errors"]),
+        "projection_classification": result["projection_classification"],
+        "predicted_resolution": (core or {}).get("predicted_resolution"),
+        "semantic_core": core,
+        "fact_draft_attempts": attempts,
+    }
+
+
+def _git_head() -> str | None:
+    try:
+        return subprocess.run(["git", "rev-parse", "HEAD"], cwd=ROOT, capture_output=True,
+                              text=True, check=True, timeout=10).stdout.strip()
+    except (OSError, subprocess.SubprocessError):
+        return None
+
+
+def freeze_problem() -> str | None:
+    """Why the checkout may not run a one-shot set, or None when it is the frozen commit."""
+    try:
+        tags = subprocess.run(["git", "tag", "--points-at", "HEAD"], cwd=ROOT, capture_output=True,
+                              text=True, check=True, timeout=10).stdout.split()
+        dirty = subprocess.run(["git", "status", "--porcelain"], cwd=ROOT, capture_output=True,
+                               text=True, check=True, timeout=10).stdout.strip()
+    except (OSError, subprocess.SubprocessError):
+        return "git state unavailable"
+    if FREEZE_TAG not in tags:
+        return f"HEAD is not tagged {FREEZE_TAG}"
+    return "working tree is not clean" if dirty else None
+
+
+def run_arm(arm_dir: Path, model_factory: Callable[[Callable[[str], None]], Any], *,
+            arm: str, indices: tuple[int, ...] = DEV_CASES,
+            emit: Callable[[str], None] = print, stated: bool = False,
+            prompts: list[tuple[int, str, str]] | None = None) -> int:
+    """Return 0 when every selected case has a record, 3 on a non-model failure,
+    4 when the directory already holds another model's records."""
+    arm_dir.mkdir(parents=True, exist_ok=True)
+    journal = arm_dir / "outbound-attempts.jsonl"
+    current: dict[str, Any] = {}
+
+    def before_request(phase: str) -> None:
+        with journal.open("a", encoding="utf-8") as writer:
+            writer.write(json.dumps({"case_id": current.get("case_id"), "phase": phase,
+                                     "reserved_at_utc": datetime.now(UTC).isoformat()},
+                                    ensure_ascii=False) + "\n")
+            writer.flush()
+            os.fsync(writer.fileno())
+
+    delegate = model_factory(before_request)
+    recorded = {json.loads(path.read_text(encoding="utf-8")).get("model")
+                for path in arm_dir.glob("case-*.json")}
+    if recorded - {delegate.model}:
+        # One arm directory holds one model; mixing would make the arm incomparable.
+        emit(f"{arm_dir} already holds records from {sorted(map(str, recorded))}; "
+             f"refusing to add {delegate.model}")
+        return 4
+    model = JournaledModel(delegate, arm_dir / "logical-model-outputs.jsonl")
+    head = _git_head()
+    for index, case_id, prompt in prompts if prompts is not None else dev_prompts(indices):
+        target = arm_dir / f"case-{index:02d}.json"
+        if target.exists():
+            continue
+        current["case_id"] = case_id
+        evaluate = evaluate_case_aff if arm == "AFF" else evaluate_case
+        if stated:
+            prompt = state_withheld(case_id, prompt)
+        calls_before = len(getattr(delegate, "call_log", []))
+        record = evaluate(model, index, case_id, prompt)
+        record["json_outputs_closed"] = sum(
+            1 for call in getattr(delegate, "call_log", [])[calls_before:]
+            if call.get("json_brackets_closed"))
+        error = record["safe_error"] or {}
+        if error and error.get("model_content_received") is not True:
+            # Provider, network or configuration failure: not a model result.
+            emit(f"case {index:02d}: {error.get('code')}; stopping without a record")
+            return 3
+        record.update({"arm": arm, "code_head": head, "model": getattr(model, "model", None),
+                       "provider": getattr(delegate, "provider", None) or "default",
+                       "repair_policy_version": REPAIR_POLICY_VERSION,
+                       "prompt_variant": "withheld-stated" if stated else None,
+                       "recorded_at_utc": datetime.now(UTC).isoformat()})
+        with target.open("x", encoding="utf-8") as writer:
+            json.dump(record, writer, ensure_ascii=False, indent=2)
+            writer.write("\n")
+        emit(f"case {index:02d}: first_pass_valid={record.get('first_pass_valid')} "
+             f"final_valid={record.get('final_valid')} calls={record['physical_calls']}")
+    return 0
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description="Run one live Formalization evaluation arm")
+    parser.add_argument("--arm", required=True, help="Arm label, e.g. DCF or AFF")
+    parser.add_argument("--out-dir", type=Path, required=True)
+    parser.add_argument("--cases", help="Comma-separated dev case indices (default 1-56)")
+    parser.add_argument("--provider", choices=["default", "gemini"], default="default",
+                        help="default = the LLM_* model; gemini = the GEMINI_* model")
+    parser.add_argument("--test", action="store_true",
+                        help=f"run closed cases 58-100; only on the {FREEZE_TAG} commit")
+    parser.add_argument("--supplement", type=Path,
+                        help="run a dataset/supplement file instead of the dev cases; "
+                             f"only on the {FREEZE_TAG} commit")
+    parser.add_argument("--state-withheld", action="store_true",
+                        help="variant: state the deadline time and token policy")
+    args = parser.parse_args()
+    if args.test and args.supplement:
+        parser.error("--test and --supplement are separate runs")
+    if args.test or args.supplement:
+        problem = freeze_problem()
+        if problem:
+            print(f"refusing a one-shot set: {problem}")
+            return 5
+    indices = (tuple(int(item) for item in args.cases.split(",")) if args.cases
+               else TEST_CASES if args.test else DEV_CASES)
+    if args.supplement:
+        prompts = supplement_prompts(args.supplement)
+    else:
+        prompts = test_prompts(indices) if args.test else None
+
+    def factory(before_request: Callable[[str], None]) -> Any:
+        from research.adapters.model_transport import ModelTransport
+        return ModelTransport(before_request=before_request, api_style="chat",
+                              max_tokens=16000, disable_reasoning=True,
+                              retry_empty=False, request_json_object=False,
+                              provider=None if args.provider == "default" else args.provider)
+
+    return run_arm(args.out_dir, factory, arm=args.arm, indices=indices,
+                   stated=args.state_withheld,
+                   prompts=prompts)
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

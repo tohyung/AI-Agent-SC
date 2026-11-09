@@ -22,7 +22,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          # verify_freeze reads the frozen Stage 2A blobs from their source commit.
+          # verify_freeze reads the frozen Corpus blobs from their source commit.
           fetch-depth: 0
 
       - uses: actions/setup-python@v5
@@ -52,5 +52,5 @@ jobs:
       - name: Validate frozen dataset
         run: python -m dataset.validate_dataset
 
-      - name: Verify Stage 2A freeze
-        run: python research/stage2a/verify_freeze.py research/stage2a/freeze/stage2a-v1.manifest.json
+      - name: Verify Corpus freeze
+        run: python research/corpus/verify_freeze.py research/corpus/freeze/Corpus-v1.manifest.json
