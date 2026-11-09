@@ -117,8 +117,33 @@ def _one_shape(value: Any, variants: dict[str, Any], path: str, errors: list[str
         shape = set(spec)
         if set(value) == shape:
             return shape
-    errors.append(f"{path}: tổ hợp field không hợp lệ: {sorted(value)}.")
+    errors.append(f"{path}: tổ hợp field không hợp lệ: {sorted(value)}."
+                  + _closest_shape_hint(value, variants))
     return None
+
+
+def _closest_shape_hint(value: dict[str, Any], variants: dict[str, Any]) -> str:
+    """Diagnostic text only: name the nearest variant's exact field set."""
+    given = set(value)
+    best: tuple[int, str, set[str]] | None = None
+    for name, spec in variants.items():
+        if not isinstance(spec, dict):
+            continue
+        shape = set(spec)
+        distance = len(given ^ shape)
+        if not given & shape and distance > 1:
+            continue
+        if best is None or distance < best[0]:
+            best = (distance, name, shape)
+    if best is None:
+        return ""
+    _, name, shape = best
+    parts = [f" Gần nhất với {name}: cần đúng các field {sorted(shape)}"]
+    if given - shape:
+        parts.append(f"field không được hỗ trợ: {sorted(given - shape)}")
+    if shape - given:
+        parts.append(f"thiếu field: {sorted(shape - given)}")
+    return "; ".join(parts) + "."
 
 
 def _text(value: Any, path: str, errors: list[str], allow_empty: bool = False) -> None:

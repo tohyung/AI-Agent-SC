@@ -102,3 +102,31 @@ def test_typed_grammar_does_not_accept_integer_type_label_as_value() -> None:
     contract = pay("Alice", "Bob", 10)
     contract["pay"] = "integer"
     assert any("Value phải là số nguyên" in error for error in validate_contract(contract))
+
+
+@pytest.mark.parametrize("wrong, expected_fields, unknown", [
+    ({"deposit": 1, "into_account": {"role_token": "A"},
+      "of_token": {"currency_symbol": "", "token_name": ""},
+      "party": {"role_token": "A"}},
+     "['deposits', 'into_account', 'of_token', 'party']", "['deposit']"),
+    ({"for_choice": {"choice_name": "c", "choice_owner": {"role_token": "A"}},
+      "choose_between": [{"from": 0, "to": 1}], "extra": 1},
+     "['choose_between', 'for_choice']", "['extra']"),
+])
+def test_misnamed_action_fields_stay_rejected_and_name_expected_fields(
+        wrong, expected_fields, unknown) -> None:
+    contract = {"when": [{"case": wrong, "then": "close"}],
+                "timeout": 1799254800000, "timeout_continuation": "close"}
+    errors = validate_contract(contract)
+    with pytest.raises(MarloweValidationError):
+        assert_valid(contract)
+    combination = [item for item in errors if "tổ hợp field không hợp lệ" in item]
+    assert len(combination) == 1
+    assert combination[0].startswith(
+        f"root.when[0].case: tổ hợp field không hợp lệ: {sorted(wrong)}.")
+    assert f"cần đúng các field {expected_fields}" in combination[0]
+    assert f"field không được hỗ trợ: {unknown}" in combination[0]
+
+
+def test_unrelated_field_set_gets_no_guessed_variant() -> None:
+    assert validate_contract({"foo": 1}) == ["root: tổ hợp field không hợp lệ: ['foo']."]
