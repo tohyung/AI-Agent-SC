@@ -212,3 +212,58 @@ def test_repair_reuses_exact_invalid_candidate_without_rewriting_it(monkeypatch,
     assert repaired["steps"]["intent_extraction"]["output_artifacts"] != [invalid_id]
     assert first == json.loads(
         (case_dir / "attempt-001.json").read_text(encoding="utf-8"))
+
+
+def test_gemini_provider_and_run_dir_reach_transport(monkeypatch, tmp_path):
+    prompt = "Minh lends Quynh 101 ADA."
+    monkeypatch.setattr(roleplay_case, "load_batch", lambda: ({}, [
+        {"id": "case-1", "prompt": prompt}]))
+    monkeypatch.setattr(roleplay_case, "config_from_environment", lambda: None)
+    seen = {}
+
+    class FakeTransport:
+        model = "fake-gemini"
+
+        def __init__(self, *, before_request, provider=None, **_kwargs):
+            seen["provider"] = provider
+            self.llm_calls = 0
+            self.call_log = []
+
+        def set_call_budget(self, _limit):
+            pass
+
+        def generate(self, _system, _user):
+            raise AssertionError("no model call expected")
+
+        def usage_summary(self):
+            return {"api_calls": 0}
+
+    monkeypatch.setattr(roleplay_case, "ModelTransport", FakeTransport)
+    monkeypatch.setattr(roleplay_case, "run_session", lambda *_a, **_k: {
+        "status": "WAITING_USER", "steps": {}})
+    monkeypatch.setattr("sys.argv", [
+        "roleplay_case", "--case-index", "1", "--provider", "gemini",
+        "--run-dir", str(tmp_path / "holdout")])
+    assert roleplay_case.main() == 0
+    assert seen["provider"] == "gemini"
+    record = json.loads((tmp_path / "holdout" / "case-01" / "attempt-001.json")
+                        .read_text(encoding="utf-8"))
+    assert record["model_provider"] == "gemini"
+    assert record["model_name"] == "fake-gemini"
+    with pytest.raises(ValueError, match="provider"):
+        roleplay_case.run_case(1, run_dir=tmp_path, provider="other")
+
+
+def test_gemini_requests_are_spaced(monkeypatch):
+    clock = {"now": 100.0}
+    sleeps = []
+    monkeypatch.setattr(roleplay_case.time, "monotonic", lambda: clock["now"])
+    monkeypatch.setattr(roleplay_case.time, "sleep", lambda s: sleeps.append(s))
+    monkeypatch.setattr(roleplay_case, "_last_request_at", {"gemini": 98.0})
+    interval = roleplay_case.MIN_REQUEST_INTERVAL_SECONDS["gemini"]
+    assert interval >= 4.0
+    roleplay_case._pace("gemini")
+    assert sleeps == [interval - 2.0]
+    roleplay_case._pace("default")
+    roleplay_case._pace("default")
+    assert len(sleeps) == 1

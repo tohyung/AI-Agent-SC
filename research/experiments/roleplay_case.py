@@ -8,6 +8,7 @@ import json
 import os
 from pathlib import Path
 import sys
+import time
 import traceback
 from typing import Any
 
@@ -24,6 +25,22 @@ from research.formalization.repair_policy import REPAIR_POLICY_VERSION
 ROOT = Path(__file__).resolve().parents[2]
 RUN_DIR = ROOT / "runs" / "E3-Roleplay-Batch20"
 REMAINING_RUN_DIR = ROOT / "runs" / "E3-Roleplay-Batch80"
+# Secondary providers are chosen only by explicit argument (see ModelTransport).
+PROVIDERS = ("default", "gemini")
+# Free-tier Gemini allows about 15 requests per minute; space requests so a
+# per-minute 429 does not end a case attempt as provider_limit.
+MIN_REQUEST_INTERVAL_SECONDS = {"default": 0.0, "gemini": 5.0}
+_last_request_at: dict[str, float] = {}
+
+
+def _pace(provider: str) -> None:
+    interval = MIN_REQUEST_INTERVAL_SECONDS[provider]
+    last = _last_request_at.get(provider)
+    if interval and last is not None:
+        wait = interval - (time.monotonic() - last)
+        if wait > 0:
+            time.sleep(wait)
+    _last_request_at[provider] = time.monotonic()
 
 
 def _case_at(index: int) -> dict[str, Any]:
@@ -177,7 +194,10 @@ def run_case(index: int, *, answers: list[str] | None = None,
              expectation: dict[str, Any] | None = None,
              revision: str | None = None,
              repair_attempts: int = 0,
-             run_dir: Path | None = None) -> dict[str, Any]:
+             run_dir: Path | None = None,
+             provider: str = "default") -> dict[str, Any]:
+    if provider not in PROVIDERS:
+        raise ValueError(f"provider must be one of {', '.join(PROVIDERS)}")
     case = _case_at(index)
     if run_dir is None:
         run_dir = RUN_DIR if index <= 20 else REMAINING_RUN_DIR
@@ -262,9 +282,11 @@ def run_case(index: int, *, answers: list[str] | None = None,
         return payload
 
     def before_request(phase: str) -> None:
+        _pace(provider)
         with physical_journal.open("a", encoding="utf-8") as writer:
             writer.write(json.dumps({
                 "case_id": case["id"], "attempt": attempt, "phase": phase,
+                "provider": provider,
                 "reserved_at_utc": datetime.now(timezone.utc).isoformat(),
             }, ensure_ascii=False) + "\n")
             writer.flush()
@@ -272,7 +294,8 @@ def run_case(index: int, *, answers: list[str] | None = None,
 
     transport = ModelTransport(before_request=before_request, api_style="chat",
                                max_tokens=16000, disable_reasoning=True,
-                               retry_empty=False, request_json_object=False)
+                               retry_empty=False, request_json_object=False,
+                               provider=None if provider == "default" else provider)
     journaled = JournaledModel(transport, case_dir / "logical-model-outputs.jsonl")
     replayed_model = (SavedContractReplayModel(journaled, contract_replay[1],
                                                contract_replay[0])
@@ -315,6 +338,8 @@ def run_case(index: int, *, answers: list[str] | None = None,
     payload = {
         "case_id": case["id"], "case_index": index, "attempt": attempt,
         "simulation_only": True,
+        "model_provider": provider,
+        "model_name": getattr(transport, "model", None),
         "roleplay_answers_supplied": asked,
         "roleplay_revision": revision,
         "replayed_core_candidate_id": replay[1] if replay else None,
@@ -357,6 +382,10 @@ def main() -> int:
     parser.add_argument("--replay-contract-id")
     parser.add_argument("--expectation-file", type=Path)
     parser.add_argument("--repair-attempts", type=int, default=0)
+    parser.add_argument("--provider", choices=PROVIDERS, default="default",
+                        help="default = the LLM_* model; gemini = the GEMINI_* model")
+    parser.add_argument("--run-dir", type=Path,
+                        help="evidence directory (default: the E3 batch directory)")
     args = parser.parse_args()
     answers = json.loads(args.answers_file.read_text(encoding="utf-8")) if args.answers_file else []
     expectation = (json.loads(args.expectation_file.read_text(encoding="utf-8"))
@@ -367,7 +396,8 @@ def main() -> int:
                       repair_candidate_id=args.repair_candidate_id,
                       replay_contract_id=args.replay_contract_id,
                       expectation=expectation,
-                      revision=revision, repair_attempts=args.repair_attempts)
+                      revision=revision, repair_attempts=args.repair_attempts,
+                      run_dir=args.run_dir, provider=args.provider)
     return 3 if result["provider_limit"] else 0
 
 
