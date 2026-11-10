@@ -1,8 +1,12 @@
-# Báo cáo các câu hỏi nghiên cứu RQ1–RQ4
+# Báo cáo các câu hỏi nghiên cứu (RQ1, RQ2; RQ3 và RQ4 chưa thực hiện)
 
 Tư liệu để viết bài báo. Ghi ngày 2026-11-10, dựa trên E2–E5 (docs/JOURNAL.md,
 docs/E4-Formalization-Comparison.md, docs/E5-Evidence-Gates.md). Mọi con số dưới đây đều có trong
 tài liệu hoặc dữ liệu nêu ở mục 8. Chỗ nào chưa đo thì ghi là chưa đo.
+
+**RQ3 và RQ4 chưa được thực hiện**, nên chưa có kết luận nào cho hai câu này. Mục 4 và 5 chỉ ghi dữ
+liệu đã có sẵn để dùng khi làm thí nghiệm. Khi làm xong, hai mục này sẽ được viết theo cùng khung với
+RQ1 và RQ2.
 
 Bốn câu hỏi lấy từ paper (mục 7.1):
 
@@ -19,8 +23,8 @@ Bốn câu hỏi lấy từ paper (mục 7.1):
 | --- | --- | --- |
 | RQ1 | **Một phần** | Bước trích intent bằng AFF giữ đúng nghĩa tốt hơn hẳn DCF trên tập test đóng (quyết định đúng trên core hợp lệ 0,47 → 0,86). Nhưng 3/19 intent được chấp nhận vẫn khác nghĩa tham chiếu, bước "duyệt" là người dùng mô phỏng, và nhãn chưa có hai người phân xử độc lập. |
 | RQ2 | **Có** (theo quy tắc chốt trước) | Trên 2 259 biến thể của 99 case, cổng đầy đủ giảm chấp nhận sai từ 100% xuống 19% và vẫn chấp nhận 94,4% hợp đồng đúng; từ chối nhầm 0,8%. Đạt cả ở tập giữ lại. Khoảng 19% lỗi, chủ yếu là dời hạn, vẫn lọt qua. |
-| RQ3 | **Chưa trả lời theo đúng định nghĩa** | Chưa có nhánh đối chứng dùng cùng tài nguyên. Bằng chứng mô tả: quy trình E3 cho hợp đồng đúng ở 47/56 case dev và 34/43 case test; vòng sinh lại nâng tỷ lệ hợp đồng đúng từ 38/54 lên 47/54 (dev) và từ 28/36 lên 34/36 (test). |
-| RQ4 | **Một phần** | Có số lượt gọi model, số lượt chạy, số câu trả lời của người dùng mô phỏng, chi phí cổng và tỷ lệ không quyết định. Chưa đo độ trễ model, chưa đo công duyệt của người thật. |
+| RQ3 | **Chưa thực hiện** | Chưa có kết luận. |
+| RQ4 | **Chưa thực hiện** | Chưa có kết luận. |
 
 ## 1. Bối cảnh chung
 
@@ -81,7 +85,7 @@ So sánh dùng McNemar chính xác. Nghĩa của intent được so với hợp 
   mâu thuẫn ở 12 case không có mâu thuẫn. Nhưng AFF chấp nhận sai 3 case có mâu thuẫn, DCF chấp nhận
   sai 1.
 - **Bằng chứng từ E5:** so hợp đồng cuối của E3 với yêu cầu mà người dùng mô phỏng đã xác nhận,
-  47/54 hợp đồng ĐÚNG ở dev và 34/36 ở test (mục 4). Đây là bằng chứng về cả chuỗi
+  47/54 hợp đồng ĐÚNG ở dev và 34/36 ở test (`docs/E5-Adjudication.json`). Đây là bằng chứng về cả chuỗi
   intent → hợp đồng, không riêng bước intent.
 
 ### Điểm mạnh
@@ -228,89 +232,40 @@ Scenario → Oracle (đầy đủ).
 
 ## 4. RQ3: toàn bộ quy trình có cải thiện mức khớp hành vi cuối cùng không
 
-### Hiện trạng
+**Chưa thực hiện. Chưa có kết luận.**
 
-**Chưa có thí nghiệm đúng định nghĩa.** Định nghĩa đòi một nhánh đối chứng, ví dụ sinh hợp đồng trực
-tiếp từ prompt không qua cổng, chạy trên cùng các case với cùng ngân sách request, rồi so mức khớp
-hành vi cuối cùng. Phần dưới đây chỉ là bằng chứng mô tả từ E2 và E3.
+Câu hỏi đòi một nhánh đối chứng, ví dụ sinh hợp đồng trực tiếp từ prompt không qua cổng, chạy trên
+cùng các case với cùng ngân sách request, rồi so mức khớp hành vi cuối cùng. Thí nghiệm này chưa được
+thiết kế hay chạy.
 
-### Bằng chứng có được
+Dữ liệu đã có sẵn, chưa phải là kết quả:
 
-- **E2 Online Tuning** (Nemotron, 20 case đầu, trần 48 request): chỉ 6/20 case được thử; cả 6 tới bước
-  kiểm kích thước giao dịch; 14 case hết ngân sách. Hợp đồng do compiler tất định sinh, không phải model.
-- **E3 Roleplay:** mỗi case chạy qua pipeline chính, có người dùng mô phỏng. Bảng dưới là trạng thái
-  cuối, kèm kết quả phân xử của hợp đồng cuối.
+- Trạng thái cuối của E3 cho 56 case dev (Nemotron, DCF) và 43 case test (Gemini, DCF), trong
+  `runs/roleplay-main-batch*` và `runs/E3-Roleplay-Holdout`.
+- Nhãn phân xử của mọi hợp đồng E3 do model sinh, kể cả hợp đồng ở lượt giữa, trong
+  `docs/E5-Adjudication.json`.
+- Kết quả E2 Online Tuning: 6/20 case được thử trong 48 request, hợp đồng do compiler tất định sinh.
 
-| | Dev 1–56 (Nemotron, DCF) | Test 58–100 (Gemini, DCF) |
-| --- | --- | --- |
-| Tới bước kiểm kích thước, hợp đồng ĐÚNG | 46 | 34 |
-| Tới bước kiểm kích thước, hợp đồng SAI | **7** | **0** |
-| Dừng trước, hợp đồng ĐÚNG | 1 (case 30) | 0 |
-| Dừng trước, hợp đồng SAI | 0 | 2 (case 67, 95) |
-| Không sinh hợp đồng | 2 (case 8 `UNSUPPORTED` đúng; case 45 `WAITING_USER`) | 7 (58, 60, 62 bị chặn ở bước sinh hợp đồng; 76 intent không hợp lệ; 75, 77, 100 `infeasible` bị chặn thay vì `UNSUPPORTED`) |
-| **Case có hợp đồng cuối ĐÚNG** | **47/56 = 84%** | **34/43 = 79%** |
+Lưu ý khi thiết kế:
 
-- **Vòng sinh lại có giúp:** hợp đồng đầu tiên của mỗi case ĐÚNG ở 38/54 case (dev) và 28/36 (test);
-  hợp đồng cuối ĐÚNG ở 47/54 và 34/36.
-- **Ở test, không hợp đồng SAI nào tới được trạng thái cuối tích cực.** Ở dev có 7: 5 dùng token hex,
-  2 dùng `Notify` cho phép trả sớm.
-
-### Điểm mạnh
-
-- Có số liệu đầu-cuối trên 99 case, đi qua cả bước kiểm kích thước giao dịch thật.
-- Hợp đồng cuối được phân xử theo yêu cầu đã xác nhận.
-- Có tập test chạy theo đúng quy trình như dev.
-
-### Điểm yếu
-
-- **Không có đối chứng dùng cùng tài nguyên,** nên chưa nói được quy trình "cải thiện" so với cái gì.
-  So hợp đồng đầu với hợp đồng cuối không phải là đối chứng: hợp đồng đầu cũng đã qua bước làm rõ
-  intent.
-- **Người dùng mô phỏng vừa viết intent vừa viết kịch bản kỳ vọng,** nên mức khớp được đo phần nào theo
-  chính tiêu chuẩn của người đó.
-- **Dev và test khác nhau ở ba điểm:** model (Nemotron so với Gemini), lời báo lỗi của validator (đổi
-  trước case 58), và số lượt chạy (trung bình 10,0 so với 7,3). So sánh hai cột không phải là so một
-  biến.
-- **Case `infeasible` ở test bị chặn vì lỗi khác** chứ không dừng đúng ở `UNSUPPORTED` (0/3).
-
-### Hạn chế và rào cản
-
-- Một nhánh đối chứng sẽ cần thêm khoảng 300–400 request Gemini cho 99 case, tức khoảng 1 ngày quota
-  miễn phí. Nhánh đó cũng cần người dùng mô phỏng đóng vai giống hệt cho cả hai nhánh.
-- Pipeline chưa dùng AFF.
-- Không có người dùng thật.
+- Pipeline chính hiện dùng DCF, chưa dùng AFF.
+- Dev và test khác nhau về model và về lời báo lỗi của validator.
+- Người dùng mô phỏng phải đóng vai giống hệt ở mọi nhánh.
 
 ## 5. RQ4: chi phí của các biện pháp kiểm soát
 
-### Số liệu có được
+**Chưa thực hiện. Chưa có kết luận.**
 
-| Hạng mục | Giá trị | Nguồn |
-| --- | --- | --- |
-| Lượt gọi model cho mỗi case, E3 dev | ~10,6 (605 lượt ghi nhận cho 57 case, Nemotron) | `runs/roleplay-main-batch*` |
-| Lượt gọi model cho mỗi case, E3 test | 8,4 (363 cho 43 case, Gemini) | session E3 |
-| Lượt chạy pipeline cho mỗi case | dev: trung vị 8, trung bình 10,0, tối đa 24; test: trung vị 7, trung bình 7,3, tối đa 14 | như trên |
-| Câu trả lời của người dùng mô phỏng cho mỗi case | dev 5,3; test 4,6 | như trên |
-| Request cho mỗi intent hợp lệ, bước trích intent (E4 test) | AFF 1,90–2,02; DCF 4,10–4,24 | E4 |
-| Chi phí cổng (E5) | 0,57 giây/hợp đồng; 8,6 lần gọi bộ thực thi tham chiếu + 1 lần SMT; 0 request model | E5 |
-| Tỷ lệ không quyết định (Oracle), Variants gộp 99 case | 4,8% hợp đồng đúng; 0% hợp đồng sai | E5 |
-| Tỷ lệ không quyết định (Oracle), E3 gộp 99 case | 26% hợp đồng đúng; 31% hợp đồng sai (chủ yếu vì không có kịch bản) | E5 |
-| Thời gian thực để chạy E3 test | ~2 ngày, do giới hạn 500 request/ngày | session E3 |
+Dữ liệu đã có sẵn, chưa phải là kết quả:
 
-### Điểm mạnh
+- Số lượt chạy và số lượt gọi model ghi trong từng `attempt-*.json` của E3. Ở dev, một số lượt chạy cũ
+  ghi lượt gọi theo trường khác nhau, nên cần đếm lại trước khi dùng.
+- Số câu trả lời của người dùng mô phỏng cho mỗi case (chỉ là chỉ số đại diện, không phải công duyệt
+  của người thật).
+- Request cho mỗi intent hợp lệ ở bước trích intent (E4).
+- Chi phí và tỷ lệ ABSTAIN của các cổng (E5, mục 9.4 của docs/E5-Evidence-Gates.md).
 
-Các cổng gần như không tốn gì: dưới 1 giây, không gọi model. AFF giảm khoảng một nửa số request ở
-bước trích intent. Tỷ lệ không quyết định được đo và báo riêng, không gộp vào "đạt".
-
-### Điểm yếu, hạn chế
-
-- **Chưa đo độ trễ của model.** Bản ghi không lưu thời gian từng lượt gọi một cách nhất quán.
-- **Chưa đo công duyệt của người thật.** Số câu trả lời mô phỏng chỉ là chỉ số đại diện. Một người dùng
-  thật có thể cần nhiều hoặc ít lượt hơn.
-- **Lượt gọi ở dev đếm chưa chắc chắn.** Một số lượt chạy cũ ghi lượt gọi theo trường khác nhau, nên
-  605 là số ghi nhận được, có thể thiếu.
-- **Chi phí phân xử tay của E5 không được đo.** Đó là công của người phân xử, cần thiết vì nhãn máy của
-  E3 không dùng được.
-- **Chi phí cổng tính trong WSL.** Qua bridge Windows thì chậm hơn khoảng 20 lần (~1,4 giây mỗi lần gọi).
+Chưa có: độ trễ từng lượt gọi model, công duyệt của người thật.
 
 ## 6. Mối đe dọa tính hợp lệ chung
 
