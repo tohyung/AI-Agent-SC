@@ -3,80 +3,486 @@
  "adjudicator": "Claude (one reviewer, as the project lead decided on 2026-11-10)",
  "date": "2026-11-10",
  "verdicts": {
-  "case-01-E3-d35d8cd931cb": ["WRONG", "token_name \"ADA\" is not ADA (rule 1)"],
-  "case-01-E3-2550069ee874": ["WRONG", "token_name \"ADA\" is not ADA (rule 1)"],
-  "case-01-E3-597219be6a99": ["RIGHT", "matches confirmed 00:00 VN deadlines, price threshold and refunds"],
-  "case-02-E3-9fa29e03c12b": ["RIGHT", "0 refund, 1 keeps 3 and returns 20, timeout refund"],
-  "case-03-E3-9f307d0cbc3d": ["RIGHT", "Nga 1 pays Huy, 0 or timeout refunds Dũng"],
-  "case-04-E3-6bd176cc0adf": ["WRONG", "GOLD written as token_name \"474f4c44\" (hex text), not the name GOLD (rule 1)"],
-  "case-05-E3-2ed0718439ae": ["RIGHT", "confirmed 34 ADA and 17+17 milestones; machine WRONG only because the hidden fact is 32 ADA"],
-  "case-06-E3-68c84ccdca64": ["WRONG", "Notify guard requires time >= the When timeout, so it can never fire; Nga is never paid (rule 4)"],
-  "case-06-E3-898262ea9d5b": ["WRONG", "first 17.5 ADA is never paid at 15/01; remainder refunded to Huy (rule 4)"],
-  "case-06-E3-a3b8e328e6fb": ["WRONG", "same unreachable Notify guard as 68c84; Nga never paid (rule 4)"],
-  "case-06-E3-dd7d6d2f8ae3": ["WRONG", "Notify-if-true lets anyone release each half before its earliest time (rule 4)"],
-  "case-07-E3-f0da2109f82a": ["WRONG", "GOLD as hex token_name (rule 1)"],
-  "case-07-E3-4c21cb7b0fe1": ["RIGHT", "swap matches confirmed deadlines and refunds"],
-  "case-09-E3-e222c63a5a93": ["RIGHT", "confirmed 24 ADA, approve-only Choice; machine WRONG because the hidden fact is 44 ADA"],
-  "case-10-E3-20c01e408662": ["RIGHT", "price >= 50 pays Noah, else and timeout refund Kate"],
-  "case-11-E3-fd90a75994aa": ["RIGHT", "confirmed 12 ADA with Kate as inspector; 0 refund, 1 pays 5/7; machine WRONG because roles and amount differ from hidden facts"],
-  "case-12-E3-0fa4fa377643": ["RIGHT", "confirmed approve-only, no early rejection; machine WRONG because the reference has a reject Choice"],
-  "case-13-E3-2a6e64a9dfda": ["RIGHT", "confirmed Sơn as inspector and both deadlines; machine WRONG because roles differ from hidden facts"],
-  "case-14-E3-a7a85d3699f4": ["RIGHT", "Alex 1 pays Sam, 0 or timeout refunds Olivia"],
-  "case-15-E3-54d26a95017f": ["WRONG", "payments gated by Notify-if-true, early release possible, timeout closes without paying Tina (rule 4)"],
-  "case-15-E3-472271538160": ["RIGHT", "two time gates pay 31 ADA each at the confirmed release times"],
-  "case-16-E3-554de8c21f77": ["WRONG", "GOLD as hex token_name (rule 1)"],
-  "case-16-E3-b75ca9d755b6": ["RIGHT", "swap matches confirmed terms"],
-  "case-17-E3-5ce4d8d5e1b7": ["RIGHT", "independent halves with explicit 0 refunds, as confirmed; part two may be approved right after part one, a reasonable reading of 'after that first approval'"],
-  "case-18-E3-46382e65d416": ["RIGHT", "price threshold contract matches confirmed terms"],
-  "case-19-E3-a03b51799ae0": ["WRONG", "GOLD as hex token_name (rule 1)"],
-  "case-19-E3-5259e90166c0": ["RIGHT", "swap matches confirmed terms"],
-  "case-20-E3-2712bffec5b2": ["RIGHT", "both 38.5 ADA contributions paid to Huy, refund An if Dũng misses"],
-  "case-21-E3-847f7659c662": ["WRONG", "Notify-gated payouts, timeout closes without paying Giang (rule 4)"],
-  "case-21-E3-f3b40e6e2ff9": ["WRONG", "Notify-if-true allows release before the earliest times the user confirmed (rule 4)"],
-  "case-22-E3-62c956baf35c": ["RIGHT", "loan disbursed on deposit, 85 ADA repayment to Chi, no fake refund"],
-  "case-23-E3-ad33b2ad9d97": ["RIGHT", "0 cancel pays 3 fee and refunds 83, 1 pays 86, timeout refunds"],
-  "case-24-E3-8a08ac2ae98b": ["WRONG", "Notify-gated payouts, timeout closes without paying Lan (rule 4)"],
-  "case-24-E3-5c98e7073702": ["WRONG", "Notify-gated payouts, timeout closes without paying Lan (rule 4)"],
-  "case-24-E3-ff3049f77d12": ["RIGHT", "two time gates pay 44.5 ADA each at the confirmed times"],
-  "case-25-E3-58b97d0a54bc": ["RIGHT", "confirmed 91 ADA principal and 96 repayment; machine WRONG because the hidden fact is 92 ADA"],
-  "case-26-E3-3bb2401a8a9a": ["WRONG", "pays 95 ADA from Grace's 47.5 ADA account (partial pay, rule 6)"],
-  "case-26-E3-468f4b8d44a8": ["WRONG", "pays 95 ADA from each 47.5 ADA account (rule 6)"],
-  "case-26-E3-7eb0ba6a6e1a": ["WRONG", "pays 95 ADA from each 47.5 ADA account (rule 6)"],
-  "case-26-E3-f70048291b58": ["WRONG", "pays 95 ADA from Grace's 47.5 ADA account (rule 6)"],
-  "case-26-E3-7aa6b1a96eba": ["RIGHT", "47.5 + 47.5 to Maya, refund Grace if Jack misses"],
-  "case-27-E3-2742fa611cb9": ["RIGHT", "confirmed 29 ADA with approve, active reject and no-decision paths (1 pays Kate, 2 refunds); machine WRONG because the hidden fact is 98 ADA"],
-  "case-28-E3-1032b1070f1b": ["RIGHT", "loan 101 disbursed, 109 repayment to Minh, no fake refund"],
-  "case-29-E3-0f97fc0f04dd": ["RIGHT", "loan flow as confirmed; funds pass through an account role named 'contract', which the user did not constrain"],
-  "case-30-E3-574c92b301f6": ["RIGHT", "53.5 + 53.5 to Rita, refund Kate if Noah misses"],
-  "case-31-E3-56ba15d06f3f": ["WRONG", "Notify-gated payouts, timeout closes without paying Olivia (rule 4)"],
-  "case-31-E3-abdd5b13bde4": ["RIGHT", "account owned by Kate as confirmed; time gates at the confirmed 00:00 VN release times"],
-  "case-32-E3-28570bf5c4fb": ["RIGHT", "confirmed dates in February 2027 at noon; machine WRONG because the hidden dates differ"],
-  "case-33-E3-adb308d7f5c5": ["RIGHT", "two time gates of 58 ADA at the confirmed noon release times"],
-  "case-34-E3-cb4fffe8f819": ["RIGHT", "confirmed approve-only by Trang, timeout refund; machine WRONG because the reference has a reject Choice"],
-  "case-34-E3-a14c97e107d0": ["RIGHT", "same behaviour as cb4fffe8"],
-  "case-35-E3-3b6435d94f9e": ["WRONG", "no repayment Deposit for Yến; the 83 ADA repayment path is missing"],
-  "case-35-E3-8e00d9ccef21": ["RIGHT", "confirmed 75 ADA loan and 83 ADA repayment; machine WRONG because the hidden principal differs"],
-  "case-36-E3-4ccd4e1a8b84": ["RIGHT", "loan 125 and 127 repayment at the confirmed 19:00 deadlines"],
-  "case-37-E3-49797491ca29": ["RIGHT", "two Choice ranges 50..100 and 0..49 encode the threshold exactly"],
-  "case-38-E3-1ba1c1ff9b65": ["RIGHT", "confirmed: Sam pays, Tina 1 cancels (4 fee, 127 back), 0 completes; machine WRONG because roles differ from hidden facts"],
-  "case-39-E3-0bc89754f605": ["RIGHT", "confirmed: Tina pays, Will 1 cancels (5 fee, 129 back), 0 completes; machine WRONG because roles differ"],
-  "case-40-E3-01391b72a402": ["RIGHT", "1 cancels with 6 ADA fee, 0 pays all, timeout refunds, as confirmed; machine WRONG is an encoding difference"],
-  "case-41-E3-52fc26b20f5f": ["WRONG", "GOLD as hex token_name (rule 1)"],
-  "case-42-E3-aa7862a83d61": ["RIGHT", "sequential milestones as confirmed; Chi's value 0 refunds her own funds early, which only moves a confirmed refund earlier"],
-  "case-43-E3-a3f57fa56bf6": ["RIGHT", "1 pays Huy, 0 or timeout refunds Dũng"],
-  "case-44-E3-3845eadb6217": ["RIGHT", "Phúc 1 pays Lan, 0 or timeout refunds Giang"],
-  "case-46-E3-1d05a880c393": ["RIGHT", "two approve-only milestones of 77.5 ADA with timeout refunds, as confirmed"],
-  "case-47-E3-9644dd28f814": ["WRONG", "GOLD as hex token_name (rule 1)"],
-  "case-48-E3-6d3772759ae5": ["RIGHT", "two Choice ranges encode the 50 threshold exactly"],
-  "case-49-E3-0c80f96aaca9": ["RIGHT", "loan 164 and 172 repayment as confirmed"],
-  "case-50-E3-3771fe4fd2c9": ["WRONG", "GOLD as hex token_name (rule 1)"],
-  "case-51-E3-514542fd6788": ["WRONG", "party misspelled Quỹnh (not Quỳnh) and GOLD as hex token_name (rules 1-2)"],
-  "case-51-E3-d7279d07e591": ["WRONG", "party misspelled Quỹnh and GOLD as hex token_name (rules 1-2)"],
-  "case-51-E3-9a9a41b5026e": ["WRONG", "GOLD as hex token_name (rule 1)"],
-  "case-52-E3-6f3759460475": ["RIGHT", "confirmed: no cancellation by the deadline pays Tú 173 ADA; machine WRONG because the hidden facts refund instead"],
-  "case-53-E3-161b70ad8fa0": ["RIGHT", "88 + 88 to Đạt, refund Thảo if Uyên misses, confirmed 00:00 deadlines"],
-  "case-54-E3-75aa29edc09a": ["RIGHT", "confirmed deadlines and 1 pay / 0 refund; machine WRONG because the hidden dates differ"],
-  "case-55-E3-3ea7d00badbc": ["RIGHT", "confirmed choice 1 pays Yến, 2 refunds Tú, timeout refunds; machine WRONG is an encoding difference"],
-  "case-56-E3-646538a73449": ["RIGHT", "confirmed choice 1 pays Đạt, 2 refunds Uyên; machine WRONG because the hidden dates differ"]
- }
+  "case-01-E3-d35d8cd931cb": [
+   "WRONG",
+   "token_name \"ADA\" is not ADA (rule 1)"
+  ],
+  "case-01-E3-2550069ee874": [
+   "WRONG",
+   "token_name \"ADA\" is not ADA (rule 1)"
+  ],
+  "case-01-E3-597219be6a99": [
+   "RIGHT",
+   "matches confirmed 00:00 VN deadlines, price threshold and refunds"
+  ],
+  "case-02-E3-9fa29e03c12b": [
+   "RIGHT",
+   "0 refund, 1 keeps 3 and returns 20, timeout refund"
+  ],
+  "case-03-E3-9f307d0cbc3d": [
+   "RIGHT",
+   "Nga 1 pays Huy, 0 or timeout refunds Dũng"
+  ],
+  "case-04-E3-6bd176cc0adf": [
+   "WRONG",
+   "GOLD written as token_name \"474f4c44\" (hex text), not the name GOLD (rule 1)"
+  ],
+  "case-05-E3-2ed0718439ae": [
+   "RIGHT",
+   "confirmed 34 ADA and 17+17 milestones; machine WRONG only because the hidden fact is 32 ADA"
+  ],
+  "case-06-E3-68c84ccdca64": [
+   "WRONG",
+   "Notify guard requires time >= the When timeout, so it can never fire; Nga is never paid (rule 4)"
+  ],
+  "case-06-E3-898262ea9d5b": [
+   "WRONG",
+   "first 17.5 ADA is never paid at 15/01; remainder refunded to Huy (rule 4)"
+  ],
+  "case-06-E3-a3b8e328e6fb": [
+   "WRONG",
+   "same unreachable Notify guard as 68c84; Nga never paid (rule 4)"
+  ],
+  "case-06-E3-dd7d6d2f8ae3": [
+   "WRONG",
+   "Notify-if-true lets anyone release each half before its earliest time (rule 4)"
+  ],
+  "case-07-E3-f0da2109f82a": [
+   "WRONG",
+   "GOLD as hex token_name (rule 1)"
+  ],
+  "case-07-E3-4c21cb7b0fe1": [
+   "RIGHT",
+   "swap matches confirmed deadlines and refunds"
+  ],
+  "case-09-E3-e222c63a5a93": [
+   "RIGHT",
+   "confirmed 24 ADA, approve-only Choice; machine WRONG because the hidden fact is 44 ADA"
+  ],
+  "case-10-E3-20c01e408662": [
+   "RIGHT",
+   "price >= 50 pays Noah, else and timeout refund Kate"
+  ],
+  "case-11-E3-fd90a75994aa": [
+   "RIGHT",
+   "confirmed 12 ADA with Kate as inspector; 0 refund, 1 pays 5/7; machine WRONG because roles and amount differ from hidden facts"
+  ],
+  "case-12-E3-0fa4fa377643": [
+   "RIGHT",
+   "confirmed approve-only, no early rejection; machine WRONG because the reference has a reject Choice"
+  ],
+  "case-13-E3-2a6e64a9dfda": [
+   "RIGHT",
+   "confirmed Sơn as inspector and both deadlines; machine WRONG because roles differ from hidden facts"
+  ],
+  "case-14-E3-a7a85d3699f4": [
+   "RIGHT",
+   "Alex 1 pays Sam, 0 or timeout refunds Olivia"
+  ],
+  "case-15-E3-54d26a95017f": [
+   "WRONG",
+   "payments gated by Notify-if-true, early release possible, timeout closes without paying Tina (rule 4)"
+  ],
+  "case-15-E3-472271538160": [
+   "RIGHT",
+   "two time gates pay 31 ADA each at the confirmed release times"
+  ],
+  "case-16-E3-554de8c21f77": [
+   "WRONG",
+   "GOLD as hex token_name (rule 1)"
+  ],
+  "case-16-E3-b75ca9d755b6": [
+   "RIGHT",
+   "swap matches confirmed terms"
+  ],
+  "case-17-E3-5ce4d8d5e1b7": [
+   "RIGHT",
+   "independent halves with explicit 0 refunds, as confirmed; part two may be approved right after part one, a reasonable reading of 'after that first approval'"
+  ],
+  "case-18-E3-46382e65d416": [
+   "RIGHT",
+   "price threshold contract matches confirmed terms"
+  ],
+  "case-19-E3-a03b51799ae0": [
+   "WRONG",
+   "GOLD as hex token_name (rule 1)"
+  ],
+  "case-19-E3-5259e90166c0": [
+   "RIGHT",
+   "swap matches confirmed terms"
+  ],
+  "case-20-E3-2712bffec5b2": [
+   "RIGHT",
+   "both 38.5 ADA contributions paid to Huy, refund An if Dũng misses"
+  ],
+  "case-21-E3-847f7659c662": [
+   "WRONG",
+   "Notify-gated payouts, timeout closes without paying Giang (rule 4)"
+  ],
+  "case-21-E3-f3b40e6e2ff9": [
+   "WRONG",
+   "Notify-if-true allows release before the earliest times the user confirmed (rule 4)"
+  ],
+  "case-22-E3-62c956baf35c": [
+   "RIGHT",
+   "loan disbursed on deposit, 85 ADA repayment to Chi, no fake refund"
+  ],
+  "case-23-E3-ad33b2ad9d97": [
+   "RIGHT",
+   "0 cancel pays 3 fee and refunds 83, 1 pays 86, timeout refunds"
+  ],
+  "case-24-E3-8a08ac2ae98b": [
+   "WRONG",
+   "Notify-gated payouts, timeout closes without paying Lan (rule 4)"
+  ],
+  "case-24-E3-5c98e7073702": [
+   "WRONG",
+   "Notify-gated payouts, timeout closes without paying Lan (rule 4)"
+  ],
+  "case-24-E3-ff3049f77d12": [
+   "RIGHT",
+   "two time gates pay 44.5 ADA each at the confirmed times"
+  ],
+  "case-25-E3-58b97d0a54bc": [
+   "RIGHT",
+   "confirmed 91 ADA principal and 96 repayment; machine WRONG because the hidden fact is 92 ADA"
+  ],
+  "case-26-E3-3bb2401a8a9a": [
+   "WRONG",
+   "pays 95 ADA from Grace's 47.5 ADA account (partial pay, rule 6)"
+  ],
+  "case-26-E3-468f4b8d44a8": [
+   "WRONG",
+   "pays 95 ADA from each 47.5 ADA account (rule 6)"
+  ],
+  "case-26-E3-7eb0ba6a6e1a": [
+   "WRONG",
+   "pays 95 ADA from each 47.5 ADA account (rule 6)"
+  ],
+  "case-26-E3-f70048291b58": [
+   "WRONG",
+   "pays 95 ADA from Grace's 47.5 ADA account (rule 6)"
+  ],
+  "case-26-E3-7aa6b1a96eba": [
+   "RIGHT",
+   "47.5 + 47.5 to Maya, refund Grace if Jack misses"
+  ],
+  "case-27-E3-2742fa611cb9": [
+   "RIGHT",
+   "confirmed 29 ADA with approve, active reject and no-decision paths (1 pays Kate, 2 refunds); machine WRONG because the hidden fact is 98 ADA"
+  ],
+  "case-28-E3-1032b1070f1b": [
+   "RIGHT",
+   "loan 101 disbursed, 109 repayment to Minh, no fake refund"
+  ],
+  "case-29-E3-0f97fc0f04dd": [
+   "RIGHT",
+   "loan flow as confirmed; funds pass through an account role named 'contract', which the user did not constrain"
+  ],
+  "case-30-E3-574c92b301f6": [
+   "RIGHT",
+   "53.5 + 53.5 to Rita, refund Kate if Noah misses"
+  ],
+  "case-31-E3-56ba15d06f3f": [
+   "WRONG",
+   "Notify-gated payouts, timeout closes without paying Olivia (rule 4)"
+  ],
+  "case-31-E3-abdd5b13bde4": [
+   "RIGHT",
+   "account owned by Kate as confirmed; time gates at the confirmed 00:00 VN release times"
+  ],
+  "case-32-E3-28570bf5c4fb": [
+   "RIGHT",
+   "confirmed dates in February 2027 at noon; machine WRONG because the hidden dates differ"
+  ],
+  "case-33-E3-adb308d7f5c5": [
+   "RIGHT",
+   "two time gates of 58 ADA at the confirmed noon release times"
+  ],
+  "case-34-E3-cb4fffe8f819": [
+   "RIGHT",
+   "confirmed approve-only by Trang, timeout refund; machine WRONG because the reference has a reject Choice"
+  ],
+  "case-34-E3-a14c97e107d0": [
+   "RIGHT",
+   "same behaviour as cb4fffe8"
+  ],
+  "case-35-E3-3b6435d94f9e": [
+   "WRONG",
+   "no repayment Deposit for Yến; the 83 ADA repayment path is missing"
+  ],
+  "case-35-E3-8e00d9ccef21": [
+   "RIGHT",
+   "confirmed 75 ADA loan and 83 ADA repayment; machine WRONG because the hidden principal differs"
+  ],
+  "case-36-E3-4ccd4e1a8b84": [
+   "RIGHT",
+   "loan 125 and 127 repayment at the confirmed 19:00 deadlines"
+  ],
+  "case-37-E3-49797491ca29": [
+   "RIGHT",
+   "two Choice ranges 50..100 and 0..49 encode the threshold exactly"
+  ],
+  "case-38-E3-1ba1c1ff9b65": [
+   "RIGHT",
+   "confirmed: Sam pays, Tina 1 cancels (4 fee, 127 back), 0 completes; machine WRONG because roles differ from hidden facts"
+  ],
+  "case-39-E3-0bc89754f605": [
+   "RIGHT",
+   "confirmed: Tina pays, Will 1 cancels (5 fee, 129 back), 0 completes; machine WRONG because roles differ"
+  ],
+  "case-40-E3-01391b72a402": [
+   "RIGHT",
+   "1 cancels with 6 ADA fee, 0 pays all, timeout refunds, as confirmed; machine WRONG is an encoding difference"
+  ],
+  "case-41-E3-52fc26b20f5f": [
+   "WRONG",
+   "GOLD as hex token_name (rule 1)"
+  ],
+  "case-42-E3-aa7862a83d61": [
+   "RIGHT",
+   "sequential milestones as confirmed; Chi's value 0 refunds her own funds early, which only moves a confirmed refund earlier"
+  ],
+  "case-43-E3-a3f57fa56bf6": [
+   "RIGHT",
+   "1 pays Huy, 0 or timeout refunds Dũng"
+  ],
+  "case-44-E3-3845eadb6217": [
+   "RIGHT",
+   "Phúc 1 pays Lan, 0 or timeout refunds Giang"
+  ],
+  "case-46-E3-1d05a880c393": [
+   "RIGHT",
+   "two approve-only milestones of 77.5 ADA with timeout refunds, as confirmed"
+  ],
+  "case-47-E3-9644dd28f814": [
+   "WRONG",
+   "GOLD as hex token_name (rule 1)"
+  ],
+  "case-48-E3-6d3772759ae5": [
+   "RIGHT",
+   "two Choice ranges encode the 50 threshold exactly"
+  ],
+  "case-49-E3-0c80f96aaca9": [
+   "RIGHT",
+   "loan 164 and 172 repayment as confirmed"
+  ],
+  "case-50-E3-3771fe4fd2c9": [
+   "WRONG",
+   "GOLD as hex token_name (rule 1)"
+  ],
+  "case-51-E3-514542fd6788": [
+   "WRONG",
+   "party misspelled Quỹnh (not Quỳnh) and GOLD as hex token_name (rules 1-2)"
+  ],
+  "case-51-E3-d7279d07e591": [
+   "WRONG",
+   "party misspelled Quỹnh and GOLD as hex token_name (rules 1-2)"
+  ],
+  "case-51-E3-9a9a41b5026e": [
+   "WRONG",
+   "GOLD as hex token_name (rule 1)"
+  ],
+  "case-52-E3-6f3759460475": [
+   "RIGHT",
+   "confirmed: no cancellation by the deadline pays Tú 173 ADA; machine WRONG because the hidden facts refund instead"
+  ],
+  "case-53-E3-161b70ad8fa0": [
+   "RIGHT",
+   "88 + 88 to Đạt, refund Thảo if Uyên misses, confirmed 00:00 deadlines"
+  ],
+  "case-54-E3-75aa29edc09a": [
+   "RIGHT",
+   "confirmed deadlines and 1 pay / 0 refund; machine WRONG because the hidden dates differ"
+  ],
+  "case-55-E3-3ea7d00badbc": [
+   "RIGHT",
+   "confirmed choice 1 pays Yến, 2 refunds Tú, timeout refunds; machine WRONG is an encoding difference"
+  ],
+  "case-56-E3-646538a73449": [
+   "RIGHT",
+   "confirmed choice 1 pays Đạt, 2 refunds Uyên; machine WRONG because the hidden dates differ"
+  ],
+  "case-59-E3-cac552a6bb86": [
+   "RIGHT",
+   "confirmed 120 ADA, Hà's price >= 50 pays Chi, else and timeout refund Đạt"
+  ],
+  "case-61-E3-ae5bf6f45552": [
+   "RIGHT",
+   "1 cancels with 6 ADA fee and 144 refund, 0 or no choice pays Giang 150, as confirmed"
+  ],
+  "case-63-E3-ee7b2d932192": [
+   "RIGHT",
+   "two time gates of 103 ADA at the confirmed 00:00 release times"
+  ],
+  "case-64-E3-6e9b4316416a": [
+   "RIGHT",
+   "209 disbursed on deposit, 211 repayment to Giang, no fake refund"
+  ],
+  "case-65-E3-e6e5338f41e6": [
+   "RIGHT",
+   "Finn 1 pays Iris, 0 or timeout refunds Finn"
+  ],
+  "case-66-E3-5065a2c6ef8f": [
+   "RIGHT",
+   "107.5 + 107.5 to Sơn, refund Huy if Nga misses"
+  ],
+  "case-67-E3-52ebb413f726": [
+   "WRONG",
+   "chooser role is 'Thao', not 'Thảo' (rule 1: wrong party)"
+  ],
+  "case-68-E3-c5e7119a449c": [
+   "WRONG",
+   "parties written as addresses 'Iris', 'Liam', 'Olivia' instead of roles (rule 1)"
+  ],
+  "case-68-E3-0e3e61cc041b": [
+   "RIGHT",
+   "110.5 + 110.5 to Olivia, refund Iris if Liam misses"
+  ],
+  "case-68-E3-247171c191a7": [
+   "RIGHT",
+   "110.5 + 110.5 to Olivia, refund Iris if Liam misses"
+  ],
+  "case-69-E3-8ac33e0ebdc2": [
+   "RIGHT",
+   "0 refund 224, 1 pays 7 to Maya and 217 back, timeout refund"
+  ],
+  "case-70-E3-44b6df1d34bd": [
+   "RIGHT",
+   "1 pays Thảo, 0 refunds at once, timeout refunds"
+  ],
+  "case-71-E3-b61b5e756e17": [
+   "WRONG",
+   "depositor role is 'Quynh', not 'Quỳnh' (rule 1)"
+  ],
+  "case-71-E3-a1f348439b5d": [
+   "RIGHT",
+   "swap with GOLD under the confirmed policy, refunds as confirmed"
+  ],
+  "case-71-E3-4382cb524290": [
+   "RIGHT",
+   "swap with GOLD under the confirmed policy, refunds as confirmed"
+  ],
+  "case-72-E3-735fd16f895c": [
+   "RIGHT",
+   "116.5 + 116.5 to Yến, refund Sơn if Tú misses"
+  ],
+  "case-73-E3-20601dc921ac": [
+   "WRONG",
+   "parties written as addresses instead of roles (rule 1)"
+  ],
+  "case-73-E3-9ede8ad0e6f1": [
+   "RIGHT",
+   "118 + 118 to Will, refund Noah if Rita misses"
+  ],
+  "case-73-E3-f62fa7a0c649": [
+   "RIGHT",
+   "118 + 118 to Will, refund Noah if Rita misses"
+  ],
+  "case-74-E3-b1c8612ab096": [
+   "RIGHT",
+   "Olivia 1 pays Sam, 0 or timeout refunds"
+  ],
+  "case-78-E3-4be6df161b8d": [
+   "RIGHT",
+   "Evan 1 pays Ben, 2 refunds Tina, timeout refunds"
+  ],
+  "case-79-E3-5fe364fb99ca": [
+   "RIGHT",
+   "approve-only milestones; unapproved amounts return to Will through Close, which refunds his own account"
+  ],
+  "case-80-E3-dd5e9204a009": [
+   "RIGHT",
+   "Grace's price >= 50 pays Daisy, else and timeout refund Alex"
+  ],
+  "case-81-E3-79762b4f208a": [
+   "WRONG",
+   "parties written as addresses instead of roles (rule 1)"
+  ],
+  "case-81-E3-959ba4a66ee1": [
+   "RIGHT",
+   "approve-only milestones of 130 ADA with refunds, as confirmed"
+  ],
+  "case-82-E3-a173dce62b6b": [
+   "RIGHT",
+   "Iris's price >= 50 pays Finn, else and timeout refund Clara"
+  ],
+  "case-83-E3-7b38e92a121d": [
+   "RIGHT",
+   "0 refund 266, 1 pays 7 to Huy and 259 back, timeout refund"
+  ],
+  "case-84-E3-babfa03eae53": [
+   "RIGHT",
+   "two time gates of 134.5 ADA at the confirmed release times"
+  ],
+  "case-85-E3-34d81aea6960": [
+   "RIGHT",
+   "confirmed 150 ADA deposit; 0 refund, 1 pays 2 to Minh and 148 back, timeout refund"
+  ],
+  "case-86-E3-68336dde8b32": [
+   "WRONG",
+   "parties written as addresses instead of roles (rule 1)"
+  ],
+  "case-86-E3-885b72dd8e5c": [
+   "RIGHT",
+   "Grace 1 pays Jack, 0 or timeout refunds"
+  ],
+  "case-87-E3-8b43bcbcb534": [
+   "RIGHT",
+   "Lan 1 pays Phúc, 0 or timeout refunds"
+  ],
+  "case-88-E3-ae5c0cc34efa": [
+   "RIGHT",
+   "swap with GOLD under the confirmed policy, refund Minh if Quỳnh misses"
+  ],
+  "case-89-E3-b05216e9969b": [
+   "RIGHT",
+   "two time gates of 142 ADA at the confirmed release times"
+  ],
+  "case-90-E3-b2a4b1e3c945": [
+   "RIGHT",
+   "Kate 1 pays Noah, 0 or timeout refunds"
+  ],
+  "case-91-E3-06f1926d5757": [
+   "RIGHT",
+   "confirmed 200 ADA; Liam 1 pays Olivia, 0 or timeout refunds"
+  ],
+  "case-92-E3-85362d91acb3": [
+   "RIGHT",
+   "1 cancels with 2 ADA fee, 0 or no choice pays Paul 293, as confirmed"
+  ],
+  "case-93-E3-30cff946aee1": [
+   "RIGHT",
+   "confirmed 160 ADA; 0 refund, 1 pays 3 to Rita and 157 back, timeout refund"
+  ],
+  "case-94-E3-6c270e0769a2": [
+   "RIGHT",
+   "Trang 1 pays Vân, 0 or timeout refunds, confirmed deadlines"
+  ],
+  "case-95-E3-5bcbb2be22b6": [
+   "WRONG",
+   "roles 'Tu', 'Binh', 'Yen' drop the diacritics of Tú, Bình, Yến (rule 1)"
+  ],
+  "case-96-E3-8b2ada6b0b1d": [
+   "WRONG",
+   "parties written as addresses instead of roles (rule 1)"
+  ],
+  "case-96-E3-fc38bf461eed": [
+   "RIGHT",
+   "Uyên 1 pays Đạt, 0 or timeout refunds"
+  ],
+  "case-97-E3-ab4ce992b420": [
+   "RIGHT",
+   "Vân 1 pays An, 0 or timeout refunds"
+  ],
+  "case-98-E3-72299d16abe5": [
+   "RIGHT",
+   "Giang 1 pays Bình, 2 refunds Yến, timeout refunds"
+  ],
+  "case-99-E3-25ecce6b41c8": [
+   "RIGHT",
+   "approve-only milestones of 157 ADA with refunds, as confirmed"
+  ]
+ },
+ "holdout_note": "Cases 58-100 adjudicated on 2026-11-10 after E5-Freeze, before their machine labels or gate decisions were seen."
 }

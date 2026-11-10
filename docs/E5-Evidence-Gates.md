@@ -369,9 +369,63 @@ không đổi quyết định nào ở đây, vì hợp đồng E3 không tách 
 
 Code của Round 2 được đóng băng bằng tag `E5-Freeze` để chạy phần case 58–100.
 
-### 9.4 Gộp 99 case
+### 9.4 Tập giữ lại (case 58–100) và gộp 99 case (ghi 2026-11-10)
 
-(Chờ session E3 cho case 58–100 và Round 2.)
+Chạy một lần với code ở tag `E5-Freeze` (`b55c7ca`). Dữ liệu ở `runs/e5/E5-Freeze-Holdout-Variants`
+và `E5-Freeze-Holdout-E3`. 45 hợp đồng E3 của case 58–100 được phân xử **trước khi** xem nhãn máy hay
+quyết định của các cổng; kết quả nằm trong `docs/E5-Adjudication.json`, có ghi chú `holdout_note`.
+
+**Variants:**
+
+| | Tập giữ lại (43 case) | Gộp 99 case (Round 2 dev + giữ lại) |
+| --- | --- | --- |
+| Sai / đúng | 686 / 281 | 1 634 / 625 |
+| Chấp nhận sai: Structure → SMT → Scenario → Oracle | 1,000 → 0,695 → 0,171 → **0,171** (Wilson 0,144–0,201) | 1,000 → 0,695 → 0,190 → **0,190** (Wilson 0,171–0,209; theo case 0,168–0,213) |
+| Độ phủ Oracle | **0,936** (Wilson 0,901–0,959) | **0,944** (Wilson 0,923–0,960; theo case 0,924–0,962) |
+| Từ chối nhầm Oracle | **0,011** | **0,008** (5/625) |
+| ABSTAIN trên hợp đồng ĐÚNG / SAI | — | 0,048 / 0 |
+| Structure so với Oracle trên hợp đồng SAI | 569 so với 0, p ≈ 10⁻¹⁷¹ | 1 324 so với 0, p < 10⁻³⁰⁰ |
+| **Quy tắc (mục 7)** | **đạt** | **đạt** |
+
+**Kết luận theo quy tắc chốt trước: RQ2 là có.** Kết quả trên tập giữ lại gần với dev: chấp nhận sai
+0,171 so với 0,204; độ phủ 0,936 so với 0,951.
+
+Hợp đồng SAI lọt qua ở 99 case (310), theo toán tử:
+
+| Toán tử | Số hợp đồng lọt qua |
+| --- | --- |
+| `deadline_later` | 136 |
+| `deadline_earlier` | 94 |
+| `drop_pay` | 20 |
+| `pay_half` | 20 |
+| `payee` | 20 |
+| `threshold` | 10 |
+| `depositor` | 10 |
+
+Chi phí cho tập giữ lại: 8 365 lần gọi bộ thực thi tham chiếu, 967 lần gọi SMT, 532 giây.
+
+**E3, case 58–100** (Gemini; nhãn phân xử: 37 ĐÚNG, 8 SAI):
+
+- Cả 8 hợp đồng SAI đều không được chấp nhận: Scenario từ chối 7, ABSTAIN 1 (case 67). Cả 37 hợp đồng
+  ĐÚNG đều được chấp nhận.
+- Lỗi SAI ở tập này đều là sai danh tính bên tham gia, khác với lỗi của Nemotron ở dev:
+  - địa chỉ ví thay cho role: case 68, 73, 81, 86, 96;
+  - tên bỏ dấu tiếng Việt: case 67 "Thao", case 71 "Quynh", case 95 "Tu/Binh/Yen".
+- E3-Final có 2 hợp đồng SAI, cả hai bị chặn.
+- So với phân xử mù: 11 nhãn máy SAI là ĐÚNG; không nhãn nào theo chiều ngược lại.
+
+**E3 gộp 99 case:**
+
+| Tập | Chấp nhận sai | Độ phủ | Từ chối nhầm | ABSTAIN trên hợp đồng ĐÚNG / SAI |
+| --- | --- | --- | --- | --- |
+| E3-All (120 hợp đồng) | 3/35 | 62/85 | 1/85 | 22/85 / 11/35 |
+| E3-Final (90 hợp đồng) | 3/9 | 59/81 | 1/81 | — |
+
+30/120 hợp đồng thuộc case không có kịch bản E3.
+
+**Kiểm nhãn của tập giữ lại trên Haskell:** đang chạy; kết quả sẽ được ghi ở đây.
+
+Báo cáo tổng hợp RQ1–RQ4: `docs/RQ-Report.md`.
 
 ## Lệch giao thức
 
