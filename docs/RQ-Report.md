@@ -189,8 +189,8 @@ Scenario → Oracle (đầy đủ).
   phải chỉ hợp với riêng dữ liệu dev.
 - **Nhãn Variants được kiểm nhiều lớp:** 1 290/1 292 nhãn dev khớp khi phát lại trên bộ thực thi
   Haskell, 2 nhãn còn lại đã giải thích được; chỉ 4 nhãn đổi khi duyệt rộng hơn, đều nằm trong dung sai
-  đã chốt; 51 nhãn đáng ngờ được xem tay. Kết quả kiểm nhãn cho phần test: xem mục 9.4 của tài liệu
-  E5.
+  đã chốt; 51 nhãn đáng ngờ được xem tay. Ở phần test,
+  964/967 nhãn khớp, 3 nhãn còn lại có cùng nguyên nhân đã giải thích.
 - **Không tốn request model nào;** 0,57 giây cho mỗi hợp đồng.
 - **Trên hợp đồng Gemini,** cổng Scenario bắt được mọi lỗi sai danh tính bên tham gia: địa chỉ ví thay
   cho role, tên bỏ dấu tiếng Việt.

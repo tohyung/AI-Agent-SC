@@ -423,7 +423,14 @@ Chi phí cho tập giữ lại: 8 365 lần gọi bộ thực thi tham chiếu, 
 
 30/120 hợp đồng thuộc case không có kịch bản E3.
 
-**Kiểm nhãn của tập giữ lại trên Haskell:** đang chạy; kết quả sẽ được ghi ở đây.
+**Kiểm nhãn của tập giữ lại trên Haskell** (`gate_label_audit`, chạy lại sau khi WSL bị lỗi giữa
+chừng ở lần đầu):
+
+- **Variants:** 686/686 nhân chứng SAI được xác nhận; 278/281 nhãn ĐÚNG không bị phản bác. Ba nhãn
+  lệch (case 75, 77, 100, `if_true` trên tham chiếu `close` của case `infeasible`) có cùng nguyên nhân
+  với hai nhãn lệch ở dev: bộ thực thi Haskell chưa rút gọn `If` khi chưa có giao dịch nào. Nhãn ĐÚNG
+  giữ nguyên.
+- **E3:** 45/45 nhãn máy khớp với Haskell. Lưu ý đây là nhãn máy; số liệu E3 ở trên dùng nhãn phân xử.
 
 Báo cáo tổng hợp RQ1–RQ4: `docs/RQ-Report.md`.
 
