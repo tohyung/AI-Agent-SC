@@ -1,6 +1,9 @@
 """E5 scoring: false acceptance, coverage and per-gate effect (docs/E5-Evidence-Gates.md, 6-7).
 
-    python -m research.experiments.gate_score runs/e5/dev-M [--final-only] [--output FILE]
+    python -m research.experiments.gate_score runs/e5/E5-Round2-Variants [--final-only]
+        [--labels docs/E5-Adjudication.json] [--output FILE]
+Reads E5-Round1 records too: their rungs B0-B4 map to Structure, Lint, SMT, Scenario, Oracle,
+and Alignment (not run in Round 1) takes the SMT decision.
 """
 
 from __future__ import annotations
@@ -13,7 +16,7 @@ from pathlib import Path
 import random
 from typing import Any
 
-from research.experiments.gate_policy import RUNGS
+from research.experiments.gate_policy import GATES, ROUND1_GATES, ROUND1_RUNGS, RUNGS
 
 WRONG, RIGHT = "WRONG", "RIGHT"
 BOOTSTRAP = 10_000
@@ -36,9 +39,28 @@ def mcnemar(only_first: int, only_second: int) -> float:
     return min(1.0, 2 * tail)
 
 
-def load(directory: Path, *, final_only: bool = False) -> list[dict[str, Any]]:
-    records = [json.loads(path.read_text(encoding="utf-8"))
+def _modern(record: dict[str, Any]) -> dict[str, Any]:
+    if "B0" not in record["decisions"]:
+        return record
+    decisions = {ROUND1_RUNGS[key]: value for key, value in record["decisions"].items()}
+    decisions["Alignment"] = decisions["SMT"]
+    gates = {ROUND1_GATES[key]: value for key, value in record["gates"].items()}
+    gates["Alignment"] = "N/A"
+    return {**record, "decisions": decisions, "gates": gates}
+
+
+def load(directory: Path, *, final_only: bool = False,
+         labels: dict[str, list[str]] | None = None) -> list[dict[str, Any]]:
+    """Records of one run; `labels` (adjudicated verdicts) replace the machine label."""
+    records = [_modern(json.loads(path.read_text(encoding="utf-8")))
                for path in sorted(directory.glob("case-*.json"))]
+    if labels is not None:
+        for record in records:
+            verdict = labels.get(record["candidate_id"])
+            if verdict is not None:
+                record["machine_label"] = record["label"]
+                record["label"] = {**record["label"], "label": verdict[0],
+                                   "reason": "adjudicated: " + verdict[1]}
     return [r for r in records if not final_only or r.get("is_final")]
 
 
@@ -82,34 +104,35 @@ def score(records: list[dict[str, Any]]) -> dict[str, Any]:
             "abstain_wrong": _rate(wrong, rung, "ABSTAIN"),
             "abstain_right": _rate(right, rung, "ABSTAIN"),
         }
-    b0 = [r["decisions"]["B0"] == "ACCEPT" for r in wrong]
-    b4 = [r["decisions"]["B4"] == "ACCEPT" for r in wrong]
+    b0 = [r["decisions"]["Structure"] == "ACCEPT" for r in wrong]
+    b4 = [r["decisions"]["Oracle"] == "ACCEPT" for r in wrong]
     only_b0 = sum(a and not b for a, b in zip(b0, b4))
     only_b4 = sum(b and not a for a, b in zip(b0, b4))
     per_operator: dict[str, Counter] = defaultdict(Counter)
     for r in records:
-        per_operator[r["operator"]][f"{r['label']['label']}:{r['decisions']['B4']}"] += 1
-    gate_rejects = {gate: Counter(r["gates"][gate] for r in records)
-                    for gate in ("structural", "lint", "smt", "scenarios", "exploration")}
+        per_operator[r["operator"]][f"{r['label']['label']}:{r['decisions']['Oracle']}"] += 1
+    gate_rejects = {gate: Counter(r["gates"][gate] for r in records) for gate in GATES}
     escaped = [{"candidate_id": r["candidate_id"], "operator": r["operator"],
                 "witness": r["label"].get("witness")}
-               for r in wrong if r["decisions"]["B4"] == "ACCEPT"]
+               for r in wrong if r["decisions"]["Oracle"] == "ACCEPT"]
+    full = rungs["Oracle"]
     rule = {
-        "B4_FA_below_B0_p<0.05": (mcnemar(only_b0, only_b4) < 0.05 and only_b0 > only_b4),
-        "B4_coverage>=0.80": (rungs["B4"]["coverage"]["rate"] is not None
-                              and rungs["B4"]["coverage"]["rate"] >= 0.80),
-        "B4_false_reject<=0.10": (rungs["B4"]["false_reject"]["rate"] is not None
-                                  and rungs["B4"]["false_reject"]["rate"] <= 0.10),
+        "full_FA_below_Structure_p<0.05": (mcnemar(only_b0, only_b4) < 0.05 and only_b0 > only_b4),
+        "full_coverage>=0.80": (full["coverage"]["rate"] is not None
+                                and full["coverage"]["rate"] >= 0.80),
+        "full_false_reject<=0.10": (full["false_reject"]["rate"] is not None
+                                    and full["false_reject"]["rate"] <= 0.10),
     }
     return {
         "candidates": len(records), "cases": len({r["case_index"] for r in records}),
         "labels": dict(labels), "rungs": rungs,
-        "B0_vs_B4_on_wrong": {"only_B0_accepts": only_b0, "only_B4_accepts": only_b4,
-                              "mcnemar_p": mcnemar(only_b0, only_b4)},
+        "Structure_vs_Oracle_on_wrong": {"only_Structure_accepts": only_b0,
+                                         "only_Oracle_accepts": only_b4,
+                                         "mcnemar_p": mcnemar(only_b0, only_b4)},
         "decision_rule": {**rule, "all": all(rule.values())},
         "gate_outcomes": {gate: dict(counts) for gate, counts in gate_rejects.items()},
         "per_operator_label_B4": {op: dict(c) for op, c in sorted(per_operator.items())},
-        "escaped_wrong_B4": escaped,
+        "escaped_wrong_full": escaped,
         "cost": {"reference_calls": sum(r["reference_calls"] for r in records),
                  "smt_calls": sum(r["smt_calls"] for r in records),
                  "seconds": round(sum(r["seconds"] for r in records), 1)},
@@ -121,14 +144,17 @@ def main() -> int:
     parser.add_argument("directory", type=Path)
     parser.add_argument("--final-only", action="store_true",
                         help="only the last model contract of each case (R-final)")
+    parser.add_argument("--labels", type=Path, help="adjudicated verdicts (docs/E5-Adjudication.json)")
     parser.add_argument("--output", type=Path)
     args = parser.parse_args()
-    result = score(load(args.directory, final_only=args.final_only))
+    labels = (json.loads(args.labels.read_text(encoding="utf-8"))["verdicts"]
+              if args.labels else None)
+    result = score(load(args.directory, final_only=args.final_only, labels=labels))
     text = json.dumps(result, ensure_ascii=False, indent=1)
     if args.output:
         args.output.write_text(text, encoding="utf-8")
     summary = {key: result[key] for key in ("candidates", "cases", "labels", "decision_rule")}
-    summary["B0_vs_B4_on_wrong"] = result["B0_vs_B4_on_wrong"]
+    summary["Structure_vs_Oracle_on_wrong"] = result["Structure_vs_Oracle_on_wrong"]
     summary["FA"] = {rung: result["rungs"][rung]["false_accept"]["rate"] for rung in RUNGS}
     summary["coverage"] = {rung: result["rungs"][rung]["coverage"]["rate"] for rung in RUNGS}
     summary["false_reject"] = {rung: result["rungs"][rung]["false_reject"]["rate"] for rung in RUNGS}

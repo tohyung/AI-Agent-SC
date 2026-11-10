@@ -3,6 +3,22 @@
 Trạng thái: **giao thức chốt 2026-11-09, trước khi đo.** Mọi thay đổi sau ngày này được ghi ở
 mục "Lệch giao thức", kèm lý do.
 
+**Tên gọi (đổi 2026-11-10).** Theo quy ước `<Phần>-<Thành phần>` của repo (docs/JOURNAL.md
+mục 9), các bậc nay mang tên cổng cuối cùng chúng thêm vào, theo thứ tự chạy trong pipeline:
+
+| Tên mới (đầy đủ) | Tên ở E5-Round1 | Thêm cổng | Bước pipeline chứa cổng |
+| --- | --- | --- | --- |
+| **Structure** (Analysis-Structure, đối chứng) | B0 | cấu trúc hợp lệ | `compile` |
+| **Lint** (Analysis-Lint) | B1 | lint | `smt_verification` |
+| **SMT** (Analysis-SMT) | B2 | SMT pin | `smt_verification` |
+| **Alignment** (Synthesis-Alignment) | — (chưa có) | khớp intent; chỉ áp dụng cho tập E3 | `semantic_comparison` |
+| **Scenario** (Synthesis-Scenario) | B3 | kịch bản đã duyệt | `semantic_comparison` |
+| **Oracle** (Exploration-Oracle, đầy đủ) | B4 | khám phá + oracle không cảnh báo | `exploration`, `oracle_evaluation` |
+
+Các tập: **Variants** (trước là M), **E3-All** (R-all), **E3-Final** (R-final). Các vòng:
+**E5-Round1** (tag `E5-Round1`, commit `275365a`) và **E5-Round2**. Tag đóng băng cho tập giữ lại:
+**`E5-Freeze`**. Mục 9.1 giữ nguyên chữ của Round 1, nên vẫn dùng tên cũ; mọi mục khác dùng tên mới.
+
 ## 1. Câu hỏi
 
 RQ2 trong paper (mục 7.1): các cổng bằng chứng có loại được hợp đồng có mâu thuẫn hành vi đã
@@ -32,7 +48,7 @@ Hai giai đoạn:
    code chạy cổng. Kết quả là khám phá.
 2. **Gộp 99 case**: khi session E3 cho case 58–100 chạy xong, thêm biến thể của case 58–100 và
    hợp đồng E3 của các case đó, rồi chạy **một lần** với code đã chốt ở cuối giai đoạn dev
-   (tag `e5-freeze`). Phần case 58–100 là tập giữ lại: chưa từng dùng để chỉnh cổng, toán tử
+   (tag `E5-Freeze`). Phần case 58–100 là tập giữ lại: chưa từng dùng để chỉnh cổng, toán tử
    hay bộ gán nhãn. Nếu session E3 chưa xong thì không có giai đoạn 2.
 
 ## 3. Biến thể
@@ -143,7 +159,11 @@ R-all và R-final được báo kèm, không nằm trong quy tắc.
 
 ## 9. Kết quả
 
-### 9.1 Dev, case 1–56 (khám phá, ghi 2026-11-10)
+### 9.1 E5-Round1: dev, case 1–56 (khám phá, ghi 2026-11-10, tên cũ)
+
+Dữ liệu đã chuyển sang `runs/e5/E5-Round1-Variants`, `E5-Round1-E3`,
+`E5-Round1-E3-DatasetScenarios`. Nhãn của tập R trong mục này là nhãn máy; mục 9.2 sửa lại bằng
+nhãn đã phân xử.
 
 Chạy trong WSL bằng các binary pin (`runs/e5/run_wsl.sh`). Kết quả nằm ở `runs/e5/dev-M`,
 `dev-R`, `dev-R-dataset`; điểm số ở `runs/e5/*-score.json`. Không có request model nào.
@@ -225,9 +245,83 @@ nhưng với cách so hiện tại, B3 từ chối gần một nửa số hợp 
 RQ2 trên dev là **chưa** (loại quá nhiều hợp đồng đúng). Khám phá (B4) không đem lại gì thêm. Chưa
 sửa cổng nào sau khi thấy số liệu này.
 
-### 9.2 Gộp 99 case
+### 9.2 Kiểm lại nhãn (2026-11-10)
 
-(Chờ session E3 cho case 58–100.)
+**Đối chiếu chéo trên bộ thực thi Haskell** (`research/experiments/gate_label_audit.py`). Với mỗi
+nhãn SAI, phát lại nhân chứng trên cả hai hợp đồng. Với mỗi nhãn ĐÚNG, thử 10 chuỗi ngẫu nhiên
+lấy từ cùng không gian hành động. So số tiền nhận và trạng thái đóng ở từng mốc, cùng cảnh báo.
+
+- **Variants:** 948/948 nhân chứng SAI được xác nhận; 342/344 nhãn ĐÚNG không bị phản bác. Hai nhãn
+  lệch (case 8 và 45, `if_true` trên hợp đồng tham chiếu `close` của case `infeasible`) là do bộ
+  thực thi Haskell chưa rút gọn `If` khi chưa có giao dịch nào. Sau giao dịch đầu tiên, hai hợp
+  đồng giống nhau, nên nhãn ĐÚNG giữ nguyên.
+- **E3:** 75/75 nhãn khớp. Hai lỗi của bộ đối chiếu được sửa trước khi có kết quả này: chọn tên
+  choice theo `When` đang chờ, và ghi trạng thái đóng ở mọi mốc. Lần chạy đầu có 4 nhãn lệch, tất
+  cả do hai lỗi đó.
+
+**Độ nhạy theo giới hạn duyệt.** Chạy lại bộ gán nhãn với độ sâu +2, thêm mốc ở 1/4 và 3/4 mỗi
+khoảng, và thêm giá trị choice quanh ngưỡng (±2, ±5) trên 1 367 hợp đồng. Chỉ 4 nhãn đổi, đều là
+hợp đồng E3 (case 1, 3, 31, 53): ĐÚNG thành SAI vì hạn lệch 5–19 giờ so với tham chiếu, mà mốc dày
+hơn rơi vào khoảng lệch đó. Giao thức chấp nhận lệch dưới 1 ngày (mục 4), nên nhãn gốc nhất quán
+với định nghĩa. Ở cả bốn case, hạn của hợp đồng khớp đúng giờ người dùng mô phỏng đã xác nhận.
+
+**Xem tay** 51 biến thể có toán tử nhằm làm sai nhưng được gán ĐÚNG (24 `pay_half`, 24 `drop_pay`,
+3 `swap_timeout`). Cả 51 đều sửa một khoản trả từ tài khoản của một bên về chính bên đó. Khi hợp đồng
+đóng, Marlowe tự trả số dư về chủ tài khoản, nên hành vi không đổi. Cả 51 nhãn đều đúng.
+
+**Phân xử 75 hợp đồng E3** theo tiêu chí ghi trước (`docs/E5-Adjudication-Rubric.md`). Một người phân
+xử, theo quyết định của người phụ trách; kết quả và lý do từng hợp đồng ở `docs/E5-Adjudication.json`.
+Căn cứ là yêu cầu người dùng mô phỏng đã xác nhận, không phải dữ kiện ẩn.
+
+| Nhãn máy → phân xử | Số hợp đồng |
+| --- | --- |
+| SAI → SAI | 27 |
+| ĐÚNG → ĐÚNG | 28 |
+| SAI → ĐÚNG | 20 (dữ kiện xác nhận khác dữ kiện ẩn: 13; khác cách mã hóa: 7) |
+| ĐÚNG → SAI | 0 |
+
+Các lỗi thật được phân xử là SAI:
+
+- 10 hợp đồng ghi token GOLD bằng `token_name: "474f4c44"` (chữ hex) thay vì `GOLD`.
+- 9 hợp đồng chặn khoản trả theo thời gian sau `Notify`: hoặc không bao giờ trả được, hoặc ai cũng
+  kích hoạt được trước thời điểm sớm nhất.
+- 4 hợp đồng trả quá số dư tài khoản.
+- 2 hợp đồng ghi ADA bằng `token_name: "ADA"`.
+- 2 hợp đồng viết sai tên bên ("Quỹnh" thay cho "Quỳnh"), kèm token hex.
+- 1 hợp đồng thiếu bước nạp trả nợ.
+
+E3-Final có 47 ĐÚNG và 7 SAI.
+
+**Round 1 chấm lại bằng nhãn đã phân xử** (cùng quyết định của các cổng, chỉ thay nhãn):
+
+| Tập | SAI / ĐÚNG | Chấp nhận sai: Structure → Oracle | Độ phủ Oracle | Từ chối nhầm Oracle | Quy tắc |
+| --- | --- | --- | --- | --- | --- |
+| E3-All | 27 / 48 | 1,00 → 0,111 (3/27) | 0,521 (25/48) | 0,021 (1/48) | không đạt (độ phủ) |
+| E3-Final | 7 / 47 | 1,00 → 0,429 (3/7) | 0,532 (25/47) | 0,021 (1/47) | không đạt (p = 0,125; độ phủ) |
+
+Ba hợp đồng SAI lọt qua đủ các cổng đều là hợp đồng cuối:
+
+- **Case 4 (token hex):** các kịch bản E3 của case này cũng được viết bằng token hex, nên kịch bản
+  nhất quán với chính lỗi của hợp đồng.
+- **Case 6 và 21 (`Notify` cho phép trả sớm):** kịch bản chỉ thử đường đi bình thường, không thử ai
+  đó gửi `Notify` trước thời điểm sớm nhất.
+
+Gần hết phần độ phủ bị thiếu là ABSTAIN, vì 25/54 case không có file kịch bản E3.
+
+**Cổng Alignment trên E3** (thêm ở Round 2, đo trước trên dữ liệu Round 1): 75/75 hợp đồng ra
+`INCONCLUSIVE`, không hợp đồng nào bị `VIOLATED`, kể cả 27 hợp đồng SAI. Phần kiểm scope chỉ xác
+nhận được là đường dẫn tồn tại. Các lỗi thật kể trên (token hex, `Notify`, trả quá số dư) cũng nằm
+ngoài những gì `check_intent_alignment` so được. Theo pipeline, `INCONCLUSIVE` vẫn cho hợp đồng đi
+tiếp sang Scenario, nên cổng này không đổi quyết định nào.
+
+### 9.3 E5-Round2
+
+(Chờ sửa cổng Scenario và Oracle sau khi session E3 cho case 58–100 chạy xong, vì nó dùng chung
+các file pipeline đó.)
+
+### 9.4 Gộp 99 case
+
+(Chờ session E3 cho case 58–100 và Round 2.)
 
 ## Lệch giao thức
 
@@ -247,3 +341,11 @@ sửa cổng nào sau khi thấy số liệu này.
    cùng câu hỏi làm rõ và câu trả lời mô phỏng của pipeline cũ (policy ID, múi giờ). Không có
    hợp đồng tham chiếu, `checks`, `params` hay dữ kiện ẩn. Session đó cam kết không dùng lại các
    câu trả lời này.
+6. **(2026-11-10) Nhãn của E3 được phân xử lại** sau khi đã thấy số liệu dev (mục 9.2). Căn cứ là
+   yêu cầu người dùng mô phỏng đã xác nhận. Nhãn máy vẫn được giữ trong bản ghi (`machine_label`).
+7. **(2026-11-10) Thêm cổng Alignment** vào chuỗi bậc, vì pipeline thật (`cli_runner`) bật
+   `require_intent_alignment`, còn Round 1 bỏ sót. Cổng này chỉ áp dụng cho E3; với Variants nó là
+   N/A, và quyết định của bậc Alignment giữ nguyên như bậc SMT. `VIOLATED` thì REJECT; mọi kết quả
+   khác cho đi tiếp, như pipeline. Giao thức mục 5 nói ABSTAIN khi khớp intent không kết luận,
+   nhưng làm vậy thì mọi hợp đồng E3 đều ABSTAIN, vì phần kiểm scope không bao giờ kết luận được.
+8. **(2026-11-10) Đổi tên** các bậc, tập, vòng và tag như bảng ở đầu tài liệu.

@@ -1,7 +1,10 @@
-"""E5 policy ladder B0-B4 over the pipeline's own gate implementations.
+"""E5 policy ladder over the pipeline's own gates, in pipeline order.
 
-Each gate returns PASS, REJECT or ABSTAIN; rung Bk combines gates 0..k (any REJECT wins, then
-any ABSTAIN, otherwise ACCEPT). See docs/E5-Evidence-Gates.md, section 5.
+Gates: Analysis-Structure, Analysis-Lint, Analysis-SMT, Synthesis-Alignment, Synthesis-Scenario,
+Exploration-Oracle (short names below). Each gate returns PASS, REJECT, ABSTAIN or N/A (does not
+apply, e.g. Alignment for Variants, which have no accepted intent). The rung named after a gate
+combines every gate up to and including it: any REJECT wins, then any ABSTAIN, otherwise ACCEPT.
+See docs/E5-Evidence-Gates.md, section 5.
 """
 
 from __future__ import annotations
@@ -20,11 +23,16 @@ from research.orchestration.artifacts import ArtifactEnvelope
 from research.orchestration.ports import StepContext
 from research.orchestration.status import AuthorityLevel, ImplementationStatus, StepRunStatus
 from research.synthesis.comparison import SemanticComparisonPort
+from research.synthesis.intent_alignment import check_intent_alignment
 
-PASS, REJECT, ABSTAIN = "PASS", "REJECT", "ABSTAIN"
+PASS, REJECT, ABSTAIN, NOT_APPLICABLE = "PASS", "REJECT", "ABSTAIN", "N/A"
 ACCEPT = "ACCEPT"
-GATES = ("structural", "lint", "smt", "scenarios", "exploration")
-RUNGS = ("B0", "B1", "B2", "B3", "B4")
+GATES = ("Structure", "Lint", "SMT", "Alignment", "Scenario", "Oracle")
+RUNGS = GATES  # a rung is named after the last gate it adds
+# E5-Round1 names (docs/E5-Evidence-Gates.md): rungs B0-B4 and lower-case gate keys.
+ROUND1_RUNGS = {"B0": "Structure", "B1": "Lint", "B2": "SMT", "B3": "Scenario", "B4": "Oracle"}
+ROUND1_GATES = {"structural": "Structure", "lint": "Lint", "smt": "SMT",
+                "scenarios": "Scenario", "exploration": "Oracle"}
 EMPTY_STATE = {"accounts": [], "choices": [], "boundValues": [], "minTime": 0}
 U = ImplementationStatus.IMPLEMENTED_UNVALIDATED
 
@@ -55,6 +63,7 @@ class Expectation:
 
 
 def decide(outcomes: list[str]) -> str:
+    outcomes = [item for item in outcomes if item != NOT_APPLICABLE]
     if REJECT in outcomes:
         return REJECT
     if ABSTAIN in outcomes:
@@ -101,6 +110,20 @@ def _scenario_gate(contract: Any, expectations: list[Expectation],
     return (PASS if overall == ACCEPT else overall), details
 
 
+def _alignment_gate(contract: Any, intent: tuple[dict[str, Any], list[dict[str, Any]]] | None
+                    ) -> tuple[str, dict[str, Any] | None]:
+    """The check `semantic_comparison` runs first in the pipeline (cli_runner sets it on)."""
+    if intent is None:
+        return NOT_APPLICABLE, None
+    spec, evidence = intent
+    result = check_intent_alignment(spec, contract, evidence)
+    # As in the pipeline: VIOLATED stops the candidate; INCONCLUSIVE (scope checks can only
+    # confirm that a path exists) lets it go on to the Scenario gate.
+    outcome = REJECT if result["verdict"] == "VIOLATED" else PASS
+    unmet = [item for item in result["checks"] if item.get("status") != "SATISFIED"]
+    return outcome, {"verdict": result["verdict"], "unmet": unmet[:10]}
+
+
 def _exploration_gate(contract: Any, expectations: list[Expectation],
                       executor: Any) -> tuple[str, dict[str, Any]]:
     declared = tuple(tx for item in expectations
@@ -121,7 +144,8 @@ def _exploration_gate(contract: Any, expectations: list[Expectation],
 
 
 def evaluate(contract: Any, expectations: list[Expectation], *, executor: Any,
-             smt_binary: str | None) -> dict[str, Any]:
+             smt_binary: str | None,
+             intent: tuple[dict[str, Any], list[dict[str, Any]]] | None = None) -> dict[str, Any]:
     started = time.perf_counter()
     counting = CountingExecutor(executor)
     gates = dict.fromkeys(GATES, "NOT_RUN")
@@ -129,30 +153,31 @@ def evaluate(contract: Any, expectations: list[Expectation], *, executor: Any,
     errors = validate_contract(contract)
     if errors:
         gates = dict.fromkeys(GATES, REJECT)
-        detail["structural"] = errors[:5]
+        detail["Structure"] = errors[:5]
         return {"gates": gates, "decisions": ladder(gates), "detail": detail,
                 "reference_calls": 0, "smt_calls": 0,
                 "seconds": round(time.perf_counter() - started, 3)}
-    gates["structural"] = PASS
+    gates["Structure"] = PASS
     lint = LogicGraphVerifier().lint(contract)
-    gates["lint"] = REJECT if lint.errors else PASS
-    detail["lint"] = {"errors": lint.errors[:5], "warnings": lint.warnings[:5]}
+    gates["Lint"] = REJECT if lint.errors else PASS
+    detail["Lint"] = {"errors": lint.errors[:5], "warnings": lint.warnings[:5]}
     smt_calls = 0
     if lint.errors:
-        gates["smt"] = REJECT
-        detail["smt"] = "not run: lint failed"
+        gates["SMT"] = REJECT
+        detail["SMT"] = "not run: lint failed"
     else:
         candidate = ArtifactEnvelope("contract-candidate", "core-v1", "compile", U,
                                      AuthorityLevel.MODEL_CANDIDATE, {"contract": contract})
         result = SMTVerificationPort(binary=smt_binary).execute(
             [candidate], StepContext("e5-smt")).result
         smt_calls = 1
-        gates["smt"] = (PASS if result.semantic_status == "NO_MODELED_WARNINGS"
+        gates["SMT"] = (PASS if result.semantic_status == "NO_MODELED_WARNINGS"
                         else REJECT if result.semantic_status in {"SMT_COUNTEREXAMPLE", "LINT_FAILED"}
                         else ABSTAIN)
-        detail["smt"] = {"status": result.semantic_status, "diagnostics": list(result.diagnostics)[:5]}
-    gates["scenarios"], detail["scenarios"] = _scenario_gate(contract, expectations, counting)
-    gates["exploration"], detail["exploration"] = _exploration_gate(contract, expectations, counting)
+        detail["SMT"] = {"status": result.semantic_status, "diagnostics": list(result.diagnostics)[:5]}
+    gates["Alignment"], detail["Alignment"] = _alignment_gate(contract, intent)
+    gates["Scenario"], detail["Scenario"] = _scenario_gate(contract, expectations, counting)
+    gates["Oracle"], detail["Oracle"] = _exploration_gate(contract, expectations, counting)
     return {"gates": gates, "decisions": ladder(gates), "detail": detail,
             "reference_calls": counting.calls, "smt_calls": smt_calls,
             "seconds": round(time.perf_counter() - started, 3)}

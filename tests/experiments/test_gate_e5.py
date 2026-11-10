@@ -57,15 +57,16 @@ def test_split_pay_is_labelled_right():
     assert gate_labels.label(split.contract, _escrow())["label"] == "RIGHT"
 
 
-def test_ladder_rejects_first_then_abstains():
-    gates = {"structural": "PASS", "lint": "PASS", "smt": "ABSTAIN",
-             "scenarios": "REJECT", "exploration": "PASS"}
-    assert gate_policy.ladder(gates) == {"B0": "ACCEPT", "B1": "ACCEPT", "B2": "ABSTAIN",
-                                         "B3": "REJECT", "B4": "REJECT"}
+def test_ladder_rejects_first_then_abstains_and_skips_not_applicable():
+    gates = {"Structure": "PASS", "Lint": "PASS", "SMT": "ABSTAIN", "Alignment": "N/A",
+             "Scenario": "REJECT", "Oracle": "PASS"}
+    assert gate_policy.ladder(gates) == {"Structure": "ACCEPT", "Lint": "ACCEPT", "SMT": "ABSTAIN",
+                                         "Alignment": "ABSTAIN", "Scenario": "REJECT",
+                                         "Oracle": "REJECT"}
 
 
 def _record(case: int, label: str, b0: str, b4: str) -> dict:
-    decisions = {"B0": b0, "B1": b0, "B2": b0, "B3": b4, "B4": b4}
+    decisions = {"B0": b0, "B1": b0, "B2": b0, "B3": b4, "B4": b4}  # a Round 1 record
     gates = dict.fromkeys(("structural", "lint", "smt", "scenarios", "exploration"), "PASS")
     return {"candidate_id": f"c{case}{label}{b4}", "case_index": case, "operator": "x",
             "label": {"label": label}, "decisions": decisions, "gates": gates,
@@ -75,9 +76,13 @@ def _record(case: int, label: str, b0: str, b4: str) -> dict:
 def test_score_reports_false_accept_coverage_and_rule():
     records = ([_record(i, "WRONG", "ACCEPT", "REJECT") for i in range(10)]
                + [_record(i, "RIGHT", "ACCEPT", "ACCEPT") for i in range(10)])
-    result = gate_score.score(records)
-    assert result["rungs"]["B0"]["false_accept"]["rate"] == 1.0
-    assert result["rungs"]["B4"]["false_accept"]["rate"] == 0.0
-    assert result["rungs"]["B4"]["coverage"]["rate"] == 1.0
-    assert result["B0_vs_B4_on_wrong"]["mcnemar_p"] < 0.05
+    result = gate_score.score([gate_score._modern(r) for r in records])
+    assert result["rungs"]["Structure"]["false_accept"]["rate"] == 1.0
+    assert result["rungs"]["Oracle"]["false_accept"]["rate"] == 0.0
+    assert result["rungs"]["Oracle"]["coverage"]["rate"] == 1.0
+    assert result["Structure_vs_Oracle_on_wrong"]["mcnemar_p"] < 0.05
     assert result["decision_rule"]["all"] is True
+
+
+def test_alignment_gate_does_not_apply_without_intent():
+    assert gate_policy._alignment_gate(_escrow(), None) == ("N/A", None)

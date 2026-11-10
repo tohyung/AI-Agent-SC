@@ -42,6 +42,7 @@ class Candidate:
     intent: str
     contract: Any
     is_final: bool | None = None
+    accepted: tuple[dict[str, Any], list[dict[str, Any]]] | None = None  # (accepted spec, mapping)
 
 
 def cases() -> list[dict[str, Any]]:
@@ -83,6 +84,28 @@ def e3_case_files(index: int) -> dict[str, str]:
     return {}
 
 
+def e3_intent(index: int, content_hash: str) -> tuple[dict[str, Any], list[dict[str, Any]]] | None:
+    """The accepted IntentSpec and mapping evidence the E3 pipeline had for this contract."""
+    found = None
+    for name, text in sorted(e3_case_files(index).items()):
+        if not name.startswith("attempt") or content_hash not in text:
+            continue
+        try:
+            artifacts = json.loads(text).get("artifacts")
+        except json.JSONDecodeError:
+            continue
+        if not isinstance(artifacts, dict):
+            continue
+        for key, artifact in artifacts.items():
+            if key.startswith("contract-candidate:") and key.endswith(content_hash):
+                payload = artifact.get("payload", {})
+                accepted = artifacts.get(payload.get("source_intent_id"), {})
+                spec = accepted.get("payload", {}).get("accepted_spec")
+                if isinstance(spec, dict):
+                    found = (spec, payload.get("mapping_evidence") or [])
+    return found
+
+
 def real_candidates(index: int) -> list[Candidate]:
     """Every distinct model-generated contract of a case, in attempt order; the last is final."""
     ordered: dict[str, Any] = {}
@@ -102,7 +125,8 @@ def real_candidates(index: int) -> list[Candidate]:
                 ordered[artifact["content_hash"]] = artifact["payload"]["contract"]
     hashes = list(ordered)
     return [Candidate(f"case-{index:02d}-E3-{digest[:12]}", index, "E3", "model", "unknown",
-                      ordered[digest], is_final=(position == len(hashes) - 1))
+                      ordered[digest], is_final=(position == len(hashes) - 1),
+                      accepted=e3_intent(index, digest))
             for position, digest in enumerate(hashes)]
 
 
@@ -194,7 +218,7 @@ def run(selection: str, indices: list[int], out_dir: Path, *, expectations_from:
                 continue
             truth = label(candidate.contract, case["reference_contract"])
             result = evaluate(candidate.contract, expectations, executor=executor,
-                              smt_binary=smt_binary)
+                              smt_binary=smt_binary, intent=candidate.accepted)
             record = {"candidate_id": candidate.candidate_id, "case_index": index,
                       "case_type": case["type"], "info_mode": case["info_mode"],
                       "source": candidate.source, "operator": candidate.operator,
