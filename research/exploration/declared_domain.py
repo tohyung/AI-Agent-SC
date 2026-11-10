@@ -19,7 +19,8 @@ class DeclaredActionDomain:
     def transactions(self, state: dict[str, Any], contract: Any) -> list[dict[str, Any]]:
         if contract == "close":
             return []
-        if isinstance(contract, dict) and "pay" in contract:
+        if isinstance(contract, dict) and any(key in contract for key in ("pay", "if", "let", "assert")):
+            # Not waiting for input: any declared empty transaction lets the reference reduce it.
             return [tx for tx in self.declared if tx.get("inputs") == []]
         if not isinstance(contract, dict) or not isinstance(contract.get("when"), list):
             return []

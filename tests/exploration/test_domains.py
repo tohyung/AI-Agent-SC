@@ -33,3 +33,13 @@ def test_declared_timeout_action_accepts_post_deadline_but_not_straddling_interv
     after = {"interval": {"from": 101, "to": 102}, "inputs": []}
     domain = DeclaredActionDomain("reviewed", (before, straddling, at_deadline, after))
     assert domain.transactions({}, contract) == [at_deadline, after]
+
+
+def test_declared_empty_transactions_reduce_if_let_and_assert_roots() -> None:
+    empty = {"interval": {"from": 5, "to": 5}, "inputs": []}
+    deposit = {"interval": {"from": 5, "to": 5}, "inputs": [{"type": "Deposit"}]}
+    domain = DeclaredActionDomain("reviewed", (empty, deposit))
+    for root in ({"if": True, "then": "close", "else": "close"},
+                 {"let": "x", "be": 1, "then": "close"},
+                 {"assert": True, "then": "close"}):
+        assert domain.transactions({}, root) == [empty]

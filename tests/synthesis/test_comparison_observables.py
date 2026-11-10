@@ -124,10 +124,13 @@ def test_all_observables_match_or_name_only_mismatched_fields():
     assert result.result.diagnostics == ["observable mismatch: payments"]
 
 
-def test_successful_step_order_is_preserved():
+def test_payment_order_and_splitting_do_not_matter_but_totals_do():
     raw = _raw()
     second = {**PAYMENT, "amount": 1}
     raw["steps"].append({"status": "Success", "warnings": [], "payments": [second]})
     assert _run(raw, payments=(PAYMENT, second)).result.run_status == StepRunStatus.SUCCEEDED
-    reversed_result = _run(raw, payments=(second, PAYMENT))
-    assert reversed_result.artifacts[0].payload["mismatches"] == ["payments"]
+    assert _run(raw, payments=(second, PAYMENT)).result.run_status == StepRunStatus.SUCCEEDED
+    merged = {**PAYMENT, "amount": PAYMENT["amount"] + 1}
+    assert _run(raw, payments=(merged,)).result.run_status == StepRunStatus.SUCCEEDED
+    short = _run(raw, payments=(PAYMENT,))
+    assert short.artifacts[0].payload["mismatches"] == ["payments"]

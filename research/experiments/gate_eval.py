@@ -17,7 +17,6 @@ import os
 from pathlib import Path
 from typing import Any
 
-from dataset.evaluator import _time
 from research.experiments.gate_labels import label
 from research.experiments.gate_mutants import variants
 from research.experiments.gate_policy import EMPTY_STATE, Expectation, evaluate
@@ -144,6 +143,26 @@ def _deposit_account(contract: Any, party: str, amount: int) -> dict[str, Any]:
     return {"role_token": party}
 
 
+DAY_MS = 86_400_000
+
+
+def scenario_time(label: str, dates: list[int]) -> int:
+    """When a reviewed step happens. E5-Round2: one day before or after a deadline, the same
+    tolerance as the label oracle (prompts give dates, not times); Round 1 used one second,
+    as `dataset/evaluator.py` does."""
+    if not dates:
+        raise ValueError("no_timeouts")
+    if label == "before_t1":
+        return dates[0] - DAY_MS
+    if label == "after_t1_before_t2" and len(dates) >= 2:
+        return (dates[0] + dates[1]) // 2
+    if label == "after_t2_before_t3" and len(dates) >= 3:
+        return (dates[1] + dates[2]) // 2
+    if label == "after_all":
+        return dates[-1] + DAY_MS
+    raise ValueError(f"missing_timepoint:{label}")
+
+
 def dataset_expectations(case: dict[str, Any], executor: Any) -> list[Expectation]:
     """The case's check scenarios, with expected behaviour taken from the reference contract."""
     from research.experiments.gate_labels import deadlines
@@ -154,7 +173,7 @@ def dataset_expectations(case: dict[str, Any], executor: Any) -> list[Expectatio
         transactions = []
         try:
             for step in scenario["steps"]:
-                at = _time(step["at"], dates)
+                at = scenario_time(step["at"], dates)
                 if step["kind"] == "deposit":
                     token = {"currency_symbol": "", "token_name": step.get("token", "")}
                     inputs = [{"type": "Deposit", "party": {"role_token": step["party"]},

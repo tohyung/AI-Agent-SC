@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import json
 from typing import Any, Protocol
 
 from research.orchestration.artifacts import ArtifactEnvelope
@@ -39,6 +40,23 @@ class BehaviorExpectation:
         if self.expected_payments is not None:
             result["expected_payments"] = list(self.expected_payments)
         return result
+
+
+def _payment_totals(items: list[dict[str, Any]]) -> list[tuple[str, str, int]] | None:
+    """Total amount each payee receives per token; order and splitting of payments do not matter.
+
+    Two contracts that pay a party the same total are behaviourally equal here even when one
+    pays in two parts, or refunds an account owner explicitly instead of through Close
+    (E5-Round2, docs/E5-Evidence-Gates.md). Payment timing within one trace is not compared.
+    """
+    totals: dict[tuple[str, str], int] = {}
+    for item in items:
+        amount = item.get("amount")
+        if type(amount) is not int or "payee" not in item or "token" not in item:
+            return None
+        key = (json.dumps(item["payee"], sort_keys=True), json.dumps(item["token"], sort_keys=True))
+        totals[key] = totals.get(key, 0) + amount
+    return sorted((payee, token, amount) for (payee, token), amount in totals.items() if amount)
 
 
 def _observed_items(raw: dict[str, Any], field: str) -> list[dict[str, Any]] | None:
@@ -227,6 +245,13 @@ class SemanticComparisonPort:
                 observed_items = _observed_items(raw, field)
                 if observed_items is None:
                     unavailable.append(field)
+                elif field == "payments":
+                    observed_totals = _payment_totals(observed_items)
+                    expected_totals = _payment_totals(list(expected_items))
+                    if observed_totals is None or expected_totals is None:
+                        unavailable.append(field)
+                    elif observed_totals != expected_totals:
+                        mismatches.append(field)
                 elif observed_items != list(expected_items):
                     mismatches.append(field)
             if mismatches:
