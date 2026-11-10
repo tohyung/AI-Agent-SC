@@ -314,10 +314,60 @@ nhận được là đường dẫn tồn tại. Các lỗi thật kể trên (t
 ngoài những gì `check_intent_alignment` so được. Theo pipeline, `INCONCLUSIVE` vẫn cho hợp đồng đi
 tiếp sang Scenario, nên cổng này không đổi quyết định nào.
 
-### 9.3 E5-Round2
+### 9.3 E5-Round2: dev, case 1–56 (khám phá, ghi 2026-11-10)
 
-(Chờ sửa cổng Scenario và Oracle sau khi session E3 cho case 58–100 chạy xong, vì nó dùng chung
-các file pipeline đó.)
+Code ở commit `2b8489e`; dữ liệu ở `runs/e5/E5-Round2-Variants` và `E5-Round2-E3`. So với Round 1,
+cổng và cách dựng kịch bản đổi ở ba chỗ, đều được chọn sau khi xem số liệu Round 1:
+
+1. **Scenario** (`synthesis/comparison.py`) so tổng số tiền mỗi bên nhận theo từng token, thay vì so
+   danh sách từng lần trả. Đánh đổi: thời điểm trả trong cùng một kịch bản không còn được so.
+2. **Oracle** (`exploration/declared_domain.py`) đi qua được hợp đồng có gốc là `If`, `Let` hoặc
+   `Assert`.
+3. **Kịch bản dựng từ dataset** thử 1 ngày trước và sau hạn, thay vì 1 giây, cùng dung sai với bộ
+   gán nhãn.
+
+Thêm vào đó là cổng **Alignment**, như ghi ở lệch giao thức 7.
+
+**Variants** (948 SAI, 344 ĐÚNG; nhãn đã kiểm ở mục 9.2):
+
+| Bậc | Chấp nhận sai R1 → R2 | Độ phủ R1 → R2 | Từ chối nhầm R1 → R2 |
+| --- | --- | --- | --- |
+| Structure | 1,000 → 1,000 | 1,000 → 1,000 | 0 → 0 |
+| SMT | 0,695 → 0,695 | 1,000 → 1,000 | 0 → 0 |
+| Alignment (N/A) | — → 0,695 | — → 1,000 | — → 0 |
+| Scenario | 0,204 → 0,204 | 0,532 → **0,988** | 0,462 → **0,006** |
+| **Oracle** (đầy đủ) | 0,204 → **0,204** (Wilson 0,179–0,230) | 0,375 → **0,951** (Wilson 0,922–0,969; theo case 0,927–0,972) | 0,462 → **0,006** |
+
+- **Quy tắc quyết định (mục 7) trên dev: đạt cả ba điều.** Chấp nhận sai thấp hơn Structure: 755 hợp
+  đồng chỉ Structure chấp nhận, 0 hợp đồng chỉ Oracle chấp nhận, p ≈ 10⁻²²⁷. Độ phủ 0,951 ≥ 0,80.
+  Từ chối nhầm 0,006 ≤ 0,10. Đây vẫn là kết quả khám phá, vì cổng được sửa sau khi xem dev; kiểm
+  chứng thật là phần case 58–100 (mục 9.4).
+- **So tổng tiền không làm tăng chấp nhận sai:** không hợp đồng SAI nào đổi quyết định so với Round 1.
+- **17 hợp đồng ĐÚNG còn chưa được chấp nhận:**
+  - 13 biến thể `if_true` ABSTAIN ở Oracle, vì khám phá không cho vết nào kết luận được;
+  - 2 biến thể `if_true` bị Scenario từ chối, ở case `infeasible` (8, 45) có tham chiếu là `close`;
+  - 2 hợp đồng tham chiếu `close` của chính hai case đó, không có kịch bản.
+- **193 hợp đồng SAI vẫn lọt qua, y như Round 1:**
+
+  | Toán tử | Số hợp đồng lọt qua |
+  | --- | --- |
+  | `deadline_later` | 78 |
+  | `deadline_earlier` | 54 |
+  | `drop_pay` | 16 |
+  | `pay_half` | 16 |
+  | `payee` | 16 |
+  | `depositor` | 8 |
+  | `threshold` | 5 |
+
+  Đây là những chỗ kịch bản không chạm tới, và chưa cổng nào bắt được.
+- **Chi phí:** 11 012 lần gọi bộ thực thi tham chiếu, 1 292 lần gọi SMT, 757 giây.
+
+**E3** (nhãn đã phân xử): không đổi so với Round 1 chấm lại (mục 9.2). E3-All: chấp nhận sai 0,111,
+độ phủ 0,521, từ chối nhầm 0,021. E3-Final: chấp nhận sai 3/7, độ phủ 0,532. Hai sửa đổi của Scenario
+không đổi quyết định nào ở đây, vì hợp đồng E3 không tách khoản trả và kịch bản E3 là file có sẵn.
+Độ phủ vẫn thấp vì 25/54 case không có kịch bản. Alignment không chặn hợp đồng nào.
+
+Code của Round 2 được đóng băng bằng tag `E5-Freeze` để chạy phần case 58–100.
 
 ### 9.4 Gộp 99 case
 
