@@ -232,7 +232,7 @@ Scenario → Oracle (đầy đủ).
 
 ## 4. RQ3: toàn bộ quy trình có cải thiện mức khớp hành vi cuối cùng không
 
-**Chưa thực hiện. Chưa có kết luận.**
+**Chưa thực hiện. Chưa có kết luận.** Kế hoạch đã thống nhất (E6): `docs/E6-Plan.md`.
 
 Câu hỏi đòi một nhánh đối chứng, ví dụ sinh hợp đồng trực tiếp từ prompt không qua cổng, chạy trên
 cùng các case với cùng ngân sách request, rồi so mức khớp hành vi cuối cùng. Thí nghiệm này chưa được
@@ -254,7 +254,7 @@ Lưu ý khi thiết kế:
 
 ## 5. RQ4: chi phí của các biện pháp kiểm soát
 
-**Chưa thực hiện. Chưa có kết luận.**
+**Chưa thực hiện. Chưa có kết luận.** Sẽ đo cùng E6 (`docs/E6-Plan.md`).
 
 Dữ liệu đã có sẵn, chưa phải là kết quả:
 
