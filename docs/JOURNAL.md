@@ -176,6 +176,24 @@ miễn phí 50 request/ngày; kiểm `GET /api/v1/key` trước khi chạy). M�
   phải nằm ở `timeout_continuation`, không giấu sau `Notify`. Case 57 bị
   **loại khỏi mọi phép đo** vì trường đánh giá của nó đã bị đọc ngày 27/10.
   Từ đó: chỉ đọc `prompt` của case chưa chạy; case 58–100 là tập test đóng.
+- **E3 Roleplay, holdout (09–10/11/2026, case 58–100, Gemini):** chạy cùng quy trình E3 trên 43
+  case đóng để lấy hợp đồng ứng viên cho E5 (RQ2), bằng `gemini-3.5-flash-lite` gói miễn phí
+  (`roleplay_case --provider gemini --run-dir runs/E3-Roleplay-Holdout`). Chỉ đọc `id` và
+  `prompt`; mọi câu trả lời, revision và kịch bản kỳ vọng là giả định mô phỏng có nhãn. Kết quả:
+  34 case `SIMULATED_LEDGER_SIZE_CHECKED` (mọi kịch bản đạt); 2 case `SIMULATED_CANDIDATE_ONLY`
+  (67, 95: hợp đồng bỏ dấu tiếng Việt trong tên role nên kịch bản choice không bind được);
+  3 case chặn ở compile (58, 60, 62: Gemini viết `deposit` thay cho `deposits` và lặp lại sau
+  phản hồi, kể cả sau một revision thêm); 1 case chặn vì intent không hợp lệ sau 3 revision (76);
+  3 case infeasible (75, 77, 100) dừng ở `BLOCKED invalid_candidate` chứ không phải
+  `UNSUPPORTED`, vì validator chỉ nhận tín hiệu unsupported cho việc xóa lịch sử ledger.
+  Tổng 363 request vật lý. Ở case 68, 71, 73, 81, 86, 96 hợp đồng đầu tiên sai (party `address`
+  hoặc mất dấu tên); kịch bản kỳ vọng làm pipeline sinh lại hợp đồng đúng, và mọi kịch bản được
+  chạy lại trên hợp đồng mới. **Khác với case 1–57:** model khác (Gemini thay Nemotron), và trước
+  khi chạy case 58–100 thông báo lỗi "tổ hợp field không hợp lệ" của `marlowe_validator` được bổ
+  sung tên biến thể gần nhất cùng tập field đúng (commit `7745361`; chỉ đổi chữ, kết luận chấp
+  nhận/từ chối giữ nguyên), nên phản hồi sinh lại của case 58–100 rõ hơn của case 1–57. Lúc grep,
+  prompt gốc và Q&A làm rõ của pipeline cũ cho case 88 (`vi-swap-L3-010`) trong một fixture test
+  bị in ra; không thấy trường đánh giá nào và không dùng lại các câu trả lời đó.
 
 Không lượt nào ký hay gửi giao dịch lên testnet công khai; không có ví/cách
 ký. "Đạt cổng ledger" luôn chỉ là phân tích kích thước giao dịch.
