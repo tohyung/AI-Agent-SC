@@ -300,3 +300,8 @@ mục 5 và 6.
     vesting có thu hồi của case 22 (3 lần chạy, mỗi lần 3 lời gọi). Lỗi 500 là phản hồi nên được tính
     là request (mục 2). Bộ chạy coi lần chạy compile không có phản hồi dùng được là lỗi hạ tầng và chạy
     lại; sau 3 lần chạy như vậy, case kết thúc là Pipeline không giao ra (`compile_model_failed`).
+    Ngay sau đó, case 23 (hợp đồng nhỏ) cũng gặp lỗi 500, và một lần gọi thử bước compile cho cùng
+    intent cho thấy lỗi chập chờn ở cả hai key (key 2 thành công ở lần gọi thứ hai). Đây là sự cố phía
+    máy chủ, không phải kết quả của case, nên lượt chạy case 22–23 (cả hai nhánh) được giữ ở
+    `runs/E6-Discarded/gemini-500-outage/` và chạy lại khi Gemini ổn định. Luật 3 lần vẫn áp dụng cho
+    lần chạy lại.
