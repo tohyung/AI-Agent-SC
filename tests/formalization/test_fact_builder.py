@@ -173,6 +173,9 @@ def test_digit_grouping_is_removed_only_between_three_digit_groups(text, ungroup
     (14, "2 giờ chiều ngày 05/08", True),
     (21, "9h tối", True),
     (0, "12:00 AM", True),
+    (12, "by noon on 2027-09-01", True),
+    (0, "trước nửa đêm ngày 05/03", True),
+    (12, "by midnight", False),
     (20, "8:00 AM", False),
     (20, "18:00", False),
 ])

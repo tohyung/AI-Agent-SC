@@ -312,3 +312,7 @@ mục 5 và 6.
     cho case 1–21: 13 case Baseline dùng không quá trần mới nên được giữ. Case 6 và 14 từng chạm trần
     vì một lỗi 500 bị tính, nên Baseline của chúng được chạy lại với trần mới (vẫn chạm trần, không giao
     ra). Trường `cap` lưu trong các session cũ là trần cũ; bộ chấm tính lại chi phí theo luật mới.
+    Bổ sung ở case 27: "noon", "midday", "trưa" được tính là nêu giờ 12, và "midnight", "nửa đêm" là
+    giờ 0. Case 1–26 không có các chữ này. Lượt chạy cũ của case 27 ở
+    `runs/E6-Discarded/before-noon-fix/`. Bộ chạy cũng phân biệt lỗi máy chủ của Baseline (đợi 60 giây
+    rồi thử lại, tối đa 3 lần) với lỗi quota (đổi key).

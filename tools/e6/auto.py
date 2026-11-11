@@ -272,6 +272,7 @@ def base(index: int) -> int:
     view = user_view(index)
     path = case_dir / "session.json"
     args: list[str] = []
+    server_retries = 0
     if not path.exists():
         args = ["--pipeline-case-dir", _rel(PIPE_DIR / f"case-{index:03d}")]
     while True:
@@ -298,7 +299,17 @@ def base(index: int) -> int:
         result = _wsl("research.experiments.baseline_llm", "--case-index", str(index), *args)
         print(f"  base {' '.join(args) or '(resume)'} -> rc {result.returncode}")
         if result.returncode == 3:
-            if _rotate():
+            stopped = json.loads(path.read_text(encoding="utf-8"))["status"]
+            if stopped == "provider_error" and server_retries < 3:
+                # A provider server error, not quota: wait and resume on the same key.
+                import time
+
+                server_retries += 1
+                print(f"  provider server error; retry {server_retries} in 60 s")
+                time.sleep(60)
+                args = []
+                continue
+            if stopped == "provider_limit" and _rotate():
                 args = []  # the session resumes where the quota error stopped it
                 continue
             return 3

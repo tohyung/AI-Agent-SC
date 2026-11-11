@@ -103,6 +103,10 @@ def _ungrouped(text: str) -> str:
 
 def _twelve_hour(hour: int, spans: str) -> bool:
     """Whether the evidence states `hour` (0-23) on a 12-hour clock: "8:00 PM", "8 giờ tối"."""
+    named = {12: r"\b(?:noon|midday|giữa trưa|giua trua|trưa|trua)\b",
+             0: r"\b(?:midnight|nửa đêm|nua dem)\b"}
+    if hour in named and re.search(named[hour], spans, re.IGNORECASE):
+        return True
     clock = hour % 12 or 12
     if hour >= 12:
         marker = r"(?:p\.?\s?m\.?|(?:giờ|gio|g|h)?\s*(?:chiều|chieu|tối|toi|đêm|dem))"
