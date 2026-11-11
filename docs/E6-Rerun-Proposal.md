@@ -179,6 +179,67 @@ riêng đóng góp của cổng.
 Đề xuất: một model khác họ (Claude Haiku) nếu có ngân sách; nếu không thì `gemini-2.5-flash`. Dù chọn
 gì cũng phải ghi rõ là hạn chế.
 
+**Đã chọn (2026-11-12):** sub-agent Claude Haiku 5.5, effort low, của Claude Code, một sub-agent cho
+mỗi nhánh. Không cần API key riêng.
+
+### 3.7 Cài đặt bằng sub-agent
+
+- **Prompt người dùng** nằm ở `.claude/agents/sim-user.md` (SimUser-v1). Định nghĩa đó không có công
+  cụ, nên sub-agent không đọc được dataset hay thư mục `runs/`.
+  - Định nghĩa agent mới chỉ được nạp khi mở phiên mới.
+  - Trong phiên hiện tại, thử nghiệm dùng sub-agent `general-purpose` (Haiku, low), dán nguyên văn
+    prompt SimUser-v1 kèm lệnh "không dùng công cụ". Kiểu này còn quyền dùng công cụ, nên chỉ dùng để
+    thử, không dùng cho lần chạy thật.
+- **Mỗi lượt là một lần gọi mới, không có trạng thái.** Đầu vào luôn đầy đủ: yêu cầu, điều người dùng
+  biết, và toàn bộ lời đã thấy. Mọi thứ nằm trong đầu vào nên kiểm tra lại được.
+  - `tools/e6/simuser.py input N base|pipe` dựng đầu vào chỉ từ prompt, phiếu dữ kiện và lời hiển thị
+    của nhánh; không đọc các trường dành cho người chấm.
+  - `tools/e6/simuser.py check N '<json>'` kiểm câu trả lời: có đúng JSON không, hành động có hợp lệ
+    không, có con số nào không có trong yêu cầu hay phiếu dữ kiện không.
+- **Claude chỉ chuyển tiếp.** Đầu ra của sub-agent được lưu nguyên văn vào thư mục case rồi đưa cho bộ
+  chạy (`auto.py answer … "<message>"`). Claude không sửa câu chữ. Câu trả lời không qua được `check`
+  thì gọi lại, tối đa 2 lần, và ghi nhận số lần.
+- **Giới hạn:**
+  - không đặt được nhiệt độ, nên kết quả không tái lập tuyệt đối. Bù lại bằng việc lưu nguyên văn đầu
+    vào và đầu ra của mọi lượt;
+  - mỗi lượt đi qua phiên chính, nên tốn ngữ cảnh của phiên chính. Nên chạy theo lô.
+- **Thiếu ở nhánh Pipeline:** Pipeline hiện chưa có bản tóm tắt intent bằng lời cho người dùng đọc, và
+  chưa có bước đổi ví dụ bằng lời thành kịch bản (mục 3.4). Hai phần này phải làm trước khi người dùng
+  mô phỏng duyệt được kết quả của Pipeline.
+
+### 3.8 Chạy thử Haiku 5.5, effort low (2026-11-12)
+
+Lấy 5 tình huống đã ghi lại trong E6, mỗi tình huống gọi một sub-agent mới.
+
+| Tình huống | Hành vi mong đợi | SimUser-v1 | SimUser-v2 |
+| --- | --- | --- | --- |
+| 33 (B): lời giải thích đúng, không ghi giờ | accept, hoặc hỏi về giờ | Chuyển sang tiếng Việt, nhắc lại yêu cầu (sai) | `object`: thiếu giờ 15:00 UTC (chấp nhận được, khó tính) |
+| 31 (B): lời giải thích ghi năm 2024 | object: năm phải là 2027 | Bắt được 2024 nhưng nhãn `answer`, lại thêm dữ kiện | Bắt đúng, nhưng nhãn vẫn `answer` |
+| 49 (B): lời cuối chỉ nói "đã sửa JSON" | hỏi hợp đồng làm gì | Hỏi đúng ý, nhưng viết tiếng Việt không dấu (sai ngôn ngữ) | Nhắc lại yêu cầu thay vì hỏi (yếu) |
+| 45 (P): đòi số nguyên lovelace | nói không hiểu, nhắc 37,5 ADA | Đúng | Đúng |
+| 82 (P): "input by Vân chưa biểu diễn được" | vẫn cần, nhắc lại | Đúng | **Sai nặng:** đồng ý bỏ phần Vân nhập, và bịa rằng cửa hàng nhập |
+
+(B) là nhánh Baseline, (P) là nhánh Pipeline.
+
+Kết quả và nhận xét:
+
+- **Giao kết quả không chắc chắn:** 2/5 lần ở v1 sub-agent kết thúc mà không trả kết quả về. Ở v2, nhờ
+  câu lệnh "final report là JSON", cả 5/5 lần đều trả về.
+- **Ngôn ngữ:** v2 hết lỗi sai ngôn ngữ, nhờ dòng `YOUR LANGUAGE`.
+- **Nhãn hành động không đáng tin** (2/5 sai). Cách xử lý: bộ chạy không dựa vào nhãn. Khi đang xem kết
+  quả, *mọi tin nhắn khác rỗng* được coi là phản đối; chỉ `accept` với tin nhắn rỗng mới là chấp nhận.
+- **Bịa và tự ý bỏ yêu cầu** (1/5 ở v2) là lỗi nặng nhất, vì nó thay đổi nội dung yêu cầu. Cần một lớp
+  kiểm tra tất định:
+  - câu trả lời có đồng ý bỏ (bỏ, drop, không cần…) mà phiếu dữ kiện không có mục cho phép bỏ thì từ
+    chối và gọi lại;
+  - câu trả lời gán vai mới cho một bên (tên đi với động từ hành động không có trong yêu cầu) thì đánh
+    dấu để kiểm.
+- **Kết luận:** Haiku ở effort low **chưa đủ tin cậy** để chạy thật. Trước khi chạy cần:
+  1. thêm các kiểm tra tất định ở trên;
+  2. thử effort medium (hoặc Sonnet) trên cùng bộ tình huống;
+  3. chạy một bộ thử 20 tình huống, với ngưỡng đặt trước: không quá 1 câu bịa hoặc tự ý bỏ yêu cầu, và
+     không quá 10% câu cần gọi lại.
+
 ## 4. Kế hoạch triển khai (sau khi được duyệt)
 
 1. **Chốt các quy ước:** tên (Failure-Review, AFF-2 và S-1), thời gian (mục 1), chấm (Failure-Review,
