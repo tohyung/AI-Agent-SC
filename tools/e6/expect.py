@@ -8,7 +8,8 @@ Compact form:
    "pay": [["Minh", "Thảo", 45]],          # from account, to party, ADA (or [.., amount, token])
    "end": "close"}                          # optional, default close
 Amounts are ADA unless a token is given as [currency_symbol, token_name, units].
-Each transaction is placed 1 ms before the given instant, so a deadline instant means "just in time".
+A transaction with inputs is placed 1 ms before the given instant ("just in time"); an empty one
+(a timeout) is placed at the instant itself.
 """
 
 from __future__ import annotations
@@ -34,7 +35,8 @@ def _amount(value: object, token: list | None) -> tuple[dict, int]:
 def build(compact: dict) -> dict:
     transactions = []
     for instant, inputs in compact["tx"]:
-        moment = _ms(instant) - 1
+        # An empty transaction is a timeout: it happens at the deadline itself.
+        moment = _ms(instant) - (1 if inputs else 0)
         items = []
         for item in inputs:
             if item[0] == "deposit":

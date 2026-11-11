@@ -187,3 +187,25 @@ mục 5 và 6.
    `tools/e6/base.sh`), thêm trước lần chạy đầu tiên. `show.py` chỉ in những gì người dùng mô phỏng
    được thấy (prompt, phiếu dữ kiện, câu hỏi, intent, lời giải thích của model), không in đặc tả, hợp
    đồng tham chiếu, kịch bản kiểm, hành vi mong đợi hay JSON hợp đồng.
+3. **Người dùng mô phỏng bán tự động (2026-11-11, người phụ trách duyệt, sau case 1).** Thay cho quy
+   tắc 2, 3, 4 và 7 của mục 3, áp dụng như nhau cho hai nhánh (`research/experiments/e6_user.py`,
+   `tools/e6/auto.py`):
+   - Model hỏi: bộ chạy dừng, in câu hỏi và câu trả lời tự động. Câu trả lời tự động là cả phiếu dữ
+     kiện; phiếu trống thì là câu cố định "không có thêm thông tin, làm đúng như đã nêu". Lần tự động
+     thứ hai là "không có thông tin nào khác".
+   - Người dùng chọn một trong ba:
+     - gửi câu tự động;
+     - nhắc lại điều prompt đã nói, khi câu hỏi có đáp án sẵn trong prompt (không thêm dữ kiện; lần
+       trả lời đầu thì kèm phiếu dữ kiện nếu có);
+     - bỏ cuộc, khi cùng câu hỏi quay lại sau hai lần đã trả lời.
+
+     Mọi câu trả lời và lựa chọn được ghi vào `replies.json` của case.
+   - Intent của Pipeline, hợp đồng và lời từ chối của Baseline được chấp nhận tự động; đúng sai do
+     phân xử mù quyết định.
+   - Kịch bản mong đợi của Pipeline vẫn do người dùng viết từ prompt, phiếu và intent, một lần cho mỗi
+     case (`scenarios.json`); bộ chạy tự nạp chúng ở cổng Scenario và dừng ở kịch bản đầu tiên không
+     qua.
+
+   Lý do: ở case 1, AFF hỏi múi giờ dù prompt ghi "giờ VN". Câu trả lời cố định không giải được câu
+   hỏi đó, nên nhánh hay hỏi sẽ bị phạt nặng hơn với người dùng thật. Hai lần chạy case 1 theo cách cũ
+   (đóng tay; chỉ câu cố định) được giữ ở `runs/E6-Discarded/` và không tính.
