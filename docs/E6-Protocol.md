@@ -264,3 +264,18 @@ mục 5 và 6.
     lựa chọn nào khác trích tin nhắn đó hoặc tin nhắn sau hơn. Mâu thuẫn trong cùng một tin nhắn vẫn được
     hỏi. Case 1–15 không có câu hỏi mâu thuẫn nên được giữ. Dựng lại offline: draft của case 16 cho 320
     ADA, không còn câu hỏi. Lượt chạy cũ của case 16 được giữ ở `runs/E6-Discarded/before-conflict-fix/`.
+11. **Rà soát một lần các kiểm bằng chứng của builder (2026-11-11, người phụ trách yêu cầu, sau case
+    1–18).** Thay vì sửa từng lỗi khi gặp, builder được rà một lượt trên dữ liệu không thuộc v3 (các lỗi
+    draft của E4 trên dataset v2: 45 trích dẫn diễn đạt lại là lỗi thật của model, 12 khác hoa
+    thường/khoảng trắng đã sửa ở mục 5, cộng số viết bằng chữ). Sửa cùng lúc:
+    - một múi giờ nêu một lần cho cả yêu cầu áp dụng cho mọi mốc giờ khi lịch sử yêu cầu không nêu múi
+      giờ nào khác (case 19: "(giờ VN)" ở cuối câu có ba mốc);
+    - số viết bằng chữ tiếng Anh và tiếng Việt ("two hundred fifty", "bảy mươi", "một trăm") và dấu
+      phẩy thập phân ("1,5 ADA") được tính là nêu số đó (`research/formalization/number_words.py`);
+    - trích dẫn và tên người được khớp bỏ qua dấu tiếng Việt (prompt không dấu, model trích có dấu), rồi
+      thay bằng đúng đoạn gốc.
+
+    Mọi trích dẫn khác chữ vẫn là lỗi. Để mọi case chạy trên cùng một phiên bản, toàn bộ lượt chạy trước
+    đó (case 1–19, cả hai nhánh) được giữ ở `runs/E6-Discarded/before-evidence-fixes/` và không tính; E6
+    chạy lại từ case 1. Các mục 4–11 là sửa lỗi bộ chạy và builder trước kết quả chính thức; báo cáo
+    tóm tắt chúng trong một đoạn.

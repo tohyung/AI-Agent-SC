@@ -9,11 +9,13 @@ deposit and choice steps, static `Value` expressions (design doc section 4).
 from __future__ import annotations
 
 import re
+import unicodedata
 from copy import deepcopy
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal, InvalidOperation
 from typing import Any
 
+from research.formalization.number_words import digits_for_words
 from research.formalization.intent_spec import (
     CORE_SCHEMA_VERSION_V4,
     _absolute_deadline_mismatch,
@@ -108,20 +110,57 @@ def _twelve_hour(hour: int, spans: str) -> bool:
                      re.IGNORECASE) is not None
 
 
+def _fold(text: str) -> str:
+    """Lower case without Vietnamese marks, one character per character of `text`."""
+    folded = []
+    for char in unicodedata.normalize("NFC", text):
+        base = "".join(part for part in unicodedata.normalize("NFD", char.lower())
+                       if unicodedata.category(part) != "Mn")
+        folded.append("d" if base == "đ" else (base[:1] or char))
+    return "".join(folded)
+
+
 def _source_span(span: str, message: str) -> str | None:
     """The exact source text a cited span stands for.
 
-    A model often changes only letter case or spacing when it quotes; such a span is matched
-    ignoring case and runs of whitespace, and the source text replaces it, so evidence stays
-    verbatim. Any other difference is not a citation.
+    A model often changes only letter case, spacing or Vietnamese marks when it quotes (a request
+    typed without marks is quoted with them, or the other way round); such a span is matched on
+    folded text and the source text replaces it, so evidence stays verbatim. Any other difference
+    is not a citation.
     """
     if not span.strip():
         return None
     if span in message:
         return span
-    words = [re.escape(word) for word in span.split()]
-    match = re.search(r"\s+".join(words), message, re.IGNORECASE)
-    return match.group(0) if match else None
+    source = unicodedata.normalize("NFC", message)
+    words = [re.escape(word) for word in _fold(span).split()]
+    match = re.search(r"\s+".join(words), _fold(source))
+    return source[match.start():match.end()] if match else None
+
+
+def _same_name(name: str, text: str) -> bool:
+    """A party name is in its evidence, ignoring letter case and Vietnamese marks."""
+    return name in text or _fold(name) in _fold(text)
+
+
+def _zones(text: str) -> set[int]:
+    """UTC offsets in hours that `text` states, by offset or by name."""
+    zones = {int(sign + hours) for sign, hours in
+             re.findall(r"(?:UTC|GMT)\s*([+-])\s*0?(\d{1,2})(?!\d)", text, re.IGNORECASE)}
+    zones |= {int(sign + hours) for sign, hours in
+              re.findall(r"(?:(?<=\d\d:\d\d)|(?<![\w:]))([+-])(\d{2}):\d{2}(?!\d)", text)}
+    if re.search(r"\b(?:UTC|GMT)\b(?!\s*[+-]\s*\d)", text, re.IGNORECASE):
+        zones.add(0)
+    if VIETNAM_TIME.search(text):
+        zones.add(7)
+    return zones
+
+
+def _searchable(spans: str) -> str:
+    """Spans plus the same text with digit grouping removed, decimal commas as points and
+    number words as digits, for deciding whether a literal is stated."""
+    decimal_points = re.sub(r"(?<=\d),(?=\d{1,2}(?!\d))", ".", spans)
+    return " ".join([spans, _ungrouped(spans), decimal_points, digits_for_words(spans)])
 
 
 class DraftError(ValueError):
@@ -142,6 +181,8 @@ class _Builder:
         self.draft = draft
         self.history = history
         self.messages = _messages(history)
+        # A time zone stated once for the whole request applies to every time in it.
+        self.zones = set().union(*(_zones(text) for text in self.messages.values()))
         self.language = request_language(list(self.messages.values()))
         self.problems: list[tuple[str, str]] = []
         self.parties = self._index("parties")
@@ -266,7 +307,7 @@ class _Builder:
         basis = ""
         spans = " ".join(entry.get("span", "") for entry in item_evidence)
         # "1,200 ADA" states the literal 1200 as well: also look in the text without digit grouping.
-        searchable = spans + " " + _ungrouped(spans)
+        searchable = _searchable(spans)
         units: set[str] = set()
 
         def sub(ref: Any) -> int | None:
@@ -420,13 +461,19 @@ class _Builder:
 
     def _require_stated_time(self, iid: str, hour: int, tz: re.Match[str], spans: str) -> None:
         """A resolved time decides money, so its hour and timezone must be cited."""
-        if not (re.search(rf"(?<!\d)0?{hour}(?!\d)", spans) or _twelve_hour(hour, spans)):
+        words = digits_for_words(spans)
+        if not any(re.search(rf"(?<!\d)0?{hour}(?!\d)", text) or _twelve_hour(hour, text)
+                   for text in (spans, words)):
             self.problems.append((iid, f"hour {hour} not in evidence"))
         offset = int(tz.group(2))
         stated = (re.search(r"\b(?:UTC|GMT)\b", spans, re.IGNORECASE) if offset == 0 else
                   re.search(rf"[+-]\s*0?{offset}(?!\d)", spans))
         if not stated and tz.group(0) == "+07:00":
             stated = VIETNAM_TIME.search(spans)
+        signed = offset if tz.group(1) == "+" else -offset
+        if not stated and tz.group(3) == "00" and self.zones == {signed}:
+            # The request states exactly this one zone somewhere, for all its times.
+            stated = True
         if not stated:
             self.problems.append((iid, f"timezone {tz.group(0)} not in evidence"))
 
@@ -742,7 +789,7 @@ class _Builder:
     def build(self) -> dict[str, Any]:
         for party_id, party in self.parties.items():
             # Design section 3: a party's name is quoted from its own evidence.
-            if party["name"] not in self._spans(party):
+            if not _same_name(party["name"], self._spans(party)):
                 self.problems.append((party_id, f"name {party['name']!r} not in its evidence"))
             if not party["name"][0].isupper():
                 self.problems.append((party_id, f"name {party['name']!r} is a role word, not a "
