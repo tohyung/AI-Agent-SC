@@ -148,6 +148,24 @@ def test_model_generator_rejects_noncanonical_token_when_intent_only_uses_ada():
                for item in outcome.result.diagnostics)
 
 
+def test_model_generator_rejects_a_participant_written_as_an_address():
+    class AddressModel:
+        def generate(self, _system, _user):
+            return {"contract": {"when": [{"case": {
+                "for_choice": {"choice_name": "ok", "choice_owner": {"address": "Alice"}},
+                "choose_between": [{"from": 1, "to": 1}]}, "then": "close"}],
+                "timeout": 1893456000000, "timeout_continuation": "close"}, "mapping_evidence": []}
+
+    outcome = LLMContractGeneratorPort(AddressModel()).execute([_accepted()], StepContext("run"))
+    assert outcome.result.run_status == StepRunStatus.FAILED
+    assert outcome.result.diagnostics == [
+        "$.when[0].case.for_choice.choice_owner: participant 'Alice' is a role; "
+        'use {"role_token": "Alice"}, not an address']
+    model = ContractModel()
+    LLMContractGeneratorPort(model).execute([_accepted()], StepContext("run"))
+    assert "never as an address" in model.requests[0][0]
+
+
 def test_roleplay_intent_requires_explicit_option_and_keeps_no_user_authority():
     source = _accepted()
     simulated = ArtifactEnvelope(

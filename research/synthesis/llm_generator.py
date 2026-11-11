@@ -16,6 +16,26 @@ from research.formalization.intent_spec import validate_intent_spec
 from research.formalization.model_errors import sanitized_model_error
 
 
+def _named_address_paths(contract: Any, names: set[str], path: str = "$") -> list[str]:
+    """Parties written as {"address": <participant name>}: intent participants are roles."""
+    if isinstance(contract, list):
+        return [item for index, value in enumerate(contract)
+                for item in _named_address_paths(value, names, f"{path}[{index}]")]
+    if not isinstance(contract, dict):
+        return []
+    if set(contract) == {"address"} and contract["address"] in names:
+        return [path]
+    return [item for key, value in contract.items()
+            for item in _named_address_paths(value, names, f"{path}.{key}")]
+
+
+def _value_at(contract: Any, path: str) -> Any:
+    node = contract
+    for part in path.replace("]", "").replace("[", ".").split(".")[1:]:
+        node = node[int(part)] if isinstance(node, list) else node[part]
+    return node["address"]
+
+
 def _noncanonical_ada_paths(contract: Any, path: str = "$") -> list[str]:
     if isinstance(contract, list):
         return [item for index, value in enumerate(contract)
@@ -79,6 +99,8 @@ class LLMContractGeneratorPort:
             "A refund can spend only the amount that was actually deposited in "
             "that account on that path. Do not invent a deposit to fund a payout. "
             "Never invent missing business facts or turn an unsupported behavior into a different one. "
+            "Every participant of the IntentSpec is a role: write each party, account, payee and "
+            'choice owner as {"role_token":"<participant name>"}, never as an address. '
             "Return JSON with contract, mapping_evidence and reasoning_narrative. "
             "Each mapping item has source_kind ('claim' or 'scope'), source_id and ast_path. "
             "An ast_path must start at root or $ and identify an existing location in the returned AST. "
@@ -152,6 +174,14 @@ class LLMContractGeneratorPort:
             assets = [claim.get("value") for claim in spec.get("claims", [])
                       if claim.get("kind") == "asset"
                       and claim.get("status") != "superseded"]
+            names = {item.get("name") for item in spec.get("participants", [])
+                     if isinstance(item, dict) and isinstance(item.get("name"), str)}
+            if not diagnostics:
+                diagnostics.extend(
+                    f"{path}: participant {name!r} is a role; use "
+                    f'{{"role_token": {json.dumps(name, ensure_ascii=False)}}}, not an address'
+                    for path in _named_address_paths(output["contract"], names)
+                    for name in [_value_at(output["contract"], path)])
             if not diagnostics and assets and set(assets) == {"ADA"}:
                 diagnostics.extend(
                     f"{path}: accepted intent has only ADA; use empty currency_symbol "

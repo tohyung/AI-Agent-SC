@@ -209,3 +209,17 @@ mục 5 và 6.
    Lý do: ở case 1, AFF hỏi múi giờ dù prompt ghi "giờ VN". Câu trả lời cố định không giải được câu
    hỏi đó, nên nhánh hay hỏi sẽ bị phạt nặng hơn với người dùng thật. Hai lần chạy case 1 theo cách cũ
    (đóng tay; chỉ câu cố định) được giữ ở `runs/E6-Discarded/` và không tính.
+4. **Sửa bước compile và chạy lại từ đầu (2026-11-11, người phụ trách duyệt, sau case 1–4).**
+   - **Lỗi:** ở 3/4 case đầu, LLM của bước compile viết một bên của intent thành
+     `{"address": "<tên>"}` thay vì `{"role_token": "<tên>"}`. Kịch bản viết theo vai không gắn được
+     vào hợp đồng, cổng Scenario báo INCONCLUSIVE và pipeline dừng. E3 (DCF) đã gặp lỗi này ở 3 case.
+   - **Sửa** (`research/synthesis/llm_generator.py`): prompt nói rõ mọi bên của intent là vai; một bên
+     `address` mang tên người trong intent bị trả lại thành chẩn đoán, để vòng sinh lại sửa, giống cách
+     đang làm với token ADA sai.
+   - **Kiểm không dùng v3:** sinh lại từ 10 intent đã duyệt của E3 (case 58–100 của dataset v2). Prompt
+     cũ: một hợp đồng có 12 chỗ `address`. Prompt mới: không còn chỗ nào. Tỷ lệ hợp đồng lần đầu sai
+     cấu trúc (`deposit` thay `deposits`) là 7/10 ở cả hai prompt; vòng sinh lại của pipeline xử lý lỗi
+     này.
+   - **Hệ quả:** lỗi được phát hiện nhờ nhìn kết quả của 4 case v3. Lần chạy trước sửa của case 1–4 (cả
+     hai nhánh) được giữ ở `runs/E6-Discarded/before-role-fix/` và không tính. E6 chạy lại từ case 1
+     với cùng quy tắc; trần của Baseline lấy từ lần chạy mới của Pipeline.

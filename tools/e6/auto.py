@@ -3,6 +3,7 @@
   python tools/e6/auto.py pipe N    drive the pipeline arm of case N as far as it can go
   python tools/e6/auto.py base N    drive the baseline arm of case N (after the pipeline arm ended)
   python tools/e6/auto.py answer pipe|base N auto|giveup|"<restatement>"
+  python tools/e6/auto.py scen N '{"<name>": <compact scenario>, ...}'   (for the intent under review)
 
 When an arm asks, the driver stops (exit 5) and prints the questions and the automatic reply. The
 simulated user then records one answer (replies.json of the case):
@@ -256,6 +257,18 @@ def base(index: int) -> int:
 if __name__ == "__main__":
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    if sys.argv[1] == "scen":
+        index = int(sys.argv[2])
+        case_dir = PIPE_DIR / f"case-{index:03d}"
+        record = _last(case_dir)
+        if record is None or record["status"] != "WAITING_RESEARCH_REVIEW":
+            raise SystemExit("scen: the case is not waiting for intent review")
+        candidate = record["steps"]["intent_extraction"]["output_artifacts"][0]
+        spec = {"intent_id": candidate, "scenarios": json.loads(sys.argv[3])}
+        (case_dir / "scenarios.json").write_text(json.dumps(spec, ensure_ascii=False, indent=1) + "\n",
+                                                 encoding="utf-8")
+        print(f"scenarios for {candidate}: {', '.join(spec['scenarios'])}")
+        raise SystemExit(0)
     if sys.argv[1] == "answer":
         raise SystemExit(answer(sys.argv[2], int(sys.argv[3]), sys.argv[4]))
     raise SystemExit({"pipe": pipe, "base": base}[sys.argv[1]](int(sys.argv[2])))
