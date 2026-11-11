@@ -283,3 +283,6 @@ mục 5 và 6.
     "Tôi", "Buyer" lọt thành tên người (case 7: người mua thành "I" thay vì "Ethan"). Thêm danh sách
     đại từ và từ chỉ vai phổ biến (giữ dấu: "mình" là đại từ, "Minh" là tên). Case 1–6 dùng tên riêng
     nên được giữ; lượt chạy cũ của case 7 ở `runs/E6-Discarded/before-role-word-fix/`.
+    Khi tên một bên là đại từ hoặc từ chỉ vai, builder hỏi người dùng tên người đó, thay vì báo lỗi
+    draft. Chỉ báo lỗi thì model không biết tên (nó chỉ có trong phiếu dữ kiện), nên ở lần chạy thử
+    case 7 dừng sau 4 draft mà không hỏi gì. Lượt chạy đó ở `runs/E6-Discarded/before-name-question/`.

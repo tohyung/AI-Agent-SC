@@ -44,6 +44,7 @@ QUESTIONS = {
         "time": "At what exact time and in which timezone is \"{at}\"?",
         "amount": "What exact amount is \"{at}\"?",
         "policy": "Which policy ID and token name identify {name}?",
+        "name": "What is the name of \"{role}\" in this request?",
         "rounding": "{num}/{den} of \"{at}\" is not a whole number of the smallest unit; "
                     "how should it be rounded?",
         "unsupported": "This part cannot be represented yet: \"{text}\". "
@@ -54,6 +55,7 @@ QUESTIONS = {
         "time": "\"{at}\" là chính xác mấy giờ, theo múi giờ nào?",
         "amount": "\"{at}\" cụ thể là bao nhiêu?",
         "policy": "Token {name} có policy ID và tên token là gì?",
+        "name": "\"{role}\" trong yêu cầu này tên là gì?",
         "rounding": "{num}/{den} của \"{at}\" không chia hết đến đơn vị nhỏ nhất; "
                     "làm tròn thế nào?",
         "unsupported": "Phần này chưa biểu diễn được: \"{text}\". "
@@ -802,7 +804,10 @@ class _Builder:
             # Design section 3: a party's name is quoted from its own evidence.
             if not _same_name(party["name"], self._spans(party)):
                 self.problems.append((party_id, f"name {party['name']!r} not in its evidence"))
-            if not party["name"][0].isupper() or unicodedata.normalize("NFC", party["name"]).strip().lower() in ROLE_WORDS:
+            if unicodedata.normalize("NFC", party["name"]).strip().lower() in ROLE_WORDS:
+                # "I", "Tôi", "Buyer": the person is not named yet, so the user is asked.
+                self.ask(party_id, self.question("name", role=party["name"]))
+            elif not party["name"][0].isupper():
                 self.problems.append((party_id, f"name {party['name']!r} is a role word, not a "
                                                 "proper name: use the person it means, or add "
                                                 "a note of kind \"other\" if nobody is named"))
