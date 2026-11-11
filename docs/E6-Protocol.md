@@ -230,3 +230,10 @@ mục 5 và 6.
    nguyên văn; trích dẫn khác chữ vẫn là lỗi. Dựng lại offline 4 draft đã hỏng của case 1: draft đầu
    qua, đúng mốc giờ. Lượt chạy case 1–2 trước bản sửa được giữ ở
    `runs/E6-Discarded/before-span-fix/` và không tính; E6 chạy lại từ case 1.
+6. **Múi giờ ghi bằng tên (2026-11-11, người phụ trách yêu cầu, cùng lúc với mục 5, trước khi chạy lại).**
+   Builder chỉ nhận "+7", "UTC+7"… là bằng chứng của +07:00, nên AFF hỏi lại múi giờ ở mọi case ghi
+   "giờ VN", và draft trích "giờ VN" bị từ chối. Builder giờ nhận "giờ VN", "giờ Việt Nam", "giờ Hà
+   Nội", "giờ Sài Gòn", "Vietnam time", "ICT", "Asia/Ho_Chi_Minh" (có hoặc không dấu) là +07:00; prompt
+   của AFF nói rõ múi giờ ghi bằng tên là đã ghi (`Formalization-FactPrompt-v6`). Các múi giờ khác
+   không đổi. Dựng lại offline 4 draft cũ của case 1: 2 draft qua; 2 draft còn lại không trích chỗ
+   nào về múi giờ nên vẫn bị từ chối, đúng như mong đợi.

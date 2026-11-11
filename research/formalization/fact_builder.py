@@ -27,6 +27,11 @@ ADA_BASIS = "1 ADA = 1000000 lovelace"
 OUTCOME_RECIPIENT_KIND = {"payment": "payment_recipient", "refund": "refund_recipient",
                           "release": "release_recipient"}
 TZ = re.compile(r"([+-])(\d{2}):(\d{2})\Z")
+# A named zone states UTC+7 as clearly as an offset does ("giờ VN", "giờ Việt Nam", "ICT", ...).
+VIETNAM_TIME = re.compile(
+    r"\b(?:gi[ờo]\s+(?:VN|Vi[ệe]t\s*Nam|H[àa]\s*N[ộo]i|S[àa]i\s*G[òo]n)|"
+    r"(?:Vietnam|Viet\s*Nam|Hanoi|Saigon)\s+time|ICT|Asia/Ho_Chi_Minh|Asia/Saigon)\b",
+    re.IGNORECASE)
 VIETNAMESE_LETTER = re.compile("[ăâđêôơưạảấầẩẫậắằẳẵặẹẻẽếềểễệỉịọỏốồổỗộớờởỡợụủứừửữựỳỵỷỹ"
                                "áàãéèíìóòõúùýđ]", re.IGNORECASE)
 # Fallback questions, used only for an item the model wrote no question for.
@@ -372,6 +377,8 @@ class _Builder:
         offset = int(tz.group(2))
         stated = (re.search(r"\b(?:UTC|GMT)\b", spans, re.IGNORECASE) if offset == 0 else
                   re.search(rf"[+-]\s*0?{offset}(?!\d)", spans))
+        if not stated and tz.group(0) == "+07:00":
+            stated = VIETNAM_TIME.search(spans)
         if not stated:
             self.problems.append((iid, f"timezone {tz.group(0)} not in evidence"))
 

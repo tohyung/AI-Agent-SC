@@ -144,6 +144,22 @@ def test_ungrounded_literal_and_span_are_draft_errors_by_item_id():
     assert items == {"q_total", "p_tu"}
 
 
+def test_a_named_vietnam_zone_states_utc_plus_seven():
+    message = MESSAGE.replace("(UTC+7)", "giờ VN")
+    history = [{"version": 1, "messages": [message]}]
+    draft = milestone_draft()
+    draft["instants"][0]["evidence"] = ev("00:00 ngày 02/03/2027 giờ VN")
+    for item in draft["parties"] + draft["quantities"] + draft["steps"] + draft["outcomes"]:
+        for entry in item.get("evidence", []):
+            entry["span"] = entry["span"].replace("(UTC+7)", "giờ VN")
+    core = build_core(draft, history)
+    assert any(claim["value"] == D1 for claim in core["claims"])
+    draft["instants"][0]["expr"]["date"]["tz"] = "+08:00"
+    with pytest.raises(DraftError) as caught:
+        build_core(draft, history)
+    assert ("i_d1", "timezone +08:00 not in evidence") in caught.value.problems
+
+
 def test_a_span_differing_only_in_case_or_spacing_cites_the_source_text():
     exact = build_core(milestone_draft(), HISTORY)
     draft = milestone_draft()

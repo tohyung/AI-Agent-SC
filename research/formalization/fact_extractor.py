@@ -14,7 +14,7 @@ from research.formalization.fact_builder import FACT_DRAFT_VERSION, DraftError, 
 from research.formalization.intent_spec import validate_intent_spec
 from research.formalization.projector import classify_projection, project_intent_spec
 
-FACT_PROMPT_VERSION = "Formalization-FactPrompt-v5"
+FACT_PROMPT_VERSION = "Formalization-FactPrompt-v6"
 
 SYSTEM = f"""You read a request for a Cardano Marlowe contract and write a FactDraft
 ({FACT_DRAFT_VERSION}) as one JSON object. Code computes every amount, time and
@@ -53,7 +53,7 @@ Fields
   {{"fraction": {{"of": "q_total", "num": 1, "den": 2}}}} (also percentages: num 5, den 100),
   {{"unknown": true}}, or {{"dynamic": "<what decides it while the contract runs>"}}.
 - "instants": [{{"id", "expr", "evidence"}}] where expr is one of
-  {{"date": {{"y", "m", "d", "h", "min", "tz": "+07:00"}}}} (h, min or tz null when not written),
+  {{"date": {{"y", "m", "d", "h", "min", "tz": "+07:00"}}}} (h, min or tz null when not written; a named zone is written: "giờ VN"/"giờ Việt Nam" is "+07:00", "UTC"/"GMT" is "+00:00"),
   {{"offset": {{"from": "<instant id>", "days": 7}}}}, or {{"unknown": true}}.
 - "steps": ordered actions, linked by id. Kinds:
   deposit {{"by", "into", "amount", "deadline", "then", "on_timeout"}};
