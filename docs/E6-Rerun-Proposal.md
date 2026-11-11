@@ -266,7 +266,7 @@ Kết quả và nhận xét:
 ## 4. Kế hoạch triển khai (sau khi được duyệt)
 
 1. **Chốt các quy ước:** tên (Failure-Review, AFF-2 và S-1), thời gian (mục 1), chấm (Failure-Review,
-   mục 5). Ghi vào giao thức mới `docs/E7-Protocol.md`.
+   mục 5). Đã chốt ở `docs/E7-Conventions.md` (bản 1).
 2. **Dataset v4:**
    - phiếu dữ kiện viết thành "trí nhớ người dùng": đủ để trả lời mọi câu hỏi hợp lý, có mục cho giờ,
      múi giờ, năm, hoàn tiền khi hết hạn, và ví dụ tình huống;

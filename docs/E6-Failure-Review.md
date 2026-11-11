@@ -270,8 +270,8 @@ giảm sai sót của người viết.
 
 ## 7. Thứ tự làm đề xuất
 
-1. **Chốt quy ước** ở mục 2 (AFF-2), 3 (S-1) và 5, trước khi sửa code. Ghi vào `docs/E6-Protocol.md`
-   như một quy ước cho vòng sau.
+1. **Chốt quy ước** ở mục 2 (AFF-2), 3 (S-1) và 5, trước khi sửa code. Đã chốt ở
+   `docs/E7-Conventions.md` (bản 1).
 2. **AFF-1** (sửa lỗi thay vì dừng hẳn), **AFF-2** (tên), **AFF-3** (giờ cho danh sách), **AFF-4** (số):
    chi phí thấp, ảnh hưởng tới khoảng 15 case.
 3. **AFF-7** và **AFF-8** (kênh "không làm được", chất lượng câu hỏi).
