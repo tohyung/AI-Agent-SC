@@ -281,9 +281,9 @@ Chi tiết: `docs/E6-Protocol.md` (giao thức, 16 mục lệch giao thức), `d
 ### Phải đọc kết quả này thế nào
 
 - **Phần lớn khoảng cách đến từ việc tính mốc thời gian.** Cả 54 hợp đồng sai của Baseline đều sai mốc
-  giờ (thường sai năm, sai múi giờ hoặc lệch một ngày khi tự đổi sang POSIX ms), và 36 hợp đồng chỉ sai
+  giờ (thường sai năm, sai múi giờ hoặc lệch một ngày khi tự đổi sang POSIX ms), và 35 hợp đồng chỉ sai
   mỗi mốc giờ. Pipeline không gặp lỗi này, vì builder của AFF tính mốc giờ bằng code. Nếu Baseline có
-  một công cụ đổi giờ đúng, nó có thể đạt khoảng 47/71 (ước lượng giả định: cộng 36 case chỉ sai giờ).
+  một công cụ đổi giờ đúng, nó có thể đạt khoảng 46/71 (ước lượng giả định: cộng 35 case chỉ sai giờ).
   Con số đó cao hơn Pipeline. Kết luận vững là: **tính tất định các giá trị (giờ, tiền) là thứ tạo ra
   khác biệt lớn nhất**, chứ chưa phải toàn bộ hệ thống cổng.
 - **Pipeline thua ở khâu hiểu yêu cầu.** 30/71 case Pipeline không giao ra gì. Lý do chính:
