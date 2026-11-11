@@ -141,6 +141,14 @@ if __name__ == "__main__":
         show(int(sys.argv[2]), int(sys.argv[3]))
     elif command == "set":
         set_verdict(sys.argv[2], sys.argv[3], sys.argv[4], sys.argv[5])
+    elif command == "bulk":
+        # one verdict per stdin line: CODE|RIGHT|WRONG|UND|NONE|TOLD|reason
+        for line in sys.stdin.read().splitlines():
+            if line.strip():
+                code, contract, told, reason = line.split("|", 3)
+                set_verdict(code.strip(), contract.strip(), told.strip(), reason.strip())
+        done = json.loads(VERDICTS.read_text(encoding="utf-8"))
+        print(len(done), "verdicts recorded")
     elif command == "todo":
         done = json.loads(VERDICTS.read_text(encoding="utf-8")) if VERDICTS.exists() else {}
         todo = [number for number, packet in enumerate(_packets(), 1) if packet["code"] not in done]

@@ -1,0 +1,1283 @@
+{
+ "note": "E6 blind adjudication of cases 30-100 (code frozen at E6-Freeze-30). Verdicts were written before the arm key was opened. Rubric: docs/E5-Adjudication-Rubric.md plus docs/E6-Protocol.md section 4.",
+ "verdicts": [
+  {
+   "contract": "WRONG",
+   "told_unsupported": false,
+   "reason": "deadlines 2026-03-01 02:40Z and 2026-09-05, required 2027-03-01 05:00Z and 2027-03-08 05:00Z",
+   "code": "2ce2aed5b99a",
+   "case_index": 32,
+   "case_id": "v3-vi-third_party-001",
+   "arm": "baseline"
+  },
+  {
+   "contract": "WRONG",
+   "told_unsupported": false,
+   "reason": "choice deadline 2027-07-19 19:00Z, required 2027-07-20 19:00Z",
+   "code": "3bcf1992e5c8",
+   "case_index": 41,
+   "case_id": "v3-en-cancellation_fee-002",
+   "arm": "baseline"
+  },
+  {
+   "contract": "WRONG",
+   "told_unsupported": false,
+   "reason": "deposit deadline 2027-10-02 05:00Z, required 2027-10-01 05:00Z (12:00 UTC+7); inspection 10-06 vs 10-05",
+   "code": "822bb7963a07",
+   "case_index": 85,
+   "case_id": "v3-en-deduction-004",
+   "arm": "baseline"
+  },
+  {
+   "contract": "WRONG",
+   "told_unsupported": false,
+   "reason": "deadlines wrong (2026-12-21, 2027-01-19, 2027-02-18 vs 20/02, 20/03, 20/04/2027 23:59 VN); no payment to Truc until close",
+   "code": "07c44116fd55",
+   "case_index": 50,
+   "case_id": "v3-vi-installment-007",
+   "arm": "baseline"
+  },
+  {
+   "contract": "WRONG",
+   "told_unsupported": false,
+   "reason": "deadlines in 2025/2026; pays 300 from Lan's account holding 100 (partial pay); recipient NhaCungCap not PhucAn",
+   "code": "63fa59617fe3",
+   "case_index": 51,
+   "case_id": "v3-vi-k_of_n-001",
+   "arm": "baseline"
+  },
+  {
+   "contract": "WRONG",
+   "told_unsupported": false,
+   "reason": "purchase deadline 2026-05-02 12:00Z vs 2027-05-01 12:00Z; maturity 2027-11-02 vs 11-01",
+   "code": "4cd1f3066b31",
+   "case_index": 62,
+   "case_id": "v3-en-zero_coupon_bond-001",
+   "arm": "baseline"
+  },
+  {
+   "contract": "RIGHT",
+   "told_unsupported": false,
+   "reason": "deposit and four coupons at 12:00 UTC on the stated dates; last pays 20 + 800; missed payment closes",
+   "code": "69e9afb8147e",
+   "case_index": 69,
+   "case_id": "v3-en-coupon_bond-004",
+   "arm": "pipeline"
+  },
+  {
+   "contract": null,
+   "told_unsupported": false,
+   "reason": "stopped at formalization, nothing delivered, no unsupported notice",
+   "code": "d8237e62cc7b",
+   "case_index": 39,
+   "case_id": "v3-en-rental_deposit-004",
+   "arm": "pipeline"
+  },
+  {
+   "contract": null,
+   "told_unsupported": true,
+   "reason": "no contract; it told the user the automatic rainfall feed cannot be represented",
+   "code": "3acfd38f65a5",
+   "case_index": 99,
+   "case_id": "v3-vi-infeasible-009",
+   "arm": "pipeline"
+  },
+  {
+   "contract": "WRONG",
+   "told_unsupported": false,
+   "reason": "deadlines in 2026 instead of 2027 (and 05:00Z is 12:00 VN, not 07:00)",
+   "code": "6fb2dabfca22",
+   "case_index": 82,
+   "case_id": "v3-vi-deduction-001",
+   "arm": "baseline"
+  },
+  {
+   "contract": "WRONG",
+   "told_unsupported": false,
+   "reason": "timeout 2024-03-09, required 2027-06-04 23:59 VN",
+   "code": "7934b34c2fa5",
+   "case_index": 61,
+   "case_id": "v3-vi-first_come-005",
+   "arm": "baseline"
+  },
+  {
+   "contract": "WRONG",
+   "told_unsupported": false,
+   "reason": "deadlines wrong (2026-12-31 17:46Z, 2027-01-28); requires all three to choose in order, not any two",
+   "code": "fcb9490933ea",
+   "case_index": 52,
+   "case_id": "v3-vi-k_of_n-002",
+   "arm": "baseline"
+  },
+  {
+   "contract": null,
+   "told_unsupported": true,
+   "reason": "no contract; told the user \"forever\" cannot be represented",
+   "code": "7aa771eca451",
+   "case_index": 98,
+   "case_id": "v3-en-infeasible-008",
+   "arm": "pipeline"
+  },
+  {
+   "contract": "WRONG",
+   "told_unsupported": false,
+   "reason": "timeout 2026-05-01 23:59Z, required 2027-05-01 23:59 VN (16:59Z)",
+   "code": "390d9ae2626d",
+   "case_index": 59,
+   "case_id": "v3-vi-first_come-003",
+   "arm": "baseline"
+  },
+  {
+   "contract": null,
+   "told_unsupported": false,
+   "reason": "blocked by an invalid core; nothing delivered, no notice",
+   "code": "3f48e54fb890",
+   "case_index": 48,
+   "case_id": "v3-vi-installment-005",
+   "arm": "pipeline"
+  },
+  {
+   "contract": "WRONG",
+   "told_unsupported": false,
+   "reason": "deadlines 2026-12-12 etc., required 10/02, 10/03, 10/04, 10/05/2027 23:59 VN",
+   "code": "4723e5d1c75b",
+   "case_index": 45,
+   "case_id": "v3-vi-installment-002",
+   "arm": "baseline"
+  },
+  {
+   "contract": "WRONG",
+   "told_unsupported": false,
+   "reason": "depositor An instead of Yên; dates in 2029; deposit deadline not 25/09/2027",
+   "code": "933468f9164b",
+   "case_index": 73,
+   "case_id": "v3-vi-split-003",
+   "arm": "baseline"
+  },
+  {
+   "contract": "WRONG",
+   "told_unsupported": false,
+   "reason": "deadlines one day late (04-02 and 04-04 23:59 VN vs 01/04 and 03/04)",
+   "code": "035f85c5c686",
+   "case_index": 30,
+   "case_id": "v3-vi-crowdfunding-003",
+   "arm": "baseline"
+  },
+  {
+   "contract": "WRONG",
+   "told_unsupported": false,
+   "reason": "shares 40/20/20/20 (100 of 120) instead of 48/24/24/24; deadlines in August, not December",
+   "code": "ebff4ac67fbe",
+   "case_index": 75,
+   "case_id": "v3-vi-split-005",
+   "arm": "baseline"
+  },
+  {
+   "contract": null,
+   "told_unsupported": true,
+   "reason": "no contract; explained a passport scan cannot be done on-chain",
+   "code": "f8ca21d74fbd",
+   "case_index": 94,
+   "case_id": "v3-en-infeasible-004",
+   "arm": "baseline"
+  },
+  {
+   "contract": "RIGHT",
+   "told_unsupported": false,
+   "reason": "first of Khôi, Trinh, Đông to deposit 50 ADA pays Thái; deadline 20:00 VN 15/03; otherwise close",
+   "code": "dfcd5dd3404a",
+   "case_index": 57,
+   "case_id": "v3-vi-first_come-001",
+   "arm": "pipeline"
+  },
+  {
+   "contract": "WRONG",
+   "told_unsupported": false,
+   "reason": "deposit deadline 2027-04-01 23:59Z (7 h late; 23:59 VN is 16:59Z); repay 2028-03-31 23:59Z",
+   "code": "2357446d6041",
+   "case_index": 65,
+   "case_id": "v3-vi-zero_coupon_bond-004",
+   "arm": "baseline"
+  },
+  {
+   "contract": "WRONG",
+   "told_unsupported": false,
+   "reason": "only Aria can buy; Basil, Cora, Dmitri cannot",
+   "code": "52dec753a96c",
+   "case_index": 58,
+   "case_id": "v3-en-first_come-002",
+   "arm": "pipeline"
+  },
+  {
+   "contract": null,
+   "told_unsupported": true,
+   "reason": "no contract; explained email and compounding interest cannot be done",
+   "code": "adfb6fc95444",
+   "case_index": 91,
+   "case_id": "v3-vi-infeasible-001",
+   "arm": "baseline"
+  },
+  {
+   "contract": "WRONG",
+   "told_unsupported": false,
+   "reason": "timeout 2026-03-15, required 2027-03-15",
+   "code": "8fe6c4bb6ae5",
+   "case_index": 57,
+   "case_id": "v3-vi-first_come-001",
+   "arm": "baseline"
+  },
+  {
+   "contract": null,
+   "told_unsupported": true,
+   "reason": "no contract; explained a weather site cannot be read without an oracle",
+   "code": "2e76b8ddda51",
+   "case_index": 99,
+   "case_id": "v3-vi-infeasible-009",
+   "arm": "baseline"
+  },
+  {
+   "contract": "WRONG",
+   "told_unsupported": false,
+   "reason": "borrower named Minh instead of Nhu; all deadlines in 2026 and 7 h off",
+   "code": "6eae8263b6c9",
+   "case_index": 79,
+   "case_id": "v3-vi-collateral_loan-003",
+   "arm": "baseline"
+  },
+  {
+   "contract": "RIGHT",
+   "told_unsupported": false,
+   "reason": "cancel (1) pays SeaHotel 20 and refunds 130; 0 or no choice pays 150 to SeaHotel; deadlines 12:00 VN",
+   "code": "1219013e88f4",
+   "case_index": 42,
+   "case_id": "v3-vi-cancellation_fee-003",
+   "arm": "pipeline"
+  },
+  {
+   "contract": "WRONG",
+   "told_unsupported": false,
+   "reason": "all deadlines in 2026 instead of 2027",
+   "code": "7b1eb7c9fdd6",
+   "case_index": 87,
+   "case_id": "v3-vi-matching-001",
+   "arm": "baseline"
+  },
+  {
+   "contract": "WRONG",
+   "told_unsupported": false,
+   "reason": "no sponsor match step (NhaTaiTro missing); deadlines 7 h late",
+   "code": "bb52e123fc50",
+   "case_index": 89,
+   "case_id": "v3-vi-matching-003",
+   "arm": "baseline"
+  },
+  {
+   "contract": "RIGHT",
+   "told_unsupported": false,
+   "reason": "sequential deposits, anyone (Notify) triggers payout to Winner by 11-30 23:59Z, refunds on every timeout",
+   "code": "53c42f80597f",
+   "case_index": 31,
+   "case_id": "v3-en-crowdfunding-004",
+   "arm": "pipeline"
+  },
+  {
+   "contract": "RIGHT",
+   "told_unsupported": false,
+   "reason": "480 paid straight to Marco, 500 repaid to Priya by 2027-09-01 00:00Z, default closes",
+   "code": "c3c43b45126d",
+   "case_index": 64,
+   "case_id": "v3-vi-zero_coupon_bond-003",
+   "arm": "pipeline"
+  },
+  {
+   "contract": "RIGHT",
+   "told_unsupported": false,
+   "reason": "0 refunds 1050, 1 pays 157.5 to Victor and 892.5 back, no report refunds; deadlines exact",
+   "code": "f18b04fbb537",
+   "case_index": 37,
+   "case_id": "v3-en-rental_deposit-002",
+   "arm": "pipeline"
+  },
+  {
+   "contract": null,
+   "told_unsupported": true,
+   "reason": "no contract; told the Vietcombank transfer cannot be represented",
+   "code": "d5a15a0b60b8",
+   "case_index": 97,
+   "case_id": "v3-vi-infeasible-007",
+   "arm": "pipeline"
+  },
+  {
+   "contract": null,
+   "told_unsupported": false,
+   "reason": "stopped at formalization; nothing delivered",
+   "code": "07b9a77b9b6e",
+   "case_index": 70,
+   "case_id": "v3-vi-coupon_bond-005",
+   "arm": "pipeline"
+  },
+  {
+   "contract": null,
+   "told_unsupported": true,
+   "reason": "no contract; told the passport scan cannot be represented",
+   "code": "a2d73d872af8",
+   "case_index": 94,
+   "case_id": "v3-en-infeasible-004",
+   "arm": "pipeline"
+  },
+  {
+   "contract": null,
+   "told_unsupported": false,
+   "reason": "stopped asking the name of Me; nothing delivered",
+   "code": "00aebaa6e238",
+   "case_index": 55,
+   "case_id": "v3-vi-k_of_n-005",
+   "arm": "pipeline"
+  },
+  {
+   "contract": "RIGHT",
+   "told_unsupported": false,
+   "reason": "30 + 50 + sponsor 60 to MamXanh, refunds of whoever paid on every missed step, deadlines exact",
+   "code": "f4af32e06a6f",
+   "case_index": 87,
+   "case_id": "v3-vi-matching-001",
+   "arm": "pipeline"
+  },
+  {
+   "contract": "RIGHT",
+   "told_unsupported": false,
+   "reason": "1000 straight to Bob, 1050 repaid to Alice by 2027-11-01 12:00Z, default closes",
+   "code": "12731ed2ea38",
+   "case_index": 62,
+   "case_id": "v3-en-zero_coupon_bond-001",
+   "arm": "pipeline"
+  },
+  {
+   "contract": null,
+   "told_unsupported": false,
+   "reason": "blocked on a JSON error; no contract and no notice that the request cannot be done",
+   "code": "b2e58eee9054",
+   "case_index": 91,
+   "case_id": "v3-vi-infeasible-001",
+   "arm": "pipeline"
+  },
+  {
+   "contract": null,
+   "told_unsupported": true,
+   "reason": "no contract; explained a contract cannot run forever",
+   "code": "9a24bec64d78",
+   "case_index": 98,
+   "case_id": "v3-en-infeasible-008",
+   "arm": "baseline"
+  },
+  {
+   "contract": "WRONG",
+   "told_unsupported": false,
+   "reason": "collateral 120000000 GEM units instead of 120; deadlines 13:20Z and 08-31 16:00Z instead of 12:00Z",
+   "code": "5e500f28ab56",
+   "case_index": 80,
+   "case_id": "v3-en-collateral_loan-004",
+   "arm": "baseline"
+  },
+  {
+   "contract": "WRONG",
+   "told_unsupported": false,
+   "reason": "deadlines two days late (06-03 and 12-03 vs 06-01 and 12-01 00:00Z)",
+   "code": "65508f915945",
+   "case_index": 37,
+   "case_id": "v3-en-rental_deposit-002",
+   "arm": "baseline"
+  },
+  {
+   "contract": "RIGHT",
+   "told_unsupported": false,
+   "reason": "five weekly 20 ADA payments to Sa at 18:00 VN Fridays from 08/01/2027; a missed week closes",
+   "code": "c13820d37b3b",
+   "case_index": 47,
+   "case_id": "v3-vi-installment-004",
+   "arm": "pipeline"
+  },
+  {
+   "contract": "RIGHT",
+   "told_unsupported": false,
+   "reason": "1 pays VietGo 30 and refunds 270; 0 or no choice pays VietGo 300; deadlines 10:00 VN",
+   "code": "e4274ec7c12e",
+   "case_index": 40,
+   "case_id": "v3-vi-cancellation_fee-001",
+   "arm": "pipeline"
+  },
+  {
+   "contract": null,
+   "told_unsupported": false,
+   "reason": "stopped at formalization; nothing delivered",
+   "code": "18dea80d31fb",
+   "case_index": 60,
+   "case_id": "v3-en-first_come-004",
+   "arm": "pipeline"
+  },
+  {
+   "contract": "WRONG",
+   "told_unsupported": false,
+   "reason": "purchase and first coupon deadlines in 2026; later deadlines at wrong hours",
+   "code": "ab2e15276a0c",
+   "case_index": 66,
+   "case_id": "v3-vi-coupon_bond-001",
+   "arm": "baseline"
+  },
+  {
+   "contract": "RIGHT",
+   "told_unsupported": false,
+   "reason": "0 = cancel (8.5 to Iris, 76.5 back), 1 or no choice pays Iris 85; mapping clear (the user never stated an encoding)",
+   "code": "61f5b59d9834",
+   "case_index": 41,
+   "case_id": "v3-en-cancellation_fee-002",
+   "arm": "pipeline"
+  },
+  {
+   "contract": "WRONG",
+   "told_unsupported": false,
+   "reason": "all deadlines in 2026 (and one day late)",
+   "code": "b5e166144137",
+   "case_index": 88,
+   "case_id": "v3-en-matching-002",
+   "arm": "baseline"
+  },
+  {
+   "contract": "WRONG",
+   "told_unsupported": false,
+   "reason": "deadlines in July 2026-2029 instead of 10/01/2027-2030 23:59 VN",
+   "code": "771b8a323047",
+   "case_index": 68,
+   "case_id": "v3-vi-coupon_bond-003",
+   "arm": "baseline"
+  },
+  {
+   "contract": "RIGHT",
+   "told_unsupported": false,
+   "reason": "first of Aiko, Bruno, Chen to deposit 15 ADA into Dara's account by 03:00Z (12:00 UTC+9); close pays Dara at once",
+   "code": "6560384344bb",
+   "case_index": 60,
+   "case_id": "v3-en-first_come-004",
+   "arm": "baseline"
+  },
+  {
+   "contract": "RIGHT",
+   "told_unsupported": false,
+   "reason": "score >= 70 pays Huu, below or no score refunds Dat; deadlines 12:00 VN",
+   "code": "653bff03b579",
+   "case_index": 32,
+   "case_id": "v3-vi-third_party-001",
+   "arm": "pipeline"
+  },
+  {
+   "contract": "RIGHT",
+   "told_unsupported": false,
+   "reason": "three 100 ADA payments (the prompt's own correction) at 12:00 UTC to Ines; a missed payment closes",
+   "code": "9d1d3e505116",
+   "case_index": 49,
+   "case_id": "v3-en-installment-006",
+   "arm": "pipeline"
+  },
+  {
+   "contract": null,
+   "told_unsupported": false,
+   "reason": "reached the request cap without a valid contract",
+   "code": "c8dd4265ffdb",
+   "case_index": 56,
+   "case_id": "v3-en-k_of_n-006",
+   "arm": "baseline"
+  },
+  {
+   "contract": null,
+   "told_unsupported": false,
+   "reason": "reached the request cap; the explanation was right but no contract passed the checks",
+   "code": "2063a439df8f",
+   "case_index": 38,
+   "case_id": "v3-vi-rental_deposit-003",
+   "arm": "baseline"
+  },
+  {
+   "contract": null,
+   "told_unsupported": false,
+   "reason": "blocked after the Scenario gate rejected the contract",
+   "code": "0548b813a655",
+   "case_index": 75,
+   "case_id": "v3-vi-split-005",
+   "arm": "pipeline"
+  },
+  {
+   "contract": "WRONG",
+   "told_unsupported": false,
+   "reason": "coupon 25 ADA (user confirmed 20); purchase deadline June 2026; other deadlines off",
+   "code": "d12f993205a4",
+   "case_index": 70,
+   "case_id": "v3-vi-coupon_bond-005",
+   "arm": "baseline"
+  },
+  {
+   "contract": null,
+   "told_unsupported": true,
+   "reason": "user gave up; it said the entered deduction cannot be represented",
+   "code": "7ef4c37a703d",
+   "case_index": 86,
+   "case_id": "v3-vi-deduction-005",
+   "arm": "pipeline"
+  },
+  {
+   "contract": "WRONG",
+   "told_unsupported": false,
+   "reason": "collateral 500000000 CAT units instead of 500; deadlines in 2026",
+   "code": "70393b9c20a4",
+   "case_index": 77,
+   "case_id": "v3-en-collateral_loan-001",
+   "arm": "baseline"
+  },
+  {
+   "contract": "WRONG",
+   "told_unsupported": false,
+   "reason": "deadlines the next day 08:20Z, required Fridays 18:00 VN (11:00Z)",
+   "code": "47f575e6d464",
+   "case_index": 47,
+   "case_id": "v3-vi-installment-004",
+   "arm": "baseline"
+  },
+  {
+   "contract": "RIGHT",
+   "told_unsupported": false,
+   "reason": "120 GEM collateral, 250 to Zoe, 260 repaid to Ivan returns GEM, default gives GEM to Ivan; no loan closes and Close returns Zoe's GEM",
+   "code": "97ef83819ac1",
+   "case_index": 80,
+   "case_id": "v3-en-collateral_loan-004",
+   "arm": "pipeline"
+  },
+  {
+   "contract": null,
+   "told_unsupported": false,
+   "reason": "stopped at formalization; nothing delivered",
+   "code": "f9bcc436df66",
+   "case_index": 84,
+   "case_id": "v3-vi-deduction-003",
+   "arm": "pipeline"
+  },
+  {
+   "contract": "WRONG",
+   "told_unsupported": false,
+   "reason": "six deadlines in 2026 at 07:00 VN, required 01/03-01/08/2027 23:59 VN",
+   "code": "7c6f42a478ac",
+   "case_index": 48,
+   "case_id": "v3-vi-installment-005",
+   "arm": "baseline"
+  },
+  {
+   "contract": "RIGHT",
+   "told_unsupported": false,
+   "reason": "950 straight to Hung Thinh, 1000 repaid to Uyen by 09:00 VN 01/07/2028, default closes",
+   "code": "6a23624960e2",
+   "case_index": 63,
+   "case_id": "v3-vi-zero_coupon_bond-002",
+   "arm": "pipeline"
+  },
+  {
+   "contract": "WRONG",
+   "told_unsupported": false,
+   "reason": "all deadlines in 2024 (and 00:00Z instead of 23:59Z)",
+   "code": "8ad9dd1f1827",
+   "case_index": 31,
+   "case_id": "v3-en-crowdfunding-004",
+   "arm": "baseline"
+  },
+  {
+   "contract": null,
+   "told_unsupported": false,
+   "reason": "blocked after the Scenario gate rejected the contract",
+   "code": "483796b46a43",
+   "case_index": 71,
+   "case_id": "v3-vi-split-001",
+   "arm": "pipeline"
+  },
+  {
+   "contract": null,
+   "told_unsupported": false,
+   "reason": "blocked at the Scenario gate; nothing delivered",
+   "code": "6196a863aeac",
+   "case_index": 52,
+   "case_id": "v3-vi-k_of_n-002",
+   "arm": "pipeline"
+  },
+  {
+   "contract": null,
+   "told_unsupported": true,
+   "reason": "no contract; explained amounts and recipients are public on-chain",
+   "code": "dfd93d62f409",
+   "case_index": 100,
+   "case_id": "v3-vi-infeasible-010",
+   "arm": "baseline"
+  },
+  {
+   "contract": "RIGHT",
+   "told_unsupported": false,
+   "reason": "500 straight to AnBinh, coupons of 12 (the prompt's correction) at 23:59 VN, last 512; a missed coupon closes",
+   "code": "3ee864b18def",
+   "case_index": 66,
+   "case_id": "v3-vi-coupon_bond-001",
+   "arm": "pipeline"
+  },
+  {
+   "contract": "WRONG",
+   "told_unsupported": false,
+   "reason": "deadlines in 2029-2030 instead of 01/02 and 04/02/2027 23:59 VN",
+   "code": "f2795de6f5dc",
+   "case_index": 90,
+   "case_id": "v3-vi-matching-004",
+   "arm": "baseline"
+  },
+  {
+   "contract": null,
+   "told_unsupported": true,
+   "reason": "no contract; told the automatic price feed cannot be represented",
+   "code": "8f8eab004671",
+   "case_index": 92,
+   "case_id": "v3-en-infeasible-002",
+   "arm": "pipeline"
+  },
+  {
+   "contract": "RIGHT",
+   "told_unsupported": false,
+   "reason": "corrected shares 125/62.5/31.25/31.25, anyone (Notify) triggers by 08-31 23:59Z, else refund",
+   "code": "fc8a2dea1748",
+   "case_index": 72,
+   "case_id": "v3-en-split-002",
+   "arm": "pipeline"
+  },
+  {
+   "contract": "WRONG",
+   "told_unsupported": false,
+   "reason": "deposit deadline one day late (08-21 23:59Z); trigger deadline 09-02 09:59Z instead of 08-31 23:59Z",
+   "code": "909865936b27",
+   "case_index": 72,
+   "case_id": "v3-en-split-002",
+   "arm": "baseline"
+  },
+  {
+   "contract": null,
+   "told_unsupported": true,
+   "reason": "no contract; told editing the deadline after it runs cannot be represented",
+   "code": "c112fb203b27",
+   "case_index": 95,
+   "case_id": "v3-vi-infeasible-005",
+   "arm": "pipeline"
+  },
+  {
+   "contract": null,
+   "told_unsupported": false,
+   "reason": "stopped at formalization (role word tenant); nothing delivered",
+   "code": "6804f3bc5a72",
+   "case_index": 38,
+   "case_id": "v3-vi-rental_deposit-003",
+   "arm": "pipeline"
+  },
+  {
+   "contract": null,
+   "told_unsupported": false,
+   "reason": "stopped at formalization (role word studio); nothing delivered",
+   "code": "9ce2efc19fd3",
+   "case_index": 85,
+   "case_id": "v3-en-deduction-004",
+   "arm": "pipeline"
+  },
+  {
+   "contract": "WRONG",
+   "told_unsupported": false,
+   "reason": "timeout 2026-04-20 instead of 2027-04-20 21:00Z",
+   "code": "2e8159242394",
+   "case_index": 58,
+   "case_id": "v3-en-first_come-002",
+   "arm": "baseline"
+  },
+  {
+   "contract": "WRONG",
+   "told_unsupported": false,
+   "reason": "parties Alice and Hotel instead of Bao Ngoc and SeaHotel; the hotel chooses; dates in 2029-2030",
+   "code": "b1997f2bc4a2",
+   "case_index": 42,
+   "case_id": "v3-vi-cancellation_fee-003",
+   "arm": "baseline"
+  },
+  {
+   "contract": "WRONG",
+   "told_unsupported": false,
+   "reason": "only Kieu can trigger the split (anyone was required); deadlines in 2026",
+   "code": "ffc349cf908f",
+   "case_index": 71,
+   "case_id": "v3-vi-split-001",
+   "arm": "baseline"
+  },
+  {
+   "contract": "WRONG",
+   "told_unsupported": false,
+   "reason": "deadlines 09-02 and 09-16 01:39Z instead of 09-01 and 09-15 16:59Z (23:59 VN)",
+   "code": "1b26ecac3212",
+   "case_index": 84,
+   "case_id": "v3-vi-deduction-003",
+   "arm": "baseline"
+  },
+  {
+   "contract": null,
+   "told_unsupported": true,
+   "reason": "no contract; explained the USDT swap cannot be done (the rest was feasible)",
+   "code": "33d0bf90231b",
+   "case_index": 76,
+   "case_id": "v3-vi-split-006",
+   "arm": "baseline"
+  },
+  {
+   "contract": "WRONG",
+   "told_unsupported": false,
+   "reason": "issuer role written as \"Công ty Sao Mai\" although the user gave role SaoMai",
+   "code": "c0b060136169",
+   "case_index": 68,
+   "case_id": "v3-vi-coupon_bond-003",
+   "arm": "pipeline"
+  },
+  {
+   "contract": null,
+   "told_unsupported": true,
+   "reason": "no contract; explained the code cannot be edited after it runs",
+   "code": "efc4880d4ae9",
+   "case_index": 95,
+   "case_id": "v3-vi-infeasible-005",
+   "arm": "baseline"
+  },
+  {
+   "contract": null,
+   "told_unsupported": true,
+   "reason": "no contract; explained a price feed needs an oracle",
+   "code": "f0370e619918",
+   "case_index": 92,
+   "case_id": "v3-en-infeasible-002",
+   "arm": "baseline"
+  },
+  {
+   "contract": null,
+   "told_unsupported": false,
+   "reason": "blocked at the Scenario gate; nothing delivered",
+   "code": "57af386cacc9",
+   "case_index": 53,
+   "case_id": "v3-vi-k_of_n-003",
+   "arm": "pipeline"
+  },
+  {
+   "contract": "WRONG",
+   "told_unsupported": false,
+   "reason": "deadlines in 2026 and an hour early",
+   "code": "18f2ca6c86b7",
+   "case_index": 34,
+   "case_id": "v3-vi-third_party-003",
+   "arm": "baseline"
+  },
+  {
+   "contract": null,
+   "told_unsupported": false,
+   "reason": "stopped at formalization (translated quote); nothing delivered",
+   "code": "375f9b09a2cf",
+   "case_index": 35,
+   "case_id": "v3-en-third_party-004",
+   "arm": "pipeline"
+  },
+  {
+   "contract": "WRONG",
+   "told_unsupported": false,
+   "reason": "pay deadline 08-31 13:20Z vs 09-01 12:00Z; cancel deadline 10-02 13:20Z vs 10-01 12:00Z",
+   "code": "32655cddbd73",
+   "case_index": 43,
+   "case_id": "v3-en-cancellation_fee-004",
+   "arm": "baseline"
+  },
+  {
+   "contract": null,
+   "told_unsupported": false,
+   "reason": "stopped at formalization (role word minh); nothing delivered",
+   "code": "ce1c9f960b30",
+   "case_index": 79,
+   "case_id": "v3-vi-collateral_loan-003",
+   "arm": "pipeline"
+  },
+  {
+   "contract": null,
+   "told_unsupported": false,
+   "reason": "blocked after the Scenario gate rejected the contract",
+   "code": "245b607b712d",
+   "case_index": 81,
+   "case_id": "v3-vi-collateral_loan-005",
+   "arm": "pipeline"
+  },
+  {
+   "contract": "RIGHT",
+   "told_unsupported": false,
+   "reason": "Leo 630, Nova 180, Rae 90 on any Notify by 06-08 23:59Z; refund on timeout; deposit by 06-01 23:59Z",
+   "code": "acf9358b871a",
+   "case_index": 74,
+   "case_id": "v3-en-split-004",
+   "arm": "pipeline"
+  },
+  {
+   "contract": null,
+   "told_unsupported": true,
+   "reason": "no contract; told the privacy requirement cannot be represented",
+   "code": "adf291bad02e",
+   "case_index": 100,
+   "case_id": "v3-vi-infeasible-010",
+   "arm": "pipeline"
+  },
+  {
+   "contract": null,
+   "told_unsupported": true,
+   "reason": "user gave up; it kept saying the late fee and Zalo part cannot be represented (the rest was feasible)",
+   "code": "3861a534eae4",
+   "case_index": 50,
+   "case_id": "v3-vi-installment-007",
+   "arm": "pipeline"
+  },
+  {
+   "contract": "WRONG",
+   "told_unsupported": false,
+   "reason": "purchase deadline 2026-03-01 instead of 2027; repay 05:20Z instead of 00:00Z",
+   "code": "0739c20162c5",
+   "case_index": 64,
+   "case_id": "v3-vi-zero_coupon_bond-003",
+   "arm": "baseline"
+  },
+  {
+   "contract": "WRONG",
+   "told_unsupported": false,
+   "reason": "deadlines in 2030 instead of 23:59 VN 2027-06-20 and 06-27",
+   "code": "ba124f889657",
+   "case_index": 35,
+   "case_id": "v3-en-third_party-004",
+   "arm": "baseline"
+  },
+  {
+   "contract": "WRONG",
+   "told_unsupported": false,
+   "reason": "deadlines Jan-Apr 2027 instead of 1 Apr-1 Jul 23:59 VN; seller named Seller, not Daniel; buyer Kevin not Kevin Tran",
+   "code": "b2ccdb8e1dd1",
+   "case_index": 44,
+   "case_id": "v3-en-installment-001",
+   "arm": "baseline"
+  },
+  {
+   "contract": null,
+   "told_unsupported": false,
+   "reason": "blocked at the Scenario gate; nothing delivered",
+   "code": "f4dcb8d6ca04",
+   "case_index": 56,
+   "case_id": "v3-en-k_of_n-006",
+   "arm": "pipeline"
+  },
+  {
+   "contract": "WRONG",
+   "told_unsupported": false,
+   "reason": "purchase and coupons in 2026; purchase payment never sent to Kurt",
+   "code": "c5e78dad8b7d",
+   "case_index": 69,
+   "case_id": "v3-en-coupon_bond-004",
+   "arm": "baseline"
+  },
+  {
+   "contract": "WRONG",
+   "told_unsupported": false,
+   "reason": "collateral 30000000 BOOK units instead of 30; loan and repay deadlines wrong",
+   "code": "56e5d9910227",
+   "case_index": 81,
+   "case_id": "v3-vi-collateral_loan-005",
+   "arm": "baseline"
+  },
+  {
+   "contract": "WRONG",
+   "told_unsupported": false,
+   "reason": "pays the deduction and then the full 160 back (overpay); deadlines one day early in VN time",
+   "code": "3278cdb1e527",
+   "case_index": 86,
+   "case_id": "v3-vi-deduction-005",
+   "arm": "baseline"
+  },
+  {
+   "contract": "WRONG",
+   "told_unsupported": false,
+   "reason": "deadlines 02:39Z instead of 16:59Z (23:59 VN)",
+   "code": "a8baf4d20b62",
+   "case_index": 55,
+   "case_id": "v3-vi-k_of_n-005",
+   "arm": "baseline"
+  },
+  {
+   "contract": null,
+   "told_unsupported": true,
+   "reason": "no contract; explained a When always needs a deadline",
+   "code": "453f675fedad",
+   "case_index": 96,
+   "case_id": "v3-en-infeasible-006",
+   "arm": "baseline"
+  },
+  {
+   "contract": "RIGHT",
+   "told_unsupported": false,
+   "reason": "1 = cancel pays Rosa 100 and refunds 500; 0 or no choice pays Rosa 600; deadlines 12:00Z",
+   "code": "284aeccc848f",
+   "case_index": 43,
+   "case_id": "v3-en-cancellation_fee-004",
+   "arm": "pipeline"
+  },
+  {
+   "contract": "RIGHT",
+   "told_unsupported": false,
+   "reason": "score >= 51 pays Van, otherwise or no score refunds BTC; deadlines 18:00 VN",
+   "code": "eaa5cfa16f92",
+   "case_index": 34,
+   "case_id": "v3-vi-third_party-003",
+   "arm": "pipeline"
+  },
+  {
+   "contract": "RIGHT",
+   "told_unsupported": false,
+   "reason": "score >= 8 pays Kofi 452.5, otherwise or no score refunds Owen; deadlines 15:00Z",
+   "code": "a47d71142b77",
+   "case_index": 33,
+   "case_id": "v3-en-third_party-002",
+   "arm": "pipeline"
+  },
+  {
+   "contract": "RIGHT",
+   "told_unsupported": false,
+   "reason": "Yen deposits 600 by 25/09 23:59 VN; at 08:00 VN 01/10 pays 150 to each of four with no action",
+   "code": "a3cbee41d5e3",
+   "case_index": 73,
+   "case_id": "v3-vi-split-003",
+   "arm": "pipeline"
+  },
+  {
+   "contract": "WRONG",
+   "told_unsupported": false,
+   "reason": "deadlines one day late (06-02 and 06-09 23:59Z instead of 06-01 and 06-08)",
+   "code": "4096cb3a2be8",
+   "case_index": 74,
+   "case_id": "v3-en-split-004",
+   "arm": "baseline"
+  },
+  {
+   "contract": "RIGHT",
+   "told_unsupported": false,
+   "reason": "0 refunds 200, 1 gives Kien 50 and refunds 150, 2 gives Kien 200, no choice refunds; deadlines 23:59 VN",
+   "code": "1facb40ec3b1",
+   "case_index": 36,
+   "case_id": "v3-vi-rental_deposit-001",
+   "arm": "pipeline"
+  },
+  {
+   "contract": "WRONG",
+   "told_unsupported": false,
+   "reason": "all three deadlines in 2026 instead of 2027",
+   "code": "81731023e69f",
+   "case_index": 49,
+   "case_id": "v3-en-installment-006",
+   "arm": "baseline"
+  },
+  {
+   "contract": null,
+   "told_unsupported": true,
+   "reason": "no contract; ended UNSUPPORTED (deleting chain history cannot be done)",
+   "code": "fcd0484c27cb",
+   "case_index": 93,
+   "case_id": "v3-vi-infeasible-003",
+   "arm": "pipeline"
+  },
+  {
+   "contract": "RIGHT",
+   "told_unsupported": false,
+   "reason": "Ada 100, Ben 120, Cal 80, MatchFund matches 300 (under the 500 cap), all to School; refunds on missed steps",
+   "code": "d1ddb305abd3",
+   "case_index": 88,
+   "case_id": "v3-en-matching-002",
+   "arm": "pipeline"
+  },
+  {
+   "contract": null,
+   "told_unsupported": false,
+   "reason": "blocked at the Scenario gate; nothing delivered",
+   "code": "47cdccf41627",
+   "case_index": 54,
+   "case_id": "v3-en-k_of_n-004",
+   "arm": "pipeline"
+  },
+  {
+   "contract": "WRONG",
+   "told_unsupported": false,
+   "reason": "deadlines in 2026 instead of 2027",
+   "code": "f5052607280f",
+   "case_index": 33,
+   "case_id": "v3-en-third_party-002",
+   "arm": "baseline"
+  },
+  {
+   "contract": null,
+   "told_unsupported": false,
+   "reason": "blocked at the Scenario gate; nothing delivered",
+   "code": "be7702a96378",
+   "case_index": 51,
+   "case_id": "v3-vi-k_of_n-001",
+   "arm": "pipeline"
+  },
+  {
+   "contract": null,
+   "told_unsupported": false,
+   "reason": "stopped at formalization (quotes not found); nothing delivered",
+   "code": "d251b491c4c5",
+   "case_index": 59,
+   "case_id": "v3-vi-first_come-003",
+   "arm": "pipeline"
+  },
+  {
+   "contract": null,
+   "told_unsupported": false,
+   "reason": "no contract passed the checks before the cap",
+   "code": "630b7f3b1489",
+   "case_index": 40,
+   "case_id": "v3-vi-cancellation_fee-001",
+   "arm": "baseline"
+  },
+  {
+   "contract": null,
+   "told_unsupported": false,
+   "reason": "blocked after the Scenario gate rejected the contract",
+   "code": "4bb095db81c6",
+   "case_index": 65,
+   "case_id": "v3-vi-zero_coupon_bond-004",
+   "arm": "pipeline"
+  },
+  {
+   "contract": null,
+   "told_unsupported": false,
+   "reason": "stopped at formalization (role words); nothing delivered",
+   "code": "8d2f5ee42f28",
+   "case_index": 89,
+   "case_id": "v3-vi-matching-003",
+   "arm": "pipeline"
+  },
+  {
+   "contract": null,
+   "told_unsupported": false,
+   "reason": "no contract (it declined although the fund rule itself was feasible)",
+   "code": "3f7bf73f7155",
+   "case_index": 53,
+   "case_id": "v3-vi-k_of_n-003",
+   "arm": "baseline"
+  },
+  {
+   "contract": null,
+   "told_unsupported": true,
+   "reason": "no contract; told \"forever, no deadline\" cannot be represented",
+   "code": "5ae94c1a0e19",
+   "case_index": 96,
+   "case_id": "v3-en-infeasible-006",
+   "arm": "pipeline"
+  },
+  {
+   "contract": "WRONG",
+   "told_unsupported": false,
+   "reason": "deadlines in 2026; needs all three to choose in order instead of any two",
+   "code": "b85e19a08c56",
+   "case_index": 54,
+   "case_id": "v3-en-k_of_n-004",
+   "arm": "baseline"
+  },
+  {
+   "contract": null,
+   "told_unsupported": false,
+   "reason": "user gave up; nothing delivered",
+   "code": "ec35149d0f48",
+   "case_index": 90,
+   "case_id": "v3-vi-matching-004",
+   "arm": "pipeline"
+  },
+  {
+   "contract": "WRONG",
+   "told_unsupported": false,
+   "reason": "deadlines in 2026 (and inspection 18:39 VN instead of 23:59)",
+   "code": "9ca0d5ffe80b",
+   "case_index": 36,
+   "case_id": "v3-vi-rental_deposit-001",
+   "arm": "baseline"
+  },
+  {
+   "contract": "RIGHT",
+   "told_unsupported": false,
+   "reason": "Oanh then Hang 80 each to BTC; missing Hang refunds Oanh; deadlines 23:59 VN 01/04 and 03/04",
+   "code": "ad804264471f",
+   "case_index": 30,
+   "case_id": "v3-vi-crowdfunding-003",
+   "arm": "pipeline"
+  },
+  {
+   "contract": "WRONG",
+   "told_unsupported": false,
+   "reason": "coupons and principal paid back to Felix's own account from his deposit; deadlines off",
+   "code": "4c2ed4dd11a3",
+   "case_index": 67,
+   "case_id": "v3-en-coupon_bond-002",
+   "arm": "baseline"
+  },
+  {
+   "contract": "RIGHT",
+   "told_unsupported": false,
+   "reason": "100, 50, 50 straight to Lua at 18:00 VN on 01/07, 31/07, 30/08; a missed payment closes",
+   "code": "c7bb7ef8689e",
+   "case_index": 46,
+   "case_id": "v3-vi-installment-003",
+   "arm": "pipeline"
+  },
+  {
+   "contract": "RIGHT",
+   "told_unsupported": false,
+   "reason": "2000 straight to Nadia, coupons 60 and 60, last 2060 to Felix at 00:00Z; a missed payment closes",
+   "code": "03cb002bee91",
+   "case_index": 67,
+   "case_id": "v3-en-coupon_bond-002",
+   "arm": "pipeline"
+  },
+  {
+   "contract": null,
+   "told_unsupported": true,
+   "reason": "blocked at the Scenario gate; it had said the USDT swap cannot be done",
+   "code": "a69dda8c680a",
+   "case_index": 76,
+   "case_id": "v3-vi-split-006",
+   "arm": "pipeline"
+  },
+  {
+   "contract": null,
+   "told_unsupported": false,
+   "reason": "stopped at formalization (deduction amount); nothing delivered",
+   "code": "e1b0ed981f72",
+   "case_index": 83,
+   "case_id": "v3-en-deduction-002",
+   "arm": "pipeline"
+  },
+  {
+   "contract": "RIGHT",
+   "told_unsupported": false,
+   "reason": "1000 VNDC collateral, 400 to Tung, 420 repaid returns VNDC, default gives VNDC to Hao, no loan returns it; deadlines 23:59 VN",
+   "code": "43258f43d5d5",
+   "case_index": 78,
+   "case_id": "v3-vi-collateral_loan-002",
+   "arm": "pipeline"
+  },
+  {
+   "contract": "WRONG",
+   "told_unsupported": false,
+   "reason": "only Suong can buy; Ha and Ky cannot",
+   "code": "474986fe2c76",
+   "case_index": 61,
+   "case_id": "v3-vi-first_come-005",
+   "arm": "pipeline"
+  },
+  {
+   "contract": "RIGHT",
+   "told_unsupported": false,
+   "reason": "500 CAT collateral, 300 to Yuki, 315 repaid returns CAT, default gives CAT to Omar, no loan returns it; deadlines 00:00Z",
+   "code": "dc65cabad20b",
+   "case_index": 77,
+   "case_id": "v3-en-collateral_loan-001",
+   "arm": "pipeline"
+  },
+  {
+   "contract": null,
+   "told_unsupported": true,
+   "reason": "no contract; explained a bank transfer cannot be done on-chain",
+   "code": "197366d83a36",
+   "case_index": 97,
+   "case_id": "v3-vi-infeasible-007",
+   "arm": "baseline"
+  },
+  {
+   "contract": null,
+   "told_unsupported": false,
+   "reason": "no contract passed the checks",
+   "code": "be2e494eec33",
+   "case_index": 39,
+   "case_id": "v3-en-rental_deposit-004",
+   "arm": "baseline"
+  },
+  {
+   "contract": null,
+   "told_unsupported": true,
+   "reason": "user gave up; it said the chosen deduction amount cannot be represented",
+   "code": "cedc37b3b595",
+   "case_index": 82,
+   "case_id": "v3-vi-deduction-001",
+   "arm": "pipeline"
+  },
+  {
+   "contract": "WRONG",
+   "told_unsupported": false,
+   "reason": "collateral 1000000000 VNDC units instead of 1000; deadlines in 2026",
+   "code": "5ebae149db3e",
+   "case_index": 78,
+   "case_id": "v3-vi-collateral_loan-002",
+   "arm": "baseline"
+  },
+  {
+   "contract": null,
+   "told_unsupported": false,
+   "reason": "user gave up on the 37,5 ADA question; nothing delivered",
+   "code": "bc1ef733c74f",
+   "case_index": 45,
+   "case_id": "v3-vi-installment-002",
+   "arm": "pipeline"
+  },
+  {
+   "contract": "WRONG",
+   "told_unsupported": false,
+   "reason": "purchase deadline 06-01 instead of 07-01; maturity 2027-07-01 instead of 2028-07-01; an hour early",
+   "code": "798e52f41953",
+   "case_index": 63,
+   "case_id": "v3-vi-zero_coupon_bond-002",
+   "arm": "baseline"
+  },
+  {
+   "contract": "WRONG",
+   "told_unsupported": false,
+   "reason": "deadlines 19:40Z instead of 17:00Z (and the inspection deadline a day early in UTC)",
+   "code": "ab558a8e6c62",
+   "case_index": 83,
+   "case_id": "v3-en-deduction-002",
+   "arm": "baseline"
+  },
+  {
+   "contract": "WRONG",
+   "told_unsupported": false,
+   "reason": "deadlines Aug-Oct 18:00Z instead of 01/07, 31/07, 30/08 18:00 VN",
+   "code": "7ea059d98ba4",
+   "case_index": 46,
+   "case_id": "v3-vi-installment-003",
+   "arm": "baseline"
+  },
+  {
+   "contract": null,
+   "told_unsupported": false,
+   "reason": "stopped at formalization (role word seller); nothing delivered",
+   "code": "2d3a1e112d62",
+   "case_index": 44,
+   "case_id": "v3-en-installment-001",
+   "arm": "pipeline"
+  },
+  {
+   "contract": null,
+   "told_unsupported": true,
+   "reason": "no contract; explained chain history cannot be deleted",
+   "code": "699cf40042be",
+   "case_index": 93,
+   "case_id": "v3-vi-infeasible-003",
+   "arm": "baseline"
+  }
+ ]
+}

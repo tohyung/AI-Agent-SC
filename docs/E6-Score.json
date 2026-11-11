@@ -1,0 +1,2532 @@
+{
+ "cases_scored": 71,
+ "cases_paired": 71,
+ "undetermined": 0,
+ "rows": [
+  {
+   "case_index": 30,
+   "case_id": "v3-vi-crowdfunding-003",
+   "family": "crowdfunding",
+   "language": "vi",
+   "expected_behavior": "ask_then_converge",
+   "pipeline": "SUCCESS",
+   "baseline": "WRONG_DELIVERY",
+   "cost": {
+    "pipeline": {
+     "requests": 3,
+     "prompt_tokens": 11956,
+     "completion_tokens": 3489,
+     "model_seconds": 19.6,
+     "user_messages": 1,
+     "intent_reviews": 1,
+     "scenarios": 3,
+     "forwarded_errors": 0,
+     "cap_reached": false
+    },
+    "baseline": {
+     "requests": 2,
+     "prompt_tokens": 1633,
+     "completion_tokens": 572,
+     "model_seconds": 24.2,
+     "user_messages": 1,
+     "intent_reviews": 0,
+     "scenarios": 0,
+     "forwarded_errors": 0,
+     "cap_reached": false
+    }
+   }
+  },
+  {
+   "case_index": 31,
+   "case_id": "v3-en-crowdfunding-004",
+   "family": "crowdfunding",
+   "language": "en",
+   "expected_behavior": "ask_then_converge",
+   "pipeline": "SUCCESS",
+   "baseline": "WRONG_DELIVERY",
+   "cost": {
+    "pipeline": {
+     "requests": 4,
+     "prompt_tokens": 16503,
+     "completion_tokens": 6548,
+     "model_seconds": 42.5,
+     "user_messages": 1,
+     "intent_reviews": 1,
+     "scenarios": 4,
+     "forwarded_errors": 0,
+     "cap_reached": false
+    },
+    "baseline": {
+     "requests": 1,
+     "prompt_tokens": 764,
+     "completion_tokens": 866,
+     "model_seconds": 11.2,
+     "user_messages": 0,
+     "intent_reviews": 0,
+     "scenarios": 0,
+     "forwarded_errors": 0,
+     "cap_reached": false
+    }
+   }
+  },
+  {
+   "case_index": 32,
+   "case_id": "v3-vi-third_party-001",
+   "family": "third_party",
+   "language": "vi",
+   "expected_behavior": "converge",
+   "pipeline": "SUCCESS",
+   "baseline": "WRONG_DELIVERY",
+   "cost": {
+    "pipeline": {
+     "requests": 2,
+     "prompt_tokens": 8367,
+     "completion_tokens": 3472,
+     "model_seconds": 114.3,
+     "user_messages": 0,
+     "intent_reviews": 1,
+     "scenarios": 4,
+     "forwarded_errors": 0,
+     "cap_reached": false
+    },
+    "baseline": {
+     "requests": 1,
+     "prompt_tokens": 811,
+     "completion_tokens": 738,
+     "model_seconds": 4.4,
+     "user_messages": 0,
+     "intent_reviews": 0,
+     "scenarios": 0,
+     "forwarded_errors": 0,
+     "cap_reached": false
+    }
+   }
+  },
+  {
+   "case_index": 33,
+   "case_id": "v3-en-third_party-002",
+   "family": "third_party",
+   "language": "en",
+   "expected_behavior": "converge",
+   "pipeline": "SUCCESS",
+   "baseline": "WRONG_DELIVERY",
+   "cost": {
+    "pipeline": {
+     "requests": 2,
+     "prompt_tokens": 7507,
+     "completion_tokens": 2803,
+     "model_seconds": 25.4,
+     "user_messages": 0,
+     "intent_reviews": 1,
+     "scenarios": 4,
+     "forwarded_errors": 0,
+     "cap_reached": false
+    },
+    "baseline": {
+     "requests": 1,
+     "prompt_tokens": 800,
+     "completion_tokens": 824,
+     "model_seconds": 18.5,
+     "user_messages": 0,
+     "intent_reviews": 0,
+     "scenarios": 0,
+     "forwarded_errors": 0,
+     "cap_reached": false
+    }
+   }
+  },
+  {
+   "case_index": 34,
+   "case_id": "v3-vi-third_party-003",
+   "family": "third_party",
+   "language": "vi",
+   "expected_behavior": "ask_then_converge",
+   "pipeline": "SUCCESS",
+   "baseline": "WRONG_DELIVERY",
+   "cost": {
+    "pipeline": {
+     "requests": 4,
+     "prompt_tokens": 15331,
+     "completion_tokens": 6857,
+     "model_seconds": 34.0,
+     "user_messages": 1,
+     "intent_reviews": 1,
+     "scenarios": 4,
+     "forwarded_errors": 0,
+     "cap_reached": false
+    },
+    "baseline": {
+     "requests": 2,
+     "prompt_tokens": 2235,
+     "completion_tokens": 1461,
+     "model_seconds": 36.6,
+     "user_messages": 0,
+     "intent_reviews": 0,
+     "scenarios": 0,
+     "forwarded_errors": 1,
+     "cap_reached": false
+    }
+   }
+  },
+  {
+   "case_index": 35,
+   "case_id": "v3-en-third_party-004",
+   "family": "third_party",
+   "language": "en",
+   "expected_behavior": "ask_then_converge",
+   "pipeline": "NO_DELIVERY",
+   "baseline": "WRONG_DELIVERY",
+   "cost": {
+    "pipeline": {
+     "requests": 6,
+     "prompt_tokens": 19746,
+     "completion_tokens": 7231,
+     "model_seconds": 43.4,
+     "user_messages": 1,
+     "intent_reviews": 0,
+     "scenarios": 0,
+     "forwarded_errors": 0,
+     "cap_reached": false
+    },
+    "baseline": {
+     "requests": 4,
+     "prompt_tokens": 5093,
+     "completion_tokens": 2525,
+     "model_seconds": 36.9,
+     "user_messages": 0,
+     "intent_reviews": 0,
+     "scenarios": 0,
+     "forwarded_errors": 2,
+     "cap_reached": false
+    }
+   }
+  },
+  {
+   "case_index": 36,
+   "case_id": "v3-vi-rental_deposit-001",
+   "family": "rental_deposit",
+   "language": "vi",
+   "expected_behavior": "converge",
+   "pipeline": "SUCCESS",
+   "baseline": "WRONG_DELIVERY",
+   "cost": {
+    "pipeline": {
+     "requests": 3,
+     "prompt_tokens": 13952,
+     "completion_tokens": 5964,
+     "model_seconds": 43.3,
+     "user_messages": 0,
+     "intent_reviews": 1,
+     "scenarios": 5,
+     "forwarded_errors": 0,
+     "cap_reached": false
+    },
+    "baseline": {
+     "requests": 2,
+     "prompt_tokens": 2483,
+     "completion_tokens": 2096,
+     "model_seconds": 17.9,
+     "user_messages": 0,
+     "intent_reviews": 0,
+     "scenarios": 0,
+     "forwarded_errors": 1,
+     "cap_reached": false
+    }
+   }
+  },
+  {
+   "case_index": 37,
+   "case_id": "v3-en-rental_deposit-002",
+   "family": "rental_deposit",
+   "language": "en",
+   "expected_behavior": "converge",
+   "pipeline": "SUCCESS",
+   "baseline": "WRONG_DELIVERY",
+   "cost": {
+    "pipeline": {
+     "requests": 2,
+     "prompt_tokens": 9002,
+     "completion_tokens": 3805,
+     "model_seconds": 14.1,
+     "user_messages": 0,
+     "intent_reviews": 1,
+     "scenarios": 4,
+     "forwarded_errors": 0,
+     "cap_reached": false
+    },
+    "baseline": {
+     "requests": 2,
+     "prompt_tokens": 2374,
+     "completion_tokens": 1854,
+     "model_seconds": 16.2,
+     "user_messages": 0,
+     "intent_reviews": 0,
+     "scenarios": 0,
+     "forwarded_errors": 3,
+     "cap_reached": false
+    }
+   }
+  },
+  {
+   "case_index": 38,
+   "case_id": "v3-vi-rental_deposit-003",
+   "family": "rental_deposit",
+   "language": "vi",
+   "expected_behavior": "ask_then_converge",
+   "pipeline": "NO_DELIVERY",
+   "baseline": "NO_DELIVERY",
+   "cost": {
+    "pipeline": {
+     "requests": 4,
+     "prompt_tokens": 13128,
+     "completion_tokens": 4663,
+     "model_seconds": 31.3,
+     "user_messages": 0,
+     "intent_reviews": 0,
+     "scenarios": 0,
+     "forwarded_errors": 0,
+     "cap_reached": false
+    },
+    "baseline": {
+     "requests": 4,
+     "prompt_tokens": 5604,
+     "completion_tokens": 2166,
+     "model_seconds": 18.7,
+     "user_messages": 1,
+     "intent_reviews": 0,
+     "scenarios": 0,
+     "forwarded_errors": 2,
+     "cap_reached": true
+    }
+   }
+  },
+  {
+   "case_index": 39,
+   "case_id": "v3-en-rental_deposit-004",
+   "family": "rental_deposit",
+   "language": "en",
+   "expected_behavior": "ask_then_converge",
+   "pipeline": "NO_DELIVERY",
+   "baseline": "NO_DELIVERY",
+   "cost": {
+    "pipeline": {
+     "requests": 4,
+     "prompt_tokens": 13948,
+     "completion_tokens": 6722,
+     "model_seconds": 69.2,
+     "user_messages": 0,
+     "intent_reviews": 0,
+     "scenarios": 0,
+     "forwarded_errors": 0,
+     "cap_reached": false
+    },
+    "baseline": {
+     "requests": 4,
+     "prompt_tokens": 7079,
+     "completion_tokens": 2851,
+     "model_seconds": 45.2,
+     "user_messages": 0,
+     "intent_reviews": 0,
+     "scenarios": 0,
+     "forwarded_errors": 4,
+     "cap_reached": true
+    }
+   }
+  },
+  {
+   "case_index": 40,
+   "case_id": "v3-vi-cancellation_fee-001",
+   "family": "cancellation_fee",
+   "language": "vi",
+   "expected_behavior": "converge",
+   "pipeline": "SUCCESS",
+   "baseline": "NO_DELIVERY",
+   "cost": {
+    "pipeline": {
+     "requests": 2,
+     "prompt_tokens": 9037,
+     "completion_tokens": 3457,
+     "model_seconds": 46.9,
+     "user_messages": 0,
+     "intent_reviews": 1,
+     "scenarios": 4,
+     "forwarded_errors": 0,
+     "cap_reached": false
+    },
+    "baseline": {
+     "requests": 2,
+     "prompt_tokens": 2433,
+     "completion_tokens": 1916,
+     "model_seconds": 16.1,
+     "user_messages": 0,
+     "intent_reviews": 0,
+     "scenarios": 0,
+     "forwarded_errors": 2,
+     "cap_reached": true
+    }
+   }
+  },
+  {
+   "case_index": 41,
+   "case_id": "v3-en-cancellation_fee-002",
+   "family": "cancellation_fee",
+   "language": "en",
+   "expected_behavior": "converge",
+   "pipeline": "SUCCESS",
+   "baseline": "WRONG_DELIVERY",
+   "cost": {
+    "pipeline": {
+     "requests": 2,
+     "prompt_tokens": 8919,
+     "completion_tokens": 3491,
+     "model_seconds": 24.9,
+     "user_messages": 0,
+     "intent_reviews": 1,
+     "scenarios": 4,
+     "forwarded_errors": 0,
+     "cap_reached": false
+    },
+    "baseline": {
+     "requests": 1,
+     "prompt_tokens": 834,
+     "completion_tokens": 916,
+     "model_seconds": 49.8,
+     "user_messages": 0,
+     "intent_reviews": 0,
+     "scenarios": 0,
+     "forwarded_errors": 1,
+     "cap_reached": false
+    }
+   }
+  },
+  {
+   "case_index": 42,
+   "case_id": "v3-vi-cancellation_fee-003",
+   "family": "cancellation_fee",
+   "language": "vi",
+   "expected_behavior": "flag_conflict_then_converge",
+   "pipeline": "SUCCESS",
+   "baseline": "WRONG_DELIVERY",
+   "cost": {
+    "pipeline": {
+     "requests": 7,
+     "prompt_tokens": 26651,
+     "completion_tokens": 9993,
+     "model_seconds": 88.8,
+     "user_messages": 1,
+     "intent_reviews": 1,
+     "scenarios": 4,
+     "forwarded_errors": 0,
+     "cap_reached": false
+    },
+    "baseline": {
+     "requests": 4,
+     "prompt_tokens": 6909,
+     "completion_tokens": 2595,
+     "model_seconds": 35.6,
+     "user_messages": 0,
+     "intent_reviews": 0,
+     "scenarios": 0,
+     "forwarded_errors": 2,
+     "cap_reached": false
+    }
+   }
+  },
+  {
+   "case_index": 43,
+   "case_id": "v3-en-cancellation_fee-004",
+   "family": "cancellation_fee",
+   "language": "en",
+   "expected_behavior": "ask_then_converge",
+   "pipeline": "SUCCESS",
+   "baseline": "WRONG_DELIVERY",
+   "cost": {
+    "pipeline": {
+     "requests": 4,
+     "prompt_tokens": 15394,
+     "completion_tokens": 6066,
+     "model_seconds": 59.4,
+     "user_messages": 1,
+     "intent_reviews": 1,
+     "scenarios": 4,
+     "forwarded_errors": 0,
+     "cap_reached": false
+    },
+    "baseline": {
+     "requests": 4,
+     "prompt_tokens": 5472,
+     "completion_tokens": 2427,
+     "model_seconds": 53.9,
+     "user_messages": 1,
+     "intent_reviews": 0,
+     "scenarios": 0,
+     "forwarded_errors": 1,
+     "cap_reached": false
+    }
+   }
+  },
+  {
+   "case_index": 44,
+   "case_id": "v3-en-installment-001",
+   "family": "installment",
+   "language": "en",
+   "expected_behavior": "ask_then_converge",
+   "pipeline": "NO_DELIVERY",
+   "baseline": "WRONG_DELIVERY",
+   "cost": {
+    "pipeline": {
+     "requests": 4,
+     "prompt_tokens": 13490,
+     "completion_tokens": 5105,
+     "model_seconds": 47.6,
+     "user_messages": 0,
+     "intent_reviews": 0,
+     "scenarios": 0,
+     "forwarded_errors": 0,
+     "cap_reached": false
+    },
+    "baseline": {
+     "requests": 1,
+     "prompt_tokens": 758,
+     "completion_tokens": 702,
+     "model_seconds": 24.0,
+     "user_messages": 0,
+     "intent_reviews": 0,
+     "scenarios": 0,
+     "forwarded_errors": 0,
+     "cap_reached": false
+    }
+   }
+  },
+  {
+   "case_index": 45,
+   "case_id": "v3-vi-installment-002",
+   "family": "installment",
+   "language": "vi",
+   "expected_behavior": "converge",
+   "pipeline": "NO_DELIVERY",
+   "baseline": "WRONG_DELIVERY",
+   "cost": {
+    "pipeline": {
+     "requests": 8,
+     "prompt_tokens": 29192,
+     "completion_tokens": 16011,
+     "model_seconds": 79.1,
+     "user_messages": 2,
+     "intent_reviews": 0,
+     "scenarios": 0,
+     "forwarded_errors": 0,
+     "cap_reached": false
+    },
+    "baseline": {
+     "requests": 1,
+     "prompt_tokens": 798,
+     "completion_tokens": 1170,
+     "model_seconds": 12.5,
+     "user_messages": 0,
+     "intent_reviews": 0,
+     "scenarios": 0,
+     "forwarded_errors": 0,
+     "cap_reached": false
+    }
+   }
+  },
+  {
+   "case_index": 46,
+   "case_id": "v3-vi-installment-003",
+   "family": "installment",
+   "language": "vi",
+   "expected_behavior": "converge",
+   "pipeline": "SUCCESS",
+   "baseline": "WRONG_DELIVERY",
+   "cost": {
+    "pipeline": {
+     "requests": 2,
+     "prompt_tokens": 9073,
+     "completion_tokens": 3928,
+     "model_seconds": 23.5,
+     "user_messages": 0,
+     "intent_reviews": 1,
+     "scenarios": 3,
+     "forwarded_errors": 0,
+     "cap_reached": false
+    },
+    "baseline": {
+     "requests": 2,
+     "prompt_tokens": 2442,
+     "completion_tokens": 1864,
+     "model_seconds": 10.4,
+     "user_messages": 0,
+     "intent_reviews": 0,
+     "scenarios": 0,
+     "forwarded_errors": 1,
+     "cap_reached": false
+    }
+   }
+  },
+  {
+   "case_index": 47,
+   "case_id": "v3-vi-installment-004",
+   "family": "installment",
+   "language": "vi",
+   "expected_behavior": "converge",
+   "pipeline": "SUCCESS",
+   "baseline": "WRONG_DELIVERY",
+   "cost": {
+    "pipeline": {
+     "requests": 4,
+     "prompt_tokens": 30543,
+     "completion_tokens": 11593,
+     "model_seconds": 57.4,
+     "user_messages": 0,
+     "intent_reviews": 1,
+     "scenarios": 3,
+     "forwarded_errors": 0,
+     "cap_reached": false
+    },
+    "baseline": {
+     "requests": 4,
+     "prompt_tokens": 4074,
+     "completion_tokens": 4173,
+     "model_seconds": 47.4,
+     "user_messages": 0,
+     "intent_reviews": 0,
+     "scenarios": 0,
+     "forwarded_errors": 3,
+     "cap_reached": false
+    }
+   }
+  },
+  {
+   "case_index": 48,
+   "case_id": "v3-vi-installment-005",
+   "family": "installment",
+   "language": "vi",
+   "expected_behavior": "ask_then_converge",
+   "pipeline": "NO_DELIVERY",
+   "baseline": "WRONG_DELIVERY",
+   "cost": {
+    "pipeline": {
+     "requests": 3,
+     "prompt_tokens": 10240,
+     "completion_tokens": 7058,
+     "model_seconds": 24.2,
+     "user_messages": 1,
+     "intent_reviews": 0,
+     "scenarios": 0,
+     "forwarded_errors": 0,
+     "cap_reached": false
+    },
+    "baseline": {
+     "requests": 1,
+     "prompt_tokens": 744,
+     "completion_tokens": 1441,
+     "model_seconds": 9.8,
+     "user_messages": 0,
+     "intent_reviews": 0,
+     "scenarios": 0,
+     "forwarded_errors": 0,
+     "cap_reached": false
+    }
+   }
+  },
+  {
+   "case_index": 49,
+   "case_id": "v3-en-installment-006",
+   "family": "installment",
+   "language": "en",
+   "expected_behavior": "converge",
+   "pipeline": "SUCCESS",
+   "baseline": "WRONG_DELIVERY",
+   "cost": {
+    "pipeline": {
+     "requests": 5,
+     "prompt_tokens": 17311,
+     "completion_tokens": 6193,
+     "model_seconds": 58.3,
+     "user_messages": 1,
+     "intent_reviews": 1,
+     "scenarios": 3,
+     "forwarded_errors": 0,
+     "cap_reached": false
+    },
+    "baseline": {
+     "requests": 2,
+     "prompt_tokens": 2326,
+     "completion_tokens": 1766,
+     "model_seconds": 16.4,
+     "user_messages": 0,
+     "intent_reviews": 0,
+     "scenarios": 0,
+     "forwarded_errors": 1,
+     "cap_reached": false
+    }
+   }
+  },
+  {
+   "case_index": 50,
+   "case_id": "v3-vi-installment-007",
+   "family": "installment",
+   "language": "vi",
+   "expected_behavior": "converge_and_decline_extra",
+   "pipeline": "NO_DELIVERY",
+   "baseline": "WRONG_DELIVERY",
+   "cost": {
+    "pipeline": {
+     "requests": 4,
+     "prompt_tokens": 12138,
+     "completion_tokens": 6218,
+     "model_seconds": 40.4,
+     "user_messages": 2,
+     "intent_reviews": 0,
+     "scenarios": 0,
+     "forwarded_errors": 0,
+     "cap_reached": false
+    },
+    "baseline": {
+     "requests": 3,
+     "prompt_tokens": 3233,
+     "completion_tokens": 1336,
+     "model_seconds": 48.8,
+     "user_messages": 1,
+     "intent_reviews": 0,
+     "scenarios": 0,
+     "forwarded_errors": 1,
+     "cap_reached": false
+    }
+   }
+  },
+  {
+   "case_index": 51,
+   "case_id": "v3-vi-k_of_n-001",
+   "family": "k_of_n",
+   "language": "vi",
+   "expected_behavior": "ask_then_converge",
+   "pipeline": "NO_DELIVERY",
+   "baseline": "WRONG_DELIVERY",
+   "cost": {
+    "pipeline": {
+     "requests": 7,
+     "prompt_tokens": 29258,
+     "completion_tokens": 13357,
+     "model_seconds": 70.5,
+     "user_messages": 2,
+     "intent_reviews": 1,
+     "scenarios": 1,
+     "forwarded_errors": 0,
+     "cap_reached": false
+    },
+    "baseline": {
+     "requests": 1,
+     "prompt_tokens": 782,
+     "completion_tokens": 2087,
+     "model_seconds": 8.3,
+     "user_messages": 0,
+     "intent_reviews": 0,
+     "scenarios": 0,
+     "forwarded_errors": 0,
+     "cap_reached": false
+    }
+   }
+  },
+  {
+   "case_index": 52,
+   "case_id": "v3-vi-k_of_n-002",
+   "family": "k_of_n",
+   "language": "vi",
+   "expected_behavior": "converge",
+   "pipeline": "NO_DELIVERY",
+   "baseline": "WRONG_DELIVERY",
+   "cost": {
+    "pipeline": {
+     "requests": 5,
+     "prompt_tokens": 17613,
+     "completion_tokens": 6278,
+     "model_seconds": 51.1,
+     "user_messages": 1,
+     "intent_reviews": 1,
+     "scenarios": 1,
+     "forwarded_errors": 0,
+     "cap_reached": false
+    },
+    "baseline": {
+     "requests": 3,
+     "prompt_tokens": 5087,
+     "completion_tokens": 3375,
+     "model_seconds": 19.7,
+     "user_messages": 0,
+     "intent_reviews": 0,
+     "scenarios": 0,
+     "forwarded_errors": 1,
+     "cap_reached": false
+    }
+   }
+  },
+  {
+   "case_index": 53,
+   "case_id": "v3-vi-k_of_n-003",
+   "family": "k_of_n",
+   "language": "vi",
+   "expected_behavior": "converge",
+   "pipeline": "NO_DELIVERY",
+   "baseline": "NO_DELIVERY",
+   "cost": {
+    "pipeline": {
+     "requests": 3,
+     "prompt_tokens": 11729,
+     "completion_tokens": 4668,
+     "model_seconds": 29.6,
+     "user_messages": 0,
+     "intent_reviews": 1,
+     "scenarios": 1,
+     "forwarded_errors": 0,
+     "cap_reached": false
+    },
+    "baseline": {
+     "requests": 1,
+     "prompt_tokens": 865,
+     "completion_tokens": 90,
+     "model_seconds": 12.3,
+     "user_messages": 0,
+     "intent_reviews": 0,
+     "scenarios": 0,
+     "forwarded_errors": 0,
+     "cap_reached": false
+    }
+   }
+  },
+  {
+   "case_index": 54,
+   "case_id": "v3-en-k_of_n-004",
+   "family": "k_of_n",
+   "language": "en",
+   "expected_behavior": "ask_then_converge",
+   "pipeline": "NO_DELIVERY",
+   "baseline": "WRONG_DELIVERY",
+   "cost": {
+    "pipeline": {
+     "requests": 7,
+     "prompt_tokens": 37660,
+     "completion_tokens": 10713,
+     "model_seconds": 57.1,
+     "user_messages": 2,
+     "intent_reviews": 1,
+     "scenarios": 1,
+     "forwarded_errors": 0,
+     "cap_reached": false
+    },
+    "baseline": {
+     "requests": 3,
+     "prompt_tokens": 3826,
+     "completion_tokens": 3213,
+     "model_seconds": 23.8,
+     "user_messages": 1,
+     "intent_reviews": 0,
+     "scenarios": 0,
+     "forwarded_errors": 1,
+     "cap_reached": false
+    }
+   }
+  },
+  {
+   "case_index": 55,
+   "case_id": "v3-vi-k_of_n-005",
+   "family": "k_of_n",
+   "language": "vi",
+   "expected_behavior": "converge",
+   "pipeline": "NO_DELIVERY",
+   "baseline": "WRONG_DELIVERY",
+   "cost": {
+    "pipeline": {
+     "requests": 5,
+     "prompt_tokens": 15942,
+     "completion_tokens": 8001,
+     "model_seconds": 39.0,
+     "user_messages": 2,
+     "intent_reviews": 0,
+     "scenarios": 0,
+     "forwarded_errors": 0,
+     "cap_reached": false
+    },
+    "baseline": {
+     "requests": 1,
+     "prompt_tokens": 809,
+     "completion_tokens": 993,
+     "model_seconds": 10.5,
+     "user_messages": 0,
+     "intent_reviews": 0,
+     "scenarios": 0,
+     "forwarded_errors": 0,
+     "cap_reached": false
+    }
+   }
+  },
+  {
+   "case_index": 56,
+   "case_id": "v3-en-k_of_n-006",
+   "family": "k_of_n",
+   "language": "en",
+   "expected_behavior": "ask_then_converge",
+   "pipeline": "NO_DELIVERY",
+   "baseline": "NO_DELIVERY",
+   "cost": {
+    "pipeline": {
+     "requests": 4,
+     "prompt_tokens": 14540,
+     "completion_tokens": 5699,
+     "model_seconds": 31.0,
+     "user_messages": 0,
+     "intent_reviews": 1,
+     "scenarios": 1,
+     "forwarded_errors": 0,
+     "cap_reached": false
+    },
+    "baseline": {
+     "requests": 4,
+     "prompt_tokens": 8915,
+     "completion_tokens": 3728,
+     "model_seconds": 32.0,
+     "user_messages": 0,
+     "intent_reviews": 0,
+     "scenarios": 0,
+     "forwarded_errors": 3,
+     "cap_reached": true
+    }
+   }
+  },
+  {
+   "case_index": 57,
+   "case_id": "v3-vi-first_come-001",
+   "family": "first_come",
+   "language": "vi",
+   "expected_behavior": "converge",
+   "pipeline": "SUCCESS",
+   "baseline": "WRONG_DELIVERY",
+   "cost": {
+    "pipeline": {
+     "requests": 5,
+     "prompt_tokens": 19442,
+     "completion_tokens": 6062,
+     "model_seconds": 60.7,
+     "user_messages": 0,
+     "intent_reviews": 1,
+     "scenarios": 2,
+     "forwarded_errors": 0,
+     "cap_reached": false
+    },
+    "baseline": {
+     "requests": 1,
+     "prompt_tokens": 770,
+     "completion_tokens": 473,
+     "model_seconds": 13.4,
+     "user_messages": 0,
+     "intent_reviews": 0,
+     "scenarios": 0,
+     "forwarded_errors": 0,
+     "cap_reached": false
+    }
+   }
+  },
+  {
+   "case_index": 58,
+   "case_id": "v3-en-first_come-002",
+   "family": "first_come",
+   "language": "en",
+   "expected_behavior": "converge",
+   "pipeline": "WRONG_DELIVERY",
+   "baseline": "WRONG_DELIVERY",
+   "cost": {
+    "pipeline": {
+     "requests": 5,
+     "prompt_tokens": 17135,
+     "completion_tokens": 3941,
+     "model_seconds": 59.9,
+     "user_messages": 0,
+     "intent_reviews": 1,
+     "scenarios": 3,
+     "forwarded_errors": 0,
+     "cap_reached": false
+    },
+    "baseline": {
+     "requests": 1,
+     "prompt_tokens": 776,
+     "completion_tokens": 575,
+     "model_seconds": 13.6,
+     "user_messages": 0,
+     "intent_reviews": 0,
+     "scenarios": 0,
+     "forwarded_errors": 0,
+     "cap_reached": false
+    }
+   }
+  },
+  {
+   "case_index": 59,
+   "case_id": "v3-vi-first_come-003",
+   "family": "first_come",
+   "language": "vi",
+   "expected_behavior": "ask_then_converge",
+   "pipeline": "NO_DELIVERY",
+   "baseline": "WRONG_DELIVERY",
+   "cost": {
+    "pipeline": {
+     "requests": 6,
+     "prompt_tokens": 18151,
+     "completion_tokens": 4785,
+     "model_seconds": 38.7,
+     "user_messages": 1,
+     "intent_reviews": 0,
+     "scenarios": 0,
+     "forwarded_errors": 0,
+     "cap_reached": false
+    },
+    "baseline": {
+     "requests": 2,
+     "prompt_tokens": 1612,
+     "completion_tokens": 658,
+     "model_seconds": 13.4,
+     "user_messages": 1,
+     "intent_reviews": 0,
+     "scenarios": 0,
+     "forwarded_errors": 0,
+     "cap_reached": false
+    }
+   }
+  },
+  {
+   "case_index": 60,
+   "case_id": "v3-en-first_come-004",
+   "family": "first_come",
+   "language": "en",
+   "expected_behavior": "converge",
+   "pipeline": "NO_DELIVERY",
+   "baseline": "SUCCESS",
+   "cost": {
+    "pipeline": {
+     "requests": 4,
+     "prompt_tokens": 12703,
+     "completion_tokens": 3222,
+     "model_seconds": 16.9,
+     "user_messages": 0,
+     "intent_reviews": 0,
+     "scenarios": 0,
+     "forwarded_errors": 0,
+     "cap_reached": false
+    },
+    "baseline": {
+     "requests": 1,
+     "prompt_tokens": 757,
+     "completion_tokens": 489,
+     "model_seconds": 15.6,
+     "user_messages": 0,
+     "intent_reviews": 0,
+     "scenarios": 0,
+     "forwarded_errors": 0,
+     "cap_reached": false
+    }
+   }
+  },
+  {
+   "case_index": 61,
+   "case_id": "v3-vi-first_come-005",
+   "family": "first_come",
+   "language": "vi",
+   "expected_behavior": "ask_then_converge",
+   "pipeline": "WRONG_DELIVERY",
+   "baseline": "WRONG_DELIVERY",
+   "cost": {
+    "pipeline": {
+     "requests": 7,
+     "prompt_tokens": 22681,
+     "completion_tokens": 5844,
+     "model_seconds": 46.9,
+     "user_messages": 1,
+     "intent_reviews": 1,
+     "scenarios": 2,
+     "forwarded_errors": 0,
+     "cap_reached": false
+    },
+    "baseline": {
+     "requests": 1,
+     "prompt_tokens": 749,
+     "completion_tokens": 255,
+     "model_seconds": 8.3,
+     "user_messages": 0,
+     "intent_reviews": 0,
+     "scenarios": 0,
+     "forwarded_errors": 0,
+     "cap_reached": false
+    }
+   }
+  },
+  {
+   "case_index": 62,
+   "case_id": "v3-en-zero_coupon_bond-001",
+   "family": "zero_coupon_bond",
+   "language": "en",
+   "expected_behavior": "converge",
+   "pipeline": "SUCCESS",
+   "baseline": "WRONG_DELIVERY",
+   "cost": {
+    "pipeline": {
+     "requests": 4,
+     "prompt_tokens": 15409,
+     "completion_tokens": 4597,
+     "model_seconds": 36.9,
+     "user_messages": 0,
+     "intent_reviews": 1,
+     "scenarios": 3,
+     "forwarded_errors": 0,
+     "cap_reached": false
+    },
+    "baseline": {
+     "requests": 1,
+     "prompt_tokens": 830,
+     "completion_tokens": 646,
+     "model_seconds": 13.9,
+     "user_messages": 0,
+     "intent_reviews": 0,
+     "scenarios": 0,
+     "forwarded_errors": 0,
+     "cap_reached": false
+    }
+   }
+  },
+  {
+   "case_index": 63,
+   "case_id": "v3-vi-zero_coupon_bond-002",
+   "family": "zero_coupon_bond",
+   "language": "vi",
+   "expected_behavior": "converge",
+   "pipeline": "SUCCESS",
+   "baseline": "WRONG_DELIVERY",
+   "cost": {
+    "pipeline": {
+     "requests": 3,
+     "prompt_tokens": 14334,
+     "completion_tokens": 4426,
+     "model_seconds": 25.7,
+     "user_messages": 0,
+     "intent_reviews": 1,
+     "scenarios": 3,
+     "forwarded_errors": 0,
+     "cap_reached": false
+    },
+    "baseline": {
+     "requests": 3,
+     "prompt_tokens": 3982,
+     "completion_tokens": 1671,
+     "model_seconds": 20.2,
+     "user_messages": 0,
+     "intent_reviews": 0,
+     "scenarios": 0,
+     "forwarded_errors": 1,
+     "cap_reached": false
+    }
+   }
+  },
+  {
+   "case_index": 64,
+   "case_id": "v3-vi-zero_coupon_bond-003",
+   "family": "zero_coupon_bond",
+   "language": "vi",
+   "expected_behavior": "ask_then_converge",
+   "pipeline": "SUCCESS",
+   "baseline": "WRONG_DELIVERY",
+   "cost": {
+    "pipeline": {
+     "requests": 6,
+     "prompt_tokens": 22654,
+     "completion_tokens": 6808,
+     "model_seconds": 49.9,
+     "user_messages": 1,
+     "intent_reviews": 1,
+     "scenarios": 3,
+     "forwarded_errors": 0,
+     "cap_reached": false
+    },
+    "baseline": {
+     "requests": 2,
+     "prompt_tokens": 1590,
+     "completion_tokens": 680,
+     "model_seconds": 15.3,
+     "user_messages": 1,
+     "intent_reviews": 0,
+     "scenarios": 0,
+     "forwarded_errors": 0,
+     "cap_reached": false
+    }
+   }
+  },
+  {
+   "case_index": 65,
+   "case_id": "v3-vi-zero_coupon_bond-004",
+   "family": "zero_coupon_bond",
+   "language": "vi",
+   "expected_behavior": "ask_then_converge",
+   "pipeline": "NO_DELIVERY",
+   "baseline": "WRONG_DELIVERY",
+   "cost": {
+    "pipeline": {
+     "requests": 5,
+     "prompt_tokens": 23217,
+     "completion_tokens": 6521,
+     "model_seconds": 43.2,
+     "user_messages": 1,
+     "intent_reviews": 1,
+     "scenarios": 1,
+     "forwarded_errors": 0,
+     "cap_reached": false
+    },
+    "baseline": {
+     "requests": 2,
+     "prompt_tokens": 1642,
+     "completion_tokens": 788,
+     "model_seconds": 14.7,
+     "user_messages": 1,
+     "intent_reviews": 0,
+     "scenarios": 0,
+     "forwarded_errors": 0,
+     "cap_reached": false
+    }
+   }
+  },
+  {
+   "case_index": 66,
+   "case_id": "v3-vi-coupon_bond-001",
+   "family": "coupon_bond",
+   "language": "vi",
+   "expected_behavior": "converge",
+   "pipeline": "SUCCESS",
+   "baseline": "WRONG_DELIVERY",
+   "cost": {
+    "pipeline": {
+     "requests": 6,
+     "prompt_tokens": 33704,
+     "completion_tokens": 12904,
+     "model_seconds": 41.8,
+     "user_messages": 1,
+     "intent_reviews": 1,
+     "scenarios": 3,
+     "forwarded_errors": 0,
+     "cap_reached": false
+    },
+    "baseline": {
+     "requests": 1,
+     "prompt_tokens": 824,
+     "completion_tokens": 1546,
+     "model_seconds": 11.1,
+     "user_messages": 0,
+     "intent_reviews": 0,
+     "scenarios": 0,
+     "forwarded_errors": 0,
+     "cap_reached": false
+    }
+   }
+  },
+  {
+   "case_index": 67,
+   "case_id": "v3-en-coupon_bond-002",
+   "family": "coupon_bond",
+   "language": "en",
+   "expected_behavior": "converge",
+   "pipeline": "SUCCESS",
+   "baseline": "WRONG_DELIVERY",
+   "cost": {
+    "pipeline": {
+     "requests": 4,
+     "prompt_tokens": 26937,
+     "completion_tokens": 8541,
+     "model_seconds": 53.5,
+     "user_messages": 0,
+     "intent_reviews": 1,
+     "scenarios": 3,
+     "forwarded_errors": 0,
+     "cap_reached": false
+    },
+    "baseline": {
+     "requests": 1,
+     "prompt_tokens": 838,
+     "completion_tokens": 981,
+     "model_seconds": 8.1,
+     "user_messages": 0,
+     "intent_reviews": 0,
+     "scenarios": 0,
+     "forwarded_errors": 0,
+     "cap_reached": false
+    }
+   }
+  },
+  {
+   "case_index": 68,
+   "case_id": "v3-vi-coupon_bond-003",
+   "family": "coupon_bond",
+   "language": "vi",
+   "expected_behavior": "ask_then_converge",
+   "pipeline": "WRONG_DELIVERY",
+   "baseline": "WRONG_DELIVERY",
+   "cost": {
+    "pipeline": {
+     "requests": 7,
+     "prompt_tokens": 39597,
+     "completion_tokens": 13237,
+     "model_seconds": 62.2,
+     "user_messages": 2,
+     "intent_reviews": 1,
+     "scenarios": 3,
+     "forwarded_errors": 0,
+     "cap_reached": false
+    },
+    "baseline": {
+     "requests": 3,
+     "prompt_tokens": 3558,
+     "completion_tokens": 2423,
+     "model_seconds": 21.8,
+     "user_messages": 1,
+     "intent_reviews": 0,
+     "scenarios": 0,
+     "forwarded_errors": 1,
+     "cap_reached": false
+    }
+   }
+  },
+  {
+   "case_index": 69,
+   "case_id": "v3-en-coupon_bond-004",
+   "family": "coupon_bond",
+   "language": "en",
+   "expected_behavior": "ask_then_converge",
+   "pipeline": "SUCCESS",
+   "baseline": "WRONG_DELIVERY",
+   "cost": {
+    "pipeline": {
+     "requests": 7,
+     "prompt_tokens": 39814,
+     "completion_tokens": 16822,
+     "model_seconds": 74.7,
+     "user_messages": 1,
+     "intent_reviews": 1,
+     "scenarios": 3,
+     "forwarded_errors": 0,
+     "cap_reached": false
+    },
+    "baseline": {
+     "requests": 1,
+     "prompt_tokens": 752,
+     "completion_tokens": 1421,
+     "model_seconds": 12.7,
+     "user_messages": 0,
+     "intent_reviews": 0,
+     "scenarios": 0,
+     "forwarded_errors": 0,
+     "cap_reached": false
+    }
+   }
+  },
+  {
+   "case_index": 70,
+   "case_id": "v3-vi-coupon_bond-005",
+   "family": "coupon_bond",
+   "language": "vi",
+   "expected_behavior": "flag_conflict_then_converge",
+   "pipeline": "NO_DELIVERY",
+   "baseline": "WRONG_DELIVERY",
+   "cost": {
+    "pipeline": {
+     "requests": 4,
+     "prompt_tokens": 14053,
+     "completion_tokens": 6125,
+     "model_seconds": 32.8,
+     "user_messages": 0,
+     "intent_reviews": 0,
+     "scenarios": 0,
+     "forwarded_errors": 0,
+     "cap_reached": false
+    },
+    "baseline": {
+     "requests": 2,
+     "prompt_tokens": 2336,
+     "completion_tokens": 1647,
+     "model_seconds": 20.9,
+     "user_messages": 0,
+     "intent_reviews": 0,
+     "scenarios": 0,
+     "forwarded_errors": 1,
+     "cap_reached": false
+    }
+   }
+  },
+  {
+   "case_index": 71,
+   "case_id": "v3-vi-split-001",
+   "family": "split",
+   "language": "vi",
+   "expected_behavior": "converge",
+   "pipeline": "NO_DELIVERY",
+   "baseline": "WRONG_DELIVERY",
+   "cost": {
+    "pipeline": {
+     "requests": 5,
+     "prompt_tokens": 32325,
+     "completion_tokens": 9165,
+     "model_seconds": 46.2,
+     "user_messages": 0,
+     "intent_reviews": 1,
+     "scenarios": 1,
+     "forwarded_errors": 0,
+     "cap_reached": false
+    },
+    "baseline": {
+     "requests": 1,
+     "prompt_tokens": 855,
+     "completion_tokens": 958,
+     "model_seconds": 9.3,
+     "user_messages": 0,
+     "intent_reviews": 0,
+     "scenarios": 0,
+     "forwarded_errors": 0,
+     "cap_reached": false
+    }
+   }
+  },
+  {
+   "case_index": 72,
+   "case_id": "v3-en-split-002",
+   "family": "split",
+   "language": "en",
+   "expected_behavior": "converge",
+   "pipeline": "SUCCESS",
+   "baseline": "WRONG_DELIVERY",
+   "cost": {
+    "pipeline": {
+     "requests": 2,
+     "prompt_tokens": 8927,
+     "completion_tokens": 4011,
+     "model_seconds": 22.0,
+     "user_messages": 0,
+     "intent_reviews": 1,
+     "scenarios": 3,
+     "forwarded_errors": 0,
+     "cap_reached": false
+    },
+    "baseline": {
+     "requests": 1,
+     "prompt_tokens": 824,
+     "completion_tokens": 864,
+     "model_seconds": 11.9,
+     "user_messages": 0,
+     "intent_reviews": 0,
+     "scenarios": 0,
+     "forwarded_errors": 0,
+     "cap_reached": false
+    }
+   }
+  },
+  {
+   "case_index": 73,
+   "case_id": "v3-vi-split-003",
+   "family": "split",
+   "language": "vi",
+   "expected_behavior": "ask_then_converge",
+   "pipeline": "SUCCESS",
+   "baseline": "WRONG_DELIVERY",
+   "cost": {
+    "pipeline": {
+     "requests": 3,
+     "prompt_tokens": 11309,
+     "completion_tokens": 5014,
+     "model_seconds": 32.0,
+     "user_messages": 1,
+     "intent_reviews": 1,
+     "scenarios": 2,
+     "forwarded_errors": 0,
+     "cap_reached": false
+    },
+    "baseline": {
+     "requests": 1,
+     "prompt_tokens": 754,
+     "completion_tokens": 762,
+     "model_seconds": 5.2,
+     "user_messages": 0,
+     "intent_reviews": 0,
+     "scenarios": 0,
+     "forwarded_errors": 0,
+     "cap_reached": false
+    }
+   }
+  },
+  {
+   "case_index": 74,
+   "case_id": "v3-en-split-004",
+   "family": "split",
+   "language": "en",
+   "expected_behavior": "ask_then_converge",
+   "pipeline": "SUCCESS",
+   "baseline": "WRONG_DELIVERY",
+   "cost": {
+    "pipeline": {
+     "requests": 4,
+     "prompt_tokens": 16629,
+     "completion_tokens": 5279,
+     "model_seconds": 24.6,
+     "user_messages": 1,
+     "intent_reviews": 1,
+     "scenarios": 3,
+     "forwarded_errors": 0,
+     "cap_reached": false
+    },
+    "baseline": {
+     "requests": 2,
+     "prompt_tokens": 1613,
+     "completion_tokens": 846,
+     "model_seconds": 11.8,
+     "user_messages": 1,
+     "intent_reviews": 0,
+     "scenarios": 0,
+     "forwarded_errors": 0,
+     "cap_reached": false
+    }
+   }
+  },
+  {
+   "case_index": 75,
+   "case_id": "v3-vi-split-005",
+   "family": "split",
+   "language": "vi",
+   "expected_behavior": "ask_then_converge",
+   "pipeline": "NO_DELIVERY",
+   "baseline": "WRONG_DELIVERY",
+   "cost": {
+    "pipeline": {
+     "requests": 5,
+     "prompt_tokens": 27335,
+     "completion_tokens": 7419,
+     "model_seconds": 45.4,
+     "user_messages": 1,
+     "intent_reviews": 1,
+     "scenarios": 1,
+     "forwarded_errors": 0,
+     "cap_reached": false
+    },
+    "baseline": {
+     "requests": 2,
+     "prompt_tokens": 1608,
+     "completion_tokens": 904,
+     "model_seconds": 14.6,
+     "user_messages": 1,
+     "intent_reviews": 0,
+     "scenarios": 0,
+     "forwarded_errors": 0,
+     "cap_reached": false
+    }
+   }
+  },
+  {
+   "case_index": 76,
+   "case_id": "v3-vi-split-006",
+   "family": "split",
+   "language": "vi",
+   "expected_behavior": "converge_and_decline_extra",
+   "pipeline": "NO_DELIVERY",
+   "baseline": "NO_DELIVERY",
+   "cost": {
+    "pipeline": {
+     "requests": 5,
+     "prompt_tokens": 19506,
+     "completion_tokens": 7624,
+     "model_seconds": 36.3,
+     "user_messages": 2,
+     "intent_reviews": 1,
+     "scenarios": 1,
+     "forwarded_errors": 0,
+     "cap_reached": false
+    },
+    "baseline": {
+     "requests": 1,
+     "prompt_tokens": 801,
+     "completion_tokens": 89,
+     "model_seconds": 4.2,
+     "user_messages": 0,
+     "intent_reviews": 0,
+     "scenarios": 0,
+     "forwarded_errors": 0,
+     "cap_reached": false
+    }
+   }
+  },
+  {
+   "case_index": 77,
+   "case_id": "v3-en-collateral_loan-001",
+   "family": "collateral_loan",
+   "language": "en",
+   "expected_behavior": "converge",
+   "pipeline": "SUCCESS",
+   "baseline": "WRONG_DELIVERY",
+   "cost": {
+    "pipeline": {
+     "requests": 2,
+     "prompt_tokens": 11710,
+     "completion_tokens": 4810,
+     "model_seconds": 27.1,
+     "user_messages": 0,
+     "intent_reviews": 1,
+     "scenarios": 4,
+     "forwarded_errors": 0,
+     "cap_reached": false
+    },
+    "baseline": {
+     "requests": 1,
+     "prompt_tokens": 913,
+     "completion_tokens": 1345,
+     "model_seconds": 7.3,
+     "user_messages": 0,
+     "intent_reviews": 0,
+     "scenarios": 0,
+     "forwarded_errors": 0,
+     "cap_reached": false
+    }
+   }
+  },
+  {
+   "case_index": 78,
+   "case_id": "v3-vi-collateral_loan-002",
+   "family": "collateral_loan",
+   "language": "vi",
+   "expected_behavior": "converge",
+   "pipeline": "SUCCESS",
+   "baseline": "WRONG_DELIVERY",
+   "cost": {
+    "pipeline": {
+     "requests": 2,
+     "prompt_tokens": 12082,
+     "completion_tokens": 4224,
+     "model_seconds": 20.5,
+     "user_messages": 0,
+     "intent_reviews": 1,
+     "scenarios": 4,
+     "forwarded_errors": 0,
+     "cap_reached": false
+    },
+    "baseline": {
+     "requests": 1,
+     "prompt_tokens": 930,
+     "completion_tokens": 1352,
+     "model_seconds": 7.1,
+     "user_messages": 0,
+     "intent_reviews": 0,
+     "scenarios": 0,
+     "forwarded_errors": 0,
+     "cap_reached": false
+    }
+   }
+  },
+  {
+   "case_index": 79,
+   "case_id": "v3-vi-collateral_loan-003",
+   "family": "collateral_loan",
+   "language": "vi",
+   "expected_behavior": "ask_then_converge",
+   "pipeline": "NO_DELIVERY",
+   "baseline": "WRONG_DELIVERY",
+   "cost": {
+    "pipeline": {
+     "requests": 4,
+     "prompt_tokens": 13031,
+     "completion_tokens": 4855,
+     "model_seconds": 22.6,
+     "user_messages": 0,
+     "intent_reviews": 0,
+     "scenarios": 0,
+     "forwarded_errors": 0,
+     "cap_reached": false
+    },
+    "baseline": {
+     "requests": 2,
+     "prompt_tokens": 1676,
+     "completion_tokens": 1386,
+     "model_seconds": 20.2,
+     "user_messages": 1,
+     "intent_reviews": 0,
+     "scenarios": 0,
+     "forwarded_errors": 0,
+     "cap_reached": false
+    }
+   }
+  },
+  {
+   "case_index": 80,
+   "case_id": "v3-en-collateral_loan-004",
+   "family": "collateral_loan",
+   "language": "en",
+   "expected_behavior": "flag_conflict_then_converge",
+   "pipeline": "SUCCESS",
+   "baseline": "WRONG_DELIVERY",
+   "cost": {
+    "pipeline": {
+     "requests": 5,
+     "prompt_tokens": 31017,
+     "completion_tokens": 12612,
+     "model_seconds": 43.0,
+     "user_messages": 1,
+     "intent_reviews": 1,
+     "scenarios": 4,
+     "forwarded_errors": 0,
+     "cap_reached": false
+    },
+    "baseline": {
+     "requests": 1,
+     "prompt_tokens": 871,
+     "completion_tokens": 1302,
+     "model_seconds": 11.9,
+     "user_messages": 0,
+     "intent_reviews": 0,
+     "scenarios": 0,
+     "forwarded_errors": 0,
+     "cap_reached": false
+    }
+   }
+  },
+  {
+   "case_index": 81,
+   "case_id": "v3-vi-collateral_loan-005",
+   "family": "collateral_loan",
+   "language": "vi",
+   "expected_behavior": "converge",
+   "pipeline": "NO_DELIVERY",
+   "baseline": "WRONG_DELIVERY",
+   "cost": {
+    "pipeline": {
+     "requests": 12,
+     "prompt_tokens": 65123,
+     "completion_tokens": 22304,
+     "model_seconds": 93.0,
+     "user_messages": 1,
+     "intent_reviews": 1,
+     "scenarios": 1,
+     "forwarded_errors": 0,
+     "cap_reached": false
+    },
+    "baseline": {
+     "requests": 1,
+     "prompt_tokens": 892,
+     "completion_tokens": 1431,
+     "model_seconds": 15.2,
+     "user_messages": 0,
+     "intent_reviews": 0,
+     "scenarios": 0,
+     "forwarded_errors": 0,
+     "cap_reached": false
+    }
+   }
+  },
+  {
+   "case_index": 82,
+   "case_id": "v3-vi-deduction-001",
+   "family": "deduction",
+   "language": "vi",
+   "expected_behavior": "converge",
+   "pipeline": "NO_DELIVERY",
+   "baseline": "WRONG_DELIVERY",
+   "cost": {
+    "pipeline": {
+     "requests": 4,
+     "prompt_tokens": 11976,
+     "completion_tokens": 5942,
+     "model_seconds": 27.2,
+     "user_messages": 2,
+     "intent_reviews": 0,
+     "scenarios": 0,
+     "forwarded_errors": 0,
+     "cap_reached": false
+    },
+    "baseline": {
+     "requests": 3,
+     "prompt_tokens": 5012,
+     "completion_tokens": 2620,
+     "model_seconds": 16.0,
+     "user_messages": 0,
+     "intent_reviews": 0,
+     "scenarios": 0,
+     "forwarded_errors": 2,
+     "cap_reached": false
+    }
+   }
+  },
+  {
+   "case_index": 83,
+   "case_id": "v3-en-deduction-002",
+   "family": "deduction",
+   "language": "en",
+   "expected_behavior": "converge",
+   "pipeline": "NO_DELIVERY",
+   "baseline": "WRONG_DELIVERY",
+   "cost": {
+    "pipeline": {
+     "requests": 11,
+     "prompt_tokens": 41283,
+     "completion_tokens": 17464,
+     "model_seconds": 80.1,
+     "user_messages": 2,
+     "intent_reviews": 0,
+     "scenarios": 0,
+     "forwarded_errors": 0,
+     "cap_reached": false
+    },
+    "baseline": {
+     "requests": 1,
+     "prompt_tokens": 844,
+     "completion_tokens": 798,
+     "model_seconds": 4.4,
+     "user_messages": 0,
+     "intent_reviews": 0,
+     "scenarios": 0,
+     "forwarded_errors": 0,
+     "cap_reached": false
+    }
+   }
+  },
+  {
+   "case_index": 84,
+   "case_id": "v3-vi-deduction-003",
+   "family": "deduction",
+   "language": "vi",
+   "expected_behavior": "ask_then_converge",
+   "pipeline": "NO_DELIVERY",
+   "baseline": "WRONG_DELIVERY",
+   "cost": {
+    "pipeline": {
+     "requests": 4,
+     "prompt_tokens": 12525,
+     "completion_tokens": 3839,
+     "model_seconds": 20.5,
+     "user_messages": 0,
+     "intent_reviews": 0,
+     "scenarios": 0,
+     "forwarded_errors": 0,
+     "cap_reached": false
+    },
+    "baseline": {
+     "requests": 4,
+     "prompt_tokens": 5497,
+     "completion_tokens": 2351,
+     "model_seconds": 20.6,
+     "user_messages": 1,
+     "intent_reviews": 0,
+     "scenarios": 0,
+     "forwarded_errors": 1,
+     "cap_reached": false
+    }
+   }
+  },
+  {
+   "case_index": 85,
+   "case_id": "v3-en-deduction-004",
+   "family": "deduction",
+   "language": "en",
+   "expected_behavior": "ask_then_converge",
+   "pipeline": "NO_DELIVERY",
+   "baseline": "WRONG_DELIVERY",
+   "cost": {
+    "pipeline": {
+     "requests": 4,
+     "prompt_tokens": 14094,
+     "completion_tokens": 6355,
+     "model_seconds": 23.0,
+     "user_messages": 0,
+     "intent_reviews": 0,
+     "scenarios": 0,
+     "forwarded_errors": 0,
+     "cap_reached": false
+    },
+    "baseline": {
+     "requests": 1,
+     "prompt_tokens": 777,
+     "completion_tokens": 754,
+     "model_seconds": 9.7,
+     "user_messages": 0,
+     "intent_reviews": 0,
+     "scenarios": 0,
+     "forwarded_errors": 0,
+     "cap_reached": false
+    }
+   }
+  },
+  {
+   "case_index": 86,
+   "case_id": "v3-vi-deduction-005",
+   "family": "deduction",
+   "language": "vi",
+   "expected_behavior": "flag_conflict_then_converge",
+   "pipeline": "NO_DELIVERY",
+   "baseline": "WRONG_DELIVERY",
+   "cost": {
+    "pipeline": {
+     "requests": 6,
+     "prompt_tokens": 20080,
+     "completion_tokens": 9266,
+     "model_seconds": 38.8,
+     "user_messages": 2,
+     "intent_reviews": 0,
+     "scenarios": 0,
+     "forwarded_errors": 0,
+     "cap_reached": false
+    },
+    "baseline": {
+     "requests": 3,
+     "prompt_tokens": 4558,
+     "completion_tokens": 2443,
+     "model_seconds": 32.2,
+     "user_messages": 0,
+     "intent_reviews": 0,
+     "scenarios": 0,
+     "forwarded_errors": 2,
+     "cap_reached": false
+    }
+   }
+  },
+  {
+   "case_index": 87,
+   "case_id": "v3-vi-matching-001",
+   "family": "matching",
+   "language": "vi",
+   "expected_behavior": "converge",
+   "pipeline": "SUCCESS",
+   "baseline": "WRONG_DELIVERY",
+   "cost": {
+    "pipeline": {
+     "requests": 8,
+     "prompt_tokens": 52535,
+     "completion_tokens": 16709,
+     "model_seconds": 57.6,
+     "user_messages": 1,
+     "intent_reviews": 1,
+     "scenarios": 3,
+     "forwarded_errors": 0,
+     "cap_reached": false
+    },
+    "baseline": {
+     "requests": 3,
+     "prompt_tokens": 4520,
+     "completion_tokens": 2484,
+     "model_seconds": 20.1,
+     "user_messages": 1,
+     "intent_reviews": 0,
+     "scenarios": 0,
+     "forwarded_errors": 1,
+     "cap_reached": false
+    }
+   }
+  },
+  {
+   "case_index": 88,
+   "case_id": "v3-en-matching-002",
+   "family": "matching",
+   "language": "en",
+   "expected_behavior": "converge",
+   "pipeline": "SUCCESS",
+   "baseline": "WRONG_DELIVERY",
+   "cost": {
+    "pipeline": {
+     "requests": 3,
+     "prompt_tokens": 30208,
+     "completion_tokens": 7840,
+     "model_seconds": 25.2,
+     "user_messages": 0,
+     "intent_reviews": 1,
+     "scenarios": 3,
+     "forwarded_errors": 0,
+     "cap_reached": false
+    },
+    "baseline": {
+     "requests": 1,
+     "prompt_tokens": 884,
+     "completion_tokens": 1759,
+     "model_seconds": 13.8,
+     "user_messages": 0,
+     "intent_reviews": 0,
+     "scenarios": 0,
+     "forwarded_errors": 0,
+     "cap_reached": false
+    }
+   }
+  },
+  {
+   "case_index": 89,
+   "case_id": "v3-vi-matching-003",
+   "family": "matching",
+   "language": "vi",
+   "expected_behavior": "ask_then_converge",
+   "pipeline": "NO_DELIVERY",
+   "baseline": "WRONG_DELIVERY",
+   "cost": {
+    "pipeline": {
+     "requests": 4,
+     "prompt_tokens": 12323,
+     "completion_tokens": 3404,
+     "model_seconds": 19.7,
+     "user_messages": 0,
+     "intent_reviews": 0,
+     "scenarios": 0,
+     "forwarded_errors": 0,
+     "cap_reached": false
+    },
+    "baseline": {
+     "requests": 3,
+     "prompt_tokens": 3548,
+     "completion_tokens": 1770,
+     "model_seconds": 13.0,
+     "user_messages": 1,
+     "intent_reviews": 0,
+     "scenarios": 0,
+     "forwarded_errors": 1,
+     "cap_reached": false
+    }
+   }
+  },
+  {
+   "case_index": 90,
+   "case_id": "v3-vi-matching-004",
+   "family": "matching",
+   "language": "vi",
+   "expected_behavior": "ask_then_converge",
+   "pipeline": "NO_DELIVERY",
+   "baseline": "WRONG_DELIVERY",
+   "cost": {
+    "pipeline": {
+     "requests": 8,
+     "prompt_tokens": 27994,
+     "completion_tokens": 11721,
+     "model_seconds": 55.2,
+     "user_messages": 2,
+     "intent_reviews": 0,
+     "scenarios": 0,
+     "forwarded_errors": 0,
+     "cap_reached": false
+    },
+    "baseline": {
+     "requests": 2,
+     "prompt_tokens": 2095,
+     "completion_tokens": 1397,
+     "model_seconds": 17.4,
+     "user_messages": 0,
+     "intent_reviews": 0,
+     "scenarios": 0,
+     "forwarded_errors": 1,
+     "cap_reached": false
+    }
+   }
+  },
+  {
+   "case_index": 91,
+   "case_id": "v3-vi-infeasible-001",
+   "family": "infeasible",
+   "language": "vi",
+   "expected_behavior": "reject_unsupported",
+   "pipeline": "NO_DELIVERY",
+   "baseline": "SUCCESS",
+   "cost": {
+    "pipeline": {
+     "requests": 1,
+     "prompt_tokens": 2577,
+     "completion_tokens": 621,
+     "model_seconds": 3.7,
+     "user_messages": 0,
+     "intent_reviews": 0,
+     "scenarios": 0,
+     "forwarded_errors": 0,
+     "cap_reached": false
+    },
+    "baseline": {
+     "requests": 1,
+     "prompt_tokens": 746,
+     "completion_tokens": 101,
+     "model_seconds": 3.8,
+     "user_messages": 0,
+     "intent_reviews": 0,
+     "scenarios": 0,
+     "forwarded_errors": 0,
+     "cap_reached": false
+    }
+   }
+  },
+  {
+   "case_index": 92,
+   "case_id": "v3-en-infeasible-002",
+   "family": "infeasible",
+   "language": "en",
+   "expected_behavior": "reject_unsupported",
+   "pipeline": "SUCCESS",
+   "baseline": "SUCCESS",
+   "cost": {
+    "pipeline": {
+     "requests": 3,
+     "prompt_tokens": 7865,
+     "completion_tokens": 1912,
+     "model_seconds": 16.9,
+     "user_messages": 2,
+     "intent_reviews": 0,
+     "scenarios": 0,
+     "forwarded_errors": 0,
+     "cap_reached": false
+    },
+    "baseline": {
+     "requests": 2,
+     "prompt_tokens": 1623,
+     "completion_tokens": 150,
+     "model_seconds": 14.3,
+     "user_messages": 1,
+     "intent_reviews": 0,
+     "scenarios": 0,
+     "forwarded_errors": 0,
+     "cap_reached": false
+    }
+   }
+  },
+  {
+   "case_index": 93,
+   "case_id": "v3-vi-infeasible-003",
+   "family": "infeasible",
+   "language": "vi",
+   "expected_behavior": "reject_unsupported",
+   "pipeline": "SUCCESS",
+   "baseline": "SUCCESS",
+   "cost": {
+    "pipeline": {
+     "requests": 1,
+     "prompt_tokens": 2568,
+     "completion_tokens": 428,
+     "model_seconds": 2.9,
+     "user_messages": 0,
+     "intent_reviews": 0,
+     "scenarios": 0,
+     "forwarded_errors": 0,
+     "cap_reached": false
+    },
+    "baseline": {
+     "requests": 1,
+     "prompt_tokens": 737,
+     "completion_tokens": 67,
+     "model_seconds": 1.6,
+     "user_messages": 0,
+     "intent_reviews": 0,
+     "scenarios": 0,
+     "forwarded_errors": 0,
+     "cap_reached": false
+    }
+   }
+  },
+  {
+   "case_index": 94,
+   "case_id": "v3-en-infeasible-004",
+   "family": "infeasible",
+   "language": "en",
+   "expected_behavior": "reject_unsupported",
+   "pipeline": "SUCCESS",
+   "baseline": "SUCCESS",
+   "cost": {
+    "pipeline": {
+     "requests": 3,
+     "prompt_tokens": 7777,
+     "completion_tokens": 1693,
+     "model_seconds": 19.3,
+     "user_messages": 2,
+     "intent_reviews": 0,
+     "scenarios": 0,
+     "forwarded_errors": 0,
+     "cap_reached": false
+    },
+    "baseline": {
+     "requests": 2,
+     "prompt_tokens": 1587,
+     "completion_tokens": 180,
+     "model_seconds": 16.5,
+     "user_messages": 1,
+     "intent_reviews": 0,
+     "scenarios": 0,
+     "forwarded_errors": 0,
+     "cap_reached": false
+    }
+   }
+  },
+  {
+   "case_index": 95,
+   "case_id": "v3-vi-infeasible-005",
+   "family": "infeasible",
+   "language": "vi",
+   "expected_behavior": "reject_unsupported",
+   "pipeline": "SUCCESS",
+   "baseline": "SUCCESS",
+   "cost": {
+    "pipeline": {
+     "requests": 3,
+     "prompt_tokens": 7848,
+     "completion_tokens": 1901,
+     "model_seconds": 19.9,
+     "user_messages": 2,
+     "intent_reviews": 0,
+     "scenarios": 0,
+     "forwarded_errors": 0,
+     "cap_reached": false
+    },
+    "baseline": {
+     "requests": 2,
+     "prompt_tokens": 1619,
+     "completion_tokens": 217,
+     "model_seconds": 9.9,
+     "user_messages": 1,
+     "intent_reviews": 0,
+     "scenarios": 0,
+     "forwarded_errors": 0,
+     "cap_reached": false
+    }
+   }
+  },
+  {
+   "case_index": 96,
+   "case_id": "v3-en-infeasible-006",
+   "family": "infeasible",
+   "language": "en",
+   "expected_behavior": "reject_unsupported",
+   "pipeline": "SUCCESS",
+   "baseline": "SUCCESS",
+   "cost": {
+    "pipeline": {
+     "requests": 3,
+     "prompt_tokens": 7759,
+     "completion_tokens": 1361,
+     "model_seconds": 12.7,
+     "user_messages": 2,
+     "intent_reviews": 0,
+     "scenarios": 0,
+     "forwarded_errors": 0,
+     "cap_reached": false
+    },
+    "baseline": {
+     "requests": 2,
+     "prompt_tokens": 1565,
+     "completion_tokens": 146,
+     "model_seconds": 11.7,
+     "user_messages": 1,
+     "intent_reviews": 0,
+     "scenarios": 0,
+     "forwarded_errors": 0,
+     "cap_reached": false
+    }
+   }
+  },
+  {
+   "case_index": 97,
+   "case_id": "v3-vi-infeasible-007",
+   "family": "infeasible",
+   "language": "vi",
+   "expected_behavior": "reject_unsupported",
+   "pipeline": "SUCCESS",
+   "baseline": "SUCCESS",
+   "cost": {
+    "pipeline": {
+     "requests": 3,
+     "prompt_tokens": 7782,
+     "completion_tokens": 1601,
+     "model_seconds": 13.2,
+     "user_messages": 2,
+     "intent_reviews": 0,
+     "scenarios": 0,
+     "forwarded_errors": 0,
+     "cap_reached": false
+    },
+    "baseline": {
+     "requests": 1,
+     "prompt_tokens": 731,
+     "completion_tokens": 93,
+     "model_seconds": 3.8,
+     "user_messages": 0,
+     "intent_reviews": 0,
+     "scenarios": 0,
+     "forwarded_errors": 0,
+     "cap_reached": false
+    }
+   }
+  },
+  {
+   "case_index": 98,
+   "case_id": "v3-en-infeasible-008",
+   "family": "infeasible",
+   "language": "en",
+   "expected_behavior": "reject_unsupported",
+   "pipeline": "SUCCESS",
+   "baseline": "SUCCESS",
+   "cost": {
+    "pipeline": {
+     "requests": 3,
+     "prompt_tokens": 7798,
+     "completion_tokens": 2232,
+     "model_seconds": 15.8,
+     "user_messages": 2,
+     "intent_reviews": 0,
+     "scenarios": 0,
+     "forwarded_errors": 0,
+     "cap_reached": false
+    },
+    "baseline": {
+     "requests": 2,
+     "prompt_tokens": 1580,
+     "completion_tokens": 127,
+     "model_seconds": 11.2,
+     "user_messages": 1,
+     "intent_reviews": 0,
+     "scenarios": 0,
+     "forwarded_errors": 0,
+     "cap_reached": false
+    }
+   }
+  },
+  {
+   "case_index": 99,
+   "case_id": "v3-vi-infeasible-009",
+   "family": "infeasible",
+   "language": "vi",
+   "expected_behavior": "reject_unsupported",
+   "pipeline": "SUCCESS",
+   "baseline": "SUCCESS",
+   "cost": {
+    "pipeline": {
+     "requests": 9,
+     "prompt_tokens": 30019,
+     "completion_tokens": 9715,
+     "model_seconds": 54.7,
+     "user_messages": 2,
+     "intent_reviews": 0,
+     "scenarios": 0,
+     "forwarded_errors": 0,
+     "cap_reached": false
+    },
+    "baseline": {
+     "requests": 2,
+     "prompt_tokens": 1616,
+     "completion_tokens": 170,
+     "model_seconds": 7.0,
+     "user_messages": 1,
+     "intent_reviews": 0,
+     "scenarios": 0,
+     "forwarded_errors": 0,
+     "cap_reached": false
+    }
+   }
+  },
+  {
+   "case_index": 100,
+   "case_id": "v3-vi-infeasible-010",
+   "family": "infeasible",
+   "language": "vi",
+   "expected_behavior": "reject_unsupported",
+   "pipeline": "SUCCESS",
+   "baseline": "SUCCESS",
+   "cost": {
+    "pipeline": {
+     "requests": 3,
+     "prompt_tokens": 7765,
+     "completion_tokens": 1392,
+     "model_seconds": 10.3,
+     "user_messages": 2,
+     "intent_reviews": 0,
+     "scenarios": 0,
+     "forwarded_errors": 0,
+     "cap_reached": false
+    },
+    "baseline": {
+     "requests": 2,
+     "prompt_tokens": 1570,
+     "completion_tokens": 179,
+     "model_seconds": 10.3,
+     "user_messages": 1,
+     "intent_reviews": 0,
+     "scenarios": 0,
+     "forwarded_errors": 0,
+     "cap_reached": false
+    }
+   }
+  }
+ ],
+ "rq3_success": {
+  "n": 71,
+  "pipeline_rate": 0.5352112676056338,
+  "baseline_rate": 0.15492957746478872,
+  "delta": 0.380281690140845,
+  "delta_ci95": [
+   0.2535211267605634,
+   0.5070422535211268
+  ],
+  "relative": 2.454545454545454,
+  "pipeline_only": 29,
+  "baseline_only": 2,
+  "mcnemar_p": 4.628673195838928e-07,
+  "conclusion": "pipeline stronger"
+ },
+ "rq3_wrong_delivery": {
+  "n": 71,
+  "pipeline_rate": 0.04225352112676056,
+  "baseline_rate": 0.7605633802816901,
+  "delta": -0.7183098591549295,
+  "delta_ci95": [
+   -0.8169014084507042,
+   -0.6056338028169014
+  ],
+  "relative": -0.9444444444444444,
+  "pipeline_only": 0,
+  "baseline_only": 51,
+  "mcnemar_p": 8.881784197001252e-16
+ },
+ "outcomes": {
+  "pipeline": {
+   "SUCCESS": 38,
+   "WRONG_DELIVERY": 3,
+   "NO_DELIVERY": 30,
+   "RIGHT_NO_NOTICE": 0,
+   "UNDETERMINED": 0
+  },
+  "baseline": {
+   "SUCCESS": 11,
+   "WRONG_DELIVERY": 54,
+   "NO_DELIVERY": 6,
+   "RIGHT_NO_NOTICE": 0,
+   "UNDETERMINED": 0
+  }
+ },
+ "rq4_totals": {
+  "pipeline": {
+   "requests": 316,
+   "prompt_tokens": 1319771,
+   "completion_tokens": 475931,
+   "model_seconds": 2839.1,
+   "user_messages": 59,
+   "intent_reviews": 42,
+   "scenarios": 117,
+   "forwarded_errors": 0,
+   "cap_reached": 0,
+   "requests_per_success": 8.31578947368421
+  },
+  "baseline": {
+   "requests": 135,
+   "prompt_tokens": 153045,
+   "completion_tokens": 93043,
+   "model_seconds": 1220.1,
+   "user_messages": 22,
+   "intent_reviews": 0,
+   "scenarios": 0,
+   "forwarded_errors": 41,
+   "cap_reached": 4,
+   "requests_per_success": 12.272727272727273
+  }
+ },
+ "success_by_expected_behavior": {
+  "ask_then_converge": {
+   "n": 26,
+   "pipeline": 8,
+   "baseline": 0
+  },
+  "converge": {
+   "n": 29,
+   "pipeline": 19,
+   "baseline": 1
+  },
+  "flag_conflict_then_converge": {
+   "n": 4,
+   "pipeline": 2,
+   "baseline": 0
+  },
+  "converge_and_decline_extra": {
+   "n": 2,
+   "pipeline": 0,
+   "baseline": 0
+  },
+  "reject_unsupported": {
+   "n": 10,
+   "pipeline": 9,
+   "baseline": 10
+  }
+ },
+ "success_by_family": {
+  "crowdfunding": {
+   "n": 2,
+   "pipeline": 2,
+   "baseline": 0
+  },
+  "third_party": {
+   "n": 4,
+   "pipeline": 3,
+   "baseline": 0
+  },
+  "rental_deposit": {
+   "n": 4,
+   "pipeline": 2,
+   "baseline": 0
+  },
+  "cancellation_fee": {
+   "n": 4,
+   "pipeline": 4,
+   "baseline": 0
+  },
+  "installment": {
+   "n": 7,
+   "pipeline": 3,
+   "baseline": 0
+  },
+  "k_of_n": {
+   "n": 6,
+   "pipeline": 0,
+   "baseline": 0
+  },
+  "first_come": {
+   "n": 5,
+   "pipeline": 1,
+   "baseline": 1
+  },
+  "zero_coupon_bond": {
+   "n": 4,
+   "pipeline": 3,
+   "baseline": 0
+  },
+  "coupon_bond": {
+   "n": 5,
+   "pipeline": 3,
+   "baseline": 0
+  },
+  "split": {
+   "n": 6,
+   "pipeline": 3,
+   "baseline": 0
+  },
+  "collateral_loan": {
+   "n": 5,
+   "pipeline": 3,
+   "baseline": 0
+  },
+  "deduction": {
+   "n": 5,
+   "pipeline": 0,
+   "baseline": 0
+  },
+  "matching": {
+   "n": 4,
+   "pipeline": 2,
+   "baseline": 0
+  },
+  "infeasible": {
+   "n": 10,
+   "pipeline": 9,
+   "baseline": 10
+  }
+ },
+ "success_by_language": {
+  "vi": {
+   "n": 44,
+   "pipeline": 20,
+   "baseline": 6
+  },
+  "en": {
+   "n": 27,
+   "pipeline": 18,
+   "baseline": 5
+  }
+ }
+}

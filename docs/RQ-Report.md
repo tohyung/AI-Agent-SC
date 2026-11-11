@@ -1,12 +1,11 @@
-# Báo cáo các câu hỏi nghiên cứu (RQ1, RQ2; RQ3 và RQ4 chưa thực hiện)
+# Báo cáo các câu hỏi nghiên cứu (RQ1–RQ4)
 
 Tư liệu để viết bài báo. Ghi ngày 2026-11-10, dựa trên E2–E5 (docs/JOURNAL.md,
 docs/E4-Formalization-Comparison.md, docs/E5-Evidence-Gates.md). Mọi con số dưới đây đều có trong
 tài liệu hoặc dữ liệu nêu ở mục 8. Chỗ nào chưa đo thì ghi là chưa đo.
 
-**RQ3 và RQ4 chưa được thực hiện**, nên chưa có kết luận nào cho hai câu này. Mục 4 và 5 chỉ ghi dữ
-liệu đã có sẵn để dùng khi làm thí nghiệm. Khi làm xong, hai mục này sẽ được viết theo cùng khung với
-RQ1 và RQ2.
+RQ3 và RQ4 được trả lời bằng E6 (2026-11-12): mục 4 và 5, giao thức `docs/E6-Protocol.md`, phán quyết
+`docs/E6-Adjudication.json`, bảng điểm `docs/E6-Score.json`.
 
 Bốn câu hỏi lấy từ paper (mục 7.1):
 
@@ -23,8 +22,8 @@ Bốn câu hỏi lấy từ paper (mục 7.1):
 | --- | --- | --- |
 | RQ1 | **Một phần** | Bước trích intent bằng AFF giữ đúng nghĩa tốt hơn hẳn DCF trên tập test đóng (quyết định đúng trên core hợp lệ 0,47 → 0,86). Nhưng 3/19 intent được chấp nhận vẫn khác nghĩa tham chiếu, bước "duyệt" là người dùng mô phỏng, và nhãn chưa có hai người phân xử độc lập. |
 | RQ2 | **Có** (theo quy tắc chốt trước) | Trên 2 259 biến thể của 99 case, cổng đầy đủ giảm chấp nhận sai từ 100% xuống 19% và vẫn chấp nhận 94,4% hợp đồng đúng; từ chối nhầm 0,8%. Đạt cả ở tập giữ lại. Khoảng 19% lỗi, chủ yếu là dời hạn, vẫn lọt qua. |
-| RQ3 | **Chưa thực hiện** | Chưa có kết luận. |
-| RQ4 | **Chưa thực hiện** | Chưa có kết luận. |
+| RQ3 | **Có, kèm điều kiện** | Trên 71 case đánh giá (cùng model, cùng chi phí request), Pipeline thành công 53,5% so với 15,5% của một LLM đơn thuần (+38 điểm, CI 95% [25; 51], McNemar p ≈ 5·10⁻⁷), và giao ra hợp đồng sai 4% so với 76%. Phần lớn khoảng cách đến từ việc tính mốc giờ bằng code: cả 54 hợp đồng sai của LLM đơn thuần đều sai mốc giờ. Pipeline không giao ra gì ở 42% case. |
+| RQ4 | **Đã đo** | Pipeline tốn 2,3× request, 8,6× token vào, 2,3× thời gian model và nhiều công người dùng hơn (117 kịch bản), nhưng rẻ hơn tính trên mỗi case thành công (8,3 so với 12,3 request). |
 
 ## 1. Bối cảnh chung
 
@@ -232,40 +231,124 @@ Scenario → Oracle (đầy đủ).
 
 ## 4. RQ3: toàn bộ quy trình có cải thiện mức khớp hành vi cuối cùng không
 
-**Chưa thực hiện. Chưa có kết luận.** Kế hoạch đã thống nhất (E6): `docs/E6-Plan.md`.
+### Thí nghiệm (E6)
 
-Câu hỏi đòi một nhánh đối chứng, ví dụ sinh hợp đồng trực tiếp từ prompt không qua cổng, chạy trên
-cùng các case với cùng ngân sách request, rồi so mức khớp hành vi cuối cùng. Thí nghiệm này chưa được
-thiết kế hay chạy.
+Chi tiết: `docs/E6-Protocol.md` (giao thức, 16 mục lệch giao thức), `docs/E6-Dataset-Design.md`.
 
-Dữ liệu đã có sẵn, chưa phải là kết quả:
+- **Dataset v3:** 100 case do Claude viết tay để làm khó hệ thống, 19 họ hợp đồng không cần oracle,
+  60 tiếng Việt, 40 tiếng Anh, có phiếu dữ kiện cho phần prompt bỏ ngỏ. Đóng băng trước khi chạy.
+- **Hai nhánh, cùng model** (`gemini-3.5-flash-lite`, free tier):
+  - **Pipeline:** toàn bộ hệ thống, đường AFF: hỏi lại, duyệt intent, sinh hợp đồng, SMT, so kịch bản,
+    khám phá, ledger.
+  - **Baseline:** một LLM tự viết hợp đồng Marlowe từ hội thoại. Mỗi hợp đồng được kiểm cấu trúc và
+    ledger; lỗi được tự động gửi lại cho model.
+- **Cùng chi phí:** trần request của Baseline ở mỗi case bằng số request Pipeline đã dùng ở case đó.
+- **Người dùng mô phỏng:** Claude, cùng một luật cho cả hai nhánh: trả lời bằng phiếu dữ kiện, nhắc lại
+  điều prompt đã nói, bỏ cuộc khi bị hỏi lại sau hai lần. Chỉ nhánh Pipeline được người dùng viết kịch
+  bản mong đợi (đây là một phần của hệ thống).
+- **Chấm:** phân xử mù 142 gói (71 case × 2 nhánh) theo tiêu chí E5, đối chiếu với prompt, phiếu dữ
+  kiện và các câu trả lời. Mốc giờ được lệch tối đa 1 phút. Quy tắc quyết định chốt trước: McNemar chính
+  xác, α = 0,05, cộng bootstrap theo cặp.
+- **Tách dev và đánh giá:** case 1–29 đã được dùng để tìm và sửa lỗi pipeline, nên chỉ coi là dev.
+  **Kết quả chính tính trên case 30–100 (71 case), chạy trên code đã đóng băng** (tag `E6-Freeze-30`).
 
-- Trạng thái cuối của E3 cho 56 case dev (Nemotron, DCF) và 43 case test (Gemini, DCF), trong
-  `runs/roleplay-main-batch*` và `runs/E3-Roleplay-Holdout`.
-- Nhãn phân xử của mọi hợp đồng E3 do model sinh, kể cả hợp đồng ở lượt giữa, trong
-  `docs/E5-Adjudication.json`.
-- Kết quả E2 Online Tuning: 6/20 case được thử trong 48 request, hợp đồng do compiler tất định sinh.
+### Kết quả (case 30–100, 71 case)
 
-Lưu ý khi thiết kế:
+| Kết quả của case | Pipeline | Baseline |
+| --- | --- | --- |
+| Thành công | **38 (53,5%)** | 11 (15,5%) |
+| Giao ra hợp đồng sai | 3 (4,2%) | 54 (76,1%) |
+| Không giao ra | 30 (42,3%) | 6 (8,5%) |
 
-- Pipeline chính hiện dùng DCF, chưa dùng AFF.
-- Dev và test khác nhau về model và về lời báo lỗi của validator.
-- Người dùng mô phỏng phải đóng vai giống hệt ở mọi nhánh.
+- **Chênh lệch thành công:** +38,0 điểm phần trăm, khoảng tin cậy 95% [25,4; 50,7], gấp 3,5 lần
+  Baseline. Kiểm định McNemar: 29 case chỉ Pipeline đúng, 2 case chỉ Baseline đúng, p ≈ 4,6·10⁻⁷.
+  **Theo quy tắc chốt trước: Pipeline mạnh hơn.**
+- **An toàn:** Pipeline giao ra hợp đồng sai ở 3/71 case, Baseline ở 54/71 (p ≈ 9·10⁻¹⁶). Trong số hợp
+  đồng được giao ra, 38/41 của Pipeline đúng (93%), so với 11/65 của Baseline (17%).
+- **Theo hành vi mong đợi** (số case thành công):
+
+  | Hành vi mong đợi | Pipeline | Baseline |
+  | --- | --- | --- |
+  | Đủ thông tin (29) | 19 | 1 |
+  | Thiếu, phải hỏi (26) | 8 | 0 |
+  | Mâu thuẫn hoặc đính chính (4) | 2 | 0 |
+  | Kèm phần không làm được (2) | 0 | 0 |
+  | Bất khả, phải từ chối (10) | 9 | 10 |
+
+  Ở 61 case làm được, Pipeline đúng 29 case, Baseline đúng 1 case. Ở 10 case bất khả, cả hai nhánh đều
+  không giao ra hợp đồng; Baseline giải thích lý do ở cả 10 case, Pipeline ở 9 case.
+
+### Phải đọc kết quả này thế nào
+
+- **Phần lớn khoảng cách đến từ việc tính mốc thời gian.** Cả 54 hợp đồng sai của Baseline đều sai mốc
+  giờ (thường sai năm, sai múi giờ hoặc lệch một ngày khi tự đổi sang POSIX ms), và 36 hợp đồng chỉ sai
+  mỗi mốc giờ. Pipeline không gặp lỗi này, vì builder của AFF tính mốc giờ bằng code. Nếu Baseline có
+  một công cụ đổi giờ đúng, nó có thể đạt khoảng 47/71 (ước lượng giả định: cộng 36 case chỉ sai giờ).
+  Con số đó cao hơn Pipeline. Kết luận vững là: **tính tất định các giá trị (giờ, tiền) là thứ tạo ra
+  khác biệt lớn nhất**, chứ chưa phải toàn bộ hệ thống cổng.
+- **Pipeline thua ở khâu hiểu yêu cầu.** 30/71 case Pipeline không giao ra gì. Lý do chính:
+  - AFF chưa biểu diễn được k trên n người duyệt, khấu trừ bằng số người kiểm tra nhập, và "ai cũng
+    bấm được";
+  - bên chỉ có tên vai ("organizer", "người thuê"), hoặc "Me" (mẹ) trùng với đại từ "me";
+  - không chấp nhận khi người dùng đồng ý bỏ phần không làm được;
+  - trích dẫn bị dịch trong câu trộn Việt–Anh.
+- **Cổng Scenario có giá trị thật:** nó chặn các hợp đồng sai bên duyệt, sai người kích hoạt hoặc sai
+  số tiền (ví dụ case 51, 52, 53, 54, 56, 71, 75, 76). Nhưng nó chỉ bắt được điều kịch bản kiểm: case 58
+  và 61 vẫn lọt hợp đồng chỉ cho một người mua, vì kịch bản đã chọn đúng người đó.
+
+### Điểm mạnh
+
+- So sánh theo cặp, cùng model, cùng chi phí request, cùng người dùng mô phỏng, cùng luật trả lời.
+- Quy tắc quyết định và tiêu chí chấm được chốt trước khi chạy phần đánh giá.
+- Code đóng băng trên toàn bộ phần đánh giá; mọi thay đổi bộ chạy đều ghi vào lệch giao thức.
+
+### Điểm yếu
+
+- Pipeline giao ra hợp đồng ở ít case hơn nhiều (41 so với 65).
+- Pipeline tốn gấp nhiều lần token (mục 5).
+- Hiệu quả phụ thuộc kịch bản do người dùng viết.
+
+### Hạn chế và rào cản
+
+1. **Một người làm mọi vai** (viết case, đóng vai người dùng, viết kịch bản, phân xử). Việc phân xử mù
+   chỉ một phần: dòng trạng thái của pipeline trong lời cuối để lộ nhánh.
+2. **Case 1–29 đã dùng để sửa pipeline** (lệch giao thức 4–14), nên bị loại khỏi kết quả chính. Phần
+   đánh giá chỉ còn 71 case.
+3. **Prompt của Baseline không được tinh chỉnh,** còn pipeline thì có. Một Baseline có công cụ đổi giờ
+   hoặc prompt tốt hơn có thể thu hẹp hoặc đảo ngược khoảng cách.
+4. **Kịch bản chỉ dành cho Pipeline,** và có giới hạn: lấy tên vai và giá trị lựa chọn từ intent, không
+   kiểm hành vi thừa, không kiểm thời điểm trả.
+5. **Một model nhỏ, free tier,** mỗi case một mẫu; Gemini có lúc trả lỗi 500 hàng loạt (lệch giao thức
+   12–13).
+6. **Hai lỗi của bộ chạy được sửa giữa chừng** (kịch bản chạy trên hợp đồng cũ; tên trong kịch bản), các
+   case bị ảnh hưởng đã được chạy lại phần liên quan (lệch giao thức 15–16).
 
 ## 5. RQ4: chi phí của các biện pháp kiểm soát
 
-**Chưa thực hiện. Chưa có kết luận.** Sẽ đo cùng E6 (`docs/E6-Plan.md`).
+Cùng 71 case, đếm theo một luật chung (không tính lỗi quota, lỗi mạng và lỗi máy chủ 5xx).
 
-Dữ liệu đã có sẵn, chưa phải là kết quả:
+| Chi phí | Pipeline | Baseline | Tỷ lệ |
+| --- | --- | --- | --- |
+| Request | 316 | 135 | 2,3× |
+| Token vào | 1 319 771 | 153 045 | 8,6× |
+| Token ra | 475 931 | 93 043 | 5,1× |
+| Thời gian chạy model | 2 839 s | 1 220 s | 2,3× |
+| Request cho mỗi case thành công | 8,3 | 12,3 | 0,68× |
+| Tin nhắn của người dùng | 59 | 22 | 2,7× |
+| Kịch bản người dùng viết | 117 | 0 | |
+| Lượt duyệt intent (tự động trong E6) | 42 | 0 | |
+| Lỗi tự động gửi lại cho model | 0 | 41 | |
+| Không giao ra hợp đồng | 30 (42%) | 6 (8%) | |
+| Chạm trần request | 0 | 4 | |
 
-- Số lượt chạy và số lượt gọi model ghi trong từng `attempt-*.json` của E3. Ở dev, một số lượt chạy cũ
-  ghi lượt gọi theo trường khác nhau, nên cần đếm lại trước khi dùng.
-- Số câu trả lời của người dùng mô phỏng cho mỗi case (chỉ là chỉ số đại diện, không phải công duyệt
-  của người thật).
-- Request cho mỗi intent hợp lệ ở bước trích intent (E4).
-- Chi phí và tỷ lệ ABSTAIN của các cổng (E5, mục 9.4 của docs/E5-Evidence-Gates.md).
-
-Chưa có: độ trễ từng lượt gọi model, công duyệt của người thật.
+- **Tính trên mỗi case thành công, Pipeline rẻ hơn** (8,3 so với 12,3 request), vì Baseline tiêu request
+  vào các hợp đồng sai. Tính trên tổng chi phí, Pipeline đắt hơn: gấp 2,3 lần request và 8,6 lần token
+  vào, do mỗi request mang prompt dài (ngữ pháp, intent, phản hồi).
+- **Công của người dùng là chi phí lớn nhất của Pipeline:** cần hỏi đáp nhiều hơn, cộng trung bình
+  khoảng 2,9 kịch bản cho mỗi case giao ra. Trong E6, việc duyệt intent được tự động hóa; với người thật
+  thì đây sẽ là công thêm.
+- **Tỷ lệ không quyết định cao:** Pipeline không giao ra ở 42% case. Phần lớn là lúc bước hiểu yêu cầu
+  dừng, chứ không phải lúc cổng chặn.
 
 ## 6. Mối đe dọa tính hợp lệ chung
 
@@ -283,9 +366,12 @@ Chưa có: độ trễ từng lượt gọi model, công duyệt của người 
 
 ## 7. Việc nên làm tiếp (theo thứ tự ưu tiên)
 
-1. **Nối AFF vào pipeline chính,** rồi chạy lại E3 cho test. Kết quả đầu-cuối hiện tại là của DCF.
-2. **RQ3 có đối chứng:** nhánh sinh hợp đồng trực tiếp, cùng case, cùng ngân sách request, cùng người
-   dùng mô phỏng.
+1. **Baseline mạnh hơn cho RQ3:** cho LLM đơn thuần một công cụ đổi giờ sang POSIX ms (hoặc prompt tốt
+   hơn), rồi chạy lại trên case 30–100, để tách phần đóng góp của việc tính tất định khỏi phần của các
+   cổng.
+2. **Mở rộng AFF:** k trên n người duyệt, khấu trừ bằng giá trị lựa chọn, "ai cũng bấm được"
+   (Notify), bên chỉ có tên vai, chấp nhận khi người dùng đồng ý bỏ phần không làm được. Đây là các
+   nguyên nhân chính khiến Pipeline không giao ra ở E6.
 3. **Cổng bắt lỗi dời hạn:** so mọi hạn trong hợp đồng với các claim thời gian của intent đã chốt (tức
    làm Alignment so được thời gian), hoặc tự sinh kịch bản quanh mọi hạn.
 4. **Kịch bản thử nhánh bất thường,** ví dụ ai đó gửi `Notify` trước thời điểm sớm nhất. Cùng với đó,
@@ -303,5 +389,6 @@ Chưa có: độ trễ từng lượt gọi model, công duyệt của người 
 | E3 test | docs/JOURNAL.md mục 6 (commit `4469740`) | `runs/E3-Roleplay-Holdout` | `roleplay_case.py` (commit `70ad70f`) |
 | E4 (RQ1) | docs/E4-Formalization-Comparison.md | `runs/eval/T-*`, `S-*`, `G-*` | tag `a2-test-freeze` (`faacc61`) |
 | E5 (RQ2) | docs/E5-Evidence-Gates.md, E5-Adjudication-Rubric.md, E5-Adjudication.json | `runs/e5/E5-Round1-*`, `E5-Round2-*`, `E5-Freeze-Holdout-*` | tag `E5-Round1` (`275365a`), `E5-Freeze` (`b55c7ca`) |
+| E6 (RQ3, RQ4) | docs/E6-Protocol.md, E6-Adjudication.json, E6-Score.json | `runs/E6-Pipeline`, `runs/E6-Baseline`, `runs/E6-Adjudication` | tag `E6-Freeze-30` (`bb26cc5`); `research/experiments/baseline_llm.py`, `e6_score.py`, `tools/e6/` |
 
 `runs/` không có trong git. Tag chưa được push lên GitHub.
