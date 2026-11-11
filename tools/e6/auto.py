@@ -343,7 +343,10 @@ if __name__ == "__main__":
                 if item[0] in {"deposit", "choice"} for name in item[1:3 if item[0] == "deposit" else 2]}
         used |= {name for compact in spec["scenarios"].values() for row in compact.get("pay", [])
                  for name in row[:2]}
-        unknown = used - known
+        # A name the request itself states is allowed even when the intent dropped that party.
+        view = user_view(index)
+        stated = view["prompt"] + " " + " ".join(item["answer"] for item in view["fact_sheet"])
+        unknown = {name for name in used - known if name not in stated}
         if unknown:
             raise SystemExit(f"scen: names not in the intent: {sorted(unknown)}; intent has {sorted(known)}")
         (case_dir / "scenarios.json").write_text(json.dumps(spec, ensure_ascii=False, indent=1) + "\n",
