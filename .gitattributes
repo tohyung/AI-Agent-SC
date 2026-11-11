@@ -2,3 +2,4 @@
 dataset/cases.jsonl text eol=crlf
 # Dataset v3 SHA-256 (cdc0ea45...) is over LF bytes; never convert line endings.
 dataset/v3/cases.jsonl -text
+*.sh text eol=lf
