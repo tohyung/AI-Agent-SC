@@ -159,14 +159,19 @@ def _parse_reply(reply: Any) -> tuple[str | None, list[str]]:
 
 
 # Transport exceptions that carry no model response; quota is a 402/429 provider code.
-NO_RESPONSE_EXCEPTIONS = {"RateLimitError", "APIConnectionError", "APITimeoutError"}
+# Calls with no usable model response: quota, network, and provider server errors (5xx). A
+# provider outage must not spend either arm's budget (E6-Protocol, deviation 13).
+NO_RESPONSE_EXCEPTIONS = {"RateLimitError", "APIConnectionError", "APITimeoutError",
+                          "InternalServerError"}
 
 
 def is_counted(entry: dict[str, Any]) -> bool:
-    """One rule for both arms (E6-Plan, decision 4): a call counts when a response came back."""
+    """One rule for both arms (E6-Plan, decision 4): a call counts when a model response came
+    back; quota, network and provider server errors do not count."""
+    code = entry.get("provider_error_code")
     return not (entry.get("uncounted")
                 or entry.get("exception_type") in NO_RESPONSE_EXCEPTIONS
-                or entry.get("provider_error_code") in {402, 429})
+                or code in {402, 429} or (type(code) is int and 500 <= code < 600))
 
 
 def counted_requests(call_log: list[dict[str, Any]]) -> int:

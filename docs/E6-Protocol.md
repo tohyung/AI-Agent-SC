@@ -305,3 +305,10 @@ mục 5 và 6.
     máy chủ, không phải kết quả của case, nên lượt chạy case 22–23 (cả hai nhánh) được giữ ở
     `runs/E6-Discarded/gemini-500-outage/` và chạy lại khi Gemini ổn định. Luật 3 lần vẫn áp dụng cho
     lần chạy lại.
+13. **Lỗi máy chủ 5xx không tính là request (2026-11-11, sau case 1–22).** Trong đợt Gemini trả lỗi 500,
+    4/5 request của Baseline ở case 22 là lỗi 500. Đếm chúng làm nhánh nào gặp sự cố bị thiệt, và làm
+    trần của Baseline bị đội lên theo các lỗi 500 của Pipeline. Luật đếm của cả hai nhánh
+    (`baseline_llm.is_counted`) giờ bỏ qua lỗi máy chủ 5xx, như lỗi quota và lỗi mạng. Tính lại trần
+    cho case 1–21: 13 case Baseline dùng không quá trần mới nên được giữ. Case 6 và 14 từng chạm trần
+    vì một lỗi 500 bị tính, nên Baseline của chúng được chạy lại với trần mới (vẫn chạm trần, không giao
+    ra). Trường `cap` lưu trong các session cũ là trần cũ; bộ chấm tính lại chi phí theo luật mới.

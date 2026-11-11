@@ -132,7 +132,9 @@ def test_structure_checker_reports_validator_errors_without_a_ledger():
 def test_one_counting_rule_skips_calls_without_a_response():
     log = [{"status": "ok"}, {"status": "error", "exception_type": "RateLimitError"},
            {"status": "error", "provider_error_code": 429}, {"status": "error", "provider_error_code": 500},
-           {"status": "error", "exception_type": "APIConnectionError"}, {"status": "empty"}]
+           {"status": "error", "exception_type": "APIConnectionError"}, {"status": "empty"},
+           {"status": "error", "exception_type": "InternalServerError"},
+           {"status": "error", "provider_error_code": 400}]
     assert bl.counted_requests(log) == 3
 
 
