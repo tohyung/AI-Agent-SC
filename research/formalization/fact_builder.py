@@ -207,6 +207,8 @@ class _Builder:
         self.scopes: list[dict[str, Any]] = [{"scope_id": "global", "scope_type": "global"}]
         self.claims: list[dict[str, Any]] = []
         self.questions: list[dict[str, str]] = []
+        # Names that are only a pronoun or role noun; their claims stay unresolved.
+        self.unnamed: set[str] = set()
         self.observations: list[dict[str, Any]] = []
         self.used: set[str] = set()
         self._quantity_cache: dict[str, tuple[int | None, str, list[dict[str, Any]]]] = {}
@@ -806,6 +808,12 @@ class _Builder:
                 self.problems.append((party_id, f"name {party['name']!r} not in its evidence"))
             if unicodedata.normalize("NFC", party["name"]).strip().lower() in ROLE_WORDS:
                 # "I", "Tôi", "Buyer": the person is not named yet, so the user is asked.
+                self.unnamed.add(party["name"])
+                self.observations.append({
+                    "observation_id": f"obs_{len(self.observations) + 1}",
+                    "text": f"party named only as {party['name']!r}",
+                    "reason": "outside_formalization_v4_claim_taxonomy",
+                    "source_evidence": party["evidence"]})
                 self.ask(party_id, self.question("name", role=party["name"]))
             elif not party["name"][0].isupper():
                 self.problems.append((party_id, f"name {party['name']!r} is a role word, not a "

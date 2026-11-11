@@ -182,6 +182,23 @@ def test_twelve_hour_clock_states_the_hour(hour, text, stated):
     assert _twelve_hour(hour, text) is stated
 
 
+def test_a_party_known_only_as_a_pronoun_is_asked_for_its_name():
+    from research.formalization.fact_extractor import _check_core
+
+    message = MESSAGE.replace("Lan thuê Tú", "Tôi thuê Tú", 1)
+    history = [{"version": 1, "messages": [message]}]
+    draft = milestone_draft()
+    draft["parties"][0]["name"] = "Tôi"
+    for item in draft["parties"]:
+        for entry in item["evidence"]:
+            entry["span"] = entry["span"].replace("Lan thuê Tú", "Tôi thuê Tú")
+    draft["parties"][0]["evidence"] = ev("Tôi thuê Tú")
+    core = build_core(draft, history)
+    assert core["predicted_resolution"] == "clarification_required"
+    assert '"Tôi" trong yêu cầu này tên là gì?' in core["required_clarifications"]
+    assert _check_core(core, history)["projection_classification"] == "PASS"
+
+
 def test_a_named_vietnam_zone_states_utc_plus_seven():
     message = MESSAGE.replace("(UTC+7)", "giờ VN")
     history = [{"version": 1, "messages": [message]}]
