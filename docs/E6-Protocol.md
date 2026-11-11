@@ -251,3 +251,9 @@ mục 5 và 6.
    prompt không đổi. Case 1–8 không có khóa này nên được giữ. Dựng lại offline: cả 4 output hỏng của
    case 9–10 hợp lệ sau khi đổi tên. Lượt chạy cũ của case 9–10 (cả hai nhánh) được giữ ở
    `runs/E6-Discarded/before-deposit-fix/` và không tính.
+9. **Dấu phân cách hàng nghìn (2026-11-11, sau case 1–14).** Prompt case 15 ghi "1,200 ADA". Draft ghi
+   "1200" thì builder không thấy "1200" trong trích dẫn; draft ghi "1,200" thì không đọc được thành số.
+   Pipeline dừng sau 4 draft. Builder giờ tìm số trong cả trích dẫn đã bỏ dấu phân cách giữa các nhóm 3
+   chữ số ("1,200", "1.200", "1 200"); cách ghi số trong draft không đổi. Case 1–14 không có số có dấu
+   phân cách nên được giữ. Dựng lại offline: draft đầu của case 15 qua (1 200 ADA gốc, 1 260 ADA trả).
+   Lượt chạy cũ của case 15 (cả hai nhánh) được giữ ở `runs/E6-Discarded/before-grouping-fix/`.

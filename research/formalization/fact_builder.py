@@ -68,6 +68,11 @@ def request_language(messages: list[str]) -> str:
     return "vi" if words and marked * 5 >= len(words) else "en"
 
 
+def _ungrouped(text: str) -> str:
+    """`text` with thousands separators removed: "1,200" / "1.200" / "1 200" -> "1200"."""
+    return re.sub(r"(?<=\d)[,.  ](?=\d{3}(?!\d))", "", text)
+
+
 def _twelve_hour(hour: int, spans: str) -> bool:
     """Whether the evidence states `hour` (0-23) on a 12-hour clock: "8:00 PM", "8 giờ tối"."""
     clock = hour % 12 or 12
@@ -230,6 +235,8 @@ class _Builder:
         value: int | None = None
         basis = ""
         spans = " ".join(entry.get("span", "") for entry in item_evidence)
+        # "1,200 ADA" states the literal 1200 as well: also look in the text without digit grouping.
+        searchable = spans + " " + _ungrouped(spans)
         units: set[str] = set()
 
         def sub(ref: Any) -> int | None:
@@ -245,7 +252,7 @@ class _Builder:
             if self._ref(self.assets, expr.get("asset"), qid) is not None:
                 self.used.add(expr["asset"])
                 units.add(expr["asset"])
-            if not re.search(r"(?<![\d.,])" + re.escape(text) + r"(?![\d.,])", spans):
+            if not re.search(r"(?<![\d.,])" + re.escape(text) + r"(?![\d.,])", searchable):
                 self.problems.append((qid, f"literal {text} not in evidence"))
             if text.isdigit() and int(text) > 0:
                 value = int(text)
@@ -255,7 +262,7 @@ class _Builder:
             unit = "ada" if "ada" in expr else "lovelace"
             text = str(expr[unit])
             pattern = r"(?<![\d.,])" + re.escape(text) + r"\s*" + unit + r"\b"
-            if not re.search(pattern, spans, re.IGNORECASE):
+            if not re.search(pattern, searchable, re.IGNORECASE):
                 self.problems.append((qid, f"literal {text} {unit} not in evidence"))
             try:
                 amount = Decimal(text) * (LOVELACE_PER_ADA if unit == "ada" else 1)

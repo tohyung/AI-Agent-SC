@@ -144,6 +144,16 @@ def test_ungrounded_literal_and_span_are_draft_errors_by_item_id():
     assert items == {"q_total", "p_tu"}
 
 
+@pytest.mark.parametrize("text, ungrouped", [
+    ("1,200 ADA", "1200 ADA"), ("10.000.000 lovelace", "10000000 lovelace"),
+    ("1 200 ADA", "1200 ADA"), ("1,5 ADA", "1,5 ADA"), ("2027-07-01 00:00", "2027-07-01 00:00"),
+])
+def test_digit_grouping_is_removed_only_between_three_digit_groups(text, ungrouped):
+    from research.formalization.fact_builder import _ungrouped
+
+    assert _ungrouped(text) == ungrouped
+
+
 @pytest.mark.parametrize("hour, text, stated", [
     (20, "8:00 PM on March 30, 2027 (UTC-5)", True),
     (20, "8 p.m. UTC-5", True),
