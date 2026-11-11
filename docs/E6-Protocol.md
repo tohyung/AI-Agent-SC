@@ -296,3 +296,7 @@ mục 5 và 6.
     Bổ sung ở case 21: tên chỉ khớp bản gốc sau khi bỏ dấu ("Nhân" cho "Nhan") được viết lại theo đúng
     cách viết của người dùng, để validator của core tìm thấy nguyên văn. Lượt chạy trước đó ở
     `runs/E6-Discarded/before-name-spelling/`.
+12. **Lỗi máy chủ ở bước compile (2026-11-11, case 22).** Gemini trả lỗi 500 cho mọi lần sinh hợp đồng
+    vesting có thu hồi của case 22 (3 lần chạy, mỗi lần 3 lời gọi). Lỗi 500 là phản hồi nên được tính
+    là request (mục 2). Bộ chạy coi lần chạy compile không có phản hồi dùng được là lỗi hạ tầng và chạy
+    lại; sau 3 lần chạy như vậy, case kết thúc là Pipeline không giao ra (`compile_model_failed`).

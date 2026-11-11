@@ -41,6 +41,7 @@ PIPE_DIR = ROOT / "runs" / "E6-Pipeline"
 BASE_DIR = ROOT / "runs" / "E6-Baseline"
 DELIVERED = "SIMULATED_LEDGER_SIZE_CHECKED"
 MAX_RETRIES = 2  # plain reruns after a failed extraction, as the E3 runner allowed
+MAX_COMPILE_FAILURES = 3  # runs whose compile got no usable model response
 
 
 SLOT_FILE = ROOT / "runs" / "E6-gemini-slot.json"
@@ -231,7 +232,15 @@ def _scenarios(index: int, case_dir: Path, record: dict, candidate: str, spec: d
     compiled = record.get("steps", {}).get("compile", {})
     if (compiled.get("safe_error") or {}).get("code") in {"provider_request_failed",
                                                            "provider_limit"}:
-        # No response reached us: infrastructure, not a pipeline outcome (protocol, section 2).
+        # No usable response: infrastructure at first (protocol, section 2), retried by a later
+        # run; after MAX_COMPILE_FAILURES such runs the case ends as not delivered.
+        failures = sum(
+            1 for path in case_dir.glob("attempt-*.json")
+            if ((json.loads(path.read_text(encoding="utf-8")).get("steps", {}).get("compile", {})
+                 .get("safe_error") or {}).get("code") in {"provider_request_failed",
+                                                           "provider_limit"}))
+        if failures >= MAX_COMPILE_FAILURES:
+            return _finish(case_dir, record, "compile_model_failed", replies=replies)
         print(f"PIPE {case_dir.name}: compile got no model response; resume later")
         return 4
     if compiled.get("run_status") != "SUCCEEDED" or record.get("blocking_step") != "semantic_comparison":
