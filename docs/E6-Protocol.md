@@ -343,3 +343,11 @@ mục 5 và 6.
     lượt chạy đó (cả hai nhánh) được giữ ở `runs/E6-Discarded/scenario-writer-error/`, và case 44 chạy lại
     từ đầu (lần này AFF dừng ở lượt đầu). Lệnh `auto.py scen` giờ từ chối kịch bản có tên không thuộc
     intent.
+16. **Bộ chạy thử kịch bản trên hợp đồng cũ (2026-11-12, phát hiện khi bắt đầu phân xử).** Khi một kịch bản
+    làm pipeline sinh lại hợp đồng (cơ chế phản hồi của cổng Scenario), bộ chạy vẫn đem hợp đồng cũ đi chạy
+    các kịch bản sau. Vì vậy hợp đồng được tính là giao ra có thể là bản chưa sửa, và ở case 62, 67 pipeline
+    bị tính là không giao ra. Đây là lỗi bộ chạy, không phải logic của hai nhánh. Bộ chạy giờ chạy lại mọi
+    kịch bản trên hợp đồng mới (tối đa 3 lần). Phần kịch bản của case 11, 15, 17, 58, 61, 62, 64, 67, 68,
+    80, 87 được chạy lại từ hợp đồng đã sinh lại; kết quả cũ ở `runs/E6-Discarded/stale-contract-finals/`.
+    Case 58 dao động giữa hai bản hợp đồng qua 3 lần chạy lại (ghi là không ổn định). Trần của Baseline ở
+    các case này không giới hạn kết quả nên Baseline giữ nguyên.

@@ -252,6 +252,14 @@ def _scenarios(index: int, case_dir: Path, record: dict, candidate: str, spec: d
     if compiled.get("run_status") != "SUCCEEDED" or record.get("blocking_step") != "semantic_comparison":
         return _finish(case_dir, record, "pipeline_stopped_before_scenarios", replies=replies)
     contract = compiled["output_artifacts"][0]
+    return _scenario_pass(index, case_dir, candidate, contract, spec, replies)
+
+
+def _scenario_pass(index: int, case_dir: Path, candidate: str, contract: str, spec: dict,
+                   replies: int, restarts: int = 0) -> int:
+    """Run every scenario on one contract. When a scenario makes the pipeline regenerate a
+    contract that passes, every scenario is run again on that new contract (protocol deviation
+    16), so the delivered contract is the one all scenarios checked."""
     done = {}
     for name, compact in spec["scenarios"].items():
         path = case_dir / f"scenario-{name}.json"
@@ -263,6 +271,11 @@ def _scenarios(index: int, case_dir: Path, record: dict, candidate: str, spec: d
         if code is not None:
             return code
         done[name] = record["status"]
+        regenerated = sum(1 for item in record["execution_history"] if item["step"] == "compile") > 1
+        if record["status"] == DELIVERED and regenerated and restarts < 3:
+            new = record["steps"]["compile"]["output_artifacts"][0]
+            print(f"  scenario {name} regenerated the contract; rerunning all scenarios on it")
+            return _scenario_pass(index, case_dir, candidate, new, spec, replies, restarts + 1)
         if record["status"] != DELIVERED:
             return _finish(case_dir, record, f"scenario_not_delivered:{name}",
                            replies=replies, scenarios=done)
