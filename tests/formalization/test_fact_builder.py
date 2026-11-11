@@ -144,6 +144,19 @@ def test_ungrounded_literal_and_span_are_draft_errors_by_item_id():
     assert items == {"q_total", "p_tu"}
 
 
+def test_a_span_differing_only_in_case_or_spacing_cites_the_source_text():
+    exact = build_core(milestone_draft(), HISTORY)
+    draft = milestone_draft()
+    draft["parties"][1]["evidence"] = ev("tú  NHẬN một nửa")
+    loose = build_core(draft, HISTORY)
+    spans = [entry["span"] for claim in loose["claims"] for entry in claim["evidence"]]
+    assert "Tú nhận một nửa" in spans and "tú  NHẬN một nửa" not in spans
+    assert loose["claims"] != [] and len(loose["claims"]) == len(exact["claims"])
+    draft["parties"][1]["evidence"] = ev("Tú nhận nửa")  # a word dropped: not a citation
+    with pytest.raises(DraftError):
+        build_core(draft, HISTORY)
+
+
 def test_overpayment_violates_money_conservation():
     draft = milestone_draft()
     draft["outcomes"][1]["amount"] = "q_total"

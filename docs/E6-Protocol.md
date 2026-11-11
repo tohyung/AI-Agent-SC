@@ -223,3 +223,10 @@ mục 5 và 6.
    - **Hệ quả:** lỗi được phát hiện nhờ nhìn kết quả của 4 case v3. Lần chạy trước sửa của case 1–4 (cả
      hai nhánh) được giữ ở `runs/E6-Discarded/before-role-fix/` và không tính. E6 chạy lại từ case 1
      với cùng quy tắc; trần của Baseline lấy từ lần chạy mới của Pipeline.
+5. **Trích dẫn không phân biệt hoa thường (2026-11-11, người phụ trách yêu cầu, sau case 1–2 của lần
+   chạy thứ hai).** AFF trích "giờ VN là giờ Việt Nam (UTC+7)" trong khi tin nhắn viết "Giờ VN…"; builder
+   đòi khớp nguyên văn nên cả 4 lần draft đều hỏng và pipeline dừng ở case 1. `fact_builder` giờ khớp
+   trích dẫn bỏ qua hoa thường và khoảng trắng, rồi thay bằng đúng đoạn gốc, nên bằng chứng vẫn là
+   nguyên văn; trích dẫn khác chữ vẫn là lỗi. Dựng lại offline 4 draft đã hỏng của case 1: draft đầu
+   qua, đúng mốc giờ. Lượt chạy case 1–2 trước bản sửa được giữ ở
+   `runs/E6-Discarded/before-span-fix/` và không tính; E6 chạy lại từ case 1.

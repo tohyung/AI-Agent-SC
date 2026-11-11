@@ -63,6 +63,22 @@ def request_language(messages: list[str]) -> str:
     return "vi" if words and marked * 5 >= len(words) else "en"
 
 
+def _source_span(span: str, message: str) -> str | None:
+    """The exact source text a cited span stands for.
+
+    A model often changes only letter case or spacing when it quotes; such a span is matched
+    ignoring case and runs of whitespace, and the source text replaces it, so evidence stays
+    verbatim. Any other difference is not a citation.
+    """
+    if not span.strip():
+        return None
+    if span in message:
+        return span
+    words = [re.escape(word) for word in span.split()]
+    match = re.search(r"\s+".join(words), message, re.IGNORECASE)
+    return match.group(0) if match else None
+
+
 class DraftError(ValueError):
     """Model-side draft defects, addressed by atomic item id for repair."""
 
@@ -125,14 +141,20 @@ class _Builder:
         if not isinstance(evidence, list) or not evidence:
             self.problems.append((item_id, "evidence must be a nonempty list"))
             return []
+        cited = []
         for entry in evidence:
             span = entry.get("span") if isinstance(entry, dict) else None
             key = (entry.get("requirement_version"), entry.get("message_index")) \
                 if isinstance(entry, dict) else None
-            if not isinstance(span, str) or not span or span not in self.messages.get(key, ""):
+            source = (_source_span(span, self.messages.get(key, ""))
+                      if isinstance(span, str) else None)
+            if source is None:
                 self.problems.append((item_id, f"span not found verbatim: {span!r}"))
-        return [{**entry, "relation": entry.get("relation", "supports")} for entry in evidence
-                if isinstance(entry, dict)]
+            elif source != span:
+                entry = {**entry, "span": source}
+            if isinstance(entry, dict):
+                cited.append(entry)
+        return [{**entry, "relation": entry.get("relation", "supports")} for entry in cited]
 
     def _spans(self, item: dict[str, Any]) -> str:
         return " ".join(entry.get("span", "") for entry in item.get("evidence") or []
