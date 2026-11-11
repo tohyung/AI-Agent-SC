@@ -43,10 +43,43 @@ DELIVERED = "SIMULATED_LEDGER_SIZE_CHECKED"
 MAX_RETRIES = 2  # plain reruns after a failed extraction, as the E3 runner allowed
 
 
+SLOT_FILE = ROOT / "runs" / "E6-gemini-slot.json"
+SLOTS = 2
+
+
+def _quota_day() -> str:
+    """The free-tier quota day: it resets at 08:00 UTC."""
+    from datetime import datetime, timedelta, timezone
+
+    return (datetime.now(timezone.utc) - timedelta(hours=8)).date().isoformat()
+
+
+def _slot() -> int:
+    """Which Gemini key to use today; back to the first key when the quota day changes."""
+    if SLOT_FILE.exists():
+        state = json.loads(SLOT_FILE.read_text(encoding="utf-8"))
+        if state.get("day") == _quota_day():
+            return int(state["slot"])
+    return 1
+
+
+def _rotate() -> bool:
+    """Switch to the next key after a quota error; False when every key is used up today."""
+    slot = _slot()
+    if slot >= SLOTS:
+        return False
+    SLOT_FILE.write_text(json.dumps({"day": _quota_day(), "slot": slot + 1}), encoding="utf-8")
+    print(f"  quota on key {slot}: switching to key {slot + 1}")
+    return True
+
+
 def _wsl(module: str, *args: str) -> subprocess.CompletedProcess:
+    import os
+
+    env = {**os.environ, "E6_GEMINI_SLOT": str(_slot()), "WSLENV": "E6_GEMINI_SLOT"}
     return subprocess.run(["wsl", "-d", "Ubuntu", "--", "bash", RUNNER, module, *args],
                           capture_output=True, text=True, encoding="utf-8", errors="replace",
-                          timeout=1800)
+                          timeout=1800, env=env)
 
 
 def _rel(path: Path) -> str:
@@ -138,6 +171,10 @@ def _pipe_run(index: int, *args: str) -> tuple[int | None, dict | None]:
     line = next((item for item in result.stdout.splitlines() if item.startswith("case ")), "")
     print(f"  run {' '.join(args) or '(plain)'} -> {line or result.returncode}")
     if result.returncode == 3 or (record and record.get("provider_limit")):
+        if _rotate():
+            # A revision is already in the stored history: resume without sending it again.
+            retry = () if "--revision-file" in args else args
+            return _pipe_run(index, *retry)
         return 3, record
     if result.returncode != 0:
         print(result.stdout[-1500:], result.stderr[-1500:])
@@ -252,6 +289,9 @@ def base(index: int) -> int:
         result = _wsl("research.experiments.baseline_llm", "--case-index", str(index), *args)
         print(f"  base {' '.join(args) or '(resume)'} -> rc {result.returncode}")
         if result.returncode == 3:
+            if _rotate():
+                args = []  # the session resumes where the quota error stopped it
+                continue
             return 3
         if result.returncode != 0:
             print(result.stdout[-1500:], result.stderr[-1500:])
