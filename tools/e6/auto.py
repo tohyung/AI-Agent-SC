@@ -45,7 +45,7 @@ MAX_COMPILE_FAILURES = 3  # runs whose compile got no usable model response
 
 
 SLOT_FILE = ROOT / "runs" / "E6-gemini-slot.json"
-SLOTS = 2
+SLOTS = 3
 
 
 def _quota_day() -> str:

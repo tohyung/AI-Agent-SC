@@ -16,9 +16,9 @@ export MARLOWE_LEDGER_BINARY_SHA256=464f14957aafeefc86aa868074e200f700aefc070f1e
 export MARLOWE_LEDGER_SOURCE_COMMIT=2c0ad60ad2caabb7865b6dda56f7ec478f8637e7
 export MARLOWE_LEDGER_TEMPLATE_SHA256=787355228c090bb5f179d7bb96f5f20327f0ac1cdc92ed5ea61663664349b82c
 export MARLOWE_LEDGER_TESTNET_MAGIC=42123
-# Key rotation: E6_GEMINI_SLOT=2 uses GEMINI_API_KEY_2 from .env (the driver switches on quota).
-if [[ "${E6_GEMINI_SLOT:-1}" == "2" ]]; then
-  GEMINI_API_KEY="$(grep -m1 '^GEMINI_API_KEY_2=' .env | cut -d= -f2- | tr -d '\r')"
+# Key rotation: E6_GEMINI_SLOT=N (N > 1) uses GEMINI_API_KEY_N from .env (the driver switches on quota).
+if [[ "${E6_GEMINI_SLOT:-1}" != "1" ]]; then
+  GEMINI_API_KEY="$(grep -m1 "^GEMINI_API_KEY_${E6_GEMINI_SLOT}=" .env | cut -d= -f2- | tr -d '\r')"
   export GEMINI_API_KEY
 fi
 MODULE=$1; shift
