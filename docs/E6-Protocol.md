@@ -316,3 +316,25 @@ mục 5 và 6.
     giờ 0. Case 1–26 không có các chữ này. Lượt chạy cũ của case 27 ở
     `runs/E6-Discarded/before-noon-fix/`. Bộ chạy cũng phân biệt lỗi máy chủ của Baseline (đợi 60 giây
     rồi thử lại, tối đa 3 lần) với lỗi quota (đổi key).
+14. **Đóng băng từ case 30 (2026-11-12, người phụ trách quyết).** Sau lượt rà soát case 1–29, sửa nốt ba lỗi
+    builder chung (trích dẫn rút gọn bằng "...", số có dấu phân cách trong draft, đại từ viết thường
+    không dấu được hỏi tên) và làm thông báo lỗi "invalid continuation item" nói rõ luật. Từ case 30,
+    code của cả hai nhánh **đóng băng** (tag `E6-Freeze-30`): chỉ được sửa lỗi hạ tầng (mạng, quota,
+    máy chủ), không sửa logic dù gặp lỗi gì.
+    - **Báo cáo tách hai phần.** Case 1–29 đã được dùng để tìm và sửa lỗi pipeline, nên chỉ báo như tập
+      dev. RQ3/RQ4 chính thức tính trên case 30–100.
+    - **Đối xử như nhau với người dùng mô phỏng**, áp dụng cho cả hai nhánh từ case 30:
+      1. câu hỏi có đáp án trong phiếu dữ kiện: gửi phiếu (câu tự động);
+      2. câu hỏi có đáp án trong prompt, hoặc phiếu quá cụt để hiểu (ví dụ chỉ ghi "Khoa."): nhắc lại
+         đúng nội dung đó, không thêm dữ kiện;
+      3. phần yêu cầu bị báo là không làm được: phiếu bảo bỏ thì đồng ý bỏ; phiếu không nói thì giữ yêu
+         cầu và nhắc lại;
+      4. cùng câu hỏi quay lại sau hai lần trả lời: bỏ cuộc.
+
+      Khi Baseline hỏi, bộ chạy in các câu nhắc lại đã gửi cho Pipeline ở cùng case. Nếu Baseline hỏi
+      cùng điều, nó nhận đúng câu đó. Ở case 1–29, Pipeline nhận 13 câu nhắc lại, Baseline không nhận câu
+      nào (7 lần chỉ nhận câu tự động); đây là một lý do nữa để case 1–29 không tính vào kết quả chính.
+    - **Giới hạn của kịch bản do người dùng viết,** ghi vào báo cáo: tên vai và giá trị lựa chọn lấy từ
+      intent; chỉ kiểm các kết cục mà yêu cầu nêu, không bắt được hành vi thừa (ví dụ chọn 0 để được trả
+      sớm ở case 20 và 22); so tổng tiền lúc kết thúc, không kiểm thời điểm trả (case 15).
+    - Lượt chạy dở của case 30 trước đóng băng ở `runs/E6-Discarded/before-freeze/`.

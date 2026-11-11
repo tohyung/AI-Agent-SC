@@ -123,6 +123,12 @@ def _take_reply(case_dir: Path, view: dict, questions: list[str]) -> tuple[str, 
         for question in questions:
             print(f"  QUESTION: {question}")
         print(f"  AUTO REPLY: {reply(view, autos)!r}")
+        if case_dir.parent == BASE_DIR:
+            # Same treatment: what the pipeline arm's user restated for this case is offered again.
+            given = [item["text"] for item in _replies(PIPE_DIR / case_dir.name)
+                     if item["mode"] == "restate"]
+            for text in given:
+                print(f"  PIPELINE ARM GOT: {text!r}")
         return "need", None
     (case_dir / "pending-answer.json").unlink()
     if pending["mode"] == "giveup":

@@ -96,6 +96,11 @@ def _settled_reading(readings: list[tuple]) -> tuple | None:
     return (*winners[0][:-1], merged)
 
 
+def _plain_number(text: str) -> str:
+    """A literal the model wrote with digit grouping ("1,500") as plain digits ("1500")."""
+    return text.replace(",", "") if re.fullmatch(r"\d{1,3}(?:,\d{3})+(?:\.\d+)?", text) else text
+
+
 def _ungrouped(text: str) -> str:
     """`text` with thousands separators removed: "1,200" / "1.200" / "1 200" -> "1200"."""
     return re.sub(r"(?<=\d)[,.  ](?=\d{3}(?!\d))", "", text)
@@ -124,6 +129,9 @@ ROLE_WORDS = {
     "employer", "employee", "landlord", "tenant", "owner", "investor", "issuer", "donor",
     "tôi", "mình", "em", "ta", "tao", "chúng tôi", "người mua", "người bán", "bên mua",
     "bên bán", "người vay", "người cho vay", "khách", "khách hàng", "chủ nhà", "trọng tài",
+    # Unmarked spellings, except "minh" (also the name Minh).
+    "toi", "chung toi", "nguoi mua", "nguoi ban", "ben mua", "ben ban", "nguoi vay",
+    "nguoi cho vay", "khach hang", "chu nha", "trong tai",
 }
 
 
@@ -150,6 +158,19 @@ def _source_span(span: str, message: str) -> str | None:
     if span in message:
         return span
     source = unicodedata.normalize("NFC", message)
+    pieces = [piece for piece in re.split(r"\s*(?:\.\.\.|…)\s*", span) if piece.strip()]
+    if len(pieces) > 1:
+        # A span shortened with "...": every piece must appear, in order, in one message.
+        start = end = None
+        for piece in pieces:
+            found = re.search(r"\s+".join(re.escape(word) for word in _fold(piece).split()),
+                              _fold(source)[end or 0:])
+            if not found:
+                return None
+            if start is None:
+                start = (end or 0) + found.start()
+            end = (end or 0) + found.end()
+        return source[start:end]
     words = [re.escape(word) for word in _fold(span).split()]
     match = re.search(r"\s+".join(words), _fold(source))
     return source[match.start():match.end()] if match else None
@@ -338,7 +359,7 @@ class _Builder:
             return sub_value
 
         if "tokens" in expr:
-            text = str(expr["tokens"])
+            text = _plain_number(str(expr["tokens"]))
             if self._ref(self.assets, expr.get("asset"), qid) is not None:
                 self.used.add(expr["asset"])
                 units.add(expr["asset"])
@@ -350,7 +371,7 @@ class _Builder:
                 self.problems.append((qid, f"not a positive whole token quantity: {text}"))
         elif "ada" in expr or "lovelace" in expr:
             unit = "ada" if "ada" in expr else "lovelace"
-            text = str(expr[unit])
+            text = _plain_number(str(expr[unit]))
             pattern = r"(?<![\d.,])" + re.escape(text) + r"\s*" + unit + r"\b"
             if not re.search(pattern, searchable, re.IGNORECASE):
                 self.problems.append((qid, f"literal {text} {unit} not in evidence"))
@@ -658,6 +679,12 @@ class _Builder:
                 previous = scope
             elif ref in self.steps and position == len(items) - 1:
                 previous["continuation_scope_id"] = self.step(ref, balances)
+            elif ref in self.steps:
+                # The repair needs the rule, not only the item.
+                self.problems.append((owner, f"invalid continuation item {ref!r}: a step may only "
+                                             "be the last item; list outcomes first, end with "
+                                             "one step, and chain later steps through that "
+                                             "step's own \"then\""))
             else:
                 self.problems.append((owner, f"invalid continuation item {ref!r}"))
 

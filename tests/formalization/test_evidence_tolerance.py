@@ -70,3 +70,23 @@ def test_proper_names_are_not_role_words(name):
 ])
 def test_zones_stated_by_offset_or_name(text, zones):
     assert _zones(text) == zones
+
+
+def test_a_span_shortened_with_ellipsis_cites_the_source_from_first_to_last_piece():
+    message = "trả 30 ADA vào mỗi mốc 09:00 sáng các ngày 28/02, 31/03 và 30/04/2027 (giờ VN), không cần"
+    cited = _source_span("09:00 sáng các ngày... 31/03... (giờ VN)", message)
+    assert cited == "09:00 sáng các ngày 28/02, 31/03 và 30/04/2027 (giờ VN)"
+    assert _source_span("09:00 sáng... 31/12", message) is None
+
+
+def test_grouped_literals_written_by_the_model_are_plain_numbers():
+    from research.formalization.fact_builder import _plain_number
+
+    assert _plain_number("1,500") == "1500" and _plain_number("1,234,567.5") == "1234567.5"
+    assert _plain_number("1,5") == "1,5" and _plain_number("250") == "250"
+
+
+def test_unmarked_vietnamese_pronoun_is_a_role_word_but_minh_stays_a_name():
+    from research.formalization.fact_builder import ROLE_WORDS
+
+    assert "toi" in ROLE_WORDS and "minh" not in ROLE_WORDS
