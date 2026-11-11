@@ -338,3 +338,8 @@ mục 5 và 6.
       intent; chỉ kiểm các kết cục mà yêu cầu nêu, không bắt được hành vi thừa (ví dụ chọn 0 để được trả
       sớm ở case 20 và 22); so tổng tiền lúc kết thúc, không kiểm thời điểm trả (case 15).
     - Lượt chạy dở của case 30 trước đóng băng ở `runs/E6-Discarded/before-freeze/`.
+15. **Lỗi của người viết kịch bản (case 44).** Kịch bản ghi "Kevin" trong khi intent ghi "Kevin Tran"; kịch bản
+    không khớp làm pipeline sinh lại hợp đồng rồi dừng. Đây là lỗi của bộ chạy, không phải của pipeline:
+    lượt chạy đó (cả hai nhánh) được giữ ở `runs/E6-Discarded/scenario-writer-error/`, và case 44 chạy lại
+    từ đầu (lần này AFF dừng ở lượt đầu). Lệnh `auto.py scen` giờ từ chối kịch bản có tên không thuộc
+    intent.

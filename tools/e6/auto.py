@@ -336,6 +336,16 @@ if __name__ == "__main__":
             raise SystemExit("scen: the case is not waiting for intent review")
         candidate = record["steps"]["intent_extraction"]["output_artifacts"][0]
         spec = {"intent_id": candidate, "scenarios": json.loads(sys.argv[3])}
+        # Guard against the scenario writer's own typos: every name must be an intent participant.
+        known = {item["name"] for item in record["candidate"]["intent_spec"]["participants"]}
+        used = {name for compact in spec["scenarios"].values()
+                for _, inputs in compact["tx"] for item in inputs
+                if item[0] in {"deposit", "choice"} for name in item[1:3 if item[0] == "deposit" else 2]}
+        used |= {name for compact in spec["scenarios"].values() for row in compact.get("pay", [])
+                 for name in row[:2]}
+        unknown = used - known
+        if unknown:
+            raise SystemExit(f"scen: names not in the intent: {sorted(unknown)}; intent has {sorted(known)}")
         (case_dir / "scenarios.json").write_text(json.dumps(spec, ensure_ascii=False, indent=1) + "\n",
                                                  encoding="utf-8")
         print(f"scenarios for {candidate}: {', '.join(spec['scenarios'])}")
