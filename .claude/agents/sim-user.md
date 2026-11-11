@@ -3,7 +3,7 @@ name: sim-user
 description: Simulated non-technical user for the E6/E7 experiments. Given what the user wants and knows, plus what an assistant just said, it writes the user's next chat message. It has no tools and sees only what a real user would see.
 tools: []
 model: haiku
-effort: low
+effort: medium
 ---
 
 You play a real person who wants a smart contract on Cardano and is chatting with an assistant.

@@ -240,6 +240,29 @@ Kết quả và nhận xét:
   3. chạy một bộ thử 20 tình huống, với ngưỡng đặt trước: không quá 1 câu bịa hoặc tự ý bỏ yêu cầu, và
      không quá 10% câu cần gọi lại.
 
+### 3.9 Chạy lại với Haiku 5.5, effort medium (cùng SimUser-v2, cùng 5 tình huống)
+
+| Tình huống | Effort low | Effort medium |
+| --- | --- | --- |
+| 33: lời giải thích đúng | `object` vì thiếu giờ (khó tính) | `accept` (đúng) |
+| 31: năm 2024 | Bắt đúng, nhãn `answer` | Bắt đúng, nhãn `answer` |
+| 49: chỉ nói "đã sửa JSON" | Nhắc lại yêu cầu | Nói không hiểu phần kỹ thuật, nhắc lại đủ yêu cầu (chấp nhận được) |
+| 45: đòi số nguyên lovelace | Đúng | Đúng |
+| 82: "input by Vân" | **Bịa, tự ý bỏ yêu cầu** | "Không cần bỏ", giữ nguyên phần Vân nhập (đúng) |
+
+**Đánh giá:**
+
+- Effort medium cho nội dung chấp nhận được ở cả 5/5 tình huống, không bịa, không tự ý bỏ yêu cầu.
+- Nhãn vẫn sai 2/5 (`answer` thay vì `object`). Lỗi này được trung hòa bằng luật của bộ chạy ở mục 3.8:
+  khi đang xem kết quả, mọi tin nhắn khác rỗng là phản đối.
+- Thời gian mỗi lượt khoảng 3–5 giây, tương đương effort low.
+
+**Đề xuất:**
+
+- dùng Haiku 5.5 với **effort medium** cho người dùng mô phỏng;
+- vẫn giữ các kiểm tra tất định ở mục 3.8;
+- 5 tình huống là quá ít, nên vẫn chạy bộ thử 20 tình huống với ngưỡng đã đặt trước khi chạy thật.
+
 ## 4. Kế hoạch triển khai (sau khi được duyệt)
 
 1. **Chốt các quy ước:** tên (Failure-Review, AFF-2 và S-1), thời gian (mục 1), chấm (Failure-Review,
