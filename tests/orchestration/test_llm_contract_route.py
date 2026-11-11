@@ -148,6 +148,27 @@ def test_model_generator_rejects_noncanonical_token_when_intent_only_uses_ada():
                for item in outcome.result.diagnostics)
 
 
+def test_model_generator_renames_a_singular_deposit_key_and_reports_it():
+    ada = {"currency_symbol": "", "token_name": ""}
+
+    class SingularModel:
+        def generate(self, _system, _user):
+            return {"contract": {"when": [{"case": {
+                "deposit": 5, "into_account": {"role_token": "Alice"}, "of_token": ada,
+                "party": {"role_token": "Alice"}}, "then": "close"}],
+                "timeout": 1893456000000, "timeout_continuation": "close"}, "mapping_evidence": []}
+
+    outcome = LLMContractGeneratorPort(SingularModel()).execute([_accepted()], StepContext("run"))
+    assert outcome.result.run_status == StepRunStatus.SUCCEEDED
+    payload = outcome.artifacts[0].payload
+    assert payload["contract"]["when"][0]["case"]["deposits"] == 5
+    assert "deposit" not in payload["contract"]["when"][0]["case"]
+    assert payload["normalized_deposit_keys"] == ["$.when[0].case"]
+    assert outcome.result.telemetry["normalized_deposit_keys"] == 1
+    unchanged = LLMContractGeneratorPort(ContractModel()).execute([_accepted()], StepContext("run"))
+    assert "normalized_deposit_keys" not in unchanged.artifacts[0].payload
+
+
 def test_model_generator_rejects_a_participant_written_as_an_address():
     class AddressModel:
         def generate(self, _system, _user):

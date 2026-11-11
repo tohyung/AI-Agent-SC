@@ -29,6 +29,36 @@ def _named_address_paths(contract: Any, names: set[str], path: str = "$") -> lis
             for item in _named_address_paths(value, names, f"{path}.{key}")]
 
 
+DEPOSIT_ALIAS_FIELDS = {"deposit", "into_account", "of_token", "party"}
+
+
+def _deposit_alias(contract: Any, path: str = "$") -> tuple[Any, list[str]]:
+    """Rename "deposit" to "deposits" in an action that is otherwise exactly a Deposit.
+
+    The model often writes the singular key; that spelling has no other meaning in Marlowe Core
+    JSON, so renaming it changes no behavior. Every renamed path is reported.
+    """
+    if isinstance(contract, list):
+        items, paths = [], []
+        for index, value in enumerate(contract):
+            item, found = _deposit_alias(value, f"{path}[{index}]")
+            items.append(item)
+            paths.extend(found)
+        return items, paths
+    if not isinstance(contract, dict):
+        return contract, []
+    renamed: list[str] = []
+    result: dict[str, Any] = {}
+    for key, value in contract.items():
+        item, found = _deposit_alias(value, f"{path}.{key}")
+        result[key] = item
+        renamed.extend(found)
+    if set(result) == DEPOSIT_ALIAS_FIELDS:
+        result = {("deposits" if key == "deposit" else key): value for key, value in result.items()}
+        renamed.insert(0, path)
+    return result, renamed
+
+
 def _value_at(contract: Any, path: str) -> Any:
     node = contract
     for part in path.replace("]", "").replace("[", ".").split(".")[1:]:
@@ -160,6 +190,7 @@ class LLMContractGeneratorPort:
                 safe_error=safe_error,
                 telemetry=usage(),
             ))
+        renamed: list[str] = []
         if not isinstance(output, dict):
             diagnostics = ["contract model did not return a JSON object"]
         elif not isinstance(output.get("mapping_evidence"), list):
@@ -170,6 +201,9 @@ class LLMContractGeneratorPort:
                  for item in output["mapping_evidence"]):
             diagnostics = ["mapping_evidence items must contain source_kind, source_id and ast_path"]
         else:
+            contract, renamed = _deposit_alias(output.get("contract"))
+            if renamed:
+                output = {**output, "contract": contract}
             diagnostics = validate_contract(output.get("contract"))
             assets = [claim.get("value") for claim in spec.get("claims", [])
                       if claim.get("kind") == "asset"
@@ -194,22 +228,27 @@ class LLMContractGeneratorPort:
                 input_artifacts=[accepted.artifact_id], diagnostics=diagnostics,
                 telemetry=usage(),
             ))
+        payload = {"contract": output["contract"], "source_intent_id": accepted.artifact_id,
+                   "mapping_evidence": output["mapping_evidence"],
+                   "generation_mode": ("Synthesis-LlmFromSimulatedIntent-v1" if simulated else
+                                       "Synthesis-LlmFromAcceptedIntent-v1"),
+                   "simulation_only": simulated,
+                   "reasoning_narrative": str(output.get("reasoning_narrative") or "")[:700]}
+        telemetry = usage()
+        if renamed:
+            # Recorded only when it happened, so unchanged outputs keep their artifact ids.
+            payload["normalized_deposit_keys"] = renamed
+            telemetry["normalized_deposit_keys"] = len(renamed)
         candidate = ArtifactEnvelope(
             "contract-candidate", "core-v1", "compile",
             ImplementationStatus.IMPLEMENTED_UNVALIDATED,
-            AuthorityLevel.MODEL_CANDIDATE,
-            {"contract": output["contract"], "source_intent_id": accepted.artifact_id,
-             "mapping_evidence": output["mapping_evidence"],
-             "generation_mode": ("Synthesis-LlmFromSimulatedIntent-v1" if simulated else
-                                 "Synthesis-LlmFromAcceptedIntent-v1"),
-             "simulation_only": simulated,
-             "reasoning_narrative": str(output.get("reasoning_narrative") or "")[:700]},
+            AuthorityLevel.MODEL_CANDIDATE, payload,
         )
         return StepExecution(StepResult(
             "compile", ImplementationStatus.IMPLEMENTED_UNVALIDATED,
             StepRunStatus.SUCCEEDED, semantic_status="CANDIDATE_GENERATED",
             input_artifacts=[accepted.artifact_id],
             authority_level=AuthorityLevel.MODEL_CANDIDATE,
-            telemetry=usage(),
+            telemetry=telemetry,
             limitations=["structural validity and model mapping claims are not intent conformance"],
         ), [candidate])

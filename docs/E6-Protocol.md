@@ -243,3 +243,11 @@ mục 5 và 6.
    chiều", "9h tối", "12:00 AM"). Prompt và trích dẫn của case 1–6 không có giờ 12 tiếng, nên bản sửa
    không đổi gì với các case đó; chúng được giữ. Lượt chạy case 7 trước bản sửa được giữ ở
    `runs/E6-Discarded/before-12h-fix/` và không tính; case 7 chạy lại từ đầu.
+8. **Khóa `deposit` số ít (2026-11-11, người phụ trách yêu cầu, sau case 1–10).** Ở case 9 và 10, model
+   compile viết khóa `deposit` thay vì `deposits` hai lần liền; chẩn đoán của validator không làm nó
+   sửa, nên pipeline dừng (`generation_stalled`). Bước compile giờ đổi tên khóa đó khi hành động có
+   đúng các trường còn lại của Deposit (cách viết này không có nghĩa nào khác), và ghi các đường dẫn
+   đã đổi vào `normalized_deposit_keys`. Chỉ thêm khi có đổi, nên hợp đồng không đổi giữ nguyên mã;
+   prompt không đổi. Case 1–8 không có khóa này nên được giữ. Dựng lại offline: cả 4 output hỏng của
+   case 9–10 hợp lệ sau khi đổi tên. Lượt chạy cũ của case 9–10 (cả hai nhánh) được giữ ở
+   `runs/E6-Discarded/before-deposit-fix/` và không tính.
