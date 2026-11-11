@@ -180,4 +180,10 @@ mục 5 và 6.
 
 ## Lệch giao thức
 
-(chưa có)
+1. **Không dừng sau chạy thử (2026-11-11, trước lần chạy đầu tiên trên v3).** Người phụ trách quyết định
+   chạy liền cả 100 case thay vì dừng sau 20 case đầu. Chạy thử vốn đã tính vào kết quả và không cho
+   chỉnh gì ngoài lỗi bộ chạy, nên quy tắc quyết định không đổi.
+2. **Công cụ đóng vai** (`tools/e6/show.py`, `tools/e6/expect.py`, `tools/e6/pipe.sh`,
+   `tools/e6/base.sh`), thêm trước lần chạy đầu tiên. `show.py` chỉ in những gì người dùng mô phỏng
+   được thấy (prompt, phiếu dữ kiện, câu hỏi, intent, lời giải thích của model), không in đặc tả, hợp
+   đồng tham chiếu, kịch bản kiểm, hành vi mong đợi hay JSON hợp đồng.
