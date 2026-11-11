@@ -293,3 +293,6 @@ mục 5 và 6.
     - binder của kịch bản đòi đúng một hành động Choice khớp. Một hợp đồng có cùng ChoiceId ở nhiều kỳ
       thì không gắn được, dù các hành động đó nhận cùng một input. Binder giờ chấp nhận khi mọi hành
       động khớp có cùng ChoiceId. Case 1–19 không gặp trường hợp này.
+    Bổ sung ở case 21: tên chỉ khớp bản gốc sau khi bỏ dấu ("Nhân" cho "Nhan") được viết lại theo đúng
+    cách viết của người dùng, để validator của core tìm thấy nguyên văn. Lượt chạy trước đó ở
+    `runs/E6-Discarded/before-name-spelling/`.

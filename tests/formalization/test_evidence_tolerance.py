@@ -41,6 +41,8 @@ def test_a_span_differing_only_in_vietnamese_marks_cites_the_source_text():
 def test_party_names_ignore_case_and_marks():
     assert _same_name("Hải", "toi (Hai) mua")
     assert not _same_name("Hùng", "toi (Hai) mua")
+    # The builder then writes the name as the user did, so the core validator finds it verbatim.
+    assert _source_span("Hải", "toi (Hai) mua") == "Hai"
 
 
 @pytest.mark.parametrize("name", ["I", "Me", "Tôi", "Mình", "Buyer", "Người mua"])

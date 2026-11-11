@@ -806,6 +806,9 @@ class _Builder:
             # Design section 3: a party's name is quoted from its own evidence.
             if not _same_name(party["name"], self._spans(party)):
                 self.problems.append((party_id, f"name {party['name']!r} not in its evidence"))
+            elif party["name"] not in self._spans(party):
+                # Matched only ignoring case or marks: the name is written as the user wrote it.
+                party["name"] = _source_span(party["name"], self._spans(party))
             if unicodedata.normalize("NFC", party["name"]).strip().lower() in ROLE_WORDS:
                 # "I", "Tôi", "Buyer": the person is not named yet, so the user is asked.
                 self.unnamed.add(party["name"])
