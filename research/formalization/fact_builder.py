@@ -68,6 +68,17 @@ def request_language(messages: list[str]) -> str:
     return "vi" if words and marked * 5 >= len(words) else "en"
 
 
+def _twelve_hour(hour: int, spans: str) -> bool:
+    """Whether the evidence states `hour` (0-23) on a 12-hour clock: "8:00 PM", "8 giờ tối"."""
+    clock = hour % 12 or 12
+    if hour >= 12:
+        marker = r"(?:p\.?\s?m\.?|(?:giờ|gio|g|h)?\s*(?:chiều|chieu|tối|toi|đêm|dem))"
+    else:
+        marker = r"(?:a\.?\s?m\.?|(?:giờ|gio|g|h)?\s*(?:sáng|sang|đêm|dem|khuya))"
+    return re.search(rf"(?<!\d)0?{clock}(?:[:.h]\d\d)?\s*{marker}(?![a-zà-ỹ])", spans,
+                     re.IGNORECASE) is not None
+
+
 def _source_span(span: str, message: str) -> str | None:
     """The exact source text a cited span stands for.
 
@@ -372,7 +383,7 @@ class _Builder:
 
     def _require_stated_time(self, iid: str, hour: int, tz: re.Match[str], spans: str) -> None:
         """A resolved time decides money, so its hour and timezone must be cited."""
-        if not re.search(rf"(?<!\d)0?{hour}(?!\d)", spans):
+        if not (re.search(rf"(?<!\d)0?{hour}(?!\d)", spans) or _twelve_hour(hour, spans)):
             self.problems.append((iid, f"hour {hour} not in evidence"))
         offset = int(tz.group(2))
         stated = (re.search(r"\b(?:UTC|GMT)\b", spans, re.IGNORECASE) if offset == 0 else

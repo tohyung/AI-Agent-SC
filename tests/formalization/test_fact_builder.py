@@ -144,6 +144,21 @@ def test_ungrounded_literal_and_span_are_draft_errors_by_item_id():
     assert items == {"q_total", "p_tu"}
 
 
+@pytest.mark.parametrize("hour, text, stated", [
+    (20, "8:00 PM on March 30, 2027 (UTC-5)", True),
+    (20, "8 p.m. UTC-5", True),
+    (14, "2 giờ chiều ngày 05/08", True),
+    (21, "9h tối", True),
+    (0, "12:00 AM", True),
+    (20, "8:00 AM", False),
+    (20, "18:00", False),
+])
+def test_twelve_hour_clock_states_the_hour(hour, text, stated):
+    from research.formalization.fact_builder import _twelve_hour
+
+    assert _twelve_hour(hour, text) is stated
+
+
 def test_a_named_vietnam_zone_states_utc_plus_seven():
     message = MESSAGE.replace("(UTC+7)", "giờ VN")
     history = [{"version": 1, "messages": [message]}]

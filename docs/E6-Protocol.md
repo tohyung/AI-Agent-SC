@@ -237,3 +237,9 @@ mục 5 và 6.
    của AFF nói rõ múi giờ ghi bằng tên là đã ghi (`Formalization-FactPrompt-v6`). Các múi giờ khác
    không đổi. Dựng lại offline 4 draft cũ của case 1: 2 draft qua; 2 draft còn lại không trích chỗ
    nào về múi giờ nên vẫn bị từ chối, đúng như mong đợi.
+7. **Giờ 12 tiếng (2026-11-11, sau case 1–6 của lần chạy thứ ba).** Builder đòi thấy số 20 trong trích
+   dẫn của giờ 20:00, nên "8:00 PM" bị từ chối ("hour 20 not in evidence"). Model phải để trống giờ rồi
+   hỏi lại, dù phiếu dữ kiện đã nêu giờ. Builder giờ nhận giờ 12 tiếng ("8:00 PM", "8 p.m.", "2 giờ
+   chiều", "9h tối", "12:00 AM"). Prompt và trích dẫn của case 1–6 không có giờ 12 tiếng, nên bản sửa
+   không đổi gì với các case đó; chúng được giữ. Lượt chạy case 7 trước bản sửa được giữ ở
+   `runs/E6-Discarded/before-12h-fix/` và không tính; case 7 chạy lại từ đầu.
