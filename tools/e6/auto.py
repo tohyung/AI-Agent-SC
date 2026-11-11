@@ -192,6 +192,11 @@ def pipe(index: int) -> int:
 def _scenarios(index: int, case_dir: Path, record: dict, candidate: str, spec: dict,
                replies: int) -> int:
     compiled = record.get("steps", {}).get("compile", {})
+    if (compiled.get("safe_error") or {}).get("code") in {"provider_request_failed",
+                                                           "provider_limit"}:
+        # No response reached us: infrastructure, not a pipeline outcome (protocol, section 2).
+        print(f"PIPE {case_dir.name}: compile got no model response; resume later")
+        return 4
     if compiled.get("run_status") != "SUCCEEDED" or record.get("blocking_step") != "semantic_comparison":
         return _finish(case_dir, record, "pipeline_stopped_before_scenarios", replies=replies)
     contract = compiled["output_artifacts"][0]

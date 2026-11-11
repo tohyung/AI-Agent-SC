@@ -47,6 +47,15 @@ def test_choice_binding_rejects_missing_or_ambiguous_match():
         bind_choice_transactions(CONTRACT, (wrong_owner,))
 
 
+def test_actions_with_the_same_choice_id_bind_the_same_input():
+    repeated = {"when": [{"case": CHOICE, "then": {
+        "when": [{"case": deepcopy(CHOICE), "then": "close"}],
+        "timeout": 200, "timeout_continuation": "close"}}],
+        "timeout": 100, "timeout_continuation": "close"}
+    transactions, _ = bind_choice_transactions(repeated, (DECLARED,))
+    assert transactions[0]["inputs"][0]["choice_id"] == CHOICE["for_choice"]
+
+
 def test_binding_accepts_immutable_artifact_payload_without_mutating_it():
     artifact = ArtifactEnvelope("scenario", "v1", "test",
                                 ImplementationStatus.IMPLEMENTED_UNVALIDATED,

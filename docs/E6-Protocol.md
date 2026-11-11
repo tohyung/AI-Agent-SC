@@ -286,3 +286,10 @@ mục 5 và 6.
     Khi tên một bên là đại từ hoặc từ chỉ vai, builder hỏi người dùng tên người đó, thay vì báo lỗi
     draft. Chỉ báo lỗi thì model không biết tên (nó chỉ có trong phiếu dữ kiện), nên ở lần chạy thử
     case 7 dừng sau 4 draft mà không hỏi gì. Lượt chạy đó ở `runs/E6-Discarded/before-name-question/`.
+    Bổ sung ở case 20:
+    - bộ chạy coi lần gọi compile không nhận được phản hồi (`provider_request_failed`) là kết thúc của
+      Pipeline và đã chạy Baseline với trần đó. Bộ chạy giờ coi đây là lỗi hạ tầng và chạy tiếp; lượt
+      Baseline sai được giữ ở `runs/E6-Discarded/driver-infra-bug/`;
+    - binder của kịch bản đòi đúng một hành động Choice khớp. Một hợp đồng có cùng ChoiceId ở nhiều kỳ
+      thì không gắn được, dù các hành động đó nhận cùng một input. Binder giờ chấp nhận khi mọi hành
+      động khớp có cùng ChoiceId. Case 1–19 không gặp trường hợp này.

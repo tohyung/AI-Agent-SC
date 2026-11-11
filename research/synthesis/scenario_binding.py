@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from typing import Any
 
 from .reference import ReferenceExecutor, ReferenceRequest
@@ -64,8 +65,11 @@ def bind_choice_input(item: dict[str, Any],
                        and type(bound.get("to")) is int
                        and bound["from"] <= chosen <= bound["to"]
                        for bound in action.get("choose_between", []))]
-    unique = {str(choice.get("choice_name")): choice for choice in matches}
-    if len(matches) != 1 or len(unique) != 1:
+    # A Choice input is identified only by its ChoiceId: several actions with the same id (one per
+    # period, say) take the very same input, so they bind it alike.
+    unique = {json.dumps(_materialize(choice), sort_keys=True, ensure_ascii=False): choice
+              for choice in matches}
+    if len(unique) != 1:
         raise ScenarioBindingError("abstract Choice does not bind uniquely")
     return {"type": "Choice", "choice_id": _materialize(matches[0]), "chosen": chosen}
 
