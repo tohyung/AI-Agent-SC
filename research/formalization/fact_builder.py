@@ -68,6 +68,30 @@ def request_language(messages: list[str]) -> str:
     return "vi" if words and marked * 5 >= len(words) else "en"
 
 
+def _settled_reading(readings: list[tuple]) -> tuple | None:
+    """The reading a later revision settles, or None while the conflict stands.
+
+    Each reading ends with its evidence. A conflict is settled when the latest requirement
+    version cited by any reading is a revision (version 2 or later) cited only by readings of one
+    value, and no reading of another value cites that version or a later one. A conflict inside
+    one message is never settled here: the user is asked.
+    """
+    def latest(reading: tuple) -> int:
+        versions = [entry.get("requirement_version") for entry in reading[-1]
+                    if type(entry.get("requirement_version")) is int]
+        return max(versions, default=0)
+
+    top = max(latest(reading) for reading in readings)
+    winners = [reading for reading in readings if latest(reading) == top]
+    if top < 2 or len({reading[0] for reading in winners}) != 1:
+        return None
+    others = [reading for reading in readings if reading[0] != winners[0][0]]
+    if any(latest(reading) >= top for reading in others):
+        return None
+    merged = [entry for reading in winners for entry in reading[-1]]
+    return (*winners[0][:-1], merged)
+
+
 def _ungrouped(text: str) -> str:
     """`text` with thousands separators removed: "1,200" / "1.200" / "1 200" -> "1200"."""
     return re.sub(r"(?<=\d)[,.  ](?=\d{3}(?!\d))", "", text)
@@ -135,6 +159,8 @@ class _Builder:
         self._instant_cache: dict[str, tuple[int | None, str | None, list[dict[str, Any]]]] = {}
         # Draft item id -> distinct readings (value, basis, evidence) the source gives.
         self.conflicts: dict[str, list[tuple[Any, Any, list[dict[str, Any]]]]] = {}
+        # Item id -> value a later revision settled among conflicting readings.
+        self.resolved: dict[str, Any] = {}
         # Quantity id -> "lovelace" or the id of the native asset it counts.
         self.units: dict[str, str] = {}
         self._visiting: set[str] = set()
@@ -204,6 +230,10 @@ class _Builder:
                 return None, "", []
         distinct = {reading[0] for reading in readings}
         if len(distinct) > 1 and None not in distinct:
+            settled = _settled_reading(readings)
+            if settled is not None:
+                self.resolved[item_id] = settled[0]
+                return settled
             self.conflicts[item_id] = readings
             merged = [entry for reading in readings for entry in reading[-1]]
             return (None, *readings[0][1:-1], merged)

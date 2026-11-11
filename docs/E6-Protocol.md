@@ -257,3 +257,10 @@ mục 5 và 6.
    chữ số ("1,200", "1.200", "1 200"); cách ghi số trong draft không đổi. Case 1–14 không có số có dấu
    phân cách nên được giữ. Dựng lại offline: draft đầu của case 15 qua (1 200 ADA gốc, 1 260 ADA trả).
    Lượt chạy cũ của case 15 (cả hai nhánh) được giữ ở `runs/E6-Discarded/before-grouping-fix/`.
+10. **Revision sau chốt được mâu thuẫn (2026-11-11, sau case 1–15).** Builder coi mọi lựa chọn khác giá
+    trị là mâu thuẫn, kể cả khi revision sau của người dùng đã chốt một giá trị. Vì vậy case 16 (310 hay
+    320 ADA) hỏi mãi, và mọi case có mâu thuẫn đều không thể hội tụ. Builder giờ coi mâu thuẫn là đã chốt
+    khi tin nhắn mới nhất được trích là một revision (từ phiên bản 2), chỉ ủng hộ một giá trị, và không
+    lựa chọn nào khác trích tin nhắn đó hoặc tin nhắn sau hơn. Mâu thuẫn trong cùng một tin nhắn vẫn được
+    hỏi. Case 1–15 không có câu hỏi mâu thuẫn nên được giữ. Dựng lại offline: draft của case 16 cho 320
+    ADA, không còn câu hỏi. Lượt chạy cũ của case 16 được giữ ở `runs/E6-Discarded/before-conflict-fix/`.

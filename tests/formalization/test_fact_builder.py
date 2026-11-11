@@ -144,6 +144,19 @@ def test_ungrounded_literal_and_span_are_draft_errors_by_item_id():
     assert items == {"q_total", "p_tu"}
 
 
+def test_a_later_revision_settles_a_conflict_but_one_message_does_not():
+    from research.formalization.fact_builder import _settled_reading
+
+    def reading(value, *versions):
+        return (value, "", [{"requirement_version": v, "message_index": 0, "span": "x"}
+                            for v in versions])
+
+    assert _settled_reading([reading(310, 1), reading(320, 1, 2, 3)])[0] == 320
+    assert _settled_reading([reading(310, 1), reading(320, 1)]) is None
+    assert _settled_reading([reading(310, 1, 2), reading(320, 1, 2)]) is None
+    assert _settled_reading([reading(310, 2), reading(320, 1)])[0] == 310
+
+
 @pytest.mark.parametrize("text, ungrouped", [
     ("1,200 ADA", "1200 ADA"), ("10.000.000 lovelace", "10000000 lovelace"),
     ("1 200 ADA", "1200 ADA"), ("1,5 ADA", "1,5 ADA"), ("2027-07-01 00:00", "2027-07-01 00:00"),
