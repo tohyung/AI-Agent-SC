@@ -8,7 +8,7 @@ from research.orchestration.ports import StepContext
 from research.orchestration.status import AuthorityLevel, ImplementationStatus
 from research.synthesis.llm_generator import LLMContractGeneratorPort
 case = int(sys.argv[1])
-for path in sorted(glob.glob(f"runs/E6-Pipeline/case-{case:03d}/attempt-*.json"), reverse=True):
+for path in sorted(glob.glob(f"runs/E6-*/**/case-{case:03d}/attempt-*.json", recursive=True) + glob.glob(f"runs/E6-Discarded/**/pipeline-case-{case:03d}/attempt-*.json", recursive=True), reverse=True):
     record = json.load(open(path, encoding="utf-8"))
     art = next((a for a in record.get("artifacts", {}).values()
                 if a.get("artifact_type") == "accepted-intent"), None)
