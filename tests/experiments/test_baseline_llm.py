@@ -127,3 +127,20 @@ def test_structure_checker_reports_validator_errors_without_a_ledger():
     assert check("close")["passed"] is True
     result = check({"pay": "x"})
     assert result["passed"] is False and result["stage"] == "structure" and result["messages"]
+
+
+def test_one_counting_rule_skips_calls_without_a_response():
+    log = [{"status": "ok"}, {"status": "error", "exception_type": "RateLimitError"},
+           {"status": "error", "provider_error_code": 429}, {"status": "error", "provider_error_code": 500},
+           {"status": "error", "exception_type": "APIConnectionError"}, {"status": "empty"}]
+    assert bl.counted_requests(log) == 3
+
+
+def test_pipeline_requests_sum_over_attempt_records(tmp_path):
+    for number, log in ((1, [{"status": "ok"}, {"status": "error", "exception_type": "RateLimitError"}]),
+                        (2, [{"status": "ok"}, {"status": "ok"}])):
+        (tmp_path / f"attempt-{number:03d}.json").write_text(
+            json.dumps({"model_call_log_this_attempt": log}), encoding="utf-8")
+    assert bl.pipeline_requests(tmp_path) == 3
+    with pytest.raises(ValueError, match="no pipeline attempt"):
+        bl.pipeline_requests(tmp_path / "missing")

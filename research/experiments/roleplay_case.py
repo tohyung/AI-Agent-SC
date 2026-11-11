@@ -15,8 +15,8 @@ from typing import Any
 from research.orchestration.cli_runner import SessionOptions, run_session
 from research.experiments.online_tuning import DATASET, load_batch
 from research.ledger.marlowe_cli import config_from_environment
-from research.adapters.model_replay import (FirstCoreReplayModel, JournaledModel,
-                                                SavedContractReplayModel)
+from research.adapters.model_replay import (FactDraftReplayModel, FirstCoreReplayModel,
+                                                JournaledModel, SavedContractReplayModel)
 from research.adapters.model_transport import ModelTransport
 from research.formalization.intent_spec import CORE_SCHEMA_VERSION_V3, CORE_SCHEMA_VERSION_V4
 from research.formalization.repair_policy import REPAIR_POLICY_VERSION
@@ -25,6 +25,8 @@ from research.formalization.repair_policy import REPAIR_POLICY_VERSION
 ROOT = Path(__file__).resolve().parents[2]
 RUN_DIR = ROOT / "runs" / "E3-Roleplay-Batch20"
 REMAINING_RUN_DIR = ROOT / "runs" / "E3-Roleplay-Batch80"
+E6_RUN_DIR = ROOT / "runs" / "E6-Pipeline"
+DATASETS = ("v2", "v3")
 # Secondary providers are chosen only by explicit argument (see ModelTransport).
 PROVIDERS = ("default", "gemini")
 # Free-tier Gemini allows about 15 requests per minute; space requests so a
@@ -43,7 +45,14 @@ def _pace(provider: str) -> None:
     _last_request_at[provider] = time.monotonic()
 
 
-def _case_at(index: int) -> dict[str, Any]:
+def _case_at(index: int, dataset: str = "v2") -> dict[str, Any]:
+    if dataset == "v3":
+        # E6: the pipeline arm sees the same fields as the baseline arm (id, prompt, language).
+        from research.experiments.baseline_llm import load_case
+
+        return load_case(index, "v3")
+    if dataset != "v2":
+        raise ValueError(f"dataset must be one of {', '.join(DATASETS)}")
     _, first_cases = load_batch()
     if 1 <= index <= len(first_cases):
         return first_cases[index - 1]
@@ -155,6 +164,13 @@ def _reusable_core(case_dir: Path, history: list[dict[str, Any]], *,
         if (not isinstance(initial_errors, list)
                 or any(not isinstance(item, str) for item in initial_errors)):
             raise ValueError("stored candidate has invalid initial errors")
+        if candidate.get("formalization_method") == "AFF":
+            drafts = candidate.get("fact_drafts")
+            if (not isinstance(drafts, list) or not drafts
+                    or drafts[-1].get("problems") != []
+                    or any(not isinstance(item.get("draft"), dict) for item in drafts)):
+                raise ValueError("stored AFF candidate has no accepted FactDraft to replay")
+            return {"fact_drafts": [item["draft"] for item in drafts]}, ids[0], initial_errors
         return core, ids[0], initial_errors
     return None
 
@@ -196,12 +212,16 @@ def run_case(index: int, *, answers: list[str] | None = None,
              repair_attempts: int = 0,
              run_dir: Path | None = None,
              provider: str = "default",
-             formalization: str = "DCF") -> dict[str, Any]:
+             formalization: str = "DCF",
+             dataset: str = "v2") -> dict[str, Any]:
     if provider not in PROVIDERS:
         raise ValueError(f"provider must be one of {', '.join(PROVIDERS)}")
-    case = _case_at(index)
+    if dataset == "v3" and formalization != "AFF":
+        raise ValueError("E6 runs dataset v3 on the AFF main path only")
+    case = _case_at(index, dataset)
     if run_dir is None:
-        run_dir = RUN_DIR if index <= 20 else REMAINING_RUN_DIR
+        run_dir = (E6_RUN_DIR if dataset == "v3"
+                   else RUN_DIR if index <= 20 else REMAINING_RUN_DIR)
     if answers is not None and (not isinstance(answers, list)
                                 or any(not isinstance(item, str) or not item.strip()
                                        for item in answers)):
@@ -214,7 +234,7 @@ def run_case(index: int, *, answers: list[str] | None = None,
         raise ValueError("a candidate cannot be reviewed and repaired in the same run")
     if repair_candidate_id is not None and repair_attempts == 0:
         raise ValueError("candidate repair requires at least one validation repair")
-    case_dir = run_dir / f"case-{index:02d}"
+    case_dir = run_dir / (f"case-{index:03d}" if dataset == "v3" else f"case-{index:02d}")
     case_dir.mkdir(parents=True, exist_ok=True)
     previous = _latest(case_dir)
     if previous is not None and previous.get("case_id") != case["id"]:
@@ -301,7 +321,12 @@ def run_case(index: int, *, answers: list[str] | None = None,
     replayed_model = (SavedContractReplayModel(journaled, contract_replay[1],
                                                contract_replay[0])
                       if contract_replay else journaled)
-    model = FirstCoreReplayModel(replayed_model, replay[0], replay[2]) if replay else replayed_model
+    if replay is None:
+        model = replayed_model
+    elif "fact_drafts" in replay[0]:
+        model = FactDraftReplayModel(replayed_model, replay[0]["fact_drafts"])
+    else:
+        model = FirstCoreReplayModel(replayed_model, replay[0], replay[2])
     queued = iter(answers or [])
     asked: list[dict[str, str]] = []
 
@@ -344,6 +369,8 @@ def run_case(index: int, *, answers: list[str] | None = None,
         "model_name": getattr(transport, "model", None),
         "roleplay_answers_supplied": asked,
         "roleplay_revision": revision,
+        "reviewed_candidate_id": reviewed_candidate_id,
+        "simulated_expectation": expectation,
         "replayed_core_candidate_id": replay[1] if replay else None,
         "replayed_contract_candidate_id": replay_contract_id,
         "repair_attempts": repair_attempts,
@@ -388,6 +415,8 @@ def main() -> int:
                         help="default = the LLM_* model; gemini = the GEMINI_* model")
     parser.add_argument("--formalization", choices=["DCF", "AFF"], default="DCF",
                         help="DCF reproduces the E3 runs; AFF is the main path since E4")
+    parser.add_argument("--dataset", choices=DATASETS, default="v2",
+                        help="v2 = the E3 dataset; v3 = the E6 dataset (AFF only)")
     parser.add_argument("--run-dir", type=Path,
                         help="evidence directory (default: the E3 batch directory)")
     args = parser.parse_args()
@@ -402,7 +431,7 @@ def main() -> int:
                       expectation=expectation,
                       revision=revision, repair_attempts=args.repair_attempts,
                       run_dir=args.run_dir, provider=args.provider,
-                      formalization=args.formalization)
+                      formalization=args.formalization, dataset=args.dataset)
     return 3 if result["provider_limit"] else 0
 
 

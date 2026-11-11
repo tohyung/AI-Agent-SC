@@ -188,6 +188,7 @@ class ModelTransport:
         self.call_log.append(entry)
         messages = [{"role": "system", "content": system},
                     {"role": "user", "content": user}]
+        started = time.monotonic()
         try:
             if self.api_style == "chat":
                 kwargs: dict[str, Any] = {"model": self.model, "messages": messages,
@@ -229,10 +230,13 @@ class ModelTransport:
                 content = getattr(response, "output_text", None)
                 entry["response_status"] = getattr(response, "status", None)
         except ModelTransportError:
+            entry["seconds"] = round(time.monotonic() - started, 3)
             raise
         except Exception as exc:
+            entry["seconds"] = round(time.monotonic() - started, 3)
             entry["exception_type"] = type(exc).__name__
             raise
+        entry["seconds"] = round(time.monotonic() - started, 3)
         entry.update(_usage(response))
         if not isinstance(content, str) or not content.strip():
             entry["status"] = "empty"

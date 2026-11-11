@@ -110,6 +110,46 @@ class FirstCoreReplayModel:
         return self.delegate.usage_summary()
 
 
+class FactDraftReplayModel:
+    """Replay the stored AFF FactDraft attempts in order, then forward later calls.
+
+    Replaying every attempt, failed ones included, rebuilds the same candidate payload, so the
+    reviewed candidate keeps its artifact id.
+    """
+
+    def __init__(self, delegate: Any, drafts: list[dict[str, Any]]) -> None:
+        if not drafts:
+            raise ValueError("FactDraft replay needs at least one stored draft")
+        self.delegate = delegate
+        self.queue = [deepcopy(draft) for draft in drafts]
+        self.started = False
+        self.model = delegate.model
+
+    def generate(self, system: str, user: str) -> dict[str, Any]:
+        if self.queue:
+            from research.formalization.fact_extractor import SYSTEM as FACT_SYSTEM
+
+            if not self.started and system != FACT_SYSTEM:
+                raise ValueError("stored FactDrafts may only replay at Formalization")
+            self.started = True
+            return self.queue.pop(0)
+        return self.delegate.generate(system, user)
+
+    def set_call_budget(self, limit: int) -> None:
+        self.delegate.set_call_budget(limit)
+
+    @property
+    def llm_calls(self) -> int:
+        return self.delegate.llm_calls
+
+    @property
+    def call_log(self) -> list[dict[str, Any]]:
+        return self.delegate.call_log
+
+    def usage_summary(self) -> dict[str, Any]:
+        return self.delegate.usage_summary()
+
+
 class SavedContractReplayModel:
     """Replay one immutable contract output for the same accepted-intent artifact."""
 

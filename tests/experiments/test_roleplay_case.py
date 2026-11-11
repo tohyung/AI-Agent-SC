@@ -267,3 +267,42 @@ def test_gemini_requests_are_spaced(monkeypatch):
     roleplay_case._pace("default")
     roleplay_case._pace("default")
     assert len(sleeps) == 1
+
+
+def test_v3_cases_expose_only_the_arm_fields_and_require_aff():
+    import pytest
+
+    case = roleplay_case._case_at(1, "v3")
+    assert set(case) == {"id", "prompt", "language"} and case["id"].startswith("v3-")
+    with pytest.raises(ValueError, match="AFF main path"):
+        roleplay_case.run_case(1, dataset="v3", formalization="DCF")
+
+
+
+def test_aff_replay_of_all_stored_drafts_rebuilds_the_same_attempts():
+    from research.adapters.model_replay import FactDraftReplayModel
+    from research.formalization.fact_extractor import EXAMPLE_DRAFT, EXAMPLE_REQUEST, extract_fact_core
+
+    history = [{"version": 1, "messages": [EXAMPLE_REQUEST]}]
+
+    class Queue:
+        model = "queue"
+
+        def __init__(self, outputs):
+            self.outputs = list(outputs)
+
+        def generate(self, system, user):
+            return self.outputs.pop(0)
+
+    original = extract_fact_core(Queue([{"not": "a draft"}, EXAMPLE_DRAFT]), history)
+    assert len(original["attempts"]) == 2 and original["semantic_core"] is not None
+
+    class NoCalls:
+        model = "none"
+
+        def generate(self, system, user):
+            raise AssertionError("the replay must not call the model")
+
+    stored = [item["draft"] for item in original["attempts"]]
+    replayed = extract_fact_core(FactDraftReplayModel(NoCalls(), stored), history)
+    assert replayed == original

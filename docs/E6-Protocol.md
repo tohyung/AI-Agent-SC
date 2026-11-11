@@ -1,9 +1,8 @@
-# E6 — Giao thức RQ3 và RQ4 (BẢN NHÁP, chưa chốt)
+# E6 — Giao thức RQ3 và RQ4
 
-Trạng thái: **bản nháp ngày 2026-11-11; ba điểm mở đã được người phụ trách chốt cùng ngày (người
-dùng mô phỏng, trần lượt, quy tắc quyết định). Chưa chạy case nào của dataset v3.** Giao thức được
-commit lần cuối trước lần chạy đầu tiên trên v3, khi xong các việc ở mục 7; mọi thay đổi sau đó ghi
-vào mục "Lệch giao thức". Các quyết định nền và lý do nằm ở
+Trạng thái: **chốt ngày 2026-11-11, trước mọi lần chạy trên dataset v3.** Ba điểm mở (người dùng mô
+phỏng, trần lượt, quy tắc quyết định) do người phụ trách chọn cùng ngày. Mọi thay đổi sau thời điểm
+này ghi vào mục "Lệch giao thức". Các quyết định nền và lý do nằm ở
 `docs/E6-Plan.md`; dataset nằm ở `dataset/v3/` (SHA-256 `cdc0ea45…e46cc`).
 
 ## 1. Câu hỏi
@@ -24,11 +23,13 @@ Cả hai nhánh dùng cùng model (`gemini-3.5-flash-lite`, free tier), cùng c�
 | Mã | `research.experiments.roleplay_case --formalization AFF` | `research.experiments.baseline_llm` |
 | Cách làm | toàn bộ pipeline: AFF, người dùng chấp nhận intent, sinh hợp đồng, SMT, so sánh, khám phá, ledger | model sinh hợp đồng thẳng từ hội thoại (prompt `Baseline-Chat-v1`) |
 | Kiểm tra | các cổng của pipeline | kiểm cấu trúc (`validate_contract`), rồi phân tích kích thước giao dịch trên ledger |
+| Bộ chạy trong WSL | `tools/e6/run_wsl.sh research.experiments.roleplay_case --dataset v3 --formalization AFF --provider gemini` | `tools/e6/run_wsl.sh research.experiments.baseline_llm --pipeline-case-dir runs/E6-Pipeline/case-NNN` |
 | Khi kiểm không qua | pipeline tự sửa theo chính sách của nó | lỗi của công cụ được tự động chuyển lại cho model, như người dùng dán lỗi vào chat |
 | Trần request | không trần (`max_llm_calls = 99999`) | đúng số request nhánh Pipeline đã dùng cho case đó |
 
 **Chạy theo thứ tự:** mỗi case chạy nhánh Pipeline trước, đến khi kết thúc. Số request đếm được của
-nhánh Pipeline thành trần của nhánh Baseline trên case đó.
+nhánh Pipeline (tổng trên mọi lần chạy của case, `baseline_llm.pipeline_requests`) thành trần của
+nhánh Baseline trên case đó. Cả hai nhánh dùng cùng một quy tắc đếm (`baseline_llm.is_counted`).
 
 **Đếm request (E6-Plan, quyết định 4):** mỗi lần gọi model nhận được phản hồi đều tính, kể cả phản
 hồi lỗi và lượt sửa JSON. Lỗi quota (429) và lần gọi không nhận được phản hồi thì không tính; lần
@@ -63,7 +64,17 @@ Quy tắc chung cho cả hai nhánh:
    - Không khớp: chỉ ra một điểm sai, mỗi lượt một câu.
 5. Model từ chối (`decline`) hoặc nói một phần yêu cầu không làm được: người dùng chấp nhận nếu điều
    đó đúng với yêu cầu thật; nếu không, nhắc lại yêu cầu một lần.
-6. **Trần lượt của người dùng (đã chốt): không có.** Chỉ trần request giới hạn nhánh Baseline. Người
+6. **Riêng nhánh Pipeline,** người dùng làm theo các bước pipeline đòi hỏi, như ở E3:
+   - trả lời câu hỏi bằng một revision (`--revision-file`);
+   - duyệt intent (`--review-candidate-id`) theo quy tắc 4;
+   - sau khi hợp đồng được sinh, viết kịch bản mong đợi (`--expectation-file`, phát lại hợp đồng bằng
+     `--replay-contract-id`, xác nhận bằng `"dong y"`). Mỗi kết cục mà yêu cầu nêu ra (mỗi nhánh
+     lựa chọn, mỗi lần hết hạn) có một kịch bản. Kịch bản viết từ prompt, phiếu dữ kiện và bản intent;
+     không đọc JSON hợp đồng.
+
+   Phần công này nhánh Baseline không có, vì người dùng chatbot không viết kịch bản. Nó được báo riêng
+   ở RQ4 (`intent_reviews`, `scenarios`).
+7. **Trần lượt của người dùng (đã chốt): không có.** Chỉ trần request giới hạn nhánh Baseline. Người
    dùng chỉ bỏ cuộc (`--give-up`) khi model hỏi lại cùng một điều đã được trả lời đủ ba lần liền; khi
    đó hợp đồng đã qua kiểm tra gần nhất (nếu có) vẫn được tính là hợp đồng giao ra. Số tin nhắn của
    người dùng được báo cho cả hai nhánh (RQ4).
@@ -72,7 +83,8 @@ Quy tắc chung cho cả hai nhánh:
 
 **Hợp đồng giao ra:**
 
-- Nhánh Pipeline: hợp đồng qua hết các cổng và được đưa tới bước deployment (chỉ mô phỏng).
+- Nhánh Pipeline: hợp đồng của lần chạy cuối mà bước `ledger_validation` qua (trạng thái
+  `SIMULATED_LEDGER_SIZE_CHECKED`; bước testnet và deployment bị tắt theo thiết kế).
 - Nhánh Baseline: hợp đồng qua kiểm tra gần nhất, lúc người dùng chấp nhận, bỏ cuộc hoặc lúc chạm
   trần request.
 
@@ -90,11 +102,16 @@ nhận (prompt, phiếu dữ kiện và các câu trả lời trong lượt ch�
 | `converge_and_decline_extra` | giao ra hợp đồng ĐÚNG, và có nói rõ với người dùng rằng phần thêm (ví dụ gửi email) không làm được |
 | `reject_unsupported` | không giao ra hợp đồng, và có nói với người dùng là không làm được |
 
-Ngoài THÀNH CÔNG, mỗi case còn được xếp vào một trong ba loại sau:
+Nếu không THÀNH CÔNG, case được xếp vào một trong bốn loại sau (`e6_score.classify`):
 
 - **giao ra hợp đồng SAI**, gồm cả trường hợp giao ra hợp đồng cho case bất khả;
 - **không giao ra;**
+- **ĐÚNG nhưng không báo** phần thêm không làm được (`converge_and_decline_extra`);
 - **KHÔNG XÁC ĐỊNH**, loại khỏi các tỷ lệ và báo riêng.
+
+Bộ chấm là `research.experiments.e6_score`. Lệnh `packets` ghi các gói phân xử đã trộn
+(`packets.jsonl`) và khóa mã (`blind-key.json`, chỉ mở khi chấm). Lệnh `score` tính các chỉ số ở
+mục 5 và 6.
 
 ## 5. Chỉ số
 
@@ -127,21 +144,32 @@ Ngoài THÀNH CÔNG, mỗi case còn được xếp vào một trong ba loại s
 - **Chạy thử:** 20 case đầu theo thứ tự của file (lần chạy thật, kết quả được giữ). Sau chạy thử chỉ
   được sửa lỗi bộ chạy. Không xem kết quả theo nhánh để quyết định có chạy tiếp hay không.
 
-## 7. Việc phải làm trước khi chạy
+## 7. Chuẩn bị (xong ngày 2026-11-11)
 
-1. Cho `roleplay_case` đọc dataset v3 (hiện nó chỉ đọc dataset v2) và ghi bằng chứng vào
-   `runs/E6-Pipeline/`.
-2. Dựng lại testnet riêng (magic 42123) trong WSL; cập nhật đường dẫn socket của bộ chạy.
-3. Chạy thử nhánh Pipeline AFF và nhánh Baseline, mỗi nhánh 2–3 case dev, có ledger.
-4. Viết bộ chấm: trộn hợp đồng và gán mã mù, phân xử, ghép theo cặp, kiểm định.
-5. Commit bản cuối của giao thức này, trước lần chạy đầu tiên trên v3.
+1. `roleplay_case --dataset v3` đọc dataset v3 (chỉ `id`, `prompt`, `language`), chỉ cho chạy AFF, và
+   ghi bằng chứng vào `runs/E6-Pipeline/`. Bản ghi mỗi lần chạy lưu thêm intent đã duyệt và kịch bản
+   mong đợi.
+2. Testnet riêng (magic 42123) được dựng lại bằng `tools/e6/start_testnet.sh`. `tools/e6/run_wsl.sh`
+   tự dùng socket mới nhất trong `/tmp`.
+3. Chạy thử trên dev (thư mục tạm, không thuộc kết quả):
+   - Baseline, case dev 1–3: giao ra hợp đồng ở cả ba case. Case 2 có 2 lỗi cấu trúc được tự chuyển
+     lại cho model, rồi qua ledger (12 238 / 16 384 byte).
+   - Pipeline AFF, case dev 3: tới `REACHED_LEDGER_PASS` với 9 request và 35 375 token vào. Baseline
+     trên cùng case dùng 2 request và 2 102 token vào. AFF hỏi lại giờ của hạn thứ hai dù câu trả lời
+     đã nêu rõ; nó chỉ hiểu sau một revision viết lại.
+   - Hai lỗi bộ chạy được sửa nhờ lần chạy thử này:
+     - phát lại candidate AFF đã duyệt cần phát lại mọi FactDraft đã lưu, kể cả bản lỗi, để giữ nguyên
+       mã candidate (`FactDraftReplayModel`);
+     - một test toolchain vẫn ngầm dùng DCF sau khi AFF thành mặc định.
+4. Bộ chấm `e6_score` có test cho bảng phân loại, McNemar chính xác, bootstrap và gói mù. Transport
+   ghi thời gian của mỗi lần gọi model (`seconds`).
 
 ## 8. Giới hạn đã biết
 
 - Một người (Claude) vừa viết case, vừa làm thí nghiệm, vừa đóng vai người dùng, vừa phân xử. Phân xử
   mù nhánh chỉ giảm phần nào thiên vị: văn phong của hợp đồng có thể để lộ nhánh.
-- Người dùng mô phỏng của nhánh Pipeline duyệt bản intent có cấu trúc; người dùng của nhánh Baseline
-  chỉ đọc lời giải thích. Đây là khác biệt có chủ ý (hệ thống đưa cho người dùng nhiều thông tin
+- Người dùng mô phỏng của nhánh Pipeline duyệt bản intent có cấu trúc và viết kịch bản mong đợi;
+  người dùng của nhánh Baseline chỉ đọc lời giải thích. Đây là khác biệt có chủ ý (hệ thống đưa cho người dùng nhiều thông tin
   hơn), nhưng nó cũng làm hai nhánh không hoàn toàn cân xứng.
 - Không có trần lượt của người dùng; nhánh Pipeline không có trần request. Một case khó có thể làm
   nhánh Pipeline tốn nhiều request, và vì vậy nhánh Baseline cũng được trần cao.

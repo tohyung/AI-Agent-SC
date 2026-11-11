@@ -92,7 +92,8 @@ def test_accepted_intent_to_generated_candidate_runs_real_smt():
     answers = iter(["dong y", "Tester"])
     result = run_session(core["requirement_history"][0]["messages"][0], OfflineModel(),
                          options=SessionOptions(
-                             interactive=True, core_schema_version=CORE_SCHEMA_VERSION_V2),
+                             interactive=True, core_schema_version=CORE_SCHEMA_VERSION_V2,
+                             formalization_method="DCF"),
                          ask=lambda _question: next(answers))
     assert result["steps"]["compile"]["run_status"] == "SUCCEEDED"
     assert result["steps"]["smt_verification"]["run_status"] == "SUCCEEDED"

@@ -158,8 +158,28 @@ def _parse_reply(reply: Any) -> tuple[str | None, list[str]]:
     return kind, []
 
 
+# Transport exceptions that carry no model response; quota is a 402/429 provider code.
+NO_RESPONSE_EXCEPTIONS = {"RateLimitError", "APIConnectionError", "APITimeoutError"}
+
+
+def is_counted(entry: dict[str, Any]) -> bool:
+    """One rule for both arms (E6-Plan, decision 4): a call counts when a response came back."""
+    return not (entry.get("uncounted")
+                or entry.get("exception_type") in NO_RESPONSE_EXCEPTIONS
+                or entry.get("provider_error_code") in {402, 429})
+
+
 def counted_requests(call_log: list[dict[str, Any]]) -> int:
-    return sum(1 for entry in call_log if not entry.get("uncounted"))
+    return sum(1 for entry in call_log if is_counted(entry))
+
+
+def pipeline_requests(case_dir: Path) -> int:
+    """The pipeline arm's counted requests on one case, over all its attempt records."""
+    paths = sorted(case_dir.glob("attempt-*.json"))
+    if not paths:
+        raise ValueError(f"no pipeline attempt records in {case_dir}")
+    return sum(counted_requests(json.loads(path.read_text(encoding="utf-8"))
+                                .get("model_call_log_this_attempt", [])) for path in paths)
 
 
 def _save(path: Path, session: dict[str, Any]) -> None:
@@ -316,7 +336,7 @@ def _transport(case_dir: Path, case_id: str, provider: str) -> Any:
 
 
 def summary(session: dict[str, Any]) -> dict[str, Any]:
-    log = [entry for entry in session["call_log"] if not entry.get("uncounted")]
+    log = [entry for entry in session["call_log"] if is_counted(entry)]
     return {"case_id": session["case_id"], "status": session["status"], "cap": session["cap"],
             "requests": len(log),
             "prompt_tokens": sum(entry.get("prompt_tokens") or 0 for entry in log),
@@ -334,6 +354,8 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="E6 baseline arm: plain LLM, one case")
     parser.add_argument("--case-index", type=int, required=True)
     parser.add_argument("--cap", type=int, help="pipeline arm's request count (new session)")
+    parser.add_argument("--pipeline-case-dir", type=Path,
+                        help="read the cap from the pipeline arm's attempt records instead")
     action = parser.add_mutually_exclusive_group()
     action.add_argument("--message-file", type=Path, help="simulated user's next message")
     action.add_argument("--accept", action="store_true")
@@ -345,6 +367,10 @@ def main() -> int:
     args = parser.parse_args()
     message = args.message_file.read_text(encoding="utf-8") if args.message_file else None
     finish = "accept" if args.accept else "give_up" if args.give_up else None
+    if args.pipeline_case_dir is not None:
+        if args.cap is not None:
+            parser.error("give --cap or --pipeline-case-dir, not both")
+        args.cap = pipeline_requests(args.pipeline_case_dir)
     session = run(args.case_index, cap=args.cap, message=message, finish=finish,
                   run_dir=args.run_dir, provider=args.provider, dataset=args.dataset)
     last = next((turn for turn in reversed(session["transcript"])
