@@ -110,6 +110,17 @@ def _twelve_hour(hour: int, spans: str) -> bool:
                      re.IGNORECASE) is not None
 
 
+# Pronouns and role nouns that a capital letter does not make a proper name. Compared in lower
+# case with Vietnamese marks kept: "mình" is a pronoun, "Minh" is a name.
+ROLE_WORDS = {
+    "i", "me", "my", "mine", "we", "us", "you", "they", "he", "she",
+    "buyer", "seller", "lender", "borrower", "client", "customer", "arbiter", "worker",
+    "employer", "employee", "landlord", "tenant", "owner", "investor", "issuer", "donor",
+    "tôi", "mình", "em", "ta", "tao", "chúng tôi", "người mua", "người bán", "bên mua",
+    "bên bán", "người vay", "người cho vay", "khách", "khách hàng", "chủ nhà", "trọng tài",
+}
+
+
 def _fold(text: str) -> str:
     """Lower case without Vietnamese marks, one character per character of `text`."""
     folded = []
@@ -791,7 +802,7 @@ class _Builder:
             # Design section 3: a party's name is quoted from its own evidence.
             if not _same_name(party["name"], self._spans(party)):
                 self.problems.append((party_id, f"name {party['name']!r} not in its evidence"))
-            if not party["name"][0].isupper():
+            if not party["name"][0].isupper() or unicodedata.normalize("NFC", party["name"]).strip().lower() in ROLE_WORDS:
                 self.problems.append((party_id, f"name {party['name']!r} is a role word, not a "
                                                 "proper name: use the person it means, or add "
                                                 "a note of kind \"other\" if nobody is named"))

@@ -279,3 +279,7 @@ mục 5 và 6.
     đó (case 1–19, cả hai nhánh) được giữ ở `runs/E6-Discarded/before-evidence-fixes/` và không tính; E6
     chạy lại từ case 1. Các mục 4–11 là sửa lỗi bộ chạy và builder trước kết quả chính thức; báo cáo
     tóm tắt chúng trong một đoạn.
+    Bổ sung sau case 1–6 của lần chạy lại: builder chỉ coi tên viết thường là từ chỉ vai, nên "I",
+    "Tôi", "Buyer" lọt thành tên người (case 7: người mua thành "I" thay vì "Ethan"). Thêm danh sách
+    đại từ và từ chỉ vai phổ biến (giữ dấu: "mình" là đại từ, "Minh" là tên). Case 1–6 dùng tên riêng
+    nên được giữ; lượt chạy cũ của case 7 ở `runs/E6-Discarded/before-role-word-fix/`.

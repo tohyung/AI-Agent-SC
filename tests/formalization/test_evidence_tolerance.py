@@ -43,6 +43,20 @@ def test_party_names_ignore_case_and_marks():
     assert not _same_name("Hùng", "toi (Hai) mua")
 
 
+@pytest.mark.parametrize("name", ["I", "Me", "Tôi", "Mình", "Buyer", "Người mua"])
+def test_capitalized_pronouns_and_role_nouns_are_not_names(name):
+    from research.formalization.fact_builder import ROLE_WORDS
+
+    assert name.lower() in ROLE_WORDS
+
+
+@pytest.mark.parametrize("name", ["Ethan", "Minh", "Lan Anh", "Tín"])
+def test_proper_names_are_not_role_words(name):
+    from research.formalization.fact_builder import ROLE_WORDS
+
+    assert name.lower() not in ROLE_WORDS
+
+
 @pytest.mark.parametrize("text, zones", [
     ("trước 23:59 ngày 20/03/2027 giờ VN", {7}),
     ("by 2027-04-10 18:00 UTC", {0}),
