@@ -195,7 +195,8 @@ def run_case(index: int, *, answers: list[str] | None = None,
              revision: str | None = None,
              repair_attempts: int = 0,
              run_dir: Path | None = None,
-             provider: str = "default") -> dict[str, Any]:
+             provider: str = "default",
+             formalization: str = "DCF") -> dict[str, Any]:
     if provider not in PROVIDERS:
         raise ValueError(f"provider must be one of {', '.join(PROVIDERS)}")
     case = _case_at(index)
@@ -324,6 +325,7 @@ def run_case(index: int, *, answers: list[str] | None = None,
                 roleplay_reviewed_candidate_id=reviewed_candidate_id,
                 max_core_validation_repairs=repair_attempts,
                 property_dataset_path="runs/property-dataset.sqlite3",
+                formalization_method=formalization,
             ),
             ask=answer,
             emit=lambda message: print(message, flush=True) if message.startswith(
@@ -384,6 +386,8 @@ def main() -> int:
     parser.add_argument("--repair-attempts", type=int, default=0)
     parser.add_argument("--provider", choices=PROVIDERS, default="default",
                         help="default = the LLM_* model; gemini = the GEMINI_* model")
+    parser.add_argument("--formalization", choices=["DCF", "AFF"], default="DCF",
+                        help="DCF reproduces the E3 runs; AFF is the main path since E4")
     parser.add_argument("--run-dir", type=Path,
                         help="evidence directory (default: the E3 batch directory)")
     args = parser.parse_args()
@@ -397,7 +401,8 @@ def main() -> int:
                       replay_contract_id=args.replay_contract_id,
                       expectation=expectation,
                       revision=revision, repair_attempts=args.repair_attempts,
-                      run_dir=args.run_dir, provider=args.provider)
+                      run_dir=args.run_dir, provider=args.provider,
+                      formalization=args.formalization)
     return 3 if result["provider_limit"] else 0
 
 

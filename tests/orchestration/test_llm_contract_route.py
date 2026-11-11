@@ -282,7 +282,7 @@ def test_interactive_route_repairs_ast_then_runs_smt_without_fabricating_referen
     answers = iter(["dong y", "Tester"])
     model = TwoPhaseModel()
     result = run_session(core["requirement_history"][0]["messages"][0], model,
-                         options=SessionOptions(
+                         options=SessionOptions(formalization_method="DCF", 
                              interactive=True, core_schema_version=CORE_SCHEMA_VERSION_V2),
                          ask=lambda _question: next(answers))
     assert len(model.generation_inputs) == 2
@@ -322,7 +322,7 @@ def test_bad_model_mapping_does_not_regenerate_an_unchanged_contract(monkeypatch
     model = TwoContractModel()
     result = run_session(
         core["requirement_history"][0]["messages"][0], model,
-        options=SessionOptions(interactive=True, core_schema_version=CORE_SCHEMA_VERSION_V2),
+        options=SessionOptions(formalization_method="DCF", interactive=True, core_schema_version=CORE_SCHEMA_VERSION_V2),
         ask=lambda _question: next(answers))
     assert len(model.generation_inputs) == 1
     assert result["steps"]["smt_verification"]["run_status"] == "SUCCEEDED"
@@ -390,7 +390,7 @@ def test_contract_model_failure_is_llm_error_not_business_clarification():
     answers = iter(["dong y", "Tester"])
     result = run_session(core["requirement_history"][0]["messages"][0],
                          FailingContractModel(),
-                         options=SessionOptions(
+                         options=SessionOptions(formalization_method="DCF", 
                              interactive=True, core_schema_version=CORE_SCHEMA_VERSION_V2),
                          ask=lambda _question: next(answers))
     assert result["status"] == "BLOCKED"

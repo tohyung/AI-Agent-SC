@@ -52,7 +52,7 @@ def test_clarification_questions_use_formalization_object_schema():
 def test_noninteractive_pipeline_waits_for_explicit_acceptance():
     core = funded_choice_core()
     result = run_session(core["requirement_history"][0]["messages"][0], StaticModel(core),
-                         options=SessionOptions(core_schema_version=CORE_SCHEMA_VERSION_V2))
+                         options=SessionOptions(formalization_method="DCF", core_schema_version=CORE_SCHEMA_VERSION_V2))
     assert result["status"] == "WAITING_USER"
     assert result["stop_reason"] == "explicit_acceptance_required"
     assert result["steps"]["intent_acceptance"]["run_status"] == "WAITING_USER"
@@ -69,7 +69,7 @@ def test_interactive_acceptance_uses_model_contract_without_claiming_ledger(monk
     answers = iter(["dong y", "Tester"])
     progress = []
     result = run_session(core["requirement_history"][0]["messages"][0],
-                         ContractModel(core), options=SessionOptions(
+                         ContractModel(core), options=SessionOptions(formalization_method="DCF", 
                              interactive=True, core_schema_version=CORE_SCHEMA_VERSION_V2),
                          ask=lambda _question: next(answers), emit=progress.append)
     assert result["steps"]["intent_acceptance"]["run_status"] == "SUCCEEDED"
@@ -81,20 +81,44 @@ def test_interactive_acceptance_uses_model_contract_without_claiming_ledger(monk
     assert "Đang chạy: compile" in progress
 
 
-def test_default_cli_core_schema_is_v4_and_rejects_v3_output():
-    core = funded_choice_core()
+def test_default_session_uses_aff_and_core_v4():
+    assert SessionOptions().formalization_method == "AFF"
     assert SessionOptions().core_schema_version == CORE_SCHEMA_VERSION_V4
-    result = run_session(core["requirement_history"][0]["messages"][0], StaticModel(core))
+
+
+def test_aff_session_builds_the_core_from_a_fact_draft_and_waits_for_acceptance():
+    from research.formalization.fact_extractor import EXAMPLE_DRAFT, EXAMPLE_REQUEST
+
+    result = run_session(EXAMPLE_REQUEST, StaticModel(EXAMPLE_DRAFT))
+    assert result["status"] == "WAITING_USER"
+    assert result["stop_reason"] == "explicit_acceptance_required"
+    assert result["candidate"]["formalization_method"] == "AFF"
+    assert result["candidate"]["semantic_core"]["schema_version"] == CORE_SCHEMA_VERSION_V4
+
+
+EXAMPLE_PROMPT_FOR_AFF_FAILURE = "Ana deposits 10 ADA for Bo before 2027-01-01 00:00 UTC."
+
+
+def test_aff_session_with_a_non_draft_output_fails_without_a_candidate_core():
+    result = run_session(EXAMPLE_PROMPT_FOR_AFF_FAILURE, StaticModel({"not": "a draft"}))
+    assert result["status"] == "BLOCKED"
+
+
+def test_dcf_session_rejects_v3_output():
+    core = funded_choice_core()
+    result = run_session(core["requirement_history"][0]["messages"][0], StaticModel(core),
+                         options=SessionOptions(formalization_method="DCF"))
     assert result["status"] == "BLOCKED"
     assert result["stop_reason"] == "invalid_candidate"
     assert any("schema_version must equal" in item
                for item in result["candidate"]["core_validation_errors"])
 
 
-def test_default_cli_core_schema_v4_reaches_human_acceptance_gate():
+def test_dcf_session_core_v4_reaches_human_acceptance_gate():
     core = funded_choice_core()
     core["schema_version"] = CORE_SCHEMA_VERSION_V4
-    result = run_session(core["requirement_history"][0]["messages"][0], StaticModel(core))
+    result = run_session(core["requirement_history"][0]["messages"][0], StaticModel(core),
+                         options=SessionOptions(formalization_method="DCF"))
     assert result["status"] == "WAITING_USER"
     assert result["stop_reason"] == "explicit_acceptance_required"
     assert result["candidate"]["semantic_core"]["schema_version"] == CORE_SCHEMA_VERSION_V4
@@ -110,12 +134,12 @@ def test_roleplay_runs_main_ports_without_claiming_human_acceptance(monkeypatch)
         raise AssertionError("roleplay must not request or fabricate human consent")
 
     waiting = run_session(prompt, ContractModel(core),
-                          options=SessionOptions(roleplay=True), ask=unexpected_ask)
+                          options=SessionOptions(formalization_method="DCF", roleplay=True), ask=unexpected_ask)
     assert waiting["status"] == "WAITING_RESEARCH_REVIEW"
     assert waiting["simulation_only"] is True
     assert "compile" not in waiting["steps"]
     candidate_id = waiting["steps"]["intent_extraction"]["output_artifacts"][0]
-    stale_review = run_session(prompt, ContractModel(core), options=SessionOptions(
+    stale_review = run_session(prompt, ContractModel(core), options=SessionOptions(formalization_method="DCF", 
         roleplay=True, roleplay_reviewed_candidate_id="intent-candidate:stale"),
         ask=unexpected_ask)
     assert stale_review["status"] == "WAITING_RESEARCH_REVIEW"
@@ -126,7 +150,7 @@ def test_roleplay_runs_main_ports_without_claiming_human_acceptance(monkeypatch)
         "meta": {"upstream_commit": UPSTREAM_COMMIT, "driver_version": DRIVER_VERSION},
     })
     reviewed = run_session(prompt, ContractModel(core),
-                           options=SessionOptions(
+                           options=SessionOptions(formalization_method="DCF", 
                                roleplay=True,
                                roleplay_reviewed_candidate_id=candidate_id),
                            ask=unexpected_ask)
@@ -153,7 +177,7 @@ def test_expectation_requires_interaction_and_pinned_reference():
     expectation = {"request": {"state": {}, "transactions": [{}]},
                    "expected_status": "Success"}
     try:
-        SessionOptions(expectation=expectation)
+        SessionOptions(formalization_method="DCF", expectation=expectation)
     except ValueError:
         pass
     else:

@@ -50,6 +50,8 @@ class SessionOptions:
     roleplay_reviewed_candidate_id: str | None = None
     max_core_validation_repairs: int | None = None
     property_dataset_path: str | None = None
+    # AFF (E4's chosen method) is the main path; DCF only reproduces older runs.
+    formalization_method: str = "AFF"
 
     def __post_init__(self) -> None:
         if any(
@@ -74,6 +76,8 @@ class SessionOptions:
         if self.core_schema_version not in {CORE_SCHEMA_VERSION_V2, CORE_SCHEMA_VERSION_V3,
                                             CORE_SCHEMA_VERSION_V4}:
             raise ValueError("unsupported session core schema version")
+        if self.formalization_method not in {"AFF", "DCF"}:
+            raise ValueError("formalization_method must be AFF or DCF")
         if self.property_dataset_path is not None and not self.property_dataset_path.strip():
             raise ValueError("property dataset path must be nonempty")
 
@@ -452,6 +456,7 @@ def run_session(
                                                 if options.max_core_validation_repairs is not None
                                                 else 0 if options.roleplay else 3),
                 "simulation_transcript": transcript,
+                "formalization_method": options.formalization_method,
             },
             on_step_start=step_start,
         )
