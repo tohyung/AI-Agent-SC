@@ -1,4 +1,4 @@
-# E7: quy ước chung (bản 1, chốt 2026-11-12)
+# E7: quy ước chung (bản 2, 2026-11-12)
 
 Văn bản này chốt các quy ước cho vòng thí nghiệm sau E6 (gọi là E7). Nó dựa trên
 `docs/E6-Failure-Review.md` và `docs/E6-Rerun-Proposal.md`.
@@ -19,9 +19,11 @@ do ở mục 11. Sau khi đóng băng thì không sửa nữa.
    - *role token*: định danh trong hợp đồng.
 2. **Role token:**
    - Người dùng hoặc phiếu dữ kiện cho token ("role: X", "(role X)") thì dùng đúng X.
-   - Nếu không, token được suy ra tất định từ tên hiển thị sau khi bỏ danh xưng (Q-TÊN 3): bỏ dấu
-     (đ thành d), bỏ khoảng trắng và dấu câu, viết hoa chữ đầu mỗi từ. Ví dụ: Sao Mai thành SaoMai,
-     người thuê thành NguoiThue.
+   - Nếu không và bên đó có tên riêng, token là tên riêng như người dùng viết, giữ dấu (Kiều, Sương).
+   - Nếu chỉ có tên vai, token được suy ra tất định: bỏ dấu (đ thành d), bỏ "the", bỏ khoảng trắng
+     và dấu câu, viết hoa chữ đầu mỗi từ. Ví dụ: người thuê thành NguoiThue, the organizer thành
+     Organizer.
+   - Vì so khớp luôn qua `fold` (Q-TÊN 3), cách viết token không ảnh hưởng tới việc chấm.
 3. **Hàm gấp tên `fold`** dùng chung cho builder, phần gắn kịch bản và bộ chấm. Các bước:
    1. chuẩn hóa Unicode NFC, chữ thường;
    2. bỏ dấu (đ thành d);
@@ -194,6 +196,42 @@ do ở mục 11. Sau khi đóng băng thì không sửa nữa.
 | Q-NHÁNH 2–3 | Baseline: người dùng đọc lời giải thích. Pipeline: tóm tắt intent bằng lời |
 | Q-DỮ LIỆU | dataset v4 (hoặc sửa phiếu dữ kiện của v3 cho dev) |
 
-## 11. Lịch sử
+## 11. Trạng thái áp dụng (2026-11-12)
+
+| Quy ước | Trạng thái | Ở đâu |
+| --- | --- | --- |
+| Q-TÊN 1–7 | Đã làm | `research/formalization/party_names.py`; `fact_builder.py` (`identify`); prompt FactDraft v7 |
+| Q-TÊN 3 (kịch bản) | Đã làm | `scenario_binding.py` (`bind_party_names`), gọi trong `comparison.py` |
+| Q-GIỜ 3 | Đã làm | `fact_builder.py` (`_hours_of_day`, `_shared_hour`); prompt v7 |
+| Q-SỐ 2–3 | Đã làm | `fact_builder.py` (`_plain_number` theo ngôn ngữ); prompt v7 |
+| Notify ("ai cũng bấm") | Đã làm ở prompt | Grammar vốn có bước `notify`; prompt v7 nói rõ khi nào dùng |
+| Q-CHẤM 1–2 | Đã làm | `research/experiments/e7_score.py`; chạy bằng `tools/e6/score_wsl.sh` |
+| Q-NGƯỜI DÙNG 3 (quyền bỏ) | Đã làm | `tools/e6/simuser.py check` |
+| Q-NGƯỜI DÙNG 4, Q-NHÁNH 2–3, Q-KỊCH BẢN 2 | Chưa | Bộ chạy mới, tóm tắt intent bằng lời, đổi ví dụ bằng lời thành kịch bản |
+| Q-DỮ LIỆU | Chưa | Dataset v4 |
+
+**Kiểm chứng chấm máy trên E6** (case 30–100, các hợp đồng đã giao):
+
+| Nhánh | Máy và tay khớp | Lệch |
+| --- | --- | --- |
+| Baseline | 55/55 | 0 |
+| Pipeline | 29/32 | 3 |
+
+Ba case lệch của Pipeline:
+
+- **41:** máy chuyển sang REVIEW, vì cách mã hóa lựa chọn bị đảo và người dùng không nêu cách mã
+  hóa. Người phân xử chấm RIGHT. Đây đúng là việc của bước REVIEW.
+- **68:** máy chấm RIGHT, tay chấm WRONG. Theo Q-TÊN, "Công ty Sao Mai" và SaoMai là một bên, nên máy
+  đúng theo quy ước mới.
+- **61:** máy chấm RIGHT, tay chấm WRONG (chỉ Sương mua được). Đây là **lỗ hổng của dataset**: cả 5 case
+  `first_come` (57–61) chỉ có kịch bản cho người mua cuối danh sách, trái với Q-DỮ LIỆU 3. Phải sửa
+  trong v4.
+
+**Bảng phụ E6 theo quy ước mới:** chỉ có case 68 đổi verdict. Pipeline thành 39/71 (54,9%); Baseline
+giữ nguyên 11/71.
+
+## 12. Lịch sử
 
 - Bản 1 (2026-11-12): chốt lần đầu, theo yêu cầu "chốt quy ước trước" sau khi rà soát E6.
+- Bản 2 (2026-11-12): Q-TÊN 2 giữ tên riêng làm token, chỉ suy ra token cho tên vai. Lý do: khớp với
+  token mà các nhánh đang tạo; việc so khớp vẫn qua `fold` nên không đổi kết quả chấm.

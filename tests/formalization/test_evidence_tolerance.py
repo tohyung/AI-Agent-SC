@@ -83,7 +83,11 @@ def test_grouped_literals_written_by_the_model_are_plain_numbers():
     from research.formalization.fact_builder import _plain_number
 
     assert _plain_number("1,500") == "1500" and _plain_number("1,234,567.5") == "1234567.5"
-    assert _plain_number("1,5") == "1,5" and _plain_number("250") == "250"
+    assert _plain_number("250") == "250"
+    # E7 conventions Q-SỐ 2: a decimal comma is a decimal point; in Vietnamese "." groups.
+    assert _plain_number("1,5") == "1.5" and _plain_number("37,5") == "37.5"
+    assert _plain_number("1.005", "vi") == "1005" and _plain_number("1.005", "en") == "1.005"
+    assert _plain_number("1.200.000", "vi") == "1200000"
 
 
 def test_unmarked_vietnamese_pronoun_is_a_role_word_but_minh_stays_a_name():

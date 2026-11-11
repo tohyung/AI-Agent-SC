@@ -13,7 +13,7 @@ from research.orchestration.status import AuthorityLevel, ImplementationStatus, 
 
 from .reference import ReferenceExecutor, ReferenceRequest
 from .intent_alignment import check_intent_alignment
-from .scenario_binding import ScenarioBindingError, bind_choice_transactions
+from .scenario_binding import ScenarioBindingError, bind_choice_transactions, bind_party_names
 
 
 @dataclass(frozen=True)
@@ -191,9 +191,15 @@ class SemanticComparisonPort:
                                               StepRunStatus.BLOCKED,
                                               diagnostics=["expectation source is not independent accepted evidence"]))
         try:
-            bound_transactions, binding_evidence = bind_choice_transactions(
+            # Same party, different spelling ("CongTy" / "Công ty"): use the contract's token.
+            named_transactions, expected_payments, party_mapping = bind_party_names(
                 contract.payload["contract"], expectation.request.transactions,
+                expectation.expected_payments)
+            bound_transactions, binding_evidence = bind_choice_transactions(
+                contract.payload["contract"], named_transactions,
                 reference=self.executor, initial_state=expectation.request.state)
+            binding_evidence = ([{"binding_kind": "party_name_fold", "mapping": party_mapping}]
+                                if party_mapping else []) + binding_evidence
         except ScenarioBindingError:
             return StepExecution(StepResult(
                 "semantic_comparison", ImplementationStatus.IMPLEMENTED_UNVALIDATED,
@@ -239,7 +245,7 @@ class SemanticComparisonPort:
                 elif final_state != expectation.expected_final_state:
                     mismatches.append("final_state")
             for field, expected_items in (("warnings", expectation.expected_warnings),
-                                          ("payments", expectation.expected_payments)):
+                                          ("payments", expected_payments)):
                 if expected_items is None:
                     continue
                 observed_items = _observed_items(raw, field)

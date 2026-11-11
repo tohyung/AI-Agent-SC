@@ -444,14 +444,38 @@ def test_a_date_read_as_month_first_is_a_repairable_draft_error():
                for item, message_ in caught.value.problems)
 
 
-def test_a_role_word_is_not_a_party_name():
+def test_a_role_word_is_a_valid_role_with_a_derived_token():
+    # E7 conventions Q-TÊN 5: a role noun names the party; its token is derived.
     message = MESSAGE + " Một nửa chuyển cho người làm."
     history = [{"version": 1, "messages": [message]}]
     draft = milestone_draft()
     draft["parties"][1] = {"id": "p_tu", "name": "người làm", "evidence": ev("cho người làm")}
-    with pytest.raises(DraftError) as caught:
-        build_core(draft, history)
-    assert any(item == "p_tu" and "role word" in text for item, text in caught.value.problems)
+    core = build_core(draft, history)
+    names = {claim["value"] for claim in core["claims"] if claim["kind"].endswith("recipient")}
+    assert "NguoiLam" in names
+    assert "người làm" not in names
+
+
+def test_a_role_token_the_user_gives_is_the_token():
+    message = MESSAGE + " Một nửa chuyển cho Công ty Sao Mai, role SaoMai."
+    history = [{"version": 1, "messages": [message]}]
+    draft = milestone_draft()
+    draft["parties"][1] = {"id": "p_tu", "name": "Công ty Sao Mai",
+                           "evidence": ev("Công ty Sao Mai, role SaoMai")}
+    core = build_core(draft, history)
+    names = {claim["value"] for claim in core["claims"] if claim["kind"].endswith("recipient")}
+    assert "SaoMai" in names
+
+
+def test_a_first_person_pronoun_takes_the_attached_name():
+    message = MESSAGE + " Tôi (Hiền) là người nạp."
+    history = [{"version": 1, "messages": [message]}]
+    draft = milestone_draft()
+    first = draft["parties"][0]
+    draft["parties"][0] = {**first, "name": "Tôi", "evidence": ev("Tôi (Hiền)")}
+    core = build_core(draft, history)
+    assert any(claim["value"] == "Hiền" for claim in core["claims"])
+    assert not core["required_clarifications"]
 
 
 def test_out_of_scope_request_without_steps_still_builds():
@@ -658,3 +682,20 @@ def test_loop_between_steps_is_a_draft_error():
     draft["steps"][2]["branches"][0]["then"] = ["o_pay2", "s2"]
     with pytest.raises(DraftError, match="loops back"):
         build_core(draft, HISTORY)
+
+
+def test_one_time_of_day_applies_to_a_list_of_dates():
+    # E7 conventions Q-GIỜ 3: "23:59 các ngày 20/02 và 20/03/2027" states 23:59 for both dates.
+    message = ("Lan thuê Tú, tổng 60 ADA, Lan nạp trước 23:59 các ngày 20/02 và 20/03/2027 "
+               "(UTC+7), Tú nhận một nửa mỗi lần.")
+    history = [{"version": 1, "messages": [message]}]
+    from research.formalization.fact_builder import _Builder
+
+    draft = {"schema_version": FACT_DRAFT_VERSION,
+             "instants": [{"id": "i_b", "expr": {"date": {"y": 2027, "m": 3, "d": 20, "h": 23,
+                                                          "min": 59, "tz": "+07:00"}},
+                           "evidence": ev("20/03/2027 (UTC+7)")}]}
+    builder = _Builder(draft, history)
+    value, _, _ = builder.instant("i_b")
+    assert value is not None
+    assert not [problem for problem in builder.problems if "hour" in problem[1]]

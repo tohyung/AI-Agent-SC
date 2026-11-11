@@ -52,11 +52,16 @@ thử trên đúng loại khó.
 ### AFF-1. Lỗi kiểm tra FactDraft là dừng hẳn (13 case, ưu tiên cao nhất)
 
 - **Hiện tượng:** case 35, 38, 39, 44, 59, 60, 70, 79, 83, 84, 85, 89, 91 dừng ở `intent_extraction` với
-  `extraction_failed`. Không có lượt sửa, không có câu hỏi nào được gửi cho người dùng.
+  `extraction_failed`, và không có câu hỏi nào được gửi cho người dùng.
+- **Đính chính (2026-11-12):** bản đầu của tài liệu này viết là "không có lượt sửa". Điều đó sai.
+  Extractor đã gửi lỗi của builder lại cho model **3 lần** (`extract_fact_core`, `max_repairs = 3`),
+  nên mới tốn 4–6 lần gọi model. Trường `repair_attempts = 0` là số lượt sửa *core*, không phải
+  FactDraft. Vấn đề thật là: các lỗi đó là luật mà model không sửa được (tên vai, giờ dùng chung, số
+  thập phân), và sau 3 lần sửa thì case dừng hẳn mà không hỏi người dùng.
 - **Đề xuất:**
-  - gửi danh sách lỗi của builder lại cho model, tối đa 2 lượt sửa (giống cách đang làm với core);
-  - lỗi nào không sửa được bằng văn bản thì đổi thành câu hỏi. Ví dụ lỗi "tên là tên vai" thành câu
-    "Người thuê tên là gì?" thay vì dừng.
+  - sửa luật ở builder để các lỗi đó không còn là lỗi (AFF-2, AFF-3, AFF-4; đã làm theo
+    `docs/E7-Conventions.md`);
+  - lỗi nào còn lại mà người dùng trả lời được thì đổi thành câu hỏi thay vì dừng (chưa làm).
 
 ### AFF-2. Luật tên các bên (8 case trực tiếp, nhiều case gián tiếp)
 

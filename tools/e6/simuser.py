@@ -122,7 +122,24 @@ def check(index: int, raw: str, arm: str | None = None) -> list[str]:
     for number in _numbers(message):
         if number not in known_numbers and number.lstrip("0") not in known_numbers:
             problems.append(f"number {number} is not in the request or the fact sheet")
+    if agrees_to_drop(message) and not any(DROP_PERMISSION.search(fact) for fact in view["facts"]):
+        problems.append("agrees to drop part of the request, but the fact sheet does not allow it")
     return problems
+
+
+# Agreement to drop a part (Q-NGƯỜI DÙNG 3). "Không cần bỏ" / "don't drop" keep it.
+DROP_AGREEMENT = re.compile(
+    r"(có thể bỏ|co the bo|cứ bỏ|cu bo|bỏ (?:phần|phan|đi|di|cũng được|qua)|bo (?:phan|di|qua)|"
+    r"đồng ý bỏ|dong y bo|không cần (?:phần|phan|nhập|nhap|cái|cai)|khong can (?:phan|nhap|cai)|"
+    r"(?:you can|can|ok to|okay to|fine to) (?:drop|skip|remove)|drop it|skip it|remove it|"
+    r"don't need (?:it|that|this))", re.IGNORECASE)
+KEEP = re.compile(r"(không cần bỏ|khong can bo|đừng bỏ|dung bo|không bỏ|khong bo|"
+                  r"don't drop|do not drop|not drop|keep it)", re.IGNORECASE)
+DROP_PERMISSION = re.compile(r"(\bbỏ\b|\bbo\b|bỏ qua|drop|skip|leave out|leave it out)", re.IGNORECASE)
+
+
+def agrees_to_drop(message: str) -> bool:
+    return bool(DROP_AGREEMENT.search(message)) and not KEEP.search(message)
 
 
 if __name__ == "__main__":

@@ -14,7 +14,7 @@ from research.formalization.fact_builder import FACT_DRAFT_VERSION, DraftError, 
 from research.formalization.intent_spec import validate_intent_spec
 from research.formalization.projector import classify_projection, project_intent_spec
 
-FACT_PROMPT_VERSION = "Formalization-FactPrompt-v6"
+FACT_PROMPT_VERSION = "Formalization-FactPrompt-v7"
 
 SYSTEM = f"""You read a request for a Cardano Marlowe contract and write a FactDraft
 ({FACT_DRAFT_VERSION}) as one JSON object. Code computes every amount, time and
@@ -33,9 +33,25 @@ Rules
 - A party is someone the request gives an action or money. A writer who only
   introduces themselves or describes a deal between others is not a party; note
   that as kind "context".
-- A party's name is a proper name as written. A role word such as "the worker"
-  means a person named in the request, so use that person; if nobody is named for
-  the role, add a note of kind "other".
+- A party's name is its proper name as written. If the conversation gives a role
+  token for it ("role SaoMai", "(role: Studio)"), include that phrase in the party's
+  evidence. A role word such as "the worker" means a person named in the request, so
+  use that person; if nobody is named for the role, the role word itself is the name
+  ("the organizer", "người thuê"): never add a note or a question for that.
+- For "I", "me", "tôi", "mình" use the name the conversation attaches ("tôi (Hiền)",
+  "Mình là Phong") and cite that phrase; only when no name is attached is the pronoun
+  the name.
+- A time of day, a year or a time zone written once for a list of dates ("23:59 on
+  the 20th of February, March and April 2027, Vietnam time") applies to every date
+  in that list: write every date in full, citing the whole phrase.
+- Write amounts with plain digits and "." as the decimal point. In Vietnamese text
+  "." groups thousands and "," is the decimal point: "1.005 ADA" is "1005",
+  "37,5 ADA" is "37.5". A decimal ADA amount is valid; never ask for whole lovelace.
+- When anyone (no particular party) may press or trigger something, use a notify
+  step. Never replace "anyone" with one named party.
+- Missing information is a clarification, never a note of kind "other". Never put
+  the whole request, or a list of what is missing, in a note.
+- If the user has agreed to drop a part, leave it out and do not ask about it again.
 - If the request states different values for one fact, give "alternatives"
   instead of "expr": [{{"expr": ..., "evidence": [...]}}, ...]. If it names
   different parties for one role, give a list of party ids.

@@ -16,6 +16,13 @@ from decimal import Decimal, InvalidOperation
 from typing import Any
 
 from research.formalization.number_words import digits_for_words
+from research.formalization.party_names import (
+    FIRST_PERSON,
+    first_person_name,
+    given_role_tokens,
+    is_pronoun,
+    role_token,
+)
 from research.formalization.intent_spec import (
     CORE_SCHEMA_VERSION_V4,
     _absolute_deadline_mismatch,
@@ -96,9 +103,20 @@ def _settled_reading(readings: list[tuple]) -> tuple | None:
     return (*winners[0][:-1], merged)
 
 
-def _plain_number(text: str) -> str:
-    """A literal the model wrote with digit grouping ("1,500") as plain digits ("1500")."""
-    return text.replace(",", "") if re.fullmatch(r"\d{1,3}(?:,\d{3})+(?:\.\d+)?", text) else text
+def _plain_number(text: str, language: str = "en") -> str:
+    """A literal as plain digits with "." as the decimal point (E7 conventions, Q-SỐ 2).
+
+    "1,500" -> "1500"; a decimal comma "37,5" -> "37.5"; in Vietnamese the dot groups
+    thousands, so "1.005" -> "1005".
+    """
+    text = text.strip()
+    if re.fullmatch(r"\d{1,3}(?:,\d{3})+(?:\.\d+)?", text):
+        return text.replace(",", "")
+    if re.fullmatch(r"\d+,\d{1,2}", text):
+        return text.replace(",", ".")
+    if language == "vi" and re.fullmatch(r"\d{1,3}(?:\.\d{3})+(?:,\d+)?", text):
+        return text.replace(".", "").replace(",", ".")
+    return text
 
 
 def _ungrouped(text: str) -> str:
@@ -192,6 +210,16 @@ def _zones(text: str) -> set[int]:
     if VIETNAM_TIME.search(text):
         zones.add(7)
     return zones
+
+
+def _hours_of_day(text: str) -> set[int]:
+    """Hours of day `text` states as a clock time: "23:59", "9h", "09:00 sáng", "8 giờ tối"."""
+    hours = {int(hour) for hour in re.findall(r"(?<![\d/.-])([01]?\d|2[0-3])[:h]\d\d(?!\d)", text)}
+    hours |= {int(hour) for hour in
+              re.findall(r"(?<![\d/.-])([01]?\d|2[0-3])\s*(?:h|giờ|gio)(?!\w)", text)}
+    # On a 12-hour clock "8:00 PM" is hour 20, not 8.
+    twelve = {hour for hour in range(24) if _twelve_hour(hour, text)}
+    return (hours - {hour % 12 or 12 for hour in twelve}) | twelve
 
 
 def _searchable(spans: str) -> str:
@@ -359,7 +387,7 @@ class _Builder:
             return sub_value
 
         if "tokens" in expr:
-            text = _plain_number(str(expr["tokens"]))
+            text = _plain_number(str(expr["tokens"]), self.language)
             if self._ref(self.assets, expr.get("asset"), qid) is not None:
                 self.used.add(expr["asset"])
                 units.add(expr["asset"])
@@ -371,7 +399,7 @@ class _Builder:
                 self.problems.append((qid, f"not a positive whole token quantity: {text}"))
         elif "ada" in expr or "lovelace" in expr:
             unit = "ada" if "ada" in expr else "lovelace"
-            text = _plain_number(str(expr[unit]))
+            text = _plain_number(str(expr[unit]), self.language)
             pattern = r"(?<![\d.,])" + re.escape(text) + r"\s*" + unit + r"\b"
             if not re.search(pattern, searchable, re.IGNORECASE):
                 self.problems.append((qid, f"literal {text} {unit} not in evidence"))
@@ -499,11 +527,25 @@ class _Builder:
             self.problems.append((iid, f"unsupported instant expression {sorted(expr)}"))
         return value, basis
 
+    def _shared_hour(self, iid: str) -> int | None:
+        """The one hour of day stated in every message the instant cites, if exactly one is."""
+        keys = {(entry.get("requirement_version"), entry.get("message_index"))
+                for entry in self.instants[iid].get("evidence") or [] if isinstance(entry, dict)}
+        hours: set[int] = set()
+        for key in keys:
+            hours |= _hours_of_day(self.messages.get(key, ""))
+        return next(iter(hours)) if len(hours) == 1 else None
+
     def _require_stated_time(self, iid: str, hour: int, tz: re.Match[str], spans: str) -> None:
         """A resolved time decides money, so its hour and timezone must be cited."""
         words = digits_for_words(spans)
-        if not any(re.search(rf"(?<!\d)0?{hour}(?!\d)", text) or _twelve_hour(hour, text)
-                   for text in (spans, words)):
+        stated_hour = any(re.search(rf"(?<!\d)0?{hour}(?!\d)", text) or _twelve_hour(hour, text)
+                          for text in (spans, words))
+        if not stated_hour and self._shared_hour(iid) == hour:
+            # "23:59 các ngày 20/02, 20/03 và 20/04/2027": one time stated for a list of dates
+            # (E7 conventions, Q-GIỜ 3).
+            stated_hour = True
+        if not stated_hour:
             self.problems.append((iid, f"hour {hour} not in evidence"))
         offset = int(tz.group(2))
         stated = (re.search(r"\b(?:UTC|GMT)\b", spans, re.IGNORECASE) if offset == 0 else
@@ -832,27 +874,60 @@ class _Builder:
             else:
                 self.observe(owner, item.get("text"), item.get("evidence"))
 
+    def identify(self, party_id: str, party: dict[str, Any]) -> None:
+        """Settle a party's role token by the shared name conventions (E7, Q-TÊN).
+
+        - The name must be quoted from the party's own evidence (design section 3).
+        - A role token the user gives ("role SaoMai") is the token.
+        - A first-person pronoun takes the name the history attaches to it ("tôi (Hiền)").
+        - A role noun ("người thuê", "the organizer") is a valid role: its token is derived.
+        - Only a pronoun with no attached name is a question for the user.
+        """
+        name = party.get("name")
+        if not isinstance(name, str) or not name.strip():
+            self.problems.append((party_id, "party needs a name"))
+            return
+        spans = self._spans(party)
+        if not _same_name(name, spans):
+            self.problems.append((party_id, f"name {name!r} not in its evidence"))
+            return
+        if name not in spans:
+            # Matched only ignoring case or marks: the name is written as the user wrote it.
+            name = party["name"] = _source_span(name, spans)
+        given = given_role_tokens(spans)
+        if len(given) == 1:
+            party["name"] = given[0]
+            return
+        if is_pronoun(name):
+            attached = (first_person_name(list(self.messages.values()))
+                        if name.strip().lower() in FIRST_PERSON else None)
+            if attached is not None:
+                party["name"] = attached[0]
+                party["evidence"].extend(entry for entry in self._cite(attached[1])
+                                         if entry not in party["evidence"])
+                return
+            # "I", "Tôi": the person is not named yet, so the user is asked.
+            self.unnamed.add(name)
+            self.observations.append({
+                "observation_id": f"obs_{len(self.observations) + 1}",
+                "text": f"party named only as {name!r}",
+                "reason": "outside_formalization_v4_claim_taxonomy",
+                "source_evidence": party["evidence"]})
+            self.ask(party_id, self.question("name", role=name))
+            return
+        if unicodedata.normalize("NFC", name).strip().lower() in ROLE_WORDS or not name[0].isupper():
+            # A role noun names the party well enough (Q-TÊN 5): "người thuê" -> "NguoiThue".
+            party["name"] = role_token(name)
+
+    def _cite(self, phrase: str) -> list[dict[str, Any]]:
+        """Evidence entries for a phrase quoted from the history."""
+        return [{"requirement_version": key[0], "message_index": key[1], "span": phrase,
+                 "relation": "supports"}
+                for key, message in self.messages.items() if phrase in message][:1]
+
     def build(self) -> dict[str, Any]:
         for party_id, party in self.parties.items():
-            # Design section 3: a party's name is quoted from its own evidence.
-            if not _same_name(party["name"], self._spans(party)):
-                self.problems.append((party_id, f"name {party['name']!r} not in its evidence"))
-            elif party["name"] not in self._spans(party):
-                # Matched only ignoring case or marks: the name is written as the user wrote it.
-                party["name"] = _source_span(party["name"], self._spans(party))
-            if unicodedata.normalize("NFC", party["name"]).strip().lower() in ROLE_WORDS:
-                # "I", "Tôi", "Buyer": the person is not named yet, so the user is asked.
-                self.unnamed.add(party["name"])
-                self.observations.append({
-                    "observation_id": f"obs_{len(self.observations) + 1}",
-                    "text": f"party named only as {party['name']!r}",
-                    "reason": "outside_formalization_v4_claim_taxonomy",
-                    "source_evidence": party["evidence"]})
-                self.ask(party_id, self.question("name", role=party["name"]))
-            elif not party["name"][0].isupper():
-                self.problems.append((party_id, f"name {party['name']!r} is a role word, not a "
-                                                "proper name: use the person it means, or add "
-                                                "a note of kind \"other\" if nobody is named"))
+            self.identify(party_id, party)
         self.unsupported()
         asset = self.draft.get("asset") or {}
         ada = [item for item in self.assets.values() if item.get("ada") is True]

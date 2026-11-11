@@ -106,3 +106,29 @@ def test_path_aware_binding_fails_closed_on_bad_prefix():
         bind_choice_transactions(
             CONTRACT, ({"interval": {"from": 1, "to": 1}, "inputs": []}, DECLARED),
             reference=BadReference(), initial_state={})
+
+
+def test_scenario_party_names_bind_to_the_contract_spelling():
+    # E7 conventions Q-TÊN 3: "CongTy" in a scenario is "Công ty" in the contract.
+    from research.synthesis.scenario_binding import bind_party_names
+
+    contract = {"when": [{"case": {"party": {"role_token": "Công ty"},
+                                   "into_account": {"role_token": "Công ty"}}, "then": "close"}]}
+    transactions = ({"inputs": [{"type": "Deposit", "party": {"role_token": "CongTy"},
+                                 "account": {"role_token": "CongTy"}}]},)
+    payments = ({"source_account": {"role_token": "CongTy"},
+                 "payee": {"party": {"role_token": "Thu"}}},)
+    named, paid, mapping = bind_party_names(contract, transactions, payments)
+    assert mapping == {"CongTy": "Công ty"}
+    assert named[0]["inputs"][0]["party"] == {"role_token": "Công ty"}
+    assert paid[0]["source_account"] == {"role_token": "Công ty"}
+    assert paid[0]["payee"] == {"party": {"role_token": "Thu"}}
+
+
+def test_two_contract_roles_with_one_folded_name_are_ambiguous():
+    import pytest
+    from research.synthesis.scenario_binding import ScenarioBindingError, bind_party_names
+
+    contract = {"a": {"role_token": "Minh"}, "b": {"role_token": "Mình"}}
+    with pytest.raises(ScenarioBindingError):
+        bind_party_names(contract, ({"inputs": [{"party": {"role_token": "minh"}}]},), None)
