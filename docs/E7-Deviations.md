@@ -24,3 +24,19 @@ Ghi theo `docs/E7-Protocol.md`, mục 6. Mỗi mục: thời điểm, thay đổ
     băm của tệp agent vì thế đổi so với mục 1 của giao thức.
   - Định nghĩa agent chỉ được nạp lại ở phiên mới, nên cách đọc tệp chỉ dùng được trong các phiên chạy
     sau. Hai lượt thử trong phiên hiện tại báo không có Read và không ghi gì vào case 1.
+
+## D2 (2026-11-12, case 10 của v5): bộ chạy tiếp tục sai sau khi testnet treo
+
+- **Hiện tượng:** lần chạy kịch bản thứ nhất của case 10 (nhánh Pipeline) gặp ledger UNAVAILABLE vì
+  testnet ngừng tạo block, và bộ chạy thoát đúng với mã 4. Khi chạy lại, `auto.py pipe` không nhận ra
+  case đang ở giữa bước chạy kịch bản. Nó ghi `final.json` (`pipeline_stopped`) quá sớm thay vì chạy
+  tiếp.
+- **Sửa (hạ tầng):** thêm `_resume_scenarios` vào `tools/e7/auto.py`. Khi đã có `scenarios.json`, bộ
+  chạy tìm lần sinh hợp đồng của intent đã duyệt và chạy lại mọi kịch bản trên hợp đồng đó. Nếu lỗi xảy
+  ra ngay ở bước duyệt thì chạy lại bước duyệt, không hỏi lại người dùng.
+- **Không đổi:** điều mà hai nhánh hay người dùng mô phỏng nhìn thấy.
+- **Case bị ảnh hưởng:** chỉ case 10. `final.json` sai được cất vào
+  `runs/E7-Eval-Discarded/case-010/`. Bước chạy kịch bản được làm lại trên cùng hợp đồng, không có
+  request model mới. Nhánh Baseline của case 10 chạy sau khi sửa, với trần là 3 request của Pipeline.
+- **Testnet:** chuỗi ngừng tạo block hai lần dù tiến trình vẫn chạy (slot 8712 và slot 1384). Cả hai
+  lần đều được khởi động lại. Không kết quả nào khác bị ảnh hưởng.

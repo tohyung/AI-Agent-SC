@@ -288,6 +288,9 @@ def pipe(index: int) -> int:
     retries = 0
     record = _last(case_dir)
     code = None
+    resumed = _resume_scenarios(index, case_dir, record)
+    if resumed is not None:
+        return resumed
     while True:
         decision = _decision(case_dir)
         if record is None:
@@ -363,6 +366,34 @@ def pipe(index: int) -> int:
             return _finish(case_dir, record, "pipeline_stopped")
         if code is not None:
             return code
+
+
+def _resume_scenarios(index: int, case_dir: Path, record: dict | None) -> int | None:
+    """Resume a case whose confirmed scenarios were being run when infrastructure stopped it
+    (E7 protocol 2.4): run the review again if it never compiled, else every scenario again on the
+    compiled contract. None when the case is not at that point."""
+    spec_path = case_dir / "scenarios.json"
+    if record is None or not spec_path.exists():
+        return None
+    spec = json.loads(spec_path.read_text(encoding="utf-8"))
+    candidate = spec.get("intent_id")
+    if record["status"] == "WAITING_RESEARCH_REVIEW":
+        current = record["steps"]["intent_extraction"]["output_artifacts"][0]
+        if current != candidate or _stage(case_dir).get("step") != "readback" or \
+                (case_dir / "simuser-pending.json").exists():
+            return None
+        code, compiled = _pipe_run(index, "--review-candidate-id", candidate)
+        return code if code is not None else _scenarios(index, case_dir, compiled, candidate, spec)
+    compiled = None
+    for path in sorted(case_dir.glob("attempt-*.json")):
+        attempt = json.loads(path.read_text(encoding="utf-8"))
+        if (attempt.get("reviewed_candidate_id") == candidate
+                and not attempt.get("replayed_contract_candidate_id")):
+            compiled = attempt
+    if compiled is None:
+        return None
+    print(f"PIPE {case_dir.name}: resuming the scenario runs on the compiled contract")
+    return _scenarios(index, case_dir, compiled, candidate, spec)
 
 
 def _scenarios(index: int, case_dir: Path, record: dict, candidate: str, spec: dict) -> int:
