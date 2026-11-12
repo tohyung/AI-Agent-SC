@@ -17,3 +17,10 @@ Ghi theo `docs/E7-Protocol.md`, mục 6. Mỗi mục: thời điểm, thay đổ
   thấy mọi tin nhắn của các sub-agent đã chạy (127 tin nhắn) đều là `claude-haiku-5-5`.
 - **Case bị ảnh hưởng:** lượt đầu của case 1 (Pipeline) đã dùng cách dán; các lượt sau dùng cách đọc
   tệp. Nội dung như nhau, nên giữ nguyên.
+- **Bổ sung (cùng ngày):**
+  - `tools: []` trong định nghĩa `sim-user` thật sự có hiệu lực: sub-agent chỉ có công cụ trả kết quả,
+    nên không tự đọc được tệp. Dòng "All tools" trong danh sách agent là hiển thị sai.
+  - Để dùng cách đọc tệp, định nghĩa được đổi thành `tools: Read`; phần luật SimUser-v3 giữ nguyên. Mã
+    băm của tệp agent vì thế đổi so với mục 1 của giao thức.
+  - Định nghĩa agent chỉ được nạp lại ở phiên mới, nên cách đọc tệp chỉ dùng được trong các phiên chạy
+    sau. Hai lượt thử trong phiên hiện tại báo không có Read và không ghi gì vào case 1.
