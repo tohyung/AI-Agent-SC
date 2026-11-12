@@ -130,3 +130,17 @@ def test_a_run_with_no_model_response_is_retried_not_ended(driver, monkeypatch):
     assert driver.pipe(1) == 4
     assert len(runs) == 3
     assert not (case_dir / "final.json").exists()
+
+
+def test_a_key_pool_rotates_within_its_own_keys(driver, monkeypatch, tmp_path):
+    monkeypatch.setenv("E7_GEMINI_KEYS", "2,3")
+    monkeypatch.setattr(driver, "_pool_file", lambda keys: tmp_path / "pool.json")
+    assert driver._current_slot() == 2
+    assert driver._rotate() is True
+    assert driver._current_slot() == 3
+    assert driver._rotate() is False
+
+
+def test_no_key_pool_uses_the_shared_rotation(driver, monkeypatch):
+    monkeypatch.delenv("E7_GEMINI_KEYS", raising=False)
+    assert driver._keys() is None

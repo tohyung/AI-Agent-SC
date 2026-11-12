@@ -122,3 +122,18 @@ Ghi theo `docs/E7-Protocol.md`, mục 6. Mỗi mục: thời điểm, thay đổ
 - **Case bị ảnh hưởng:** chỉ case 22. `final.json` sai được cất vào `runs/E7-Eval-Discarded/case-022/`.
   Nhánh Baseline của case 22 chưa chạy. Case 1–21 không có case nào kết thúc `pipeline_stopped`.
 - **Kiểm tra:** thêm một test trong `tests/experiments/test_e7_driver.py`.
+
+## Ghi nhận hạ tầng (không phải lệch giao thức)
+
+### I1 (2026-11-13): từ case 31, hai nhánh chạy song song bằng các key riêng
+
+- **Lý do:** cho nhanh hơn. Người dùng chọn giữ sim-user Haiku và giữ nguyên phương pháp.
+- **Cách làm:**
+  - Từ case 31, một phiên chạy nhánh Pipeline cho các case 31–100 theo thứ tự id, dùng key 1–2
+    (`E7_GEMINI_KEYS=1,2`).
+  - Một phiên khác chạy nhánh Baseline, cũng theo thứ tự id, dùng key 3 (`E7_GEMINI_KEYS=3`). Case nào
+    đã có `final.json` của Pipeline thì mới được chạy Baseline.
+- **Vẫn đúng giao thức:** mục 2.1 (trong mỗi case, Pipeline chạy trước Baseline) và mục 2.2 (trần
+  Baseline bằng số request Pipeline) không đổi.
+- **Không đổi:** điều mà hai nhánh hay người dùng mô phỏng nhìn thấy. Key chỉ quyết định quota dùng
+  chung nào bị trừ.

@@ -176,22 +176,58 @@ def _out_of_turns(case_dir: Path) -> bool:
 
 # -- infrastructure ---------------------------------------------------------------------------
 
+def _keys() -> list[int] | None:
+    """Gemini keys this run may use, from E7_GEMINI_KEYS (for example "1,2"); None = the shared
+    E6 rotation over all keys. Infrastructure only: lets two runs use separate keys in parallel."""
+    import os
+
+    value = os.environ.get("E7_GEMINI_KEYS", "").strip()
+    return [int(item) for item in value.split(",") if item.strip()] if value else None
+
+
+def _pool_file(keys: list[int]) -> Path:
+    return ROOT / "runs" / f"E7-gemini-slot-{'-'.join(map(str, keys))}.json"
+
+
+def _current_slot() -> int:
+    sys.path.insert(0, str(ROOT / "tools" / "e6"))
+    from auto import _quota_day, _slot  # the E6 key rotation state is shared
+
+    keys = _keys()
+    if keys is None:
+        return _slot()
+    path = _pool_file(keys)
+    if path.exists():
+        state = json.loads(path.read_text(encoding="utf-8"))
+        if state.get("day") == _quota_day() and state.get("slot") in keys:
+            return int(state["slot"])
+    return keys[0]
+
+
 def _wsl(module: str, *args: str) -> subprocess.CompletedProcess:
     import os
 
-    sys.path.insert(0, str(ROOT / "tools" / "e6"))
-    from auto import _slot  # the E6 key rotation state is shared
-
-    env = {**os.environ, "E6_GEMINI_SLOT": str(_slot()), "WSLENV": "E6_GEMINI_SLOT"}
+    env = {**os.environ, "E6_GEMINI_SLOT": str(_current_slot()), "WSLENV": "E6_GEMINI_SLOT"}
     return subprocess.run(["wsl", "-d", "Ubuntu", "--", "bash", RUNNER, module, *args],
                           capture_output=True, text=True, encoding="utf-8", errors="replace",
                           timeout=1800, env=env)
 
 
 def _rotate() -> bool:
-    from auto import _rotate as rotate
+    keys = _keys()
+    if keys is None:
+        from auto import _rotate as rotate
 
-    return rotate()
+        return rotate()
+    from auto import _quota_day
+
+    slot = _current_slot()
+    if keys.index(slot) + 1 >= len(keys):
+        return False
+    _pool_file(keys).write_text(json.dumps({"day": _quota_day(), "slot": keys[keys.index(slot) + 1]}),
+                                encoding="utf-8")
+    print(f"  quota on key {slot}: switching to key {keys[keys.index(slot) + 1]}")
+    return True
 
 
 def _rel(path: Path) -> str:
