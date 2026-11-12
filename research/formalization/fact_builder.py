@@ -21,7 +21,7 @@ from research.formalization.party_names import (
     first_person_name,
     given_role_tokens,
     is_pronoun,
-    role_token,
+    strip_honorific,
 )
 from research.formalization.intent_spec import (
     CORE_SCHEMA_VERSION_V4,
@@ -898,6 +898,16 @@ class _Builder:
         if len(given) == 1:
             party["name"] = given[0]
             return
+        inner = re.fullmatch(r"\s*[^()]*\(\s*([^()]+?)\s*\)\s*", name)
+        if inner and inner.group(1)[:1].isupper() and not is_pronoun(inner.group(1)):
+            # "tôi (Trúc)": the name in brackets is the party's name.
+            name = party["name"] = inner.group(1)
+            return
+        titled = strip_honorific(name)
+        if titled != name:
+            # "chị Hồng" -> "Hồng": an honorific is not part of the name (Q-TÊN 3).
+            party["name"] = titled
+            return
         if is_pronoun(name):
             attached = (first_person_name(list(self.messages.values()))
                         if name.strip().lower() in FIRST_PERSON else None)
@@ -915,9 +925,8 @@ class _Builder:
                 "source_evidence": party["evidence"]})
             self.ask(party_id, self.question("name", role=name))
             return
-        if unicodedata.normalize("NFC", name).strip().lower() in ROLE_WORDS or not name[0].isupper():
-            # A role noun names the party well enough (Q-TÊN 5): "người thuê" -> "NguoiThue".
-            party["name"] = role_token(name)
+        # A role noun names the party well enough (Q-TÊN 5) and stays as written ("người thuê"):
+        # the v4 core requires a recipient's name in its evidence, and matching folds anyway.
 
     def _cite(self, phrase: str) -> list[dict[str, Any]]:
         """Evidence entries for a phrase quoted from the history."""

@@ -499,6 +499,17 @@ def _absolute_deadline_mismatch(
                 cited_dates.append(date(int(year), int(month), int(day)))
             except ValueError:
                 continue
+        # A list "20/02, 20/03 và 20/04/2027" writes the year once, on its last date: the dates
+        # before it share that year (E7 conventions, Q-GIỜ 3).
+        for match in re.finditer(r"(?<![\d/])(\d{1,2})/(\d{1,2})(?![\d/])", span):
+            later = re.search(r"(?<!\d)\d{1,2}/\d{1,2}/(\d{4})(?!\d)", span[match.end():])
+            if later is None:
+                continue
+            try:
+                cited_dates.append(date(int(later.group(1)), int(match.group(2)),
+                                        int(match.group(1))))
+            except ValueError:
+                continue
         for year, month, day in re.findall(r"(?<!\d)(\d{4})-(\d{1,2})-(\d{1,2})(?!\d)", span):
             try:
                 cited_dates.append(date(int(year), int(month), int(day)))

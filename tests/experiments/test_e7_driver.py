@@ -61,3 +61,11 @@ def test_give_up_is_recorded(driver):
     driver._need(_case(driver), 1, "question", "Hạn là khi nào?")
     driver.reply("pipe", 1, '{"action": "give_up", "message": ""}')
     assert driver._decision(_case(driver))["kind"] == "give_up"
+
+
+def test_a_message_that_only_agrees_accepts(driver):
+    assert driver.plain_agreement("Yes, these are what I mean. Sam receiving the 250 ADA is fine with me.")
+    assert driver.plain_agreement("Đúng rồi, như vậy là được.")
+    assert not driver.plain_agreement("Yes, but the year should be 2027.")
+    assert not driver.plain_agreement("Đúng, nhưng sai năm.")
+    assert not driver.plain_agreement("The year is wrong.")

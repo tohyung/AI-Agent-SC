@@ -1,4 +1,4 @@
-# E7: quy ước chung (bản 2, 2026-11-12)
+# E7: quy ước chung (bản 3, 2026-11-12)
 
 Văn bản này chốt các quy ước cho vòng thí nghiệm sau E6 (gọi là E7). Nó dựa trên
 `docs/E6-Failure-Review.md` và `docs/E6-Rerun-Proposal.md`.
@@ -20,9 +20,8 @@ do ở mục 11. Sau khi đóng băng thì không sửa nữa.
 2. **Role token:**
    - Người dùng hoặc phiếu dữ kiện cho token ("role: X", "(role X)") thì dùng đúng X.
    - Nếu không và bên đó có tên riêng, token là tên riêng như người dùng viết, giữ dấu (Kiều, Sương).
-   - Nếu chỉ có tên vai, token được suy ra tất định: bỏ dấu (đ thành d), bỏ "the", bỏ khoảng trắng
-     và dấu câu, viết hoa chữ đầu mỗi từ. Ví dụ: người thuê thành NguoiThue, the organizer thành
-     Organizer.
+   - "tôi (Trúc)" thì tên là Trúc; "chị Hồng" thì tên là Hồng (danh xưng không thuộc tên).
+   - Nếu chỉ có tên vai, token là tên vai như người dùng viết ("người thuê", "the organizer").
    - Vì so khớp luôn qua `fold` (Q-TÊN 3), cách viết token không ảnh hưởng tới việc chấm.
 3. **Hàm gấp tên `fold`** dùng chung cho builder, phần gắn kịch bản và bộ chấm. Các bước:
    1. chuẩn hóa Unicode NFC, chữ thường;
@@ -136,8 +135,12 @@ do ở mục 11. Sau khi đóng băng thì không sửa nữa.
    - đúng ngôn ngữ;
    - không có con số ngoài yêu cầu, phiếu dữ kiện và hội thoại;
    - không đồng ý bỏ một phần nếu phiếu dữ kiện không có mục cho phép bỏ.
-4. **Không dựa vào nhãn hành động.** Khi đang xem kết quả, chỉ `accept` kèm tin nhắn rỗng mới là chấp
-   nhận; mọi tin nhắn khác rỗng là phản đối và được gửi cho nhánh.
+4. **Không dựa vào nhãn hành động.** Khi đang xem kết quả, các trường hợp được tính là chấp nhận:
+   - `accept` kèm tin nhắn rỗng;
+   - tin nhắn chỉ có ý đồng ý (mở đầu bằng yes/đúng/ok/đồng ý, không có từ phản đối như
+     but/sai/nhưng/phải là).
+
+   Mọi tin nhắn khác là phản đối và được gửi cho nhánh.
 5. **Giới hạn:** tối đa 6 tin nhắn của người dùng mỗi nhánh mỗi case. Người dùng bỏ cuộc khi bị hỏi lại
    điều đã trả lời 2 lần.
 6. **Claude chỉ chuyển tiếp**, không sửa câu chữ, không tự trả lời thay.
@@ -240,3 +243,7 @@ giữ nguyên 11/71.
 - Bản 1 (2026-11-12): chốt lần đầu, theo yêu cầu "chốt quy ước trước" sau khi rà soát E6.
 - Bản 2 (2026-11-12): Q-TÊN 2 giữ tên riêng làm token, chỉ suy ra token cho tên vai. Lý do: khớp với
   token mà các nhánh đang tạo; việc so khớp vẫn qua `fold` nên không đổi kết quả chấm.
+- Bản 3 (2026-11-12, sau chạy thử dev, `docs/E7-Dev-Trial.md`):
+  - Q-TÊN 2: tên vai giữ nguyên như người dùng viết, không suy token ASCII nữa, vì core v4 đòi tên
+    người nhận có trong trích dẫn; tên trong ngoặc và tên sau danh xưng được tách ra.
+  - Q-NGƯỜI DÙNG 4: tin nhắn chỉ có ý đồng ý được tính là chấp nhận.

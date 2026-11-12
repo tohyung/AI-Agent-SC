@@ -16,7 +16,8 @@ from research.formalization.fact_builder import _zones, request_language
 WORDS = {
     "vi": {
         "intro": "Tôi hiểu hợp đồng như sau:",
-        "deposit": "{party} nạp {amount} (vào tài khoản của {owner}) trước {time}.",
+        "deposit": "{party} nạp {amount} vào hợp đồng trước {time}.",
+        "deposit_for": "{party} nạp {amount} vào hợp đồng (giữ cho {owner}) trước {time}.",
         "choice": "{owner} chọn một giá trị từ {low} đến {high} trước {time}.",
         "choice_one": "{owner} bấm xác nhận trước {time}.",
         "notify": "Bất kỳ ai cũng có thể bấm xác nhận trước {time}.",
@@ -24,9 +25,9 @@ WORDS = {
         "branch": "Nếu {owner} chọn {guard}:",
         "on_success": "Khi việc đó xảy ra:",
         "timeout": "Nếu đến {time} mà việc đó chưa xảy ra:",
-        "pay": "{source} trả {amount} cho {recipient}.",
-        "pay_rest": "trả phần còn lại trong tài khoản của {source} cho {recipient}.",
-        "end": "hợp đồng kết thúc (tiền còn trong tài khoản nào thì trả về chủ tài khoản đó).",
+        "pay": "hợp đồng chuyển {amount} (tiền {source} đã nạp) cho {recipient}.",
+        "pay_rest": "hợp đồng chuyển phần còn lại của tiền {source} đã nạp cho {recipient}.",
+        "end": "hợp đồng kết thúc; tiền còn giữ trong hợp đồng thì trả lại cho người đã nạp.",
         "question": "Như vậy có đúng ý bạn không? Nếu sai chỗ nào, xin nói rõ chỗ đó.",
         "ops": {"eq": "{v}", "ge": "từ {v} trở lên", "gt": "lớn hơn {v}", "le": "từ {v} trở xuống",
                 "lt": "nhỏ hơn {v}"},
@@ -34,7 +35,8 @@ WORDS = {
     },
     "en": {
         "intro": "This is how I understand the contract:",
-        "deposit": "{party} deposits {amount} (into {owner}'s account) by {time}.",
+        "deposit": "{party} deposits {amount} into the contract by {time}.",
+        "deposit_for": "{party} deposits {amount} into the contract (held for {owner}) by {time}.",
         "choice": "{owner} chooses a value from {low} to {high} by {time}.",
         "choice_one": "{owner} presses confirm by {time}.",
         "notify": "Anyone can press confirm by {time}.",
@@ -42,13 +44,14 @@ WORDS = {
         "branch": "If {owner} chooses {guard}:",
         "on_success": "When that happens:",
         "timeout": "If that has not happened by {time}:",
-        "pay": "{source} pays {amount} to {recipient}.",
-        "pay_rest": "what is left in {source}'s account goes to {recipient}.",
-        "end": "the contract ends (money still in an account goes back to that account's owner).",
+        "pay": "the contract sends {amount} (from what {source} deposited) to {recipient}.",
+        "pay_rest": "the contract sends what is left of {source}'s deposit to {recipient}.",
+        "end": "the contract ends; money it still holds goes back to whoever deposited it.",
         "question": "Is this what you want? If something is wrong, please say exactly what.",
         "ops": {"eq": "{v}", "ge": "{v} or more", "gt": "more than {v}", "le": "{v} or less",
                 "lt": "less than {v}"},
-        "time": "{hm} on {dmy} ({zone})",
+        # ISO dates in English: "05/08/2027" reads as May 8 to many English readers.
+        "time": "{hm} on {iso} ({zone})",
     },
 }
 
@@ -78,7 +81,7 @@ class _Summary:
             return "?"
         moment = datetime.fromtimestamp(ms / 1000, timezone.utc).astimezone(self.zone)
         return self.words["time"].format(hm=f"{moment:%H:%M}", dmy=f"{moment:%d/%m/%Y}",
-                                         zone=self.zone_name)
+                                         iso=f"{moment:%Y-%m-%d}", zone=self.zone_name)
 
     def amount(self, scope_id: str) -> str:
         lovelace = self.claim(scope_id, "amount_lovelace")
@@ -142,10 +145,12 @@ class _Summary:
         words = self.words
         if action == "deposit":
             deadline = self.claim(scope_id, "deposit_deadline_ms")
-            self.say(depth, words["deposit"].format(
-                party=self.claim(scope_id, "depositing_party"), amount=self.amount(scope_id),
-                owner=self.claim(scope_id, "destination_account_owner"),
-                time=self.time(deadline)))
+            party = self.claim(scope_id, "depositing_party")
+            owner = self.claim(scope_id, "destination_account_owner")
+            # The account is shown only when it is not the depositor's own (no Marlowe jargon).
+            key = "deposit" if owner in {None, party} else "deposit_for"
+            self.say(depth, words[key].format(party=party, amount=self.amount(scope_id),
+                                              owner=owner, time=self.time(deadline)))
         elif action == "choice":
             deadline = self.claim(scope_id, "choice_deadline_ms")
             owner = self.claim(scope_id, "choice_owner")

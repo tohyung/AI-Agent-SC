@@ -23,6 +23,7 @@ Exit codes: 0 the arm ended, 3 quota, 4 infrastructure, 5 sim-user reply needed,
 from __future__ import annotations
 
 import json
+import re
 import os
 from pathlib import Path
 import subprocess
@@ -89,6 +90,20 @@ def _need(case_dir: Path, index: int, kind: str, text: str) -> int:
     return 5
 
 
+AFFIRM = re.compile(r"^\s*(?:yes|yep|ok|okay|correct|right|that's right|exactly|looks good|đúng|đúng rồi|"
+                    r"đúng vậy|dung roi|dung|ok|được|duoc|đồng ý|dong y|chuẩn|chuan|vâng|vang|ừ|u)\b",
+                    re.IGNORECASE)
+DISSENT = re.compile(r"\b(?:but|however|wrong|incorrect|instead|should|shouldn't|not right|change|fix|"
+                     r"missing|nhưng|nhung|sai|không đúng|khong dung|chưa đúng|chua dung|phải là|phai la|"
+                     r"thay vì|thay vi|nhầm|nham|sửa|sua|thiếu|thieu|chứ không|chu khong)\b", re.IGNORECASE)
+
+
+def plain_agreement(message: str) -> bool:
+    """A message that only agrees ("Yes, these are what I mean") accepts, whatever its label;
+    any sign of dissent keeps it an objection (Q-NGƯỜI DÙNG 4, bản 3)."""
+    return bool(message) and bool(AFFIRM.search(message)) and not DISSENT.search(message)
+
+
 def reply(arm: str, index: int, raw: str) -> int:
     case_dir = (PIPE_DIR if arm == "pipe" else BASE_DIR) / f"case-{index:03d}"
     pending_path = case_dir / "simuser-pending.json"
@@ -115,7 +130,8 @@ def reply(arm: str, index: int, raw: str) -> int:
     if decision["action"] == "give_up":
         outcome = {"kind": "give_up"}
     elif pending["kind"] in RESULT:
-        accepted = decision["action"] == "accept" and not decision["message"]
+        accepted = ((decision["action"] == "accept" and not decision["message"])
+                    or plain_agreement(decision["message"]))
         outcome = {"kind": "accept"} if accepted else {
             "kind": "message", "text": decision["message"] or FALLBACK[view["language"]]}
     else:

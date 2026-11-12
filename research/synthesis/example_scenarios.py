@@ -26,7 +26,7 @@ from research.formalization.intent_summary import _Summary
 from research.formalization.fact_builder import request_language
 from research.formalization.party_names import fold_name
 
-PROMPT_VERSION = "E7-ExampleScenarios-v1"
+PROMPT_VERSION = "E7-ExampleScenarios-v2"
 DEADLINE_KINDS = ("deposit_deadline_ms", "choice_deadline_ms", "timeout_ms",
                   "payment_release_time_ms")
 
@@ -48,7 +48,8 @@ Rules
   did not give. Use the party names as the user writes them.
 - Use only the deadline labels given. Never write a date or a time yourself.
 - Every situation runs until nothing more can happen: if it ends because someone does not act,
-  end it with a "wait" past that deadline.
+  end it with a "wait" past that deadline. Use "wait" only there, never between actions and
+  never after the last payment.
 - A party who gets their own money back receives it too: list it in "receive".
 - Write amounts as plain digits with "." as the decimal point."""
 
@@ -180,12 +181,25 @@ def to_compact(core: dict[str, Any], reply: Any, tokens: dict[str, list[str]] | 
                         raise ValueError(f"bad amount {row.get('ada')!r}")
                     if amount:
                         pay.append([party, party, float(amount)])
+            tx = _only_needed_waits(tx)
             if not tx:
                 raise ValueError("no steps")
             scenarios[name] = {"tx": tx, "pay": pay}
         except (KeyError, TypeError, ValueError) as exc:
             problems.append(f"{name}: {exc}")
     return scenarios, problems
+
+
+def _only_needed_waits(tx: list[list[Any]]) -> list[list[Any]]:
+    """A wait is a timeout: only the last step can be one, and only when its deadline is later
+    than every action before it. An earlier wait moves nothing (the next deadline is later) and
+    a wait after the contract has closed is a useless transaction the reference rejects."""
+    actions = [step for step in tx if step[1]]
+    if not tx or tx[-1][1]:
+        return actions
+    last_action = max((step[0] for step in actions), default=None)
+    final = tx[-1]
+    return actions + ([final] if last_action is None or final[0] > last_action else [])
 
 
 def describe(core: dict[str, Any], scenarios: dict[str, dict[str, Any]]) -> str:

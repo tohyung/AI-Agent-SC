@@ -28,7 +28,9 @@ def user_view(index: int, dataset: str = "v3") -> dict:
     line = DATASETS[dataset].read_text(encoding="utf-8").splitlines()[index - 1]
     case = json.loads(line)
     return {"prompt": case["prompt"], "language": case["language"],
-            "facts": [item["answer"] for item in case.get("fact_sheet", [])]}
+            # The topic says what an answer is about ("nếu không làm được lãi phạt và Zalo").
+            "facts": [f"({item['topic']}) {item['answer']}" if item.get("topic") else item["answer"]
+                      for item in case.get("fact_sheet", [])]}
 
 
 def baseline_history(index: int) -> list[tuple[str, str]]:
@@ -132,8 +134,19 @@ def check_reply(view: dict, seen: str, raw: str) -> list[str]:
         problems.append("reply is not in English")
     known = " ".join([view["prompt"], *view["facts"], seen])
     known_numbers = _numbers(known) | {n.lstrip("0") for n in _numbers(known)}
-    # The reply's own digits only: "năm" (year) must not read as the number five.
-    for number in _numbers(message, words=False):
+    # A total or product the user works out from known numbers ("3 kỳ x 40 = 120") is no new fact.
+    values = sorted({int(n) for n in known_numbers if n.isdigit() and 0 < int(n) < 10**7})[:40]
+    combined = {a + b for a in values for b in values} | {a * b for a in values for b in values
+                                                          if a * b < 10**9}
+    combined |= {a + b + c for a in values for b in values for c in values}
+    known_numbers |= {str(n) for n in combined}
+    # The reply's own digits only: "năm" (year) must not read as the number five. Ordinal labels
+    # ("Situation 3", "Tình huống 2", "1.") number the reply itself and are not facts.
+    counted = re.sub(r"(?i)\b(?:situation|case|scenario|example|tình huống|tinh huong|trường hợp|"
+                     r"truong hop|ví dụ|vi du|lần|lan|kịch bản|kich ban|kỳ|ky|đợt|dot|step|payment|installment)"
+                     r"\s*\d+\b", " ", message)
+    counted = re.sub(r"(?m)^\s*\d+[.)]\s", " ", counted)
+    for number in _numbers(counted, words=False):
         if number not in known_numbers and number.lstrip("0") not in known_numbers:
             problems.append(f"number {number} is not in the request or the fact sheet")
     if agrees_to_drop(message) and not any(DROP_PERMISSION.search(fact) for fact in view["facts"]):

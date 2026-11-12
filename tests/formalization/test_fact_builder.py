@@ -444,16 +444,29 @@ def test_a_date_read_as_month_first_is_a_repairable_draft_error():
                for item, message_ in caught.value.problems)
 
 
-def test_a_role_word_is_a_valid_role_with_a_derived_token():
-    # E7 conventions Q-TÊN 5: a role noun names the party; its token is derived.
+def test_a_role_word_is_a_valid_role_kept_as_written():
+    # E7 conventions Q-TÊN 5: a role noun names the party, as written (the core needs the name
+    # in its evidence; matching folds names anyway).
     message = MESSAGE + " Một nửa chuyển cho người làm."
     history = [{"version": 1, "messages": [message]}]
     draft = milestone_draft()
     draft["parties"][1] = {"id": "p_tu", "name": "người làm", "evidence": ev("cho người làm")}
     core = build_core(draft, history)
     names = {claim["value"] for claim in core["claims"] if claim["kind"].endswith("recipient")}
-    assert "NguoiLam" in names
-    assert "người làm" not in names
+    assert "người làm" in names
+    assert validate_shadow_semantic_core(core, expected_history=history) == []
+
+
+def test_a_bracketed_name_and_an_honorific_resolve_to_the_name():
+    message = MESSAGE.replace("Lan thuê Tú", "chị Lan thuê tôi (Tú)")
+    history = [{"version": 1, "messages": [message]}]
+    draft = milestone_draft()
+    draft["parties"][0] = {"id": "p_lan", "name": "chị Lan", "evidence": ev("chị Lan thuê")}
+    draft["parties"][1] = {"id": "p_tu", "name": "tôi (Tú)", "evidence": ev("tôi (Tú)")}
+    core = build_core(draft, history)
+    names = {claim["value"] for claim in core["claims"] if claim["kind"].endswith("recipient")}
+    assert names <= {"Lan", "Tú"} and "Tú" in names
+    assert validate_shadow_semantic_core(core, expected_history=history) == []
 
 
 def test_a_role_token_the_user_gives_is_the_token():

@@ -36,9 +36,9 @@ CORE = {
 
 def test_summary_reads_the_core_in_the_request_language():
     text = summarize(CORE)
-    assert "Ngọc nạp 40 ADA" in text and "20:00 ngày 01/02/2027 (UTC+7)" in text
+    assert "Ngọc nạp 40 ADA vào hợp đồng" in text and "20:00 ngày 01/02/2027 (UTC+7)" in text
     assert "Bất kỳ ai cũng có thể bấm xác nhận" in text
-    assert "Ngọc trả 40 ADA cho Lâm." in text
+    assert "hợp đồng chuyển 40 ADA (tiền Ngọc đã nạp) cho Lâm." in text
     assert text.endswith("xin nói rõ chỗ đó.")
 
 
@@ -66,3 +66,13 @@ def test_examples_become_compact_scenarios_with_code_computed_times():
 
 def test_a_reply_without_scenarios_is_a_problem():
     assert to_compact(CORE, {"x": 1}) == ({}, ["reply has no scenarios"])
+
+
+def test_only_a_final_wait_past_every_action_is_kept():
+    from research.synthesis.example_scenarios import _only_needed_waits
+
+    d1, d2 = "2027-02-01T13:00:00.000+00:00", "2027-02-02T13:00:00.000+00:00"
+    dep = [["deposit", "A", "A", 1.0]]
+    assert _only_needed_waits([[d1, dep], [d1, []], [d2, dep], [d2, []]]) == [[d1, dep], [d2, dep]]
+    assert _only_needed_waits([[d1, dep], [d2, []]]) == [[d1, dep], [d2, []]]
+    assert _only_needed_waits([[d1, []]]) == [[d1, []]]

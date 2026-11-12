@@ -44,6 +44,19 @@ def fold_name(name: str) -> str:
     return "".join(words)
 
 
+HONORIFICS = ("anh", "chị", "em", "cô", "chú", "bác", "ông", "bà", "bạn", "cụ", "dì", "mr", "mrs",
+              "ms", "dr", "mr.", "mrs.", "ms.", "dr.")
+
+
+def strip_honorific(name: str) -> str:
+    """"chị Hồng" -> "Hồng", "Mr. Lee" -> "Lee"; a name without a leading honorific, or whose
+    rest is not capitalised ("bạn thân"), is returned unchanged."""
+    words = name.split()
+    if len(words) > 1 and words[0].lower() in HONORIFICS and words[1][:1].isupper():
+        return " ".join(words[1:])
+    return name
+
+
 def same_party(first: str, second: str) -> bool:
     return bool(fold_name(first)) and fold_name(first) == fold_name(second)
 
