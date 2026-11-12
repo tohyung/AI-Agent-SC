@@ -47,7 +47,6 @@ PIPE_DIR = ROOT / "runs" / f"E7{_SUFFIX}-Pipeline"
 BASE_DIR = ROOT / "runs" / f"E7{_SUFFIX}-Baseline"
 DELIVERED = "SIMULATED_LEDGER_SIZE_CHECKED"
 MAX_RETRIES = 2
-MAX_COMPILE_FAILURES = 3
 MAX_USER_MESSAGES = 6
 MAX_REPLY_RETRIES = 2
 MAX_EXAMPLE_ROUNDS = 2
@@ -428,7 +427,7 @@ def _resume_scenarios(index: int, case_dir: Path, record: dict | None) -> int | 
     error = (compiled.get("steps", {}).get("compile", {}).get("safe_error") or {}).get("code")
     if error in {"provider_request_failed", "provider_limit"}:
         # The compile got no model response: run the review again, not the failed attempt (D4).
-        # `_scenarios` stops the case after MAX_COMPILE_FAILURES such attempts.
+        # Such a case is never ended for it; it waits for the provider (D5).
         print(f"PIPE {case_dir.name}: compile got no model response; running the review again")
         code, compiled = _pipe_run(index, "--review-candidate-id", candidate)
         return code if code is not None else _scenarios(index, case_dir, compiled, candidate, spec)
@@ -439,13 +438,9 @@ def _resume_scenarios(index: int, case_dir: Path, record: dict | None) -> int | 
 def _scenarios(index: int, case_dir: Path, record: dict, candidate: str, spec: dict) -> int:
     compiled = record.get("steps", {}).get("compile", {})
     if (compiled.get("safe_error") or {}).get("code") in {"provider_request_failed", "provider_limit"}:
-        failures = sum(
-            1 for path in case_dir.glob("attempt-*.json")
-            if ((json.loads(path.read_text(encoding="utf-8")).get("steps", {}).get("compile", {})
-                 .get("safe_error") or {}).get("code") in {"provider_request_failed",
-                                                           "provider_limit"}))
-        if failures >= MAX_COMPILE_FAILURES:
-            return _finish(case_dir, record, "compile_model_failed")
+        # No model response (quota, network, 5xx) is infrastructure (protocol 2.2, 2.4, 6): the
+        # case is never ended for it, like the baseline arm on provider_error; it resumes later
+        # with the review run again (D5).
         print(f"PIPE {case_dir.name}: compile got no model response; resume later")
         return 4
     if compiled.get("run_status") != "SUCCEEDED" or record.get("blocking_step") != "semantic_comparison":

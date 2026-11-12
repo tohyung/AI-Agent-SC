@@ -104,3 +104,14 @@ def test_a_compiled_contract_resumes_its_scenarios_without_a_new_review(driver, 
     monkeypatch.setattr(driver, "_pipe_run", lambda *a: pytest.fail("no new review expected"))
     monkeypatch.setattr(driver, "_scenarios", lambda index, case_dir, record, candidate, spec: 0)
     assert driver._resume_scenarios(1, case_dir, compiled) == 0
+
+
+def test_a_compile_with_no_model_response_never_ends_the_case(driver):
+    case_dir = _case(driver)
+    failed = {"status": "BLOCKED", "stop_reason": "llm_error", "reviewed_candidate_id": "c1",
+              "steps": {"compile": {"run_status": "FAILED",
+                                    "safe_error": {"code": "provider_request_failed"}}}}
+    for number in range(1, 5):
+        _attempt(case_dir, number, failed)
+    assert driver._scenarios(1, case_dir, failed, "c1", {"scenarios": {}}) == 4
+    assert not (case_dir / "final.json").exists()

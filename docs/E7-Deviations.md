@@ -71,3 +71,24 @@ Ghi theo `docs/E7-Protocol.md`, mục 6. Mỗi mục: thời điểm, thay đổ
 - **Case bị ảnh hưởng:** chỉ case 15. Case 1–14 không có lần sinh hợp đồng nào gặp lỗi này khi chạy
   tiếp.
 - **Kiểm tra:** thêm hai test trong `tests/experiments/test_e7_driver.py`.
+
+## D5 (2026-11-12, case 17 của v5): không kết thúc case vì bước sinh hợp đồng gặp lỗi máy chủ
+
+- **Hiện tượng:** bộ chạy kết thúc case 17 với `compile_model_failed` sau 3 lần sinh hợp đồng
+  (attempt-005..007). Mọi lần gọi lỗi trong 3 lần đó đều là `InternalServerError` (5xx) của Gemini,
+  tức không có phản hồi của model. Mục 2.2, 2.4 và 6 của giao thức coi 5xx là lỗi hạ tầng: case bị dừng
+  vì hạ tầng thì được chạy tiếp, không được tính là kết quả của nhánh. Nhánh Baseline cũng không bao giờ
+  kết thúc case vì `provider_error`: nó dừng rồi được chạy tiếp sau. Luật `MAX_COMPILE_FAILURES` (mang
+  từ E6) vì thế làm hai nhánh bị đối xử khác nhau.
+- **Sửa (hạ tầng):** bỏ `MAX_COMPILE_FAILURES` trong `tools/e7/auto.py`. Khi bước sinh hợp đồng không
+  có phản hồi, bộ chạy thoát với mã 4, rồi chạy lại bước duyệt (D4) khi máy chủ hoạt động lại. Người
+  điều khiển chờ sự cố qua đi rồi mới chạy tiếp.
+- **Case bị ảnh hưởng:** chỉ case 17. `final.json` của nó được cất vào
+  `runs/E7-Eval-Discarded/case-017/`, và case được chạy tiếp từ bước duyệt.
+  - Nhánh Baseline của case 17 đã chạy với trần 7, tức số request Pipeline có lúc đó. Nó được chấp nhận
+    sau 3/7 request, chưa chạm trần, nên không chạy lại. Số request Pipeline chỉ có thể tăng sau khi
+    chạy tiếp, nên trần cũ không làm Baseline thiệt.
+  - Trần của case 17 được báo cáo với cả hai số.
+- **Kiểm tra:** case 1–16 không có case nào kết thúc vì `compile_model_failed`. Case 1, 5 và 15 kết thúc
+  vì `generation_stalled` khi chạy kịch bản, không có lần gọi lỗi nào, nên đó là kết quả thật của model.
+  Thêm một test trong `tests/experiments/test_e7_driver.py`.
