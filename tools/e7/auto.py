@@ -306,6 +306,7 @@ def pipe(index: int) -> int:
         return 0
     language = user_view(index, DATASET)["language"]
     retries = 0
+    outage_waits = 0
     record = _last(case_dir)
     code = None
     resumed = _resume_scenarios(index, case_dir, record)
@@ -390,6 +391,19 @@ def pipe(index: int) -> int:
                 if code is None:
                     return _scenarios(index, case_dir, record, candidate, spec)
         elif (record["status"] in {"BLOCKED", "WAITING_USER"}
+              and record.get("stop_reason") == "llm_error" and _no_response(record)):
+            # No model response (quota, network, 5xx) is infrastructure, never a failed retry
+            # (D6): run again after a wait; after 3 waits exit 4 and resume later.
+            if outage_waits >= 3:
+                print(f"PIPE {case_dir.name}: model gave no response; resume later")
+                return 4
+            import time
+
+            outage_waits += 1
+            print(f"  model gave no response; retry {outage_waits} in 60 s")
+            time.sleep(60)
+            code, record = _pipe_run(index)
+        elif (record["status"] in {"BLOCKED", "WAITING_USER"}
               and record.get("stop_reason") in {"invalid_candidate", "llm_error"}
               and retries < MAX_RETRIES):
             retries += 1
@@ -398,6 +412,14 @@ def pipe(index: int) -> int:
             return _finish(case_dir, record, "pipeline_stopped")
         if code is not None:
             return code
+
+
+def _no_response(record: dict) -> bool:
+    """The blocking step failed with no model content at all (quota, network, 5xx)."""
+    error = (record.get("steps", {}).get(record.get("blocking_step") or "", {}).get("safe_error")
+             or {})
+    return (error.get("code") in {"provider_request_failed", "provider_limit"}
+            and not error.get("model_content_received"))
 
 
 def _resume_scenarios(index: int, case_dir: Path, record: dict | None) -> int | None:

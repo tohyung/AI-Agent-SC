@@ -106,3 +106,19 @@ Ghi theo `docs/E7-Protocol.md`, mục 6. Mỗi mục: thời điểm, thay đổ
     thứ hai còn đòi bản đọc lại ghi từng lần trả tiền.
 - **Quyết định của người dùng:** giữ nguyên bản đóng băng, không sửa và không chạy lại. Đây được báo
   cáo là điểm yếu của nhánh Pipeline, kèm số case bị ảnh hưởng khi chạy xong 100 case.
+
+## D6 (2026-11-13, case 22 của v5): lần chạy đầu không có phản hồi nhưng bị tính là thử lại thất bại
+
+- **Hiện tượng:** cả ba lần chạy đầu của case 22 (attempt-001..003) đều hỏng ở `intent_extraction` vì
+  `InternalServerError` (5xx) của Gemini, với `model_content_received: false`. Bộ chạy coi đó là các lần
+  thử lại `llm_error` thông thường, nên sau `MAX_RETRIES` lần thì kết thúc case với `pipeline_stopped`
+  (0 request). Đây là cùng loại lỗi với D5, chỉ khác bước.
+- **Sửa (hạ tầng):** lần chạy hỏng mà không có nội dung nào từ model (`provider_request_failed` hoặc
+  `provider_limit` ở bước chặn) không còn bị tính vào `MAX_RETRIES`.
+  - Bộ chạy chờ 60 s rồi chạy lại, tối đa 3 lần cho mỗi lần gọi.
+  - Sau đó nó thoát với mã 4 để chạy tiếp sau, và không bao giờ kết thúc case vì lý do này.
+  - `MAX_RETRIES` vẫn áp dụng cho các lỗi có phản hồi của model (`invalid_candidate`, hoặc `llm_error`
+    có nội dung).
+- **Case bị ảnh hưởng:** chỉ case 22. `final.json` sai được cất vào `runs/E7-Eval-Discarded/case-022/`.
+  Nhánh Baseline của case 22 chưa chạy. Case 1–21 không có case nào kết thúc `pipeline_stopped`.
+- **Kiểm tra:** thêm một test trong `tests/experiments/test_e7_driver.py`.

@@ -115,3 +115,18 @@ def test_a_compile_with_no_model_response_never_ends_the_case(driver):
         _attempt(case_dir, number, failed)
     assert driver._scenarios(1, case_dir, failed, "c1", {"scenarios": {}}) == 4
     assert not (case_dir / "final.json").exists()
+
+
+def test_a_run_with_no_model_response_is_retried_not_ended(driver, monkeypatch):
+    case_dir = _case(driver)
+    failed = {"status": "BLOCKED", "stop_reason": "llm_error", "blocking_step": "intent_extraction",
+              "steps": {"intent_extraction": {"safe_error": {
+                  "code": "provider_request_failed", "model_content_received": False}}}}
+    for number in range(1, 4):
+        _attempt(case_dir, number, failed)
+    runs = []
+    monkeypatch.setattr(driver, "_pipe_run", lambda index, *args: (runs.append(args), (None, failed))[1])
+    monkeypatch.setattr("time.sleep", lambda seconds: None)
+    assert driver.pipe(1) == 4
+    assert len(runs) == 3
+    assert not (case_dir / "final.json").exists()
