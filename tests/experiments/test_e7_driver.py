@@ -144,3 +144,16 @@ def test_a_key_pool_rotates_within_its_own_keys(driver, monkeypatch, tmp_path):
 def test_no_key_pool_uses_the_shared_rotation(driver, monkeypatch):
     monkeypatch.delenv("E7_GEMINI_KEYS", raising=False)
     assert driver._keys() is None
+
+
+def test_re_entering_a_waiting_turn_keeps_its_reject_count(driver):
+    case_dir = _case(driver)
+    driver._need(case_dir, 1, "question", "Ai nhận tiền?")
+    pending = case_dir / "simuser-pending.json"
+    state = json.loads(pending.read_text(encoding="utf-8"))
+    state["retries"] = 2
+    pending.write_text(json.dumps(state), encoding="utf-8")
+    driver._need(case_dir, 1, "question", "Ai nhận tiền?")
+    assert json.loads(pending.read_text(encoding="utf-8"))["retries"] == 2
+    driver._need(case_dir, 1, "question", "Câu hỏi khác?")
+    assert json.loads(pending.read_text(encoding="utf-8"))["retries"] == 0

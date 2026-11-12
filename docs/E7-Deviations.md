@@ -158,3 +158,20 @@ Ghi theo `docs/E7-Protocol.md`, mục 6. Mỗi mục: thời điểm, thay đổ
 - Khi sub-agent xong, cùng sub-agent đó được kiểm tra lại. Lần này hợp lệ, và câu trả lời được ghi.
 - Không gọi sub-agent mới, nên không có chuyện chọn giữa nhiều câu trả lời. Cả hai lần kiểm tra đều nằm
   trong `subagent-audit.jsonl`.
+
+### I3 (2026-11-13, case 33 Pipeline): gọi lại `pipe N` khi một lượt đang chờ làm mất số lần bị từ chối
+
+- **Hiện tượng:** người dùng mô phỏng trả lời lượt `examples` của case 33. Bộ kiểm tra từ chối câu trả
+  lời hai lần ("number 60 is not in the request or the fact sheet"). Sau đó người điều khiển lỡ chạy lại
+  `auto.py pipe 33` thay vì gọi sim-user mới. `_need` ghi đè `simuser-pending.json` với `retries` = 0,
+  nên câu trả lời thứ ba, cũng bị từ chối, không chuyển sang câu dự phòng như giao thức quy định (tối đa
+  2 lần thử lại).
+- **Sửa (hạ tầng):** `_need` giữ số lần từ chối khi cùng lượt đó (cùng loại, cùng nội dung hiển thị)
+  vẫn đang chờ. Có thêm test.
+- **Sửa dữ liệu case 33:**
+  - Bản cũ của `simuser.json` và `simuser-pending.json` được cất vào `runs/E7-Eval-Discarded/case-033/`.
+  - Lượt từ chối thứ ba được ghi lại đúng như lẽ ra phải ghi: cùng câu trả lời thô, với `retry` = 2.
+  - Bộ kiểm tra từ chối lần nữa, nên câu dự phòng được ghi.
+  - Không gọi sub-agent mới, và không có câu trả lời nào được chọn.
+- **Kiểm tra:** đã quét `simuser.json` của mọi case trên cả hai nhánh. Chỉ case 33 có chuỗi thử lại bị
+  đặt về 0 sau một lần từ chối.

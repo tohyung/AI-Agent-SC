@@ -90,8 +90,16 @@ def _need(case_dir: Path, index: int, kind: str, text: str) -> int:
     if not log["history"] or log["history"][-1] != ["assistant", shown]:
         log["history"].append(["assistant", shown])
     _save_log(case_dir, log)
-    (case_dir / "simuser-pending.json").write_text(
-        json.dumps({"kind": kind, "shown": shown, "retries": 0}, ensure_ascii=False), encoding="utf-8")
+    pending_path = case_dir / "simuser-pending.json"
+    retries = 0
+    if pending_path.exists():
+        # Re-entering while the same turn waits keeps its reject count (I3).
+        old = json.loads(pending_path.read_text(encoding="utf-8"))
+        if old.get("kind") == kind and old.get("shown") == shown:
+            retries = int(old.get("retries", 0))
+    pending_path.write_text(
+        json.dumps({"kind": kind, "shown": shown, "retries": retries}, ensure_ascii=False),
+        encoding="utf-8")
     view = user_view(index, DATASET)
     (case_dir / "simuser-input.txt").write_text(
         HEADER + situation(view, [tuple(item) for item in log["history"]]), encoding="utf-8")
