@@ -275,6 +275,27 @@ def _convert(index: int, case_dir: Path, examples: str) -> dict:
         "scenarios": {}, "problems": [f"converter failed: {result.stderr[-300:]}"]}
 
 
+NO_RESPONSE_ERRORS = {"provider_request_failed", "provider_error", "provider_limit"}
+
+
+def _convert_with_retries(index: int, case_dir: Path, examples: str) -> dict:
+    """Convert examples, retrying a call that got no model response (network, timeout, 5xx)
+    up to three times a minute apart, and switching key on quota."""
+    import time
+
+    for attempt in range(3):
+        converted = _convert(index, case_dir, examples)
+        error = converted.get("error")
+        if error not in NO_RESPONSE_ERRORS:
+            return converted
+        if error == "provider_limit" and not _rotate():
+            return converted
+        if attempt < 2 and error != "provider_limit":
+            print(f"  conversion got no model response ({error}); retry in 60 s")
+            time.sleep(60)
+    return converted
+
+
 def pipe(index: int) -> int:
     from research.formalization.intent_summary import summarize
     from research.synthesis.example_scenarios import examples_request
@@ -311,6 +332,9 @@ def pipe(index: int) -> int:
             if stage.get("candidate") != candidate:
                 stage = {"candidate": candidate, "step": "review", "rounds": 0}
                 _set_stage(case_dir, stage)
+            if decision is None and stage["step"] == "converting":
+                # A conversion stopped by infrastructure resumes with the same examples (D3).
+                decision = {"kind": "message", "text": stage["pending_examples"], "resume": True}
             if decision is None:
                 if _out_of_turns(case_dir):
                     return _finish(case_dir, record, "user_out_of_turns")
@@ -329,17 +353,26 @@ def pipe(index: int) -> int:
                     stage["step"] = "examples"
                     _set_stage(case_dir, stage)
                     continue
-            elif stage["step"] == "examples" or (stage["step"] == "readback"
-                                                 and decision["kind"] == "message"):
-                examples = decision["text"] if stage["step"] == "examples" else (
-                    stage["examples"] + "\n" + decision["text"])
-                stage["rounds"] += 1
-                if stage["rounds"] > MAX_EXAMPLE_ROUNDS:
+            elif stage["step"] in {"examples", "converting"} or (stage["step"] == "readback"
+                                                                 and decision["kind"] == "message"):
+                if stage["step"] == "converting":
+                    examples = stage["pending_examples"]
+                elif stage["step"] == "examples":
+                    examples = decision["text"]
+                else:
+                    examples = stage["examples"] + "\n" + decision["text"]
+                if stage["rounds"] + 1 > MAX_EXAMPLE_ROUNDS:
                     return _finish(case_dir, record, "scenarios_not_confirmed")
-                converted = _convert(index, case_dir, examples)
+                converted = _convert_with_retries(index, case_dir, examples)
+                if converted.get("error") in NO_RESPONSE_ERRORS:
+                    # No usable model response: infrastructure, not a failed round (D3). The
+                    # same examples are converted again when the case resumes.
+                    stage.update(step="converting", pending_examples=examples)
+                    _set_stage(case_dir, stage)
+                    return 3 if converted.get("error") == "provider_limit" else 4
+                stage.pop("pending_examples", None)
+                stage["rounds"] += 1
                 if not converted.get("scenarios"):
-                    if converted.get("error") == "provider_limit":
-                        return 3
                     stage.update(step="examples", examples=examples)
                     _set_stage(case_dir, stage)
                     if stage["rounds"] >= MAX_EXAMPLE_ROUNDS:

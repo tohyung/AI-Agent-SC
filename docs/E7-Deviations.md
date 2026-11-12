@@ -40,3 +40,18 @@ Ghi theo `docs/E7-Protocol.md`, mục 6. Mỗi mục: thời điểm, thay đổ
   request model mới. Nhánh Baseline của case 10 chạy sau khi sửa, với trần là 3 request của Pipeline.
 - **Testnet:** chuỗi ngừng tạo block hai lần dù tiến trình vẫn chạy (slot 8712 và slot 1384). Cả hai
   lần đều được khởi động lại. Không kết quả nào khác bị ảnh hưởng.
+
+## D3 (2026-11-12, case 13 của v5): lỗi mạng khi đổi ví dụ thành kịch bản
+
+- **Hiện tượng:** lần gọi Gemini để đổi ví dụ thành kịch bản bị timeout (APITimeoutError sau 183 s),
+  tức không có phản hồi của model. Bộ chạy lại coi đó là lần đổi thất bại: nó hỏi người dùng ví dụ lần
+  nữa và tính là một trong hai lượt cho phép. Như vậy kết quả phụ thuộc mạng, trái với mục 2.2 và mục 6
+  của giao thức.
+- **Sửa (hạ tầng):** `tools/e7/auto.py` gọi lại tối đa 3 lần, cách nhau 60 s, khi không có phản hồi
+  (lỗi mạng, timeout, 5xx); hết quota thì đổi key. Nếu vẫn lỗi thì lưu ví dụ đang chờ, đặt trạng thái
+  `converting` và thoát (mã 4, hoặc 3 nếu hết quota). Lần chạy sau đổi lại đúng các ví dụ đó, không hỏi
+  lại người dùng, không tính lượt.
+- **Case bị ảnh hưởng:** chỉ case 13. Lượt hỏi lại ví dụ được rút lại trước khi sim-user thấy; bộ đếm
+  lượt về 0; lần gọi lỗi được cất vào `runs/E7-Eval-Discarded/case-013/`. Lần gọi đó không có phản hồi
+  nên không được tính request. Lần đổi lại thành công với đúng câu trả lời đã lưu.
+- **Kiểm tra:** case 1–12 không có lần đổi ví dụ nào gặp lỗi này.
