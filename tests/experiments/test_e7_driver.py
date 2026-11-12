@@ -69,3 +69,38 @@ def test_a_message_that_only_agrees_accepts(driver):
     assert not driver.plain_agreement("Yes, but the year should be 2027.")
     assert not driver.plain_agreement("Đúng, nhưng sai năm.")
     assert not driver.plain_agreement("The year is wrong.")
+
+
+def _attempt(case_dir, number, record):
+    (case_dir / f"attempt-{number:03d}.json").write_text(json.dumps(record), encoding="utf-8")
+
+
+def test_a_compile_with_no_model_response_reruns_the_review_on_resume(driver, monkeypatch):
+    case_dir = _case(driver)
+    (case_dir / "scenarios.json").write_text(json.dumps({"intent_id": "c1", "scenarios": {}}),
+                                             encoding="utf-8")
+    failed = {"status": "BLOCKED", "stop_reason": "llm_error", "reviewed_candidate_id": "c1",
+              "steps": {"compile": {"run_status": "FAILED",
+                                    "safe_error": {"code": "provider_request_failed"}}}}
+    _attempt(case_dir, 1, failed)
+    compiled = {"status": "WAITING_RESEARCH_REVIEW", "reviewed_candidate_id": "c1",
+                "steps": {"compile": {"run_status": "SUCCEEDED", "output_artifacts": ["k1"]}}}
+    runs, seen = [], []
+    monkeypatch.setattr(driver, "_pipe_run", lambda index, *args: (runs.append(args), (None, compiled))[1])
+    monkeypatch.setattr(driver, "_scenarios",
+                        lambda index, case_dir, record, candidate, spec: seen.append(record) or 0)
+    assert driver._resume_scenarios(1, case_dir, failed) == 0
+    assert runs == [("--review-candidate-id", "c1")]
+    assert seen == [compiled]
+
+
+def test_a_compiled_contract_resumes_its_scenarios_without_a_new_review(driver, monkeypatch):
+    case_dir = _case(driver)
+    (case_dir / "scenarios.json").write_text(json.dumps({"intent_id": "c1", "scenarios": {}}),
+                                             encoding="utf-8")
+    compiled = {"status": "BLOCKED", "reviewed_candidate_id": "c1",
+                "steps": {"compile": {"run_status": "SUCCEEDED", "output_artifacts": ["k1"]}}}
+    _attempt(case_dir, 1, compiled)
+    monkeypatch.setattr(driver, "_pipe_run", lambda *a: pytest.fail("no new review expected"))
+    monkeypatch.setattr(driver, "_scenarios", lambda index, case_dir, record, candidate, spec: 0)
+    assert driver._resume_scenarios(1, case_dir, compiled) == 0

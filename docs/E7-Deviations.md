@@ -55,3 +55,19 @@ Ghi theo `docs/E7-Protocol.md`, mục 6. Mỗi mục: thời điểm, thay đổ
   lượt về 0; lần gọi lỗi được cất vào `runs/E7-Eval-Discarded/case-013/`. Lần gọi đó không có phản hồi
   nên không được tính request. Lần đổi lại thành công với đúng câu trả lời đã lưu.
 - **Kiểm tra:** case 1–12 không có lần đổi ví dụ nào gặp lỗi này.
+
+## D4 (2026-11-12, case 15 của v5): bước sinh hợp đồng không có phản hồi rồi bị kẹt khi chạy tiếp
+
+- **Hiện tượng:** ở bước duyệt, lần gọi Gemini để sinh hợp đồng bị `provider_request_failed`
+  (attempt-006), tức không có phản hồi của model. Khi chạy tiếp, `_resume_scenarios` lấy chính lần thất
+  bại đó làm "hợp đồng đã sinh". Vì vậy `_scenarios` lần nào cũng thoát với mã 4 mà không gọi model
+  lại. Case kẹt mãi, và giới hạn `MAX_COMPILE_FAILURES` = 3 không bao giờ được đếm tới.
+- **Sửa (hạ tầng):** nếu lần duyệt gần nhất của intent đã chốt mà bước sinh hợp đồng không có phản hồi
+  (`provider_request_failed` hoặc `provider_limit`), bộ chạy chạy lại bước duyệt đó. Không hỏi lại
+  người dùng và không tính lượt. Sau 3 lần như vậy, case kết thúc với `compile_model_failed`, như luật
+  đã có.
+- **Không đổi:** điều mà hai nhánh hay người dùng mô phỏng nhìn thấy. Lần gọi lỗi không có phản hồi nên
+  không được tính request.
+- **Case bị ảnh hưởng:** chỉ case 15. Case 1–14 không có lần sinh hợp đồng nào gặp lỗi này khi chạy
+  tiếp.
+- **Kiểm tra:** thêm hai test trong `tests/experiments/test_e7_driver.py`.

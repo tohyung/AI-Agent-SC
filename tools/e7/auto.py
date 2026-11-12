@@ -425,6 +425,13 @@ def _resume_scenarios(index: int, case_dir: Path, record: dict | None) -> int | 
             compiled = attempt
     if compiled is None:
         return None
+    error = (compiled.get("steps", {}).get("compile", {}).get("safe_error") or {}).get("code")
+    if error in {"provider_request_failed", "provider_limit"}:
+        # The compile got no model response: run the review again, not the failed attempt (D4).
+        # `_scenarios` stops the case after MAX_COMPILE_FAILURES such attempts.
+        print(f"PIPE {case_dir.name}: compile got no model response; running the review again")
+        code, compiled = _pipe_run(index, "--review-candidate-id", candidate)
+        return code if code is not None else _scenarios(index, case_dir, compiled, candidate, spec)
     print(f"PIPE {case_dir.name}: resuming the scenario runs on the compiled contract")
     return _scenarios(index, case_dir, compiled, candidate, spec)
 
