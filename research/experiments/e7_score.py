@@ -33,7 +33,8 @@ from research.synthesis.reference import ReferenceRequest
 
 ROOT = Path(__file__).resolve().parents[2]
 DATASET_V3 = ROOT / "dataset" / "v3" / "cases.jsonl"
-DATASETS = {"v3": DATASET_V3, "v4": ROOT / "dataset" / "v4" / "cases.jsonl"}
+DATASETS = {"v3": DATASET_V3, "v4": ROOT / "dataset" / "v4" / "cases.jsonl",
+            "v5": ROOT / "dataset" / "v5" / "cases.jsonl"}
 EMPTY_STATE = {"accounts": [], "choices": [], "boundValues": [], "minTime": 0}
 TIME_TOLERANCE_MS = 60_000
 

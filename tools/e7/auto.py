@@ -23,6 +23,7 @@ Exit codes: 0 the arm ended, 3 quota, 4 infrastructure, 5 sim-user reply needed,
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 import subprocess
 import sys
@@ -35,10 +36,14 @@ from expect import build  # noqa: E402
 from simuser import check_reply, situation, user_view  # noqa: E402
 from research.experiments.baseline_llm import counted_requests, pipeline_requests  # noqa: E402
 
-DATASET = "v4"
+# E7_DATASET=v4 (dev, default) or v5 (the evaluation set, run only after the code is frozen).
+DATASET = os.environ.get("E7_DATASET", "v4")
+if DATASET not in {"v4", "v5"}:
+    raise SystemExit("E7_DATASET must be v4 or v5")
 RUNNER = "/mnt/d/code/marlowe_ai_agent/tools/e6/run_wsl.sh"
-PIPE_DIR = ROOT / "runs" / "E7-Pipeline"
-BASE_DIR = ROOT / "runs" / "E7-Baseline"
+_SUFFIX = "" if DATASET == "v4" else "-Eval"
+PIPE_DIR = ROOT / "runs" / f"E7{_SUFFIX}-Pipeline"
+BASE_DIR = ROOT / "runs" / f"E7{_SUFFIX}-Baseline"
 DELIVERED = "SIMULATED_LEDGER_SIZE_CHECKED"
 MAX_RETRIES = 2
 MAX_COMPILE_FAILURES = 3

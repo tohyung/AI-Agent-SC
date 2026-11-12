@@ -26,6 +26,7 @@ from typing import Any, Callable
 ROOT = Path(__file__).resolve().parents[2]
 DATASET_V3 = ROOT / "dataset" / "v3" / "cases.jsonl"
 DATASET_V4 = ROOT / "dataset" / "v4" / "cases.jsonl"
+DATASET_V5 = ROOT / "dataset" / "v5" / "cases.jsonl"
 # Dev cases 1-56 of dataset v2 are the only place the arm may be tried or tuned (E6-Plan, section 3).
 DATASET_DEV = ROOT / "dataset" / "cases.jsonl"
 DEV_CASES = 56
@@ -75,13 +76,13 @@ Marlowe Core JSON notes:
 
 def load_case(index: int, dataset: str = "v3") -> dict[str, Any]:
     """Only the fields the arm may see: id, prompt and language (never the evaluator fields)."""
-    if dataset not in {"v3", "v4", "dev"}:
-        raise ValueError("dataset must be v3, v4 or dev")
-    path = {"v3": DATASET_V3, "v4": DATASET_V4, "dev": DATASET_DEV}[dataset]
+    if dataset not in {"v3", "v4", "v5", "dev"}:
+        raise ValueError("dataset must be v3, v4, v5 or dev")
+    path = {"v3": DATASET_V3, "v4": DATASET_V4, "v5": DATASET_V5, "dev": DATASET_DEV}[dataset]
     with path.open(encoding="utf-8") as source:
         cases = [json.loads(line) for line in source]
-    last = len(cases) if dataset == "v4" else 100 if dataset == "v3" else DEV_CASES
-    if (dataset != "v4" and len(cases) != 100) or not 1 <= index <= last:
+    last = len(cases) if dataset in {"v4", "v5"} else 100 if dataset == "v3" else DEV_CASES
+    if (dataset not in {"v4", "v5"} and len(cases) != 100) or not 1 <= index <= last:
         raise ValueError(f"case index outside {dataset} cases 1-{last}")
     case = cases[index - 1]
     return {"id": case["id"], "prompt": case["prompt"], "language": case["language"]}
@@ -298,7 +299,7 @@ def run(index: int, *, cap: int | None = None, message: str | None = None,
         if message is not None or finish is not None:
             raise ValueError("a new session starts from the case prompt alone")
         session = new_session(case, cap, provider,
-                              BASELINE_PROMPT_VERSION_E7 if dataset == "v4" else BASELINE_PROMPT_VERSION)
+                              BASELINE_PROMPT_VERSION_E7 if dataset in {"v4", "v5"} else BASELINE_PROMPT_VERSION)
     if session["status"] in FINAL:
         raise ValueError(f"session already ended: {session['status']}")
     if finish is not None:
@@ -383,7 +384,7 @@ def main() -> int:
     action.add_argument("--accept", action="store_true")
     action.add_argument("--give-up", action="store_true")
     parser.add_argument("--provider", choices=PROVIDERS, default="gemini")
-    parser.add_argument("--dataset", choices=["v3", "v4", "dev"], default="v3",
+    parser.add_argument("--dataset", choices=["v3", "v4", "v5", "dev"], default="v3",
                         help="dev = dataset v2 cases 1-56, for trials and tuning only")
     parser.add_argument("--run-dir", type=Path, default=RUN_DIR)
     args = parser.parse_args()

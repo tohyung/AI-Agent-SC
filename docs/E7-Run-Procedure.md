@@ -1,6 +1,11 @@
 # E7: cách chạy (2026-11-12)
 
-Quy ước: `docs/E7-Conventions.md`. Dataset: `dataset/v4` (chỉ là dev, xem README của nó).
+Quy ước: `docs/E7-Conventions.md`. Dataset:
+
+- `dataset/v4`: dev (prompt v3). Mặc định của bộ chạy; ghi vào `runs/E7-Pipeline`, `runs/E7-Baseline`.
+- `dataset/v5`: tập đánh giá (100 case mới, đóng băng ở tag `E7-Dataset-v5`). Chạy bằng
+  `E7_DATASET=v5`, ghi vào `runs/E7-Eval-Pipeline`, `runs/E7-Eval-Baseline`, chỉ sau khi code E7 đã
+  được đóng băng trên v4.
 
 ## Thành phần
 
@@ -47,6 +52,5 @@ Quy ước: `docs/E7-Conventions.md`. Dataset: `dataset/v4` (chỉ là dev, xem 
 
 ## Còn thiếu trước khi có kết quả sạch
 
-- Prompt mới cho tập đánh giá (v4 dùng lại prompt v3, nên chỉ là dev).
 - Chạy thử vài case dev từ đầu đến cuối để bắt lỗi của bộ chạy. Chưa làm: bộ chạy mới chỉ được kiểm
   bằng unit test, chưa chạy thật trên testnet.

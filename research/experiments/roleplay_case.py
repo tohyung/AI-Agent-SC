@@ -26,7 +26,7 @@ ROOT = Path(__file__).resolve().parents[2]
 RUN_DIR = ROOT / "runs" / "E3-Roleplay-Batch20"
 REMAINING_RUN_DIR = ROOT / "runs" / "E3-Roleplay-Batch80"
 E6_RUN_DIR = ROOT / "runs" / "E6-Pipeline"
-DATASETS = ("v2", "v3", "v4")
+DATASETS = ("v2", "v3", "v4", "v5")
 # E7: dataset v4 runs into its own directory, set by --run-dir.
 # Secondary providers are chosen only by explicit argument (see ModelTransport).
 PROVIDERS = ("default", "gemini")
@@ -47,7 +47,7 @@ def _pace(provider: str) -> None:
 
 
 def _case_at(index: int, dataset: str = "v2") -> dict[str, Any]:
-    if dataset in {"v3", "v4"}:
+    if dataset in {"v3", "v4", "v5"}:
         # E6/E7: the pipeline arm sees the same fields as the baseline arm (id, prompt, language).
         from research.experiments.baseline_llm import load_case
 
@@ -218,11 +218,11 @@ def run_case(index: int, *, answers: list[str] | None = None,
              dataset: str = "v2") -> dict[str, Any]:
     if provider not in PROVIDERS:
         raise ValueError(f"provider must be one of {', '.join(PROVIDERS)}")
-    if dataset in {"v3", "v4"} and formalization != "AFF":
+    if dataset in {"v3", "v4", "v5"} and formalization != "AFF":
         raise ValueError("E6 runs dataset v3 on the AFF main path only")
     case = _case_at(index, dataset)
     if run_dir is None:
-        run_dir = (E6_RUN_DIR if dataset in {"v3", "v4"}
+        run_dir = (E6_RUN_DIR if dataset in {"v3", "v4", "v5"}
                    else RUN_DIR if index <= 20 else REMAINING_RUN_DIR)
     if answers is not None and (not isinstance(answers, list)
                                 or any(not isinstance(item, str) or not item.strip()
@@ -236,7 +236,7 @@ def run_case(index: int, *, answers: list[str] | None = None,
         raise ValueError("a candidate cannot be reviewed and repaired in the same run")
     if repair_candidate_id is not None and repair_attempts == 0:
         raise ValueError("candidate repair requires at least one validation repair")
-    case_dir = run_dir / (f"case-{index:03d}" if dataset in {"v3", "v4"} else f"case-{index:02d}")
+    case_dir = run_dir / (f"case-{index:03d}" if dataset in {"v3", "v4", "v5"} else f"case-{index:02d}")
     case_dir.mkdir(parents=True, exist_ok=True)
     previous = _latest(case_dir)
     if previous is not None and previous.get("case_id") != case["id"]:

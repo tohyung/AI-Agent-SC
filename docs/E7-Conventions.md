@@ -213,7 +213,7 @@ do ở mục 11. Sau khi đóng băng thì không sửa nữa.
 | Q-KỊCH BẢN 2–3 | Đã làm | `research/synthesis/example_scenarios.py` (xin ví dụ theo cấu trúc intent, đổi thành kịch bản, đọc lại) |
 | AFF-1 (hỏi thay vì dừng) | Đã làm | `cli_runner.restate_question`, một lần mỗi case |
 | Q-DỮ LIỆU 1, 3, 4 | Đã làm (trên prompt v3) | `dataset/v4`: `spec.parties`, kịch bản cho mọi người mua `first_come`, chia dev/eval theo họ |
-| Q-DỮ LIỆU 2 (phiếu dữ kiện đầy đủ), 5 | Chưa | Cần prompt mới cho tập đánh giá sạch (`dataset/v4/README.md`) |
+| Q-DỮ LIỆU 2, 5 | Đã làm | `dataset/v5`: 100 case mới viết tay, kiểm văn phong và độ chính xác bằng máy, đóng băng (tag `E7-Dataset-v5`) |
 
 **Kiểm chứng chấm máy trên E6** (case 30–100, các hợp đồng đã giao):
 

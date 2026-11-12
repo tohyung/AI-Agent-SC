@@ -19,7 +19,8 @@ import sys
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 DATASET = ROOT / "dataset" / "v3" / "cases.jsonl"
-DATASETS = {"v3": DATASET, "v4": ROOT / "dataset" / "v4" / "cases.jsonl"}
+DATASETS = {"v3": DATASET, "v4": ROOT / "dataset" / "v4" / "cases.jsonl",
+            "v5": ROOT / "dataset" / "v5" / "cases.jsonl"}
 ACTIONS = {"answer", "accept", "object", "give_up"}
 
 
