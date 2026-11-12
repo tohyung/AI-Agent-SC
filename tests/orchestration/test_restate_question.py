@@ -13,3 +13,13 @@ def test_draft_items_left_unrepaired_become_one_restate_question():
 
 def test_a_failure_naming_no_draft_item_is_not_the_users_to_fix():
     assert restate_question(["model output is not canonical JSON"], HISTORY) is None
+
+
+def test_an_unsupported_part_asked_again_after_an_answer_is_kept():
+    from research.orchestration.cli_runner import kept_unsupported
+
+    question = 'This part cannot be represented yet: "Pull the price automatically.". Can it be dropped or restated?'
+    transcript = [{"question": 'What is the name of "I"?\n' + question, "answer": "I still need it."}]
+    assert kept_unsupported(["What is the name of \"Me\"?", question], transcript)
+    assert not kept_unsupported([question], [])
+    assert not kept_unsupported(['This part cannot be represented yet: "something else".'], transcript)

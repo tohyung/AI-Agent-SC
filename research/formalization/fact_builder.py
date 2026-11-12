@@ -916,6 +916,10 @@ class _Builder:
                 party["evidence"].extend(entry for entry in self._cite(attached[1])
                                          if entry not in party["evidence"])
                 return
+            later = [message for key, message in self.messages.items() if key[0] > 1]
+            if any(re.search(rf"[\"'‘’“”]{re.escape(name)}[\"'‘’“”]", message) for message in later):
+                # The user chose this label in a reply ("use 'Me' for my side"): it is the name.
+                return
             # "I", "Tôi": the person is not named yet, so the user is asked.
             self.unnamed.add(name)
             self.observations.append({

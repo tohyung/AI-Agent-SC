@@ -51,8 +51,18 @@ MAX_COMPILE_FAILURES = 3
 MAX_USER_MESSAGES = 6
 MAX_REPLY_RETRIES = 2
 MAX_EXAMPLE_ROUNDS = 2
+AGENT_FILE = ROOT / ".claude" / "agents" / "sim-user.md"
+
+
+def _persona() -> str:
+    """The sim-user rules (SimUser-v3), copied into every input so each turn carries them."""
+    text = AGENT_FILE.read_text(encoding="utf-8")
+    return text.split("---", 2)[2].strip()
+
+
 HEADER = ("Do not use any tools except the one that hands your final report back. Your final "
-          "report must be exactly the one JSON object described under OUTPUT, nothing else.\n\n")
+          "report must be exactly the one JSON object described under OUTPUT, nothing else.\n\n"
+          + _persona() + "\n\n=== YOUR SITUATION ===\n")
 FALLBACK = {"vi": "Tôi không biết thêm, bạn làm theo những gì tôi đã nói.",
             "en": "I don't know anything more; please go with what I already said."}
 RESULT = {"result": "[RESULT: the assistant shows how it understood your request:] ",

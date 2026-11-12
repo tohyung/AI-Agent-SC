@@ -119,8 +119,8 @@ do ở mục 11. Sau khi đóng băng thì không sửa nữa.
 
 ## 6. Người dùng mô phỏng (Q-NGƯỜI DÙNG)
 
-1. **Cấu hình:** sub-agent `sim-user` (`.claude/agents/sim-user.md`), prompt SimUser-v2, Claude Haiku
-   5.5, effort medium, không có công cụ. Dùng cùng prompt cho hai nhánh và không cho biết đang nói với
+1. **Cấu hình:** sub-agent `sim-user` (`.claude/agents/sim-user.md`), prompt SimUser-v3, Claude Haiku
+   5.5, effort medium, không có công cụ. Toàn văn luật được chép vào mọi tệp đầu vào. Dùng cùng prompt cho hai nhánh và không cho biết đang nói với
    nhánh nào.
 2. **Mỗi lượt là một lần gọi mới.** Đầu vào do `tools/e6/simuser.py input` dựng, gồm:
    - dòng ngôn ngữ;

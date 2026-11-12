@@ -712,3 +712,13 @@ def test_one_time_of_day_applies_to_a_list_of_dates():
     value, _, _ = builder.instant("i_b")
     assert value is not None
     assert not [problem for problem in builder.problems if "hour" in problem[1]]
+
+
+def test_a_label_the_user_chose_in_a_reply_is_the_name():
+    history = [{"version": 1, "messages": [MESSAGE.replace("Lan thuê Tú", "Me thuê Tú")]},
+               {"version": 2, "messages": ["You can use 'Me' for my side."]}]
+    draft = milestone_draft()
+    draft["parties"][0] = {"id": "p_lan", "name": "Me", "evidence": ev("Me thuê Tú")}
+    draft["parties"][1] = {"id": "p_tu", "name": "Tú", "evidence": ev("Me thuê Tú")}
+    core = build_core(draft, history)
+    assert not any("Me" in question for question in core["required_clarifications"])

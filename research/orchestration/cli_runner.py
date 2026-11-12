@@ -6,6 +6,7 @@ from collections.abc import Callable
 from copy import deepcopy
 from dataclasses import dataclass
 import json
+import re
 from pathlib import Path
 from typing import Any
 
@@ -239,6 +240,25 @@ def restate_question(diagnostics: list[str], history: list[dict[str, Any]]) -> s
     joiner = " và " if language == "vi" else " and "
     what = joiner.join(_RESTATE_PARTS[language][kind] for kind in kinds[:3])
     return _RESTATE[language].format(what=what)
+
+
+UNSUPPORTED_PREFIXES = ("This part cannot be represented yet:", "Phần này chưa biểu diễn được:")
+
+
+def _quoted(text: str) -> str:
+    from research.formalization.party_names import strip_marks
+
+    match = re.search(r"[\"“](.+?)[\"”]", text)
+    return " ".join(strip_marks(match.group(1) if match else text).split())
+
+
+def kept_unsupported(questions: list[str], transcript: list[dict[str, Any]]) -> bool:
+    """True when an "this part cannot be represented" question comes back after the user answered
+    it: the user keeps a part the contract cannot do (E7, AFF-7)."""
+    asked = [_quoted(line) for item in transcript for line in str(item.get("question", "")).splitlines()
+             if line.startswith(UNSUPPORTED_PREFIXES)]
+    return any(question.startswith(UNSUPPORTED_PREFIXES) and _quoted(question) in asked
+               for question in questions)
 
 
 def clarification_questions(core: dict[str, Any]) -> list[str]:
@@ -568,6 +588,12 @@ def run_session(
                 iterations=iteration,
                 model=model,
             )
+        if options.roleplay and kept_unsupported(questions, transcript):
+            # E7 (AFF-7): the user was told this part cannot be done and still needs it, so the
+            # request is out of scope; asking the same question again would only loop.
+            return _snapshot(pipeline, run, history, status="UNSUPPORTED",
+                             stop_reason="unsupported_kept", iterations=iteration, model=model,
+                             questions=questions)
         if core["predicted_resolution"] != "accepted_interpretation" or questions:
             if not questions:
                 return _snapshot(

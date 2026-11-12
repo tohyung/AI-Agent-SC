@@ -132,7 +132,10 @@ def check_reply(view: dict, seen: str, raw: str) -> list[str]:
     words = set(re.findall(r"[a-z]+", message.lower()))
     if view["language"] == "en" and (VIETNAMESE_MARKS.search(message) or len(words & VIETNAMESE_WORDS) >= 2):
         problems.append("reply is not in English")
-    known = " ".join([view["prompt"], *view["facts"], seen])
+    if (view["language"] == "vi" and VIETNAMESE_MARKS.search(view["prompt"])
+            and len(message.split()) >= 6 and not VIETNAMESE_MARKS.search(message)):
+        problems.append("reply has no Vietnamese accents but the request has them")
+    known =" ".join([view["prompt"], *view["facts"], seen])
     known_numbers = _numbers(known) | {n.lstrip("0") for n in _numbers(known)}
     # A total or product the user works out from known numbers ("3 kỳ x 40 = 120") is no new fact.
     values = sorted({int(n) for n in known_numbers if n.isdigit() and 0 < int(n) < 10**7})[:40]

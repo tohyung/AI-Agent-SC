@@ -49,3 +49,42 @@ lại ví dụ với đúng câu trả lời cũ của người dùng, không h�
 5. **Chi phí vận hành:** mỗi case cần 4–6 lượt sub-agent, và mỗi lượt phải dán lại toàn bộ hội thoại. Chạy
    100 case đánh giá theo cách này rất tốn ngữ cảnh của phiên chính. Nên chạy theo lô, mỗi lô một
    phiên.
+
+## Lần sửa thứ hai và chạy lại có chọn lọc (2026-11-12)
+
+Theo yêu cầu, chỉ chạy lại những phần cần thiết để tiết kiệm quota Gemini.
+
+**Sửa:**
+
+- **SimUser-v3** (`.claude/agents/sim-user.md`):
+  - thêm hai luật chính: không thêm yêu cầu mới, và chỉ phản đối khi có mâu thuẫn (điều mình chưa
+    nói là quyền chọn của trợ lý);
+  - không biết thì để trợ lý chọn;
+  - giữ đúng kiểu viết có dấu.
+
+  Toàn văn luật giờ được chép vào mọi tệp đầu vào, nên mỗi lượt mang theo đúng bản luật đang dùng.
+- **Bộ kiểm tra:** prompt có dấu mà câu trả lời không dấu thì gọi lại.
+- **Pipeline:**
+  - một phần "không biểu diễn được" bị hỏi lại sau khi người dùng đã nói vẫn cần nó thì kết thúc
+    `UNSUPPORTED` (`unsupported_kept`, AFF-7);
+  - nhãn người dùng tự đặt trong dấu nháy ("use 'Me' for my side") được nhận làm tên.
+
+**Thử hồi quy SimUser-v3** trên 4 tình huống dựng lại từ các lượt đã ghi (không tốn quota Gemini):
+
+| Tình huống | v2 | v3 |
+| --- | --- | --- |
+| Baseline 50: "quá hạn thì tự động đóng" | phản đối | chấp nhận |
+| Baseline 50: "quá hạn thì xử lý sao?" | tự thêm "đừng hủy các kỳ còn lại" | "không có yêu cầu gì, bạn cứ chọn" |
+| Pipeline 50: tóm tắt cùng nội dung | chấp nhận | chấp nhận (nhất quán với dòng đầu) |
+| Pipeline 92: bỏ phần lấy giá tự động? | — | vẫn cần, không đồng ý bỏ |
+
+**Chạy lại:**
+
+- **Baseline 50:** giao hợp đồng sau 3 request; người dùng chấp nhận lời giải thích đúng ý ban đầu.
+  Máy chấm REVIEW vì mốc giờ trong hợp đồng sai, là lỗi thật của Baseline.
+- **Pipeline 92:** `UNSUPPORTED` sau 2 request.
+- **Baseline 92:** từ chối và giải thích cần oracle; dừng khi hết trần 2 request, không giao hợp đồng.
+
+Mọi lượt sub-agent đều có `tool_uses` = 1.
+
+**Còn lại:** chi phí vận hành (mục 5 ở trên). Mọi lỗi khác trong danh sách "chưa sửa" đã được xử lý.
