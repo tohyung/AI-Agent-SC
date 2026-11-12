@@ -92,3 +92,17 @@ Ghi theo `docs/E7-Protocol.md`, mục 6. Mỗi mục: thời điểm, thay đổ
 - **Kiểm tra:** case 1–16 không có case nào kết thúc vì `compile_model_failed`. Case 1, 5 và 15 kết thúc
   vì `generation_stalled` khi chạy kịch bản, không có lần gọi lỗi nào, nên đó là kết quả thật của model.
   Thêm một test trong `tests/experiments/test_e7_driver.py`.
+
+## Ghi nhận khi chạy (không phải lệch giao thức)
+
+### O1 (2026-11-13): bản đọc lại kịch bản không nêu người bấm
+
+- **Hiện tượng:** `describe` trong `research/synthesis/example_scenarios.py` đọc lại mọi bước `notify`
+  thành "có người bấm xác nhận" / "someone presses confirm". Nó không nêu ai bấm, và gọi mọi hành động
+  là "xác nhận", kể cả khi người dùng nói "LotusCo bấm dừng".
+- **Ảnh hưởng tính đến case 21:**
+  - Case 2: bị phản đối một lần, sau đó vẫn giao được.
+  - Case 20 và 21: bị phản đối hai lần, kết thúc với `scenarios_not_confirmed`. Ở case 20, lần phản đối
+    thứ hai còn đòi bản đọc lại ghi từng lần trả tiền.
+- **Quyết định của người dùng:** giữ nguyên bản đóng băng, không sửa và không chạy lại. Đây được báo
+  cáo là điểm yếu của nhánh Pipeline, kèm số case bị ảnh hưởng khi chạy xong 100 case.
