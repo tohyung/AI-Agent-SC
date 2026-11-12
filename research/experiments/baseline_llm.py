@@ -25,11 +25,19 @@ from typing import Any, Callable
 
 ROOT = Path(__file__).resolve().parents[2]
 DATASET_V3 = ROOT / "dataset" / "v3" / "cases.jsonl"
+DATASET_V4 = ROOT / "dataset" / "v4" / "cases.jsonl"
 # Dev cases 1-56 of dataset v2 are the only place the arm may be tried or tuned (E6-Plan, section 3).
 DATASET_DEV = ROOT / "dataset" / "cases.jsonl"
 DEV_CASES = 56
 RUN_DIR = ROOT / "runs" / "E6-Baseline"
 BASELINE_PROMPT_VERSION = "Baseline-Chat-v1"
+# E7 (dataset v4): the user reads the explanation and may answer it; the model may ask for examples.
+BASELINE_PROMPT_VERSION_E7 = "Baseline-Chat-v2"
+E7_PROMPT_LINES = """
+The user cannot read JSON or POSIX times: they read only your "message". When you deliver a
+contract, explain who deposits or chooses what, how much, by when (in the user's time zone), who
+receives what, and what happens at each deadline; the user may reply with corrections. You may
+also ask the user for example situations and the outcome they expect."""
 PROVIDERS = ("default", "gemini")
 MIN_REQUEST_INTERVAL_SECONDS = {"default": 0.0, "gemini": 5.0}
 
@@ -42,7 +50,7 @@ UNCOUNTED_FAILURES = {"provider_limit": "provider_limit",
                       "provider_request_failed": "provider_error"}
 
 
-def _system_prompt() -> str:
+def _system_prompt(version: str = BASELINE_PROMPT_VERSION) -> str:
     from research.analysis.marlowe_ast import prompt_contract_examples
 
     examples = json.dumps(prompt_contract_examples(), ensure_ascii=False, separators=(",", ":"))
@@ -62,17 +70,18 @@ Marlowe Core JSON notes:
 - times are POSIX milliseconds (UTC); amounts of ADA are in lovelace (1 ADA = 1 000 000 lovelace);
 - ADA is {{"currency_symbol": "", "token_name": ""}}; parties are {{"role_token": "<name>"}};
 - a contract is "close", a pay, a when, an if, a let or an assert, as in these examples:
-{examples}"""
+{examples}""" + (E7_PROMPT_LINES if version == BASELINE_PROMPT_VERSION_E7 else "")
 
 
 def load_case(index: int, dataset: str = "v3") -> dict[str, Any]:
     """Only the fields the arm may see: id, prompt and language (never the evaluator fields)."""
-    if dataset not in {"v3", "dev"}:
-        raise ValueError("dataset must be v3 or dev")
-    with (DATASET_V3 if dataset == "v3" else DATASET_DEV).open(encoding="utf-8") as source:
+    if dataset not in {"v3", "v4", "dev"}:
+        raise ValueError("dataset must be v3, v4 or dev")
+    path = {"v3": DATASET_V3, "v4": DATASET_V4, "dev": DATASET_DEV}[dataset]
+    with path.open(encoding="utf-8") as source:
         cases = [json.loads(line) for line in source]
-    last = 100 if dataset == "v3" else DEV_CASES
-    if len(cases) != 100 or not 1 <= index <= last:
+    last = len(cases) if dataset == "v4" else 100 if dataset == "v3" else DEV_CASES
+    if (dataset != "v4" and len(cases) != 100) or not 1 <= index <= last:
         raise ValueError(f"case index outside {dataset} cases 1-{last}")
     case = cases[index - 1]
     return {"id": case["id"], "prompt": case["prompt"], "language": case["language"]}
@@ -183,8 +192,13 @@ def pipeline_requests(case_dir: Path) -> int:
     paths = sorted(case_dir.glob("attempt-*.json"))
     if not paths:
         raise ValueError(f"no pipeline attempt records in {case_dir}")
-    return sum(counted_requests(json.loads(path.read_text(encoding="utf-8"))
-                                .get("model_call_log_this_attempt", [])) for path in paths)
+    attempts = sum(counted_requests(json.loads(path.read_text(encoding="utf-8"))
+                                    .get("model_call_log_this_attempt", [])) for path in paths)
+    # E7: turning the user's examples into scenarios is a pipeline model call too.
+    examples = sum(counted_requests(json.loads(path.read_text(encoding="utf-8"))
+                                    .get("model_call_log", []))
+                   for path in sorted(case_dir.glob("examples-*.json")))
+    return attempts + examples
 
 
 def _save(path: Path, session: dict[str, Any]) -> None:
@@ -193,9 +207,10 @@ def _save(path: Path, session: dict[str, Any]) -> None:
     os.replace(temporary, path)
 
 
-def new_session(case: dict[str, Any], cap: int, provider: str) -> dict[str, Any]:
+def new_session(case: dict[str, Any], cap: int, provider: str,
+                prompt_version: str = BASELINE_PROMPT_VERSION) -> dict[str, Any]:
     return {"case_id": case["id"], "language": case["language"], "cap": cap,
-            "prompt_version": BASELINE_PROMPT_VERSION, "provider": provider, "model_name": None,
+            "prompt_version": prompt_version, "provider": provider, "model_name": None,
             "status": "running", "transcript": [{"role": "user", "source": "prompt",
                                                   "content": case["prompt"]}],
             "call_log": [], "checks": [], "user_turns": 0, "forwarded_errors": 0,
@@ -282,7 +297,8 @@ def run(index: int, *, cap: int | None = None, message: str | None = None,
             raise ValueError("a new session needs --cap, the pipeline arm's request count")
         if message is not None or finish is not None:
             raise ValueError("a new session starts from the case prompt alone")
-        session = new_session(case, cap, provider)
+        session = new_session(case, cap, provider,
+                              BASELINE_PROMPT_VERSION_E7 if dataset == "v4" else BASELINE_PROMPT_VERSION)
     if session["status"] in FINAL:
         raise ValueError(f"session already ended: {session['status']}")
     if finish is not None:
@@ -309,7 +325,8 @@ def run(index: int, *, cap: int | None = None, message: str | None = None,
 
         check = make_checker(config_from_environment())
     try:
-        step(session, model, check, system=_system_prompt())
+        step(session, model, check, system=_system_prompt(session.get("prompt_version",
+                                                                       BASELINE_PROMPT_VERSION)))
     finally:
         _save(path, session)
     return session
@@ -366,7 +383,7 @@ def main() -> int:
     action.add_argument("--accept", action="store_true")
     action.add_argument("--give-up", action="store_true")
     parser.add_argument("--provider", choices=PROVIDERS, default="gemini")
-    parser.add_argument("--dataset", choices=["v3", "dev"], default="v3",
+    parser.add_argument("--dataset", choices=["v3", "v4", "dev"], default="v3",
                         help="dev = dataset v2 cases 1-56, for trials and tuning only")
     parser.add_argument("--run-dir", type=Path, default=RUN_DIR)
     args = parser.parse_args()

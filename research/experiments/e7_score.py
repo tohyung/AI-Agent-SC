@@ -14,6 +14,7 @@ The machine verdict is RIGHT only when all scenarios pass and the deadline check
 anything else is REVIEW, with the reasons, for the adjudicator (Q-CHẤM 2). No contract is NONE.
 
   python -m research.experiments.e7_score --arm pipeline|baseline --cases 30-100 --out FILE
+      [--dataset v3|v4] [--pipeline-dir DIR] [--baseline-dir DIR]
 """
 
 from __future__ import annotations
@@ -32,6 +33,7 @@ from research.synthesis.reference import ReferenceRequest
 
 ROOT = Path(__file__).resolve().parents[2]
 DATASET_V3 = ROOT / "dataset" / "v3" / "cases.jsonl"
+DATASETS = {"v3": DATASET_V3, "v4": ROOT / "dataset" / "v4" / "cases.jsonl"}
 EMPTY_STATE = {"accounts": [], "choices": [], "boundValues": [], "minTime": 0}
 TIME_TOLERANCE_MS = 60_000
 
@@ -190,15 +192,19 @@ def main() -> int:
     parser.add_argument("--arm", choices=("pipeline", "baseline"), required=True)
     parser.add_argument("--cases", default="30-100")
     parser.add_argument("--out", type=Path, required=True)
+    parser.add_argument("--dataset", choices=sorted(DATASETS), default="v3",
+                        help="whose checks to replay (v4 adds first-come buyers)")
+    parser.add_argument("--pipeline-dir", type=Path, default=PIPELINE_DIR)
+    parser.add_argument("--baseline-dir", type=Path, default=BASELINE_DIR)
     args = parser.parse_args()
-    cases = [json.loads(line) for line in DATASET_V3.read_text(encoding="utf-8").splitlines()]
+    cases = [json.loads(line) for line in DATASETS[args.dataset].read_text(encoding="utf-8").splitlines()]
     executor = PinnedMarloweReference(binary=os.getenv("MARLOWE_REFERENCE_BINARY"))
     results = {}
     for index in _parse_range(args.cases):
         if args.arm == "pipeline":
-            outcome = pipeline_outcome(PIPELINE_DIR / f"case-{index:03d}")
+            outcome = pipeline_outcome(args.pipeline_dir / f"case-{index:03d}")
         else:
-            outcome = baseline_outcome(BASELINE_DIR / f"case-{index:03d}")
+            outcome = baseline_outcome(args.baseline_dir / f"case-{index:03d}")
         results[index] = machine_verdict(outcome["contract"], cases[index - 1], executor)
         print(index, results[index]["verdict"], "; ".join(results[index]["problems"])[:200])
     args.out.write_text(json.dumps(results, ensure_ascii=False, indent=1), encoding="utf-8")

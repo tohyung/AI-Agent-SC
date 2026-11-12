@@ -26,7 +26,8 @@ ROOT = Path(__file__).resolve().parents[2]
 RUN_DIR = ROOT / "runs" / "E3-Roleplay-Batch20"
 REMAINING_RUN_DIR = ROOT / "runs" / "E3-Roleplay-Batch80"
 E6_RUN_DIR = ROOT / "runs" / "E6-Pipeline"
-DATASETS = ("v2", "v3")
+DATASETS = ("v2", "v3", "v4")
+# E7: dataset v4 runs into its own directory, set by --run-dir.
 # Secondary providers are chosen only by explicit argument (see ModelTransport).
 PROVIDERS = ("default", "gemini")
 # Free-tier Gemini allows about 15 requests per minute; space requests so a
@@ -46,11 +47,11 @@ def _pace(provider: str) -> None:
 
 
 def _case_at(index: int, dataset: str = "v2") -> dict[str, Any]:
-    if dataset == "v3":
-        # E6: the pipeline arm sees the same fields as the baseline arm (id, prompt, language).
+    if dataset in {"v3", "v4"}:
+        # E6/E7: the pipeline arm sees the same fields as the baseline arm (id, prompt, language).
         from research.experiments.baseline_llm import load_case
 
-        return load_case(index, "v3")
+        return load_case(index, dataset)
     if dataset != "v2":
         raise ValueError(f"dataset must be one of {', '.join(DATASETS)}")
     _, first_cases = load_batch()
@@ -209,6 +210,7 @@ def run_case(index: int, *, answers: list[str] | None = None,
              replay_contract_id: str | None = None,
              expectation: dict[str, Any] | None = None,
              revision: str | None = None,
+             revision_question: str | None = None,
              repair_attempts: int = 0,
              run_dir: Path | None = None,
              provider: str = "default",
@@ -216,11 +218,11 @@ def run_case(index: int, *, answers: list[str] | None = None,
              dataset: str = "v2") -> dict[str, Any]:
     if provider not in PROVIDERS:
         raise ValueError(f"provider must be one of {', '.join(PROVIDERS)}")
-    if dataset == "v3" and formalization != "AFF":
+    if dataset in {"v3", "v4"} and formalization != "AFF":
         raise ValueError("E6 runs dataset v3 on the AFF main path only")
     case = _case_at(index, dataset)
     if run_dir is None:
-        run_dir = (E6_RUN_DIR if dataset == "v3"
+        run_dir = (E6_RUN_DIR if dataset in {"v3", "v4"}
                    else RUN_DIR if index <= 20 else REMAINING_RUN_DIR)
     if answers is not None and (not isinstance(answers, list)
                                 or any(not isinstance(item, str) or not item.strip()
@@ -234,7 +236,7 @@ def run_case(index: int, *, answers: list[str] | None = None,
         raise ValueError("a candidate cannot be reviewed and repaired in the same run")
     if repair_candidate_id is not None and repair_attempts == 0:
         raise ValueError("candidate repair requires at least one validation repair")
-    case_dir = run_dir / (f"case-{index:03d}" if dataset == "v3" else f"case-{index:02d}")
+    case_dir = run_dir / (f"case-{index:03d}" if dataset in {"v3", "v4"} else f"case-{index:02d}")
     case_dir.mkdir(parents=True, exist_ok=True)
     previous = _latest(case_dir)
     if previous is not None and previous.get("case_id") != case["id"]:
@@ -251,7 +253,9 @@ def run_case(index: int, *, answers: list[str] | None = None,
             raise ValueError("roleplay revision already exists in requirement history")
         history.append({"version": len(history) + 1, "messages": [revision]})
         transcript.append({
-            "question": "Xin bổ sung các dữ kiện nghiệp vụ còn thiếu cho hợp đồng này.",
+            # E7: the question the user actually answered, when the driver gives it.
+            "question": (revision_question.strip() if revision_question and revision_question.strip()
+                         else "Xin bổ sung các dữ kiện nghiệp vụ còn thiếu cho hợp đồng này."),
             "answer": revision, "synthetic_assumption": True,
         })
     selected_candidate_id = reviewed_candidate_id or repair_candidate_id
@@ -406,6 +410,8 @@ def main() -> int:
     parser.add_argument("--case-index", type=int, required=True)
     parser.add_argument("--answers-file", type=Path)
     parser.add_argument("--revision-file", type=Path)
+    parser.add_argument("--revision-question-file", type=Path,
+                        help="the question the revision answers (E7)")
     parser.add_argument("--review-candidate-id")
     parser.add_argument("--repair-candidate-id")
     parser.add_argument("--replay-contract-id")
@@ -416,7 +422,7 @@ def main() -> int:
     parser.add_argument("--formalization", choices=["DCF", "AFF"], default="DCF",
                         help="DCF reproduces the E3 runs; AFF is the main path since E4")
     parser.add_argument("--dataset", choices=DATASETS, default="v2",
-                        help="v2 = the E3 dataset; v3 = the E6 dataset (AFF only)")
+                        help="v2 = the E3 dataset; v3 = the E6 dataset; v4 = the E7 dataset (AFF only)")
     parser.add_argument("--run-dir", type=Path,
                         help="evidence directory (default: the E3 batch directory)")
     args = parser.parse_args()
@@ -424,12 +430,15 @@ def main() -> int:
     expectation = (json.loads(args.expectation_file.read_text(encoding="utf-8"))
                    if args.expectation_file else None)
     revision = args.revision_file.read_text(encoding="utf-8").strip() if args.revision_file else None
+    question = (args.revision_question_file.read_text(encoding="utf-8")
+                if args.revision_question_file else None)
     result = run_case(args.case_index, answers=answers,
                       reviewed_candidate_id=args.review_candidate_id,
                       repair_candidate_id=args.repair_candidate_id,
                       replay_contract_id=args.replay_contract_id,
                       expectation=expectation,
-                      revision=revision, repair_attempts=args.repair_attempts,
+                      revision=revision, revision_question=question,
+                      repair_attempts=args.repair_attempts,
                       run_dir=args.run_dir, provider=args.provider,
                       formalization=args.formalization, dataset=args.dataset)
     return 3 if result["provider_limit"] else 0

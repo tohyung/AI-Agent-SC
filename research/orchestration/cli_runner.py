@@ -206,6 +206,41 @@ def _artifact(
     )
 
 
+RESTATE_MARK = "[restate] "
+_RESTATE_PARTS = {
+    "vi": {"p": "tên và vai của từng bên", "i": "các mốc thời gian", "q": "các số tiền",
+           "s": "trình tự các bước", "o": "ai nhận tiền trong từng trường hợp"},
+    "en": {"p": "who each party is", "i": "the deadlines", "q": "the amounts",
+           "s": "the order of the steps", "o": "who gets the money in each case"},
+}
+_RESTATE = {
+    "vi": RESTATE_MARK + "Tôi chưa hiểu rõ {what}. Bạn nói lại giúp bằng câu ngắn: ai nạp hoặc "
+                         "chọn gì, bao nhiêu, trước khi nào, và ai nhận tiền?",
+    "en": RESTATE_MARK + "I could not work out {what}. Could you say it again in short sentences: "
+                         "who deposits or chooses what, how much, by when, and who gets the money?",
+}
+
+
+def restate_question(diagnostics: list[str], history: list[dict[str, Any]]) -> str | None:
+    """One question asking the user to restate what the draft could not express, or None when
+    the diagnostics name no draft item (an infrastructure failure is not the user's to fix)."""
+    from research.formalization.fact_builder import request_language
+
+    language = request_language([message for revision in history
+                                 for message in revision["messages"]])
+    kinds = []
+    for line in diagnostics:
+        head = line.split(":", 1)[0].strip()
+        kind = "s" if head == "steps" else head[:1] if "_" in head else None
+        if kind in _RESTATE_PARTS[language] and kind not in kinds:
+            kinds.append(kind)
+    if not kinds:
+        return None
+    joiner = " và " if language == "vi" else " and "
+    what = joiner.join(_RESTATE_PARTS[language][kind] for kind in kinds[:3])
+    return _RESTATE[language].format(what=what)
+
+
 def clarification_questions(core: dict[str, Any]) -> list[str]:
     questions = (
         item if isinstance(item, str) else item.get("question")
@@ -468,6 +503,16 @@ def run_session(
                 if extraction.semantic_status == "MODEL_ERROR"
                 else "extraction_failed"
             )
+            restate = (restate_question(extraction.diagnostics, history)
+                       if reason == "extraction_failed" and options.roleplay
+                       and not any(str(item.get("question", "")).startswith(RESTATE_MARK)
+                                   for item in transcript) else None)
+            if restate is not None:
+                # E7: the draft could not be repaired; ask the user to restate once instead of
+                # stopping (docs/E6-Failure-Review.md, AFF-1).
+                return _snapshot(pipeline, run, history, status="WAITING_USER",
+                                 stop_reason="no_user_input", iterations=iteration,
+                                 model=model, questions=[restate])
             return _snapshot(
                 pipeline,
                 run,

@@ -19,11 +19,12 @@ import sys
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 DATASET = ROOT / "dataset" / "v3" / "cases.jsonl"
+DATASETS = {"v3": DATASET, "v4": ROOT / "dataset" / "v4" / "cases.jsonl"}
 ACTIONS = {"answer", "accept", "object", "give_up"}
 
 
-def user_view(index: int) -> dict:
-    line = DATASET.read_text(encoding="utf-8").splitlines()[index - 1]
+def user_view(index: int, dataset: str = "v3") -> dict:
+    line = DATASETS[dataset].read_text(encoding="utf-8").splitlines()[index - 1]
     case = json.loads(line)
     return {"prompt": case["prompt"], "language": case["language"],
             "facts": [item["answer"] for item in case.get("fact_sheet", [])]}
@@ -76,6 +77,11 @@ def render_input(index: int, arm: str, turn: int | None) -> str:
         history = cut
         while history and history[-1][0] != "assistant":
             history.pop()
+    return situation(view, history)
+
+
+def situation(view: dict, history: list[tuple[str, str]]) -> str:
+    """The subagent's input: language, request, what the user knows, and the visible conversation."""
     language = "Vietnamese" if view["language"] == "vi" else "English"
     lines = [f"YOUR LANGUAGE: {language}", "",
              "WHAT YOU WANT (your own first message):", view["prompt"], "",
@@ -87,11 +93,13 @@ def render_input(index: int, arm: str, turn: int | None) -> str:
     return "\n".join(lines)
 
 
-def _numbers(text: str) -> set[str]:
+def _numbers(text: str, words: bool = True) -> set[str]:
+    """Numbers written in `text`; with `words`, also numbers written as words ("ba trăm")."""
     from research.formalization.number_words import digits_for_words
 
-    text = digits_for_words(text)
-    return {re.sub(r"[.,\s]", "", match) for match in re.findall(r"\d[\d.,]*", text)}
+    texts = [text, digits_for_words(text)] if words else [text]
+    return {re.sub(r"[.,\s]", "", match) for item in texts
+            for match in re.findall(r"\d[\d.,]*", item)}
 
 
 VIETNAMESE_MARKS = re.compile("[ăâđêôơưàáảãạằắẳẵặầấẩẫậèéẻẽẹềếểễệìíỉĩịòóỏõọồốổỗộờớởỡợùúủũụừứửữựỳýỷỹỵ]",
@@ -101,6 +109,15 @@ VIETNAMESE_WORDS = {"toi", "minh", "khong", "ban", "cua", "cho", "duoc", "nhe", 
 
 def check(index: int, raw: str, arm: str | None = None) -> list[str]:
     """Problems with a reply: bad JSON, unknown action, wrong language, or numbers the user never saw."""
+    seen = ""
+    if arm is not None:
+        history = baseline_history(index) if arm == "base" else pipeline_history(index)
+        seen = " ".join(text for who, text in history if who == "assistant")
+    return check_reply(user_view(index), seen, raw)
+
+
+def check_reply(view: dict, seen: str, raw: str) -> list[str]:
+    """`check` for any view and any text the assistant has shown (`seen`)."""
     try:
         reply = json.loads(raw)
     except json.JSONDecodeError as exc:
@@ -108,18 +125,14 @@ def check(index: int, raw: str, arm: str | None = None) -> list[str]:
     problems = []
     if reply.get("action") not in ACTIONS:
         problems.append(f"unknown action {reply.get('action')!r}")
-    view = user_view(index)
     message = str(reply.get("message", ""))
     words = set(re.findall(r"[a-z]+", message.lower()))
     if view["language"] == "en" and (VIETNAMESE_MARKS.search(message) or len(words & VIETNAMESE_WORDS) >= 2):
         problems.append("reply is not in English")
-    seen = ""
-    if arm is not None:
-        history = baseline_history(index) if arm == "base" else pipeline_history(index)
-        seen = " ".join(text for who, text in history if who == "assistant")
     known = " ".join([view["prompt"], *view["facts"], seen])
     known_numbers = _numbers(known) | {n.lstrip("0") for n in _numbers(known)}
-    for number in _numbers(message):
+    # The reply's own digits only: "năm" (year) must not read as the number five.
+    for number in _numbers(message, words=False):
         if number not in known_numbers and number.lstrip("0") not in known_numbers:
             problems.append(f"number {number} is not in the request or the fact sheet")
     if agrees_to_drop(message) and not any(DROP_PERMISSION.search(fact) for fact in view["facts"]):

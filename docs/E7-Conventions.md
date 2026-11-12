@@ -207,8 +207,13 @@ do ở mục 11. Sau khi đóng băng thì không sửa nữa.
 | Notify ("ai cũng bấm") | Đã làm ở prompt | Grammar vốn có bước `notify`; prompt v7 nói rõ khi nào dùng |
 | Q-CHẤM 1–2 | Đã làm | `research/experiments/e7_score.py`; chạy bằng `tools/e6/score_wsl.sh` |
 | Q-NGƯỜI DÙNG 3 (quyền bỏ) | Đã làm | `tools/e6/simuser.py check` |
-| Q-NGƯỜI DÙNG 4, Q-NHÁNH 2–3, Q-KỊCH BẢN 2 | Chưa | Bộ chạy mới, tóm tắt intent bằng lời, đổi ví dụ bằng lời thành kịch bản |
-| Q-DỮ LIỆU | Chưa | Dataset v4 |
+| Q-NGƯỜI DÙNG 4–6 | Đã làm | `tools/e7/auto.py` (`reply`: không dựa vào nhãn, gọi lại tối đa 2 lần, câu dự phòng, tối đa 6 tin nhắn) |
+| Q-NHÁNH 2 | Đã làm | Baseline-Chat-v2; người dùng đọc lời giải thích và có thể phản đối |
+| Q-NHÁNH 3 | Đã làm | `research/formalization/intent_summary.py` |
+| Q-KỊCH BẢN 2–3 | Đã làm | `research/synthesis/example_scenarios.py` (xin ví dụ theo cấu trúc intent, đổi thành kịch bản, đọc lại) |
+| AFF-1 (hỏi thay vì dừng) | Đã làm | `cli_runner.restate_question`, một lần mỗi case |
+| Q-DỮ LIỆU 1, 3, 4 | Đã làm (trên prompt v3) | `dataset/v4`: `spec.parties`, kịch bản cho mọi người mua `first_come`, chia dev/eval theo họ |
+| Q-DỮ LIỆU 2 (phiếu dữ kiện đầy đủ), 5 | Chưa | Cần prompt mới cho tập đánh giá sạch (`dataset/v4/README.md`) |
 
 **Kiểm chứng chấm máy trên E6** (case 30–100, các hợp đồng đã giao):
 
