@@ -137,3 +137,24 @@ Ghi theo `docs/E7-Protocol.md`, mục 6. Mỗi mục: thời điểm, thay đổ
   Baseline bằng số request Pipeline) không đổi.
 - **Không đổi:** điều mà hai nhánh hay người dùng mô phỏng nhìn thấy. Key chỉ quyết định quota dùng
   chung nào bị trừ.
+
+### O1 (tiếp): case 21–30
+
+- Case 21 và 25 không chốt được kịch bản (`scenarios_not_confirmed`) vì dòng "someone presses
+  confirm" / "có người bấm xác nhận".
+- Case 27 cũng không chốt được, nhưng vì lý do khác: bản đọc lại bỏ mất các bước quá hạn. Lý do này
+  được ghi riêng là O2.
+
+### O2 (2026-11-13): bản đọc lại kịch bản bỏ mất các bước quá hạn
+
+- Case 27: người dùng mô phỏng bác cả hai bản đọc lại, vì cả hai đều không nói gì xảy ra khi đến hạn
+  mà chưa ai làm. Đây là hành vi của nhánh Pipeline (`E7-ExampleScenarios-v2`, đã đóng băng), nên giữ
+  nguyên và chỉ báo cáo.
+
+### I2 (2026-11-13, case 28 Pipeline): kiểm tra một lượt sim-user khi lượt đó chưa xong
+
+- Bước kiểm tra của lô 3 chạy `audit_agent.py` cho sub-agent `aa7a24114709b799e` khi sub-agent này
+  chưa xong, nên kết quả là "0 handbacks" và không có gì được ghi.
+- Khi sub-agent xong, cùng sub-agent đó được kiểm tra lại. Lần này hợp lệ, và câu trả lời được ghi.
+- Không gọi sub-agent mới, nên không có chuyện chọn giữa nhiều câu trả lời. Cả hai lần kiểm tra đều nằm
+  trong `subagent-audit.jsonl`.
