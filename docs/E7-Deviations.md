@@ -175,3 +175,19 @@ Ghi theo `docs/E7-Protocol.md`, mục 6. Mỗi mục: thời điểm, thay đổ
   - Không gọi sub-agent mới, và không có câu trả lời nào được chọn.
 - **Kiểm tra:** đã quét `simuser.json` của mọi case trên cả hai nhánh. Chỉ case 33 có chuỗi thử lại bị
   đặt về 0 sau một lần từ chối.
+
+### A1 (2026-11-13): script phân tích viết sau khi đóng băng (giao thức mục 5)
+
+- **Script:** `research/experiments/e7_analysis.py`, có test trong `tests/experiments/test_e7_analysis.py`.
+  Được commit trước khi mở kết quả tổng. Lúc viết, chưa chạy chấm máy hay phân xử case v5 nào.
+- **Hai chỗ phải chọn cách đọc giao thức, chốt ngay trong docstring của script:**
+  1. **`told_unsupported`.** Q-CHẤM 5 cần biết nhánh đã nói rõ phần không làm được hay chưa, mà máy
+     không chấm được điều này. Vì vậy người phân xử cũng chấm mù câu hỏi đó, nhưng chỉ cho
+     `converge_and_decline_extra` và `reject_unsupported`. Hợp đồng nào máy đã chấm RIGHT thì người
+     phân xử không chấm lại.
+  2. **Bảng độ nhạy thời gian.** Ở dung sai T, hợp đồng là RIGHT nếu máy chấm RIGHT ở T. Nếu không,
+     giữ verdict ở mức 1 phút.
+- **`e7_score`:** thêm `--time-tolerance-minutes`, mặc định 1, đúng luật đã đóng băng. Các giá trị khác
+  chỉ dùng cho bảng độ nhạy.
+- **Giao hàng của Pipeline:** tính theo `final.json` (`delivered`). Case không giao thì coi như không có
+  hợp đồng, dù lần chạy cuối có chứa hợp đồng nào.

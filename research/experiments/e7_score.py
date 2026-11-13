@@ -14,7 +14,7 @@ The machine verdict is RIGHT only when all scenarios pass and the deadline check
 anything else is REVIEW, with the reasons, for the adjudicator (Q-CHẤM 2). No contract is NONE.
 
   python -m research.experiments.e7_score --arm pipeline|baseline --cases 30-100 --out FILE
-      [--dataset v3|v4] [--pipeline-dir DIR] [--baseline-dir DIR]
+      [--dataset v3|v4|v5] [--pipeline-dir DIR] [--baseline-dir DIR] [--time-tolerance-minutes M]
 """
 
 from __future__ import annotations
@@ -197,7 +197,12 @@ def main() -> int:
                         help="whose checks to replay (v4 adds first-come buyers)")
     parser.add_argument("--pipeline-dir", type=Path, default=PIPELINE_DIR)
     parser.add_argument("--baseline-dir", type=Path, default=BASELINE_DIR)
+    parser.add_argument("--time-tolerance-minutes", type=float, default=1.0,
+                        help="deadline tolerance; 1 minute is the frozen rule (Q-GIỜ 1), larger "
+                             "values only feed the sensitivity table (Q-GIỜ 6)")
     args = parser.parse_args()
+    global TIME_TOLERANCE_MS
+    TIME_TOLERANCE_MS = int(args.time_tolerance_minutes * 60_000)
     cases = [json.loads(line) for line in DATASETS[args.dataset].read_text(encoding="utf-8").splitlines()]
     executor = PinnedMarloweReference(binary=os.getenv("MARLOWE_REFERENCE_BINARY"))
     results = {}
