@@ -1,0 +1,1304 @@
+{
+ "d2b7af5d4d36": {
+  "case_index": 1,
+  "arm": "baseline",
+  "machine_problems": [
+   "choose_da_nhan_1: step 1 fails (TransactionError)",
+   "choose_tra_hang_1: step 1 fails (TransactionError)",
+   "no_decision: step 1 fails (TransactionError)",
+   "no timeout at stated deadline 1802613600000",
+   "no timeout at stated deadline 1802959200000",
+   "timeout 1771076400000 is not a stated deadline",
+   "timeout 1771422000000 is not a stated deadline"
+  ],
+  "contract": "WRONG",
+  "reason": "Deadlines are 20:40 on 14/02/2026 and 18/02/2026 VN instead of 21:00 on 14/02/2027 and 18/02/2027 VN, so the year and time are wrong."
+ },
+ "4b7ddd1ffaef": {
+  "case_index": 2,
+  "arm": "baseline",
+  "machine_problems": [
+   "choose_confirm_1: step 1 (deposit Bianca) is not enabled",
+   "no_decision: step 1 (deposit Bianca) is not enabled",
+   "no timeout at stated deadline 1804352400000",
+   "no timeout at stated deadline 1804611600000",
+   "timeout 1799178000000 is not a stated deadline",
+   "timeout 1799433600000 is not a stated deadline"
+  ],
+  "contract": "WRONG",
+  "reason": "Timeouts are 2027-01-05 19:40 and 2027-01-08 18:40 UTC instead of 2027-03-06 and 2027-03-09 17:00 UTC."
+ },
+ "5bcc65245f20": {
+  "case_index": 3,
+  "arm": "baseline",
+  "machine_problems": [
+   "choose_danh_gia_1: step 1 fails (TransactionError)",
+   "choose_danh_gia_0: step 1 fails (TransactionError)",
+   "no_decision: step 1 fails (TransactionError)",
+   "no timeout at stated deadline 1806771540000",
+   "no timeout at stated deadline 1807203540000",
+   "timeout 1791037140000 is not a stated deadline",
+   "timeout 1791469140000 is not a stated deadline"
+  ],
+  "contract": "WRONG",
+  "reason": "Timeouts are 21:19 VN on 03/10/2026 and 08/10/2026 instead of 23:59 VN on 03/04/2027 and 08/04/2027."
+ },
+ "e9a215cd0b59": {
+  "case_index": 4,
+  "arm": "pipeline",
+  "machine_problems": [
+   "choose_reject_1: received {'gideon': {'DJED': 450}}, expected {'delia': {'DJED': 450}}"
+  ],
+  "contract": "RIGHT",
+  "reason": "Deadlines (2027-05-03 and 2027-05-17 09:00 UTC), the DJED token, the depositor and payees all match; choice 1 pays Gideon, choice 0 refunds Delia, and a timeout pays Gideon. The machine's reject mismatch comes from the test choosing a value the contract maps to approve, which is a consistent value mapping, not a behaviour error."
+ },
+ "9ce5223a5e98": {
+  "case_index": 4,
+  "arm": "baseline",
+  "machine_problems": [
+   "choose_approve_1: step 1 (deposit Delia) is not enabled",
+   "choose_reject_1: step 1 (deposit Delia) is not enabled",
+   "no_decision: step 1 (deposit Delia) is not enabled",
+   "no timeout at stated deadline 1809334800000",
+   "no timeout at stated deadline 1810544400000",
+   "timeout 1777885200000 is not a stated deadline",
+   "timeout 1779094800000 is not a stated deadline"
+  ],
+  "contract": "WRONG",
+  "reason": "The timeouts fall on 2026-05-04 and 2026-05-18 09:00 UTC instead of 2027-05-03 and 2027-05-17 09:00 UTC, so the year and day are wrong."
+ },
+ "19ff5963a529": {
+  "case_index": 5,
+  "arm": "pipeline",
+  "machine_problems": [],
+  "told_unsupported": true,
+  "reason": "The assistant explicitly said the Messenger notification part cannot be represented and asked to drop it."
+ },
+ "1ff54005d3c4": {
+  "case_index": 5,
+  "arm": "baseline",
+  "machine_problems": [
+   "choose_xac_nhan_1: step 1 fails (TransactionError)",
+   "no_decision: step 1 fails (TransactionError)",
+   "no timeout at stated deadline 1810983600000",
+   "no timeout at stated deadline 1811588400000",
+   "timeout 1779447600000 is not a stated deadline",
+   "timeout 1800508800000 is not a stated deadline"
+  ],
+  "contract": "WRONG",
+  "told_unsupported": true,
+  "reason": "Timeouts are 2026-05-22 11:00 UTC and 2027-01-21 05:20 UTC instead of 2027-05-22 and 2027-05-29 11:00 UTC, though the assistant did tell the user Messenger messaging is unsupported."
+ },
+ "fd95c0ab7e25": {
+  "case_index": 7,
+  "arm": "baseline",
+  "machine_problems": [
+   "no_deposit: step 1 fails (TransactionError)",
+   "no_decision: step 2 fails (TransactionError)",
+   "no timeout at stated deadline 1814443200000",
+   "no timeout at stated deadline 1815652800000",
+   "timeout 1814452800000 is not a stated deadline",
+   "timeout 1815734400000 is not a stated deadline"
+  ],
+  "contract": "WRONG",
+  "reason": "The deposit timeout is 2027-07-01 14:40 UTC and the decision timeout 2027-07-16 10:40 UTC instead of 12:00 UTC on July 1 and July 15."
+ },
+ "4aa415f50c01": {
+  "case_index": 9,
+  "arm": "baseline",
+  "machine_problems": [
+   "choose_ruling_1: step 1 fails (TransactionError)",
+   "choose_ruling_2: step 1 fails (TransactionError)",
+   "no_decision: step 1 fails (TransactionError)",
+   "no timeout at stated deadline 1819785600000",
+   "no timeout at stated deadline 1820390400000",
+   "timeout 1818336000000 is not a stated deadline",
+   "timeout 1819027200000 is not a stated deadline"
+  ],
+  "contract": "WRONG",
+  "reason": "Deposit timeout is 2027-08-15 13:20 UTC and arbitration timeout 2027-08-23 13:20 UTC instead of Sept 1 and Sept 8 2027 08:00 UTC."
+ },
+ "5bee94dac189": {
+  "case_index": 11,
+  "arm": "baseline",
+  "machine_problems": [
+   "exchange: step 1 fails (TransactionError)",
+   "second_absent: step 1 fails (TransactionError)",
+   "no timeout at stated deadline 1806930000000",
+   "no timeout at stated deadline 1807016400000",
+   "timeout 1775394000000 is not a stated deadline",
+   "timeout 1775480400000 is not a stated deadline"
+  ],
+  "contract": "WRONG",
+  "reason": "Deposit timeouts are 20:00 VN on 05/04/2026 and 06/04/2026, a year earlier than the stated 2027 deadlines."
+ },
+ "a722f16fb0a5": {
+  "case_index": 12,
+  "arm": "baseline",
+  "machine_problems": [
+   "exchange: step 1 fails (TransactionError)",
+   "second_absent: step 1 fails (TransactionError)",
+   "no timeout at stated deadline 1810087200000",
+   "no timeout at stated deadline 1810173600000",
+   "timeout 1778551200000 is not a stated deadline",
+   "timeout 1778637600000 is not a stated deadline"
+  ],
+  "contract": "WRONG",
+  "reason": "The timeouts are 09:00 VN on 12/05/2026 and 13/05/2026 instead of 2027, so both deadlines are off by a year and the contract has already expired."
+ },
+ "e5727f857670": {
+  "case_index": 13,
+  "arm": "baseline",
+  "machine_problems": [
+   "exchange: step 1 fails (TransactionError)",
+   "second_absent: step 1 fails (TransactionError)",
+   "no timeout at stated deadline 1814399940000",
+   "timeout 1814227140000 is not a stated deadline"
+  ],
+  "contract": "WRONG",
+  "reason": "Both deadlines are a day early: Wren's deposit times out at 2027-06-28 23:59 UTC instead of 06-29, and Viktor's at 06-29 23:59 instead of 06-30."
+ },
+ "8516d569814d": {
+  "case_index": 15,
+  "arm": "baseline",
+  "machine_problems": [
+   "repaid: step 1 fails (TransactionError)",
+   "default: step 1 fails (TransactionError)",
+   "no timeout at stated deadline 1802692800000",
+   "no timeout at stated deadline 1818331200000",
+   "timeout 1797513600000 is not a stated deadline",
+   "timeout 1818336000000 is not a stated deadline"
+  ],
+  "contract": "WRONG",
+  "reason": "The funding timeout is 2026-12-17 13:20 UTC instead of 2027-02-15 12:00 UTC, and the repayment timeout is 13:20 UTC on 2027-08-15, 80 minutes after the stated 12:00 UTC deadline."
+ },
+ "552eb0e36c2a": {
+  "case_index": 16,
+  "arm": "baseline",
+  "machine_problems": [
+   "repaid: step 1 fails (TransactionError)",
+   "default: step 1 fails (TransactionError)",
+   "no timeout at stated deadline 1804697940000",
+   "no timeout at stated deadline 1812646740000",
+   "timeout 1773177540000 is not a stated deadline",
+   "timeout 1781107140000 is not a stated deadline"
+  ],
+  "contract": "WRONG",
+  "reason": "Deadlines are 04:19 on 11/03/2026 and 22:59 on 10/06/2026 VN instead of 23:59 on 10/03/2027 and 10/06/2027 VN, so the year is wrong."
+ },
+ "21a07c3a6234": {
+  "case_index": 17,
+  "arm": "baseline",
+  "machine_problems": [
+   "default: step 2 fails (TransactionError)",
+   "never_funded: step 1 fails (TransactionError)",
+   "no timeout at stated deadline 1821459540000",
+   "no timeout at stated deadline 1829321940000",
+   "timeout 1821469200000 is not a stated deadline",
+   "timeout 1829417940000 is not a stated deadline"
+  ],
+  "contract": "WRONG",
+  "reason": "The deadlines should be 16:59 UTC on 2027-09-20 and 2027-12-20, but the timeouts are 2027-09-20 19:40 UTC and 2027-12-21 19:39 UTC, so both are wrong by hours or more."
+ },
+ "58e8f9756ee6": {
+  "case_index": 18,
+  "arm": "baseline",
+  "machine_problems": [
+   "repaid: step 1 fails (TransactionError)",
+   "default: step 1 fails (TransactionError)",
+   "no timeout at stated deadline 1807380000000",
+   "no timeout at stated deadline 1809972000000",
+   "timeout 1775846400000 is not a stated deadline",
+   "timeout 1778524800000 is not a stated deadline"
+  ],
+  "contract": "WRONG",
+  "reason": "Timeouts are 2026-04-10 18:40 and 2026-05-11 18:40 UTC instead of 2027-04-10 18:00 and 2027-05-10 18:00 UTC."
+ },
+ "d4df51ee93ac": {
+  "case_index": 20,
+  "arm": "baseline",
+  "machine_problems": [
+   "no timeout at stated deadline 1814313600000",
+   "no timeout at stated deadline 1822262400000",
+   "timeout 1814323200000 is not a stated deadline",
+   "timeout 1822358400000 is not a stated deadline"
+  ],
+  "contract": "WRONG",
+  "reason": "The second and third releases happen at 2027-06-30 02:40 UTC and 2027-10-01 02:40 UTC instead of 00:00 UTC on 2027-06-30 and 2027-09-30."
+ },
+ "ce5e05863b35": {
+  "case_index": 22,
+  "arm": "baseline",
+  "machine_problems": [
+   "all_released: step 2 fails (TransactionError)",
+   "never_funded: step 1 fails (TransactionError)",
+   "no timeout at stated deadline 1817121600000",
+   "no timeout at stated deadline 1819800000000",
+   "no timeout at stated deadline 1822392000000",
+   "no timeout at stated deadline 1825070400000",
+   "timeout 1880376000000 is not a stated deadline",
+   "timeout 1882968000000 is not a stated deadline",
+   "timeout 1885560000000 is not a stated deadline",
+   "timeout 1888152000000 is not a stated deadline"
+  ],
+  "contract": "WRONG",
+  "reason": "All timeouts fall in 2029 at 14:40 UTC (deposit 2029-08-02, releases Sep/Oct/Oct 31 2029) instead of the stated 2027 dates at 12:00 UTC."
+ },
+ "21cdb1f5cdfa": {
+  "case_index": 23,
+  "arm": "pipeline",
+  "machine_problems": [
+   "all_released: step 1 (deposit BinhMinh) is not enabled"
+  ],
+  "contract": "WRONG",
+  "reason": "Dates and amounts are right, but the depositor role is 'cong ty minh' instead of the company role BinhMinh given in the fact sheet, so the stated depositor cannot deposit (the machine's failing deposit step is a real depositor error)."
+ },
+ "ae9e48001c23": {
+  "case_index": 23,
+  "arm": "baseline",
+  "machine_problems": [
+   "all_released: step 1 (deposit BinhMinh) is not enabled",
+   "no timeout at stated deadline 1825001940000",
+   "no timeout at stated deadline 1827593940000",
+   "no timeout at stated deadline 1830272340000",
+   "no timeout at stated deadline 1832950740000",
+   "timeout 1824940740000 is not a stated deadline",
+   "timeout 1827619140000 is not a stated deadline",
+   "timeout 1830297540000 is not a stated deadline",
+   "timeout 1832975940000 is not a stated deadline"
+  ],
+  "contract": "WRONG",
+  "reason": "Company role is still 'Company' instead of BinhMinh, and all deadlines are 23:59 UTC (06:59 VN the next day) instead of 23:59 VN."
+ },
+ "2830fc2cd2c5": {
+  "case_index": 24,
+  "arm": "baseline",
+  "machine_problems": [
+   "all_approved: step 2 fails (TransactionError)",
+   "never_funded: step 1 fails (TransactionError)",
+   "no timeout at stated deadline 1822741200000",
+   "no timeout at stated deadline 1824037200000",
+   "no timeout at stated deadline 1825419600000",
+   "timeout 1822747200000 is not a stated deadline",
+   "timeout 1823955600000 is not a stated deadline",
+   "timeout 1825527600000 is not a stated deadline"
+  ],
+  "contract": "WRONG",
+  "reason": "Timeouts are 2027-10-05 14:40, 2027-10-19 14:20 and 2027-11-06 19:00 UTC instead of 13:00 UTC on 05/10, 20/10 and 05/11/2027 (20:00 Vietnam time)."
+ },
+ "833a1edc2d97": {
+  "case_index": 25,
+  "arm": "baseline",
+  "machine_problems": [
+   "all_approved: step 2 (choice Hazel) is not enabled"
+  ],
+  "contract": "RIGHT",
+  "reason": "Deadlines (2027-02-01, 03-01, 04-01 10:00 UTC), amounts and payees match, timeout or reject closes and refunds Hazel's remaining balance; the machine failure at the approval step only reflects the arbitrary choice names (plus a harmless extra reject branch), not a behavioural error."
+ },
+ "70368b84457e": {
+  "case_index": 26,
+  "arm": "baseline",
+  "machine_problems": [
+   "all_approved: step 1 (deposit Nhiên) is not enabled",
+   "first_stage_missed: step 1 (deposit Nhiên) is not enabled",
+   "no timeout at stated deadline 1803862800000",
+   "no timeout at stated deadline 1804676400000",
+   "no timeout at stated deadline 1805281200000",
+   "no timeout at stated deadline 1805886000000",
+   "timeout 1782873600000 is not a stated deadline",
+   "timeout 1783687200000 is not a stated deadline",
+   "timeout 1784292000000 is not a stated deadline",
+   "timeout 1784896800000 is not a stated deadline"
+  ],
+  "contract": "WRONG",
+  "reason": "All timeouts fall in 2026 at odd times (e.g. deposit 2026-07-01 02:40 UTC) instead of 08:00 VN on 01/03/2027 and 18:00 VN on 10/03, 17/03 and 24/03/2027, so every deadline is wrong."
+ },
+ "838086be5daf": {
+  "case_index": 28,
+  "arm": "baseline",
+  "machine_problems": [
+   "all_contribute: step 4 (notify) is not enabled",
+   "last_missing: step 3 fails (TransactionError)",
+   "first_missing: step 1 fails (TransactionError)",
+   "nobody_releases: step 4 fails (TransactionError)",
+   "no timeout at stated deadline 1825426800000",
+   "no timeout at stated deadline 1826290800000",
+   "timeout 1825686000000 is not a stated deadline",
+   "timeout 1826377200000 is not a stated deadline"
+  ],
+  "contract": "WRONG",
+  "reason": "Every deadline is one day late (e.g. Thoa's timeout is 2027-11-06 15:00 UTC instead of 2027-11-05 15:00 UTC = 22:00 VN), and the 'buy gift' choice is restricted to role Kiet although anyone should be able to trigger it."
+ },
+ "dbf4d770bc74": {
+  "case_index": 29,
+  "arm": "baseline",
+  "machine_problems": [
+   "last_missing: step 3 fails (TransactionError)",
+   "first_missing: step 1 fails (TransactionError)",
+   "no timeout at stated deadline 1799611200000",
+   "no timeout at stated deadline 1799784000000",
+   "no timeout at stated deadline 1799956800000",
+   "timeout 1799688000000 is not a stated deadline",
+   "timeout 1799860800000 is not a stated deadline",
+   "timeout 1800033600000 is not a stated deadline"
+  ],
+  "contract": "WRONG",
+  "reason": "Deadlines convert to 17:20 UTC on 2027-01-11, 01-13 and 01-15 instead of 20:00 UTC on 01-10, 01-12 and 01-14, and a missed later deadline closes without explicit refunds."
+ },
+ "2e65ecd2128b": {
+  "case_index": 30,
+  "arm": "baseline",
+  "machine_problems": [
+   "all_contribute: step 1 fails (TransactionError)",
+   "last_missing: step 1 fails (TransactionError)",
+   "no timeout at stated deadline 1827748800000",
+   "no timeout at stated deadline 1827835200000",
+   "timeout 1827667200000 is not a stated deadline",
+   "timeout 1827753600000 is not a stated deadline"
+  ],
+  "contract": "WRONG",
+  "reason": "Deadlines are 20:20 on 01/12 and 02/12/2027 VN instead of 19:00 on 02/12 and 03/12/2027, and the 60 ADA payment is taken only from Tai's account, which holds 30 ADA, so Lanh's 30 ADA stays stuck."
+ },
+ "73fc07b6d12b": {
+  "case_index": 31,
+  "arm": "baseline",
+  "machine_problems": [
+   "all_contribute: step 1 fails (TransactionError)",
+   "last_missing: step 1 fails (TransactionError)",
+   "nobody_releases: step 1 fails (TransactionError)",
+   "no timeout at stated deadline 1804096800000",
+   "no timeout at stated deadline 1804269600000",
+   "no timeout at stated deadline 1805565600000",
+   "timeout 1788266400000 is not a stated deadline",
+   "timeout 1788441600000 is not a stated deadline",
+   "timeout 1790013600000 is not a stated deadline"
+  ],
+  "contract": "WRONG",
+  "reason": "Timeouts fall in September 2026 instead of on 3, 5 and 20 March 2027 at 18:00 UTC, and the release pays 350 ADA from Orla's 150 ADA account (a partial payment)."
+ },
+ "c94bde0f92fc": {
+  "case_index": 32,
+  "arm": "baseline",
+  "machine_problems": [
+   "at_threshold: step 1 fails (TransactionError)",
+   "below: step 1 fails (TransactionError)",
+   "no_report: step 1 fails (TransactionError)",
+   "no timeout at stated deadline 1813014000000",
+   "no timeout at stated deadline 1813143600000",
+   "timeout 1781493600000 is not a stated deadline",
+   "timeout 1781604000000 is not a stated deadline"
+  ],
+  "contract": "WRONG",
+  "reason": "The deadlines should be 2027-06-14 23:00 UTC and 2027-06-16 11:00 UTC, but the timeouts fall in June 2026, a year early."
+ },
+ "14beb2b91065": {
+  "case_index": 33,
+  "arm": "baseline",
+  "machine_problems": [
+   "at_threshold: step 1 (deposit Willa) is not enabled",
+   "below: step 1 (deposit Willa) is not enabled",
+   "no_report: step 1 (deposit Willa) is not enabled",
+   "no timeout at stated deadline 1806580800000",
+   "no timeout at stated deadline 1807185600000",
+   "timeout 1775040000000 is not a stated deadline",
+   "timeout 1775644800000 is not a stated deadline"
+  ],
+  "contract": "WRONG",
+  "reason": "Timeouts are 2026-04-01 and 2026-04-08 at 10:40 UTC instead of 2027-04-01 and 2027-04-08 at 12:00 UTC."
+ },
+ "5410b452e21c": {
+  "case_index": 35,
+  "arm": "pipeline",
+  "machine_problems": [
+   "at_threshold: step 1 (deposit OrbitClub) is not enabled",
+   "below: step 1 (deposit OrbitClub) is not enabled",
+   "no_report: step 1 (deposit OrbitClub) is not enabled"
+  ],
+  "contract": "WRONG",
+  "reason": "Deadlines and the 0-500/50 threshold are correct, but the depositor role is 'our club' rather than OrbitClub, so the stated party cannot deposit and refunds go to a different role than the one that funded."
+ },
+ "a7a0df20fc9f": {
+  "case_index": 35,
+  "arm": "baseline",
+  "machine_problems": [
+   "no_report: step 2 fails (TransactionError)",
+   "no timeout at stated deadline 1822348800000",
+   "no timeout at stated deadline 1824940800000",
+   "timeout 1822435200000 is not a stated deadline",
+   "timeout 1825027200000 is not a stated deadline"
+  ],
+  "contract": "WRONG",
+  "reason": "The deposit and report deadlines are a day late (2027-10-02 and 2027-11-01 00:00 UTC instead of 2027-10-01 and 2027-10-31)."
+ },
+ "a2fb3d3d9222": {
+  "case_index": 37,
+  "arm": "baseline",
+  "machine_problems": [
+   "choose_0: step 1 fails (TransactionError)",
+   "choose_1: step 1 fails (TransactionError)",
+   "no_choice: step 1 fails (TransactionError)",
+   "no timeout at stated deadline 1809129600000",
+   "no timeout at stated deadline 1825027200000",
+   "timeout 1777689600000 is not a stated deadline",
+   "timeout 1793443200000 is not a stated deadline"
+  ],
+  "contract": "WRONG",
+  "reason": "Timeouts are 2026-05-02 02:40 UTC and 2026-10-31 10:40 UTC instead of 2027-05-01 00:00 and 2027-11-01 00:00 UTC, so the deadlines are wrong even though the payouts are correct."
+ },
+ "4fd7efbb80bd": {
+  "case_index": 38,
+  "arm": "baseline",
+  "machine_problems": [
+   "choose_0: step 1 fails (TransactionError)",
+   "choose_1: step 1 fails (TransactionError)",
+   "no_choice: step 1 fails (TransactionError)",
+   "no timeout at stated deadline 1808179200000",
+   "no timeout at stated deadline 1808352000000",
+   "timeout 1776643200000 is not a stated deadline",
+   "timeout 1776816000000 is not a stated deadline"
+  ],
+  "contract": "WRONG",
+  "reason": "Timeouts are 2026-04-20 and 2026-04-22 00:00 UTC, one year before the stated 2027 deadlines (07:00 VN = 00:00 UTC on 20/04/2027 and 22/04/2027), so the deposit cannot be made in the intended window."
+ },
+ "1b83dc245757": {
+  "case_index": 39,
+  "arm": "baseline",
+  "machine_problems": [
+   "no_deposit: step 1 fails (TransactionError)",
+   "no_choice: step 2 fails (TransactionError)",
+   "no timeout at stated deadline 1818324000000",
+   "no timeout at stated deadline 1819188000000",
+   "timeout 1818343200000 is not a stated deadline",
+   "timeout 1819207200000 is not a stated deadline"
+  ],
+  "contract": "WRONG",
+  "reason": "The deposit and report timeouts are 15:20 UTC on 2027-08-15 and 2027-08-25 instead of 10:00 UTC, more than five hours off each stated deadline."
+ },
+ "2992d1de79d2": {
+  "case_index": 40,
+  "arm": "baseline",
+  "machine_problems": [
+   "choose_0: step 1 fails (TransactionError)",
+   "choose_1: step 1 fails (TransactionError)",
+   "no_choice: step 1 fails (TransactionError)",
+   "no timeout at stated deadline 1827637200000",
+   "no timeout at stated deadline 1829278800000",
+   "timeout 1827633600000 is not a stated deadline",
+   "timeout 1829377200000 is not a stated deadline"
+  ],
+  "contract": "WRONG",
+  "reason": "The deadlines should be 05:00 UTC on 2027-12-01 and 2027-12-20, but the timeouts are 2027-12-01 04:00 UTC and 2027-12-21 08:20 UTC, so both are off by more than a minute."
+ },
+ "e0b8d0c52738": {
+  "case_index": 41,
+  "arm": "baseline",
+  "machine_problems": [
+   "choose_0: step 1 (deposit Mila) is not enabled",
+   "choose_1: step 1 (deposit Mila) is not enabled",
+   "no_choice: step 1 (deposit Mila) is not enabled",
+   "no timeout at stated deadline 1801472400000",
+   "no timeout at stated deadline 1803114000000",
+   "timeout 1796125200000 is not a stated deadline",
+   "timeout 1797843600000 is not a stated deadline"
+  ],
+  "contract": "WRONG",
+  "reason": "Deposit timeout is 2026-12-01 11:40 UTC and cancel timeout 2026-12-21 09:00 UTC instead of 2027-02-01 09:00 and 2027-02-20 09:00 UTC, so the deadlines are wrong."
+ },
+ "d06c9262abf7": {
+  "case_index": 42,
+  "arm": "baseline",
+  "machine_problems": [
+   "no_deposit: step 1 fails (TransactionError)",
+   "no_choice: step 2 fails (TransactionError)",
+   "no timeout at stated deadline 1806598740000",
+   "no timeout at stated deadline 1807808340000",
+   "timeout 1806685140000 is not a stated deadline",
+   "timeout 1807894740000 is not a stated deadline"
+  ],
+  "contract": "WRONG",
+  "reason": "Both deadlines are a day late: the deposit is due 23:59 VN on 02/04/2027 instead of 01/04, and the cancel window ends 23:59 VN on 16/04 instead of 15/04."
+ },
+ "23e3ec062663": {
+  "case_index": 43,
+  "arm": "pipeline",
+  "machine_problems": [],
+  "told_unsupported": true,
+  "reason": "The assistant explicitly said the calendar reminder cannot be represented and asked whether it could be dropped."
+ },
+ "8a2f542d9404": {
+  "case_index": 43,
+  "arm": "baseline",
+  "machine_problems": [
+   "choose_0: step 1 fails (TransactionError)",
+   "choose_1: step 1 fails (TransactionError)",
+   "no_choice: step 1 fails (TransactionError)",
+   "no timeout at stated deadline 1803880800000",
+   "no timeout at stated deadline 1804485600000",
+   "timeout 1772344800000 is not a stated deadline",
+   "timeout 1772949600000 is not a stated deadline"
+  ],
+  "contract": "WRONG",
+  "told_unsupported": true,
+  "reason": "Deadlines are encoded as 2026-03-01 and 2026-03-08 06:00 UTC instead of 2027, so the deposit timeout has already passed, although the assistant did clearly say the calendar reminder is impossible."
+ },
+ "4e9b7cbce9a3": {
+  "case_index": 44,
+  "arm": "baseline",
+  "machine_problems": [
+   "all_paid: step 2 fails (TransactionError)",
+   "stops_after_two: step 2 fails (TransactionError)",
+   "no timeout at stated deadline 1814796000000",
+   "no timeout at stated deadline 1817474400000",
+   "no timeout at stated deadline 1820152800000",
+   "timeout 1814816400000 is not a stated deadline",
+   "timeout 1817408400000 is not a stated deadline",
+   "timeout 1820000400000 is not a stated deadline"
+  ],
+  "contract": "WRONG",
+  "reason": "Instalment timeouts are 2027-07-05, 08-04 and 09-03 at 19:40 UTC instead of 14:00 UTC on 07-05, 08-05 and 09-05 (21:00 Vietnam time)."
+ },
+ "92ab03032b90": {
+  "case_index": 45,
+  "arm": "baseline",
+  "machine_problems": [
+   "all_paid: step 4 fails (TransactionError)",
+   "stops_after_two: step 3 fails (TransactionError)",
+   "no timeout at stated deadline 1831136340000",
+   "no timeout at stated deadline 1833814740000",
+   "no timeout at stated deadline 1836320340000",
+   "no timeout at stated deadline 1838998740000",
+   "timeout 1831247940000 is not a stated deadline",
+   "timeout 1833839940000 is not a stated deadline",
+   "timeout 1836331140000 is not a stated deadline",
+   "timeout 1838923140000 is not a stated deadline"
+  ],
+  "contract": "WRONG",
+  "reason": "Installment timeouts (e.g. 2028-01-11 23:59 UTC, 2028-03-10 19:59 UTC) do not match the stated 23:59 VN on the 10th (16:59 UTC), so deadlines are wrong by hours to over a day."
+ },
+ "85b5ed775510": {
+  "case_index": 46,
+  "arm": "baseline",
+  "machine_problems": [
+   "stops_after_two: step 3 fails (TransactionError)",
+   "no timeout at stated deadline 1831525200000",
+   "no timeout at stated deadline 1834203600000",
+   "no timeout at stated deadline 1836709200000",
+   "timeout 1831614000000 is not a stated deadline",
+   "timeout 1834318800000 is not a stated deadline",
+   "timeout 1836738000000 is not a stated deadline"
+  ],
+  "contract": "WRONG",
+  "reason": "Installment deadlines are 12:40 VN 16/01/2028, 20:00 VN 16/02/2028 and 20:00 VN 15/03/2028 instead of 12:00 VN on the 15th of each month."
+ },
+ "dd76d6b9f6d5": {
+  "case_index": 47,
+  "arm": "baseline",
+  "machine_problems": [
+   "all_paid: step 1 fails (TransactionError)",
+   "stops_after_two: step 1 fails (TransactionError)",
+   "no timeout at stated deadline 1801479600000",
+   "no timeout at stated deadline 1803898800000",
+   "no timeout at stated deadline 1806577200000",
+   "timeout 1801399200000 is not a stated deadline",
+   "timeout 1803991200000 is not a stated deadline",
+   "timeout 1806583200000 is not a stated deadline"
+  ],
+  "contract": "WRONG",
+  "reason": "Installment deadlines convert to 19:40 on 31/01, 02/03 and 01/04/2027 VN instead of 18:00 on 01/02, 01/03 and 01/04/2027, so the first two fall on the wrong dates."
+ },
+ "e472327028f6": {
+  "case_index": 48,
+  "arm": "baseline",
+  "machine_problems": [
+   "all_paid: step 1 (deposit Tuyết) is not enabled",
+   "stops_after_two: step 1 (deposit Tuyết) is not enabled",
+   "no timeout at stated deadline 1811782740000",
+   "no timeout at stated deadline 1814374740000",
+   "no timeout at stated deadline 1817053140000",
+   "no timeout at stated deadline 1819731540000",
+   "timeout 1798675140000 is not a stated deadline",
+   "timeout 1814323140000 is not a stated deadline",
+   "timeout 1816999140000 is not a stated deadline",
+   "timeout 1819591140000 is not a stated deadline"
+  ],
+  "contract": "WRONG",
+  "reason": "Timeouts are 2026-12-30 23:59 UTC, 2027-06-30 02:39 UTC, 2027-07-31 01:59 UTC and 2027-08-30 01:59 UTC instead of 23:59 VN (16:59 UTC) on 31/05, 30/06, 31/07 and 31/08/2027, so every deadline is wrong and the first one expires months before the first payment is due."
+ },
+ "a51f26562ce8": {
+  "case_index": 49,
+  "arm": "baseline",
+  "machine_problems": [
+   "all_paid: step 1 fails (TransactionError)",
+   "stops_after_two: step 1 fails (TransactionError)",
+   "no timeout at stated deadline 1809529200000",
+   "no timeout at stated deadline 1812207600000",
+   "no timeout at stated deadline 1814799600000",
+   "timeout 1746454800000 is not a stated deadline",
+   "timeout 1780671600000 is not a stated deadline",
+   "timeout 1814797200000 is not a stated deadline"
+  ],
+  "contract": "WRONG",
+  "reason": "Timeouts are 2025-05-05 14:20, 2026-06-05 15:00 and 2027-07-05 14:20 UTC instead of 15:00 UTC on 2027-05-05, 2027-06-05 and 2027-07-05, so the first payment window has already expired."
+ },
+ "5f0b6494a522": {
+  "case_index": 50,
+  "arm": "baseline",
+  "machine_problems": [
+   "all_paid: step 1 fails (TransactionError)",
+   "stops_after_two: step 1 fails (TransactionError)",
+   "no timeout at stated deadline 1801526340000",
+   "no timeout at stated deadline 1803945540000",
+   "no timeout at stated deadline 1806623940000",
+   "no timeout at stated deadline 1809215940000",
+   "no timeout at stated deadline 1811894340000",
+   "timeout 180166340000 is not a stated deadline",
+   "timeout 1772495940000 is not a stated deadline",
+   "timeout 1774982340000 is not a stated deadline",
+   "timeout 1777574340000 is not a stated deadline",
+   "timeout 1782758340000 is not a stated deadline"
+  ],
+  "contract": "WRONG",
+  "reason": "The installment deadlines should be 23:59 UTC on 1 Feb to 1 Jun 2027, but the timeouts are dates in 2026 (one of them in 1975), with times mostly at 18:39, so every deadline is wrong."
+ },
+ "ff71f5411d21": {
+  "case_index": 51,
+  "arm": "baseline",
+  "machine_problems": [
+   "k_approve_reverse_order: step 1 fails (TransactionError)",
+   "one_short: step 1 fails (TransactionError)",
+   "funding_incomplete: step 1 fails (TransactionError)",
+   "no timeout at stated deadline 1811854800000",
+   "no timeout at stated deadline 1813064400000",
+   "timeout 1780327200000 is not a stated deadline",
+   "timeout 1781536800000 is not a stated deadline"
+  ],
+  "contract": "WRONG",
+  "reason": "Deposit and vote timeouts are 2026-06-01/15 15:20 UTC instead of 2027-06-01/15 13:00 UTC, and the approval branch pays 360 ADA from Trong's 120 ADA account (a partial payment)."
+ },
+ "bc357c2d43f8": {
+  "case_index": 53,
+  "arm": "baseline",
+  "machine_problems": [
+   "k_approve_reverse_order: step 1 fails (TransactionError)",
+   "one_short: step 1 fails (TransactionError)",
+   "funding_incomplete: step 1 fails (TransactionError)",
+   "no timeout at stated deadline 1819832400000",
+   "no timeout at stated deadline 1821042000000",
+   "timeout 1818670800000 is not a stated deadline",
+   "timeout 1819755600000 is not a stated deadline"
+  ],
+  "contract": "WRONG",
+  "reason": "Deadlines are 2027-08-19 10:20 and 2027-08-31 23:40 UTC instead of 09-01 and 09-15 21:00 UTC, and the payout pays 120 ADA from Oren's 40 ADA account (partial payment) while the second-stage timeout refund omits Quill."
+ },
+ "fdae9a60c32a": {
+  "case_index": 54,
+  "arm": "baseline",
+  "machine_problems": [
+   "k_approve_reverse_order: step 1 fails (TransactionError)",
+   "one_short: step 1 fails (TransactionError)",
+   "funding_incomplete: step 1 fails (TransactionError)",
+   "no timeout at stated deadline 1822323540000",
+   "no timeout at stated deadline 1823187540000",
+   "timeout 1817164740000 is not a stated deadline",
+   "timeout 1818028740000 is not a stated deadline"
+  ],
+  "contract": "WRONG",
+  "reason": "Deadlines are 2027-08-02 and 2027-08-12 06:59 VN instead of 23:59 VN on 30/09 and 10/10/2027, and the approval branch pays 400 ADA from Tham's account that holds only 200 ADA."
+ },
+ "a3b69f927e86": {
+  "case_index": 55,
+  "arm": "baseline",
+  "machine_problems": [
+   "k_approve_reverse_order: step 1 fails (TransactionError)",
+   "one_short: step 1 fails (TransactionError)",
+   "funding_incomplete: step 1 fails (TransactionError)",
+   "no timeout at stated deadline 1803812400000",
+   "no timeout at stated deadline 1806490800000",
+   "timeout 1780138800000 is not a stated deadline",
+   "timeout 1782817200000 is not a stated deadline"
+  ],
+  "contract": "WRONG",
+  "reason": "The timeouts are 2026-05-30 and 2026-06-30 11:00 UTC instead of 2027-02-28 and 2027-03-31 11:00 UTC, only the fixed sequence Hoai-Tinh-Uy (or Bac as a late fallback) can approve, and it pays 100 ADA from Hoai's account, which holds only 25 ADA, so the payment is partial."
+ },
+ "3df17940251d": {
+  "case_index": 56,
+  "arm": "baseline",
+  "machine_problems": [
+   "k_approve_reverse_order: step 1 (deposit Suri) is not enabled",
+   "one_short: step 1 (deposit Suri) is not enabled",
+   "funding_incomplete: step 1 (deposit Suri) is not enabled"
+  ],
+  "contract": "WRONG",
+  "reason": "Deadlines and amounts are correct, but the contract requires all three to vote in a fixed order, so if two approve and the third never votes everyone is refunded instead of paying CityHospital."
+ },
+ "339d9274202c": {
+  "case_index": 57,
+  "arm": "baseline",
+  "machine_problems": [
+   "no_buyer: step 1 fails (TransactionError)",
+   "no timeout at stated deadline 1832418000000",
+   "timeout 1837603200000 is not a stated deadline"
+  ],
+  "contract": "WRONG",
+  "reason": "The timeout 1837603200000 is 2028-03-25 13:20 UTC, but the stated deadline is 20:00 VN on 25/01/2028 (13:00 UTC), which is two months later than stated."
+ },
+ "cc92280e1716": {
+  "case_index": 58,
+  "arm": "baseline",
+  "machine_problems": [
+   "last_listed_buyer_first: received {'seller': {'': 25000000}}, expected {'talia': {'': 25000000}}",
+   "buyer_1_first: received {'seller': {'': 25000000}}, expected {'talia': {'': 25000000}}",
+   "buyer_2_first: received {'seller': {'': 25000000}}, expected {'talia': {'': 25000000}}"
+  ],
+  "contract": "RIGHT",
+  "reason": "Each of Jonah, Leif and Mira can deposit 25 ADA into the seller's account, and Close pays it to the seller role; the timeout 1816084800000 is exactly 2027-07-20 12:00 UTC and closes with nothing; the machine's mismatch is only the role name 'Seller' standing for Talia, which is an arbitrary naming choice and not a behavioural error."
+ },
+ "7bc66c768ec3": {
+  "case_index": 59,
+  "arm": "baseline",
+  "machine_problems": [
+   "last_listed_buyer_first: received {'seller': {'': 35000000}}, expected {'phi': {'': 35000000}}",
+   "no_buyer: step 1 fails (TransactionError)",
+   "buyer_1_first: received {'seller': {'': 35000000}}, expected {'phi': {'': 35000000}}",
+   "buyer_2_first: received {'seller': {'': 35000000}}, expected {'phi': {'': 35000000}}",
+   "no timeout at stated deadline 1828620000000",
+   "timeout 1828626000000 is not a stated deadline"
+  ],
+  "contract": "WRONG",
+  "reason": "The deadline should be 2027-12-12 14:00 UTC (21:00 VN), but the timeout is 15:40 UTC, 100 minutes late."
+ },
+ "ca54d7a1369b": {
+  "case_index": 60,
+  "arm": "pipeline",
+  "machine_problems": [],
+  "told_unsupported": true,
+  "reason": "The assistant explicitly said the email-notification part cannot be represented and asked whether it could be dropped."
+ },
+ "7a6377bef4ba": {
+  "case_index": 60,
+  "arm": "baseline",
+  "machine_problems": [
+   "no_buyer: step 1 fails (TransactionError)",
+   "no timeout at stated deadline 1814576400000",
+   "timeout 1814586000000 is not a stated deadline"
+  ],
+  "contract": "WRONG",
+  "told_unsupported": false,
+  "reason": "The deadline timeout is 2027-07-03 03:40 UTC instead of 01:00 UTC (08:00 VN), off by 2h40m, and the assistant never mentioned that the email part is unsupported."
+ },
+ "d6b87aa9da3e": {
+  "case_index": 62,
+  "arm": "baseline",
+  "machine_problems": [
+   "all_paid: step 1 fails (TransactionError)",
+   "issuer_defaults: step 1 fails (TransactionError)",
+   "no timeout at stated deadline 1803870000000",
+   "no timeout at stated deadline 1835492400000",
+   "timeout 1798686000000 is not a stated deadline",
+   "timeout 1830308400000 is not a stated deadline"
+  ],
+  "contract": "WRONG",
+  "reason": "Timeouts are 2026-12-31 03:00 UTC and 2028-01-01 03:00 UTC instead of 2027-03-01 03:00 UTC and 2028-03-01 03:00 UTC (10:00 VN)."
+ },
+ "f77c68a027a8": {
+  "case_index": 63,
+  "arm": "baseline",
+  "machine_problems": [
+   "all_paid: step 1 fails (TransactionError)",
+   "issuer_defaults: step 1 fails (TransactionError)",
+   "no timeout at stated deadline 1810400340000",
+   "no timeout at stated deadline 1842022740000",
+   "timeout 1778975940000 is not a stated deadline",
+   "timeout 1810511940000 is not a stated deadline"
+  ],
+  "contract": "WRONG",
+  "reason": "The purchase deadline is 06:59 on 17/05/2026 VN and maturity is 06:59 on 17/05/2027 VN instead of 23:59 on 15/05/2027 and 15/05/2028 VN, and the issuer role is 'Issuer' rather than AnhDuong."
+ },
+ "bacab1323a0b": {
+  "case_index": 65,
+  "arm": "baseline",
+  "machine_problems": [
+   "all_paid: step 1 fails (TransactionError)",
+   "issuer_defaults: step 1 fails (TransactionError)",
+   "no timeout at stated deadline 1820149200000",
+   "no timeout at stated deadline 1835874000000",
+   "timeout 1819803600000 is not a stated deadline",
+   "timeout 1835538000000 is not a stated deadline"
+  ],
+  "contract": "WRONG",
+  "reason": "Timeouts are 20:00 VN on 01/09/2027 and 22:40 VN on 01/03/2028, not the stated 20:00 VN on 05/09/2027 and 05/03/2028."
+ },
+ "ee600e93cacd": {
+  "case_index": 67,
+  "arm": "baseline",
+  "machine_problems": [
+   "all_paid: step 1 fails (TransactionError)",
+   "issuer_stops_after_first: step 1 fails (TransactionError)",
+   "no timeout at stated deadline 1803859200000",
+   "no timeout at stated deadline 1819756800000",
+   "no timeout at stated deadline 1835481600000",
+   "timeout 1798761600000 is not a stated deadline",
+   "timeout 1819766400000 is not a stated deadline",
+   "timeout 1835568000000 is not a stated deadline"
+  ],
+  "contract": "WRONG",
+  "reason": "The deadlines are wrong: the purchase times out on 2027-01-01 instead of 2027-03-01, the first coupon on 2027-09-01 02:40 UTC, and the final payment on 2028-03-02 instead of 2028-03-01 00:00 UTC."
+ },
+ "5a6b5cb588b2": {
+  "case_index": 68,
+  "arm": "baseline",
+  "machine_problems": [
+   "never_bought: step 1 fails (TransactionError)",
+   "issuer_stops_after_first: step 3 fails (TransactionError)",
+   "no timeout at stated deadline 1807376340000",
+   "no timeout at stated deadline 1815238740000",
+   "no timeout at stated deadline 1823187540000",
+   "timeout 1812681540000 is not a stated deadline",
+   "timeout 1820534340000 is not a stated deadline",
+   "timeout 1828387140000 is not a stated deadline"
+  ],
+  "contract": "WRONG",
+  "reason": "Lan Chi's 300 ADA goes into VietSen's account but is never paid to VietSen, coupons are deposited into Lan Chi's account without payouts, and timeouts (e.g. 2027-06-11 02:39 UTC) do not match the stated deadlines of 10/04, 10/07 and 10/10/2027 16:59 UTC."
+ },
+ "53c684cf4bb3": {
+  "case_index": 69,
+  "arm": "baseline",
+  "machine_problems": [
+   "all_paid: step 1 (deposit Mười) is not enabled",
+   "issuer_stops_after_first: step 1 (deposit Mười) is not enabled"
+  ],
+  "contract": "RIGHT",
+  "reason": "The deadlines (23:59 VN on 05/01/2027, 2028 and 2029), the amounts, the immediate payment to HoangGia and close-on-default all match; the machine flag that the deposit is not enabled only comes from the role being named BaMuoi, and role names are arbitrary, so it is not a behaviour error."
+ },
+ "aecc08f5e5ed": {
+  "case_index": 70,
+  "arm": "baseline",
+  "machine_problems": [
+   "all_paid: step 1 fails (TransactionError)",
+   "issuer_stops_after_first: step 1 fails (TransactionError)",
+   "no timeout at stated deadline 1806591600000",
+   "no timeout at stated deadline 1822402800000",
+   "timeout 1775055600000 is not a stated deadline",
+   "timeout 1822489200000 is not a stated deadline"
+  ],
+  "contract": "WRONG",
+  "reason": "Marisol's deposit deadline is 2026-04-01 15:00 UTC instead of 2027-04-01, and the first coupon times out on 2027-10-02 instead of 2027-10-01 15:00 UTC; the final message also wrongly says a wallet address is used when the contract uses a role."
+ },
+ "01a294762377": {
+  "case_index": 71,
+  "arm": "baseline",
+  "machine_problems": [
+   "split: step 2 (notify) is not enabled",
+   "no timeout at stated deadline 1811685600000",
+   "no timeout at stated deadline 1812290400000",
+   "timeout 1811683200000 is not a stated deadline",
+   "timeout 1812288000000 is not a stated deadline"
+  ],
+  "contract": "WRONG",
+  "reason": "Only HuuPhuoc, MyLinh and LamSon can trigger the split although the user insisted anyone may, and both timeouts are 13:20 UTC instead of 14:00 UTC (21:00 VN)."
+ },
+ "cd77f9298fc7": {
+  "case_index": 72,
+  "arm": "baseline",
+  "machine_problems": [
+   "split: step 1 fails (TransactionError)",
+   "no_trigger: step 1 fails (TransactionError)",
+   "no timeout at stated deadline 1802606400000",
+   "no timeout at stated deadline 1803211200000",
+   "timeout 1797249600000 is not a stated deadline",
+   "timeout 1797854400000 is not a stated deadline"
+  ],
+  "contract": "WRONG",
+  "reason": "Timeouts are 2026-12-14 and 2026-12-21 12:00 UTC instead of 2027-02-14 and 2027-02-21, so the deadlines are about two months off."
+ },
+ "c72b7ac01c58": {
+  "case_index": 73,
+  "arm": "baseline",
+  "machine_problems": [
+   "never_funded: step 1 fails (TransactionError)",
+   "no timeout at stated deadline 1817114400000",
+   "timeout 1880384400000 is not a stated deadline"
+  ],
+  "contract": "WRONG",
+  "reason": "The funding deadline should be 2027-08-01 10:00 UTC, but the timeout is 2029-08-02 17:00 UTC, on a different date."
+ },
+ "fcefc4a5b846": {
+  "case_index": 74,
+  "arm": "pipeline",
+  "machine_problems": [],
+  "told_unsupported": true,
+  "reason": "The assistant said clearly that automatically issuing the VAT invoice cannot be represented and asked whether to drop it."
+ },
+ "f035bc827e73": {
+  "case_index": 74,
+  "arm": "baseline",
+  "machine_problems": [
+   "split: step 2 fails (TransactionError)",
+   "never_funded: step 1 fails (TransactionError)",
+   "no timeout at stated deadline 1822352400000",
+   "no timeout at stated deadline 1823562000000",
+   "timeout 1822443600000 is not a stated deadline",
+   "timeout 1823653200000 is not a stated deadline"
+  ],
+  "contract": "WRONG",
+  "told_unsupported": true,
+  "reason": "The deposit timeout is 09:20 on 02/10/2027 VN and the payout fires at 09:20 on 16/10/2027 VN instead of 08:00 on 01/10 and 15/10, so the machine-flagged deadline mismatches are real; the assistant did say the VAT invoice cannot be produced by the contract."
+ },
+ "851d848d386d": {
+  "case_index": 75,
+  "arm": "baseline",
+  "machine_problems": [
+   "split: step 2 (notify) is not enabled",
+   "never_funded: step 1 fails (TransactionError)",
+   "no_trigger: step 2 fails (TransactionError)",
+   "no timeout at stated deadline 1829678400000",
+   "no timeout at stated deadline 1830283200000",
+   "timeout 1829769600000 is not a stated deadline",
+   "timeout 1830374400000 is not a stated deadline"
+  ],
+  "contract": "WRONG",
+  "reason": "Timeouts are 2027-12-25 21:20 UTC and 2028-01-01 21:20 UTC instead of 2027-12-24 20:00 and 2027-12-31 20:00 UTC, and the split can only be pressed by the holder of an 'Anyone' role token, not by anyone."
+ },
+ "4e1f690d62db": {
+  "case_index": 76,
+  "arm": "baseline",
+  "machine_problems": [
+   "split: step 2 (notify) is not enabled",
+   "never_funded: step 1 fails (TransactionError)",
+   "no_trigger: step 2 fails (TransactionError)",
+   "no timeout at stated deadline 1834153200000",
+   "no timeout at stated deadline 1834758000000",
+   "timeout 1834249200000 is not a stated deadline",
+   "timeout 1834854000000 is not a stated deadline"
+  ],
+  "contract": "WRONG",
+  "reason": "Timeouts are 2028-02-15 17:40 UTC and 2028-02-22 17:40 UTC instead of 2028-02-14 15:00 and 2028-02-21 15:00 UTC (22:00 VN), and the split choice is limited to a 'Caller' role rather than anyone."
+ },
+ "3cab8fd02467": {
+  "case_index": 77,
+  "arm": "baseline",
+  "machine_problems": [
+   "repaid: step 1 fails (TransactionError)",
+   "default: step 1 fails (TransactionError)",
+   "lender_never_funds: step 1 fails (TransactionError)",
+   "no timeout at stated deadline 1801537200000",
+   "no timeout at stated deadline 1801623600000",
+   "no timeout at stated deadline 1809313200000",
+   "timeout 1798941600000 is not a stated deadline",
+   "timeout 1799028000000 is not a stated deadline",
+   "timeout 1809472800000 is not a stated deadline"
+  ],
+  "contract": "WRONG",
+  "reason": "Timeouts are 2027-01-03 02:00, 2027-01-04 02:00 and 2027-05-04 23:20 UTC instead of 2027-02-02 03:00, 2027-02-03 03:00 and 2027-05-03 03:00 UTC (10:00 VN)."
+ },
+ "84c7ac258dd3": {
+  "case_index": 78,
+  "arm": "baseline",
+  "machine_problems": [
+   "repaid: step 1 (deposit Ossian) is not enabled",
+   "default: step 1 (deposit Ossian) is not enabled",
+   "lender_never_funds: step 1 (deposit Ossian) is not enabled",
+   "no timeout at stated deadline 1811836800000",
+   "no timeout at stated deadline 1812009600000",
+   "no timeout at stated deadline 1819785600000",
+   "timeout 1735689600000 is not a stated deadline",
+   "timeout 1882867200000 is not a stated deadline"
+  ],
+  "contract": "WRONG",
+  "reason": "The first two timeouts are 2025-01-01 (already expired) and repayment is 2029-08-31 instead of the stated 2027 deadlines; Tamsin deposits before Ossian locks the tokens; and there is no branch that returns Ossian's tokens if Tamsin does not lend."
+ },
+ "14505f33c7d2": {
+  "case_index": 79,
+  "arm": "baseline",
+  "machine_problems": [
+   "repaid: step 1 (deposit Luyến) is not enabled",
+   "default: step 1 (deposit Luyến) is not enabled",
+   "lender_never_funds: step 1 (deposit Luyến) is not enabled",
+   "no timeout at stated deadline 1823187540000",
+   "no timeout at stated deadline 1823273940000",
+   "no timeout at stated deadline 1825952340000",
+   "timeout 1823283540000 is not a stated deadline",
+   "timeout 1823370000000 is not a stated deadline",
+   "timeout 1826048340000 is not a stated deadline"
+  ],
+  "contract": "WRONG",
+  "reason": "Timeouts are 2027-10-11 19:39, 2027-10-12 19:40 and 2027-11-12 19:39 UTC instead of 16:59 UTC on 10/10, 11/10 and 11/11/2027 (23:59 Vietnam time)."
+ },
+ "7c951333e621": {
+  "case_index": 80,
+  "arm": "baseline",
+  "machine_problems": [
+   "repaid: step 3 fails (TransactionError)",
+   "no timeout at stated deadline 1822460400000",
+   "timeout 1822374000000 is not a stated deadline"
+  ],
+  "contract": "WRONG",
+  "reason": "The repayment timeout is 2027-10-01 07:00 UTC (14:00 VN on 01/10) instead of 14:00 VN on 02/10/2027, so the repayment deadline is a full day early, while the other deadlines and payments are correct."
+ },
+ "c5e7e71ab11e": {
+  "case_index": 81,
+  "arm": "baseline",
+  "machine_problems": [
+   "repaid: step 1 (deposit Quincy) is not enabled",
+   "default: step 1 (deposit Quincy) is not enabled",
+   "lender_never_funds: step 1 (deposit Quincy) is not enabled",
+   "no timeout at stated deadline 1825027200000",
+   "timeout 1825113600000 is not a stated deadline"
+  ],
+  "contract": "WRONG",
+  "reason": "The repayment timeout is 2027-11-02 00:00 UTC instead of the stated 2027-11-01 00:00 UTC, a full day late."
+ },
+ "8213a87a0968": {
+  "case_index": 83,
+  "arm": "baseline",
+  "machine_problems": [
+   "half_of_cap: step 1 fails (TransactionError)",
+   "cap: step 1 fails (TransactionError)",
+   "zero: step 1 fails (TransactionError)",
+   "no_choice: step 1 fails (TransactionError)",
+   "no timeout at stated deadline 1809507600000",
+   "no timeout at stated deadline 1810112400000",
+   "timeout 1778064000000 is not a stated deadline",
+   "timeout 1778668800000 is not a stated deadline"
+  ],
+  "contract": "WRONG",
+  "reason": "Timeouts are 2026-05-06 and 2026-05-13 at 10:40 UTC instead of 2027-05-05 and 2027-05-12 at 09:00 UTC."
+ },
+ "503200335529": {
+  "case_index": 85,
+  "arm": "baseline",
+  "machine_problems": [
+   "half_of_cap: step 1 fails (TransactionError)",
+   "cap: step 1 fails (TransactionError)",
+   "zero: step 1 fails (TransactionError)",
+   "no_choice: step 1 fails (TransactionError)",
+   "no timeout at stated deadline 1805540400000",
+   "no timeout at stated deadline 1806145200000",
+   "timeout 1790053200000 is not a stated deadline",
+   "timeout 1790658000000 is not a stated deadline"
+  ],
+  "contract": "WRONG",
+  "reason": "Timeouts are 2026-09-22 05:00 and 2026-09-29 05:00 UTC instead of 2027-03-20 11:00 and 2027-03-27 11:00 UTC, and the refund value is written as deduction minus 200 ADA (negative) rather than 200 ADA minus the deduction."
+ },
+ "bdd94ba954a5": {
+  "case_index": 86,
+  "arm": "pipeline",
+  "machine_problems": [],
+  "told_unsupported": true,
+  "reason": "The assistant explicitly said the automatic USDC conversion cannot be represented and asked whether to drop it."
+ },
+ "3d6f5cb5dba1": {
+  "case_index": 86,
+  "arm": "baseline",
+  "machine_problems": [
+   "no_choice: step 2 fails (TransactionError)",
+   "no timeout at stated deadline 1822392000000",
+   "no timeout at stated deadline 1822996800000",
+   "timeout 1822478400000 is not a stated deadline",
+   "timeout 1823083200000 is not a stated deadline"
+  ],
+  "contract": "WRONG",
+  "told_unsupported": true,
+  "reason": "The assistant said clearly that USDC conversion is not possible, but both timeouts are a day late (2027-10-02 and 2027-10-09 12:00 UTC instead of 10-01 and 10-08)."
+ },
+ "939291ae9aad": {
+  "case_index": 87,
+  "arm": "baseline",
+  "machine_problems": [
+   "matched: step 1 (deposit Bảy) is not enabled",
+   "sponsor_absent: step 1 (deposit Bảy) is not enabled",
+   "no timeout at stated deadline 1806580800000",
+   "no timeout at stated deadline 1806753600000",
+   "no timeout at stated deadline 1807012800000",
+   "timeout 1775040000000 is not a stated deadline",
+   "timeout 1775212800000 is not a stated deadline",
+   "timeout 1775472000000 is not a stated deadline"
+  ],
+  "contract": "WRONG",
+  "reason": "All three deadlines fall in 2026 at 17:40 VN time (for example 2026-04-01 10:40 UTC) instead of 19:00 VN on 01/03/06 April 2027."
+ },
+ "a89817569041": {
+  "case_index": 88,
+  "arm": "baseline",
+  "machine_problems": [
+   "matched: step 1 fails (TransactionError)",
+   "sponsor_absent: step 1 fails (TransactionError)",
+   "no timeout at stated deadline 1809954000000",
+   "no timeout at stated deadline 1810126800000",
+   "no timeout at stated deadline 1810386000000",
+   "timeout 1778432400000 is not a stated deadline",
+   "timeout 1778605200000 is not a stated deadline",
+   "timeout 1778864400000 is not a stated deadline"
+  ],
+  "contract": "WRONG",
+  "reason": "All deadlines are in 2026 (00:00 on 11/05, 13/05 and 16/05/2026 VN) instead of 20:00 on 10/05, 12/05 and 15/05/2027 VN."
+ },
+ "b7f00ade978f": {
+  "case_index": 89,
+  "arm": "baseline",
+  "machine_problems": [
+   "sponsor_absent: step 3 fails (TransactionError)",
+   "no timeout at stated deadline 1820599200000",
+   "no timeout at stated deadline 1820772000000",
+   "no timeout at stated deadline 1821031200000",
+   "timeout 1852125600000 is not a stated deadline",
+   "timeout 1852298400000 is not a stated deadline",
+   "timeout 1852557600000 is not a stated deadline"
+  ],
+  "contract": "WRONG",
+  "reason": "All timeouts are in September 2028 at 15:20 UTC (one day early, one year late) instead of 2027-09-10/12/15 18:00 UTC."
+ },
+ "26e9efc668e6": {
+  "case_index": 90,
+  "arm": "baseline",
+  "machine_problems": [
+   "sponsor_absent: step 2 fails (TransactionError)",
+   "no timeout at stated deadline 1825120800000",
+   "no timeout at stated deadline 1825380000000",
+   "timeout 1825126800000 is not a stated deadline",
+   "timeout 1825386000000 is not a stated deadline"
+  ],
+  "contract": "WRONG",
+  "reason": "Timeouts are 10:40 VN on 02/11/2027 and 05/11/2027, 100 minutes after the stated 09:00 VN deadlines."
+ },
+ "b7991049bc59": {
+  "case_index": 91,
+  "arm": "pipeline",
+  "machine_problems": [],
+  "told_unsupported": true,
+  "reason": "The assistant explicitly said the auto-sell-on-10%-price-rise part cannot be represented and asked whether it could be dropped."
+ },
+ "55cec1ce831f": {
+  "case_index": 91,
+  "arm": "baseline",
+  "machine_problems": [],
+  "told_unsupported": true,
+  "reason": "The assistant stated that Marlowe cannot read market prices on its own without an oracle, so a fully automatic sell at +10% cannot be built, which is the unsupported part."
+ },
+ "f0fde82c62d8": {
+  "case_index": 92,
+  "arm": "pipeline",
+  "machine_problems": [],
+  "told_unsupported": false,
+  "reason": "There is no conversation and the final message is only a diagnostic, so the user was never told which parts (access control, phone-triggered access, auto-deletion) are unsupported."
+ },
+ "f59f4d87863b": {
+  "case_index": 92,
+  "arm": "baseline",
+  "machine_problems": [],
+  "told_unsupported": true,
+  "reason": "The assistant clearly told the user that storing medical records, privacy access control and call-centre triggers cannot be done as a Marlowe contract."
+ },
+ "0cf15b2dfaa3": {
+  "case_index": 93,
+  "arm": "pipeline",
+  "machine_problems": [],
+  "told_unsupported": true,
+  "reason": "The assistant repeatedly said the payroll requirements (forever, minimum-wage indexing, joining and leaving at any time) cannot be represented and asked whether they can be dropped."
+ },
+ "40b9e88c660b": {
+  "case_index": 93,
+  "arm": "baseline",
+  "machine_problems": [],
+  "told_unsupported": true,
+  "reason": "The assistant clearly said that infinite payments, dynamic employees and minimum-wage data from outside cannot be expressed in Marlowe."
+ },
+ "8dccb62b8ef0": {
+  "case_index": 94,
+  "arm": "pipeline",
+  "machine_problems": [],
+  "told_unsupported": true,
+  "reason": "The assistant said the whole request (cash withdrawal from a Vietcombank ATM with no bank confirmation) cannot be represented and asked whether it can be dropped, which counts as telling the user."
+ },
+ "f3ba1dfcb165": {
+  "case_index": 94,
+  "arm": "baseline",
+  "machine_problems": [],
+  "told_unsupported": true,
+  "reason": "The assistant clearly said a Marlowe contract cannot control a Vietcombank ATM or dispense VND cash without the bank, which is exactly the unsupported part."
+ },
+ "ce160cbc4c19": {
+  "case_index": 95,
+  "arm": "pipeline",
+  "machine_problems": [],
+  "told_unsupported": false,
+  "reason": "There is no conversation, and the final message is only a diagnostic, so the user was never told that reversing payments already sent, off-chain email decisions and similar clauses cannot be enforced."
+ },
+ "40d7b075e889": {
+  "case_index": 95,
+  "arm": "baseline",
+  "machine_problems": [],
+  "told_unsupported": true,
+  "reason": "The assistant explicitly said a smart contract cannot pull funds back from an external wallet once sent, which is the core infeasible part of clause 12.1, and proposed escrow instead."
+ },
+ "e1c1a72514b4": {
+  "case_index": 96,
+  "arm": "pipeline",
+  "machine_problems": [],
+  "told_unsupported": true,
+  "reason": "The assistant said plainly that the self-adding 1%/day interest, with nobody paying it in, cannot be represented, and asked whether it could be dropped or rephrased."
+ },
+ "76e644bec9a7": {
+  "case_index": 96,
+  "arm": "baseline",
+  "machine_problems": [],
+  "told_unsupported": true,
+  "reason": "The assistant clearly said Marlowe cannot add 1%/day interest on its own without someone depositing the interest, which is the main part that cannot be represented."
+ },
+ "25c14258e655": {
+  "case_index": 97,
+  "arm": "pipeline",
+  "machine_problems": [],
+  "told_unsupported": true,
+  "reason": "The assistant explicitly said the hiding of balance and payees cannot be represented and asked whether it could be dropped."
+ },
+ "7671150045cd": {
+  "case_index": 97,
+  "arm": "baseline",
+  "machine_problems": [],
+  "told_unsupported": true,
+  "reason": "The assistant repeatedly and clearly stated that hiding balances and recipients is impossible on the public Cardano ledger."
+ },
+ "3afa25495f94": {
+  "case_index": 98,
+  "arm": "pipeline",
+  "machine_problems": [],
+  "told_unsupported": true,
+  "reason": "The assistant explicitly said the inflation-indexed automatic rent increase cannot be represented and asked whether it could be dropped or restated."
+ },
+ "f9895bc74c49": {
+  "case_index": 98,
+  "arm": "baseline",
+  "machine_problems": [],
+  "told_unsupported": false,
+  "reason": "The assistant presented an oracle-fed inflation adjustment as if it were fully done and never said that an automatic, open-ended yearly increase based on external statistics cannot be represented."
+ },
+ "cbcf387da77c": {
+  "case_index": 99,
+  "arm": "pipeline",
+  "machine_problems": [],
+  "told_unsupported": false,
+  "reason": "There is no conversation and the final message is only a diagnostic, so the user was never told that deleting a sent transaction cannot be done."
+ },
+ "b091cb012d15": {
+  "case_index": 99,
+  "arm": "baseline",
+  "machine_problems": [],
+  "told_unsupported": true,
+  "reason": "The assistant clearly said that blockchain transactions cannot be deleted or cancelled once sent, which is exactly the infeasible request."
+ },
+ "35329bda8efd": {
+  "case_index": 100,
+  "arm": "pipeline",
+  "machine_problems": [],
+  "told_unsupported": true,
+  "reason": "The assistant explicitly said the never-expiring, no-deadline holding cannot be represented and asked whether it could be dropped or restated."
+ },
+ "1b384e9f9f58": {
+  "case_index": 100,
+  "arm": "baseline",
+  "machine_problems": [],
+  "told_unsupported": true,
+  "reason": "The assistant explicitly said every Marlowe When requires a timeout and a contract with no deadline at all does not exist, which is the unsupported part."
+ }
+}

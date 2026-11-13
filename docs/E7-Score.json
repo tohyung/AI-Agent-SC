@@ -1,0 +1,4500 @@
+{
+ "cases_scored": 100,
+ "cases_paired": 100,
+ "undetermined": 0,
+ "rq3_success": {
+  "n": 100,
+  "pipeline_rate": 0.49,
+  "baseline_rate": 0.18,
+  "delta": 0.31,
+  "delta_ci95": [
+   0.19,
+   0.43
+  ],
+  "relative": 1.7222222222222223,
+  "pipeline_only": 39,
+  "baseline_only": 8,
+  "mcnemar_p": 5.539621596994948e-06,
+  "conclusion": "pipeline stronger"
+ },
+ "rq3_wrong_delivery": {
+  "n": 100,
+  "pipeline_rate": 0.02,
+  "baseline_rate": 0.72,
+  "delta": -0.7,
+  "delta_ci95": [
+   -0.79,
+   -0.61
+  ],
+  "relative": -0.9722222222222222,
+  "pipeline_only": 0,
+  "baseline_only": 70,
+  "mcnemar_p": 1.6940658945086007e-21
+ },
+ "outcomes": {
+  "pipeline": {
+   "SUCCESS": 49,
+   "WRONG_DELIVERY": 2,
+   "NO_DELIVERY": 49,
+   "RIGHT_NO_NOTICE": 0,
+   "UNDETERMINED": 0
+  },
+  "baseline": {
+   "SUCCESS": 18,
+   "WRONG_DELIVERY": 72,
+   "NO_DELIVERY": 10,
+   "RIGHT_NO_NOTICE": 0,
+   "UNDETERMINED": 0
+  }
+ },
+ "time_sensitivity": {
+  "1m": {
+   "pipeline": 49,
+   "baseline": 18
+  },
+  "1h": {
+   "pipeline": 49,
+   "baseline": 18
+  },
+  "1d": {
+   "pipeline": 49,
+   "baseline": 18
+  },
+  "3d": {
+   "pipeline": 49,
+   "baseline": 19
+  }
+ },
+ "rq4": {
+  "pipeline": {
+   "total": {
+    "requests": 684,
+    "prompt_tokens": 2620648,
+    "completion_tokens": 1008415,
+    "model_seconds": 8499.7,
+    "user_messages": 267,
+    "scenarios": 134
+   },
+   "median": {
+    "requests": 5.0,
+    "prompt_tokens": 16890.5,
+    "completion_tokens": 6741.5,
+    "model_seconds": 47.15,
+    "user_messages": 2.0,
+    "scenarios": 1.0
+   },
+   "requests_per_success": 13.959183673469388
+  },
+  "baseline": {
+   "total": {
+    "requests": 287,
+    "prompt_tokens": 511136,
+    "completion_tokens": 243090,
+    "model_seconds": 4200.2,
+    "user_messages": 100,
+    "scenarios": 0
+   },
+   "median": {
+    "requests": 2.5,
+    "prompt_tokens": 2893.0,
+    "completion_tokens": 1641.5,
+    "model_seconds": 19.65,
+    "user_messages": 1.0,
+    "scenarios": 0.0
+   },
+   "requests_per_success": 15.944444444444445,
+   "cap_reached": 28
+  }
+ },
+ "success_by_expected_behavior": {
+  "converge": {
+   "n": 44,
+   "pipeline": 22,
+   "baseline": 5
+  },
+  "ask_then_converge": {
+   "n": 35,
+   "pipeline": 16,
+   "baseline": 4
+  },
+  "converge_and_decline_extra": {
+   "n": 5,
+   "pipeline": 1,
+   "baseline": 0
+  },
+  "flag_conflict_then_converge": {
+   "n": 6,
+   "pipeline": 3,
+   "baseline": 0
+  },
+  "reject_unsupported": {
+   "n": 10,
+   "pipeline": 7,
+   "baseline": 9
+  }
+ },
+ "success_by_family": {
+  "escrow": {
+   "n": 5,
+   "pipeline": 3,
+   "baseline": 0
+  },
+  "escrow_arbiter": {
+   "n": 4,
+   "pipeline": 4,
+   "baseline": 1
+  },
+  "swap": {
+   "n": 4,
+   "pipeline": 4,
+   "baseline": 1
+  },
+  "loan": {
+   "n": 5,
+   "pipeline": 4,
+   "baseline": 1
+  },
+  "vesting": {
+   "n": 5,
+   "pipeline": 2,
+   "baseline": 0
+  },
+  "milestone": {
+   "n": 4,
+   "pipeline": 1,
+   "baseline": 1
+  },
+  "crowdfunding": {
+   "n": 4,
+   "pipeline": 1,
+   "baseline": 0
+  },
+  "third_party": {
+   "n": 4,
+   "pipeline": 2,
+   "baseline": 1
+  },
+  "rental_deposit": {
+   "n": 4,
+   "pipeline": 4,
+   "baseline": 0
+  },
+  "cancellation_fee": {
+   "n": 4,
+   "pipeline": 4,
+   "baseline": 0
+  },
+  "installment": {
+   "n": 7,
+   "pipeline": 4,
+   "baseline": 0
+  },
+  "k_of_n": {
+   "n": 6,
+   "pipeline": 0,
+   "baseline": 0
+  },
+  "first_come": {
+   "n": 5,
+   "pipeline": 0,
+   "baseline": 2
+  },
+  "zero_coupon_bond": {
+   "n": 4,
+   "pipeline": 0,
+   "baseline": 1
+  },
+  "coupon_bond": {
+   "n": 5,
+   "pipeline": 1,
+   "baseline": 1
+  },
+  "split": {
+   "n": 6,
+   "pipeline": 3,
+   "baseline": 0
+  },
+  "collateral_loan": {
+   "n": 5,
+   "pipeline": 1,
+   "baseline": 0
+  },
+  "deduction": {
+   "n": 5,
+   "pipeline": 0,
+   "baseline": 0
+  },
+  "matching": {
+   "n": 4,
+   "pipeline": 4,
+   "baseline": 0
+  },
+  "infeasible": {
+   "n": 10,
+   "pipeline": 7,
+   "baseline": 9
+  }
+ },
+ "success_by_language": {
+  "vi": {
+   "n": 60,
+   "pipeline": 30,
+   "baseline": 9
+  },
+  "en": {
+   "n": 40,
+   "pipeline": 19,
+   "baseline": 9
+  }
+ },
+ "success_by_info_mode": {
+  "complete": {
+   "n": 40,
+   "pipeline": 20,
+   "baseline": 3
+  },
+  "missing": {
+   "n": 25,
+   "pipeline": 10,
+   "baseline": 2
+  },
+  "ambiguous": {
+   "n": 10,
+   "pipeline": 6,
+   "baseline": 2
+  },
+  "extra_unsupported": {
+   "n": 5,
+   "pipeline": 1,
+   "baseline": 0
+  },
+  "conflict": {
+   "n": 10,
+   "pipeline": 5,
+   "baseline": 2
+  },
+  "infeasible": {
+   "n": 10,
+   "pipeline": 7,
+   "baseline": 9
+  }
+ },
+ "simuser": {
+  "pipeline": {
+   "turns": 394,
+   "rejected_by_checker": 15,
+   "fallbacks": 2,
+   "objections": 116,
+   "invalid_subagent_turns": 1
+  },
+  "baseline": {
+   "turns": 172,
+   "rejected_by_checker": 0,
+   "fallbacks": 0,
+   "objections": 48,
+   "invalid_subagent_turns": 0
+  }
+ },
+ "rows": [
+  {
+   "case_index": 1,
+   "case_id": "v5-vi-escrow-001",
+   "family": "escrow",
+   "language": "vi",
+   "info_mode": "complete",
+   "expected_behavior": "converge",
+   "pipeline": "NO_DELIVERY",
+   "pipeline_machine": "NONE",
+   "pipeline_end": "scenario_not_delivered:nhung_nhan_dan",
+   "pipeline_1m": "NO_DELIVERY",
+   "pipeline_1h": "NO_DELIVERY",
+   "pipeline_1d": "NO_DELIVERY",
+   "pipeline_3d": "NO_DELIVERY",
+   "baseline": "WRONG_DELIVERY",
+   "baseline_machine": "REVIEW",
+   "baseline_end": "accepted",
+   "baseline_1m": "WRONG_DELIVERY",
+   "baseline_1h": "WRONG_DELIVERY",
+   "baseline_1d": "WRONG_DELIVERY",
+   "baseline_3d": "WRONG_DELIVERY",
+   "cost": {
+    "pipeline": {
+     "requests": 5,
+     "prompt_tokens": 21833,
+     "completion_tokens": 6352,
+     "model_seconds": 24.4,
+     "user_messages": 1,
+     "scenarios": 1
+    },
+    "baseline": {
+     "requests": 5,
+     "prompt_tokens": 8901,
+     "completion_tokens": 3003,
+     "model_seconds": 19.1,
+     "user_messages": 2,
+     "scenarios": 0,
+     "cap": 5,
+     "cap_reached": false
+    }
+   }
+  },
+  {
+   "case_index": 2,
+   "case_id": "v5-en-escrow-002",
+   "family": "escrow",
+   "language": "en",
+   "info_mode": "missing",
+   "expected_behavior": "ask_then_converge",
+   "pipeline": "SUCCESS",
+   "pipeline_machine": "RIGHT",
+   "pipeline_end": "all_scenarios_delivered",
+   "pipeline_1m": "SUCCESS",
+   "pipeline_1h": "SUCCESS",
+   "pipeline_1d": "SUCCESS",
+   "pipeline_3d": "SUCCESS",
+   "baseline": "WRONG_DELIVERY",
+   "baseline_machine": "REVIEW",
+   "baseline_end": "accepted",
+   "baseline_1m": "WRONG_DELIVERY",
+   "baseline_1h": "WRONG_DELIVERY",
+   "baseline_1d": "WRONG_DELIVERY",
+   "baseline_3d": "WRONG_DELIVERY",
+   "cost": {
+    "pipeline": {
+     "requests": 6,
+     "prompt_tokens": 15679,
+     "completion_tokens": 5235,
+     "model_seconds": 16.2,
+     "user_messages": 3,
+     "scenarios": 2
+    },
+    "baseline": {
+     "requests": 2,
+     "prompt_tokens": 1822,
+     "completion_tokens": 943,
+     "model_seconds": 5.3,
+     "user_messages": 1,
+     "scenarios": 0,
+     "cap": 6,
+     "cap_reached": false
+    }
+   }
+  },
+  {
+   "case_index": 3,
+   "case_id": "v5-vi-escrow-003",
+   "family": "escrow",
+   "language": "vi",
+   "info_mode": "ambiguous",
+   "expected_behavior": "ask_then_converge",
+   "pipeline": "SUCCESS",
+   "pipeline_machine": "RIGHT",
+   "pipeline_end": "all_scenarios_delivered",
+   "pipeline_1m": "SUCCESS",
+   "pipeline_1h": "SUCCESS",
+   "pipeline_1d": "SUCCESS",
+   "pipeline_3d": "SUCCESS",
+   "baseline": "WRONG_DELIVERY",
+   "baseline_machine": "REVIEW",
+   "baseline_end": "accepted",
+   "baseline_1m": "WRONG_DELIVERY",
+   "baseline_1h": "WRONG_DELIVERY",
+   "baseline_1d": "WRONG_DELIVERY",
+   "baseline_3d": "WRONG_DELIVERY",
+   "cost": {
+    "pipeline": {
+     "requests": 4,
+     "prompt_tokens": 12352,
+     "completion_tokens": 4453,
+     "model_seconds": 15.7,
+     "user_messages": 2,
+     "scenarios": 3
+    },
+    "baseline": {
+     "requests": 2,
+     "prompt_tokens": 2438,
+     "completion_tokens": 1522,
+     "model_seconds": 13.0,
+     "user_messages": 1,
+     "scenarios": 0,
+     "cap": 4,
+     "cap_reached": false
+    }
+   }
+  },
+  {
+   "case_index": 4,
+   "case_id": "v5-en-escrow-004",
+   "family": "escrow",
+   "language": "en",
+   "info_mode": "complete",
+   "expected_behavior": "converge",
+   "pipeline": "SUCCESS",
+   "pipeline_machine": "REVIEW",
+   "pipeline_end": "all_scenarios_delivered",
+   "pipeline_1m": "SUCCESS",
+   "pipeline_1h": "SUCCESS",
+   "pipeline_1d": "SUCCESS",
+   "pipeline_3d": "SUCCESS",
+   "baseline": "WRONG_DELIVERY",
+   "baseline_machine": "REVIEW",
+   "baseline_end": "accepted",
+   "baseline_1m": "WRONG_DELIVERY",
+   "baseline_1h": "WRONG_DELIVERY",
+   "baseline_1d": "WRONG_DELIVERY",
+   "baseline_3d": "WRONG_DELIVERY",
+   "cost": {
+    "pipeline": {
+     "requests": 4,
+     "prompt_tokens": 13930,
+     "completion_tokens": 5415,
+     "model_seconds": 17.6,
+     "user_messages": 2,
+     "scenarios": 3
+    },
+    "baseline": {
+     "requests": 1,
+     "prompt_tokens": 941,
+     "completion_tokens": 1196,
+     "model_seconds": 3.0,
+     "user_messages": 0,
+     "scenarios": 0,
+     "cap": 4,
+     "cap_reached": false
+    }
+   }
+  },
+  {
+   "case_index": 5,
+   "case_id": "v5-vi-escrow-005",
+   "family": "escrow",
+   "language": "vi",
+   "info_mode": "extra_unsupported",
+   "expected_behavior": "converge_and_decline_extra",
+   "pipeline": "NO_DELIVERY",
+   "pipeline_machine": "NONE",
+   "pipeline_end": "scenario_not_delivered:tram_deposit_and_confirm",
+   "pipeline_1m": "NO_DELIVERY",
+   "pipeline_1h": "NO_DELIVERY",
+   "pipeline_1d": "NO_DELIVERY",
+   "pipeline_3d": "NO_DELIVERY",
+   "baseline": "WRONG_DELIVERY",
+   "baseline_machine": "REVIEW",
+   "baseline_end": "accepted",
+   "baseline_1m": "WRONG_DELIVERY",
+   "baseline_1h": "WRONG_DELIVERY",
+   "baseline_1d": "WRONG_DELIVERY",
+   "baseline_3d": "WRONG_DELIVERY",
+   "cost": {
+    "pipeline": {
+     "requests": 6,
+     "prompt_tokens": 20892,
+     "completion_tokens": 6744,
+     "model_seconds": 18.9,
+     "user_messages": 2,
+     "scenarios": 1
+    },
+    "baseline": {
+     "requests": 1,
+     "prompt_tokens": 886,
+     "completion_tokens": 779,
+     "model_seconds": 5.7,
+     "user_messages": 0,
+     "scenarios": 0,
+     "cap": 6,
+     "cap_reached": false
+    }
+   }
+  },
+  {
+   "case_index": 6,
+   "case_id": "v5-vi-escrow_arbiter-001",
+   "family": "escrow_arbiter",
+   "language": "vi",
+   "info_mode": "complete",
+   "expected_behavior": "converge",
+   "pipeline": "SUCCESS",
+   "pipeline_machine": "RIGHT",
+   "pipeline_end": "all_scenarios_delivered",
+   "pipeline_1m": "SUCCESS",
+   "pipeline_1h": "SUCCESS",
+   "pipeline_1d": "SUCCESS",
+   "pipeline_3d": "SUCCESS",
+   "baseline": "NO_DELIVERY",
+   "baseline_machine": "NONE",
+   "baseline_end": "cap_reached",
+   "baseline_1m": "NO_DELIVERY",
+   "baseline_1h": "NO_DELIVERY",
+   "baseline_1d": "NO_DELIVERY",
+   "baseline_3d": "NO_DELIVERY",
+   "cost": {
+    "pipeline": {
+     "requests": 3,
+     "prompt_tokens": 10009,
+     "completion_tokens": 3592,
+     "model_seconds": 10.3,
+     "user_messages": 1,
+     "scenarios": 3
+    },
+    "baseline": {
+     "requests": 3,
+     "prompt_tokens": 5162,
+     "completion_tokens": 2213,
+     "model_seconds": 12.3,
+     "user_messages": 0,
+     "scenarios": 0,
+     "cap": 3,
+     "cap_reached": true
+    }
+   }
+  },
+  {
+   "case_index": 7,
+   "case_id": "v5-en-escrow_arbiter-002",
+   "family": "escrow_arbiter",
+   "language": "en",
+   "info_mode": "missing",
+   "expected_behavior": "ask_then_converge",
+   "pipeline": "SUCCESS",
+   "pipeline_machine": "RIGHT",
+   "pipeline_end": "all_scenarios_delivered",
+   "pipeline_1m": "SUCCESS",
+   "pipeline_1h": "SUCCESS",
+   "pipeline_1d": "SUCCESS",
+   "pipeline_3d": "SUCCESS",
+   "baseline": "WRONG_DELIVERY",
+   "baseline_machine": "REVIEW",
+   "baseline_end": "accepted",
+   "baseline_1m": "WRONG_DELIVERY",
+   "baseline_1h": "WRONG_DELIVERY",
+   "baseline_1d": "WRONG_DELIVERY",
+   "baseline_3d": "WRONG_DELIVERY",
+   "cost": {
+    "pipeline": {
+     "requests": 6,
+     "prompt_tokens": 19154,
+     "completion_tokens": 7333,
+     "model_seconds": 25.5,
+     "user_messages": 3,
+     "scenarios": 3
+    },
+    "baseline": {
+     "requests": 4,
+     "prompt_tokens": 6050,
+     "completion_tokens": 2891,
+     "model_seconds": 25.6,
+     "user_messages": 2,
+     "scenarios": 0,
+     "cap": 6,
+     "cap_reached": false
+    }
+   }
+  },
+  {
+   "case_index": 8,
+   "case_id": "v5-vi-escrow_arbiter-003",
+   "family": "escrow_arbiter",
+   "language": "vi",
+   "info_mode": "conflict",
+   "expected_behavior": "converge",
+   "pipeline": "SUCCESS",
+   "pipeline_machine": "RIGHT",
+   "pipeline_end": "all_scenarios_delivered",
+   "pipeline_1m": "SUCCESS",
+   "pipeline_1h": "SUCCESS",
+   "pipeline_1d": "SUCCESS",
+   "pipeline_3d": "SUCCESS",
+   "baseline": "SUCCESS",
+   "baseline_machine": "RIGHT",
+   "baseline_end": "accepted",
+   "baseline_1m": "SUCCESS",
+   "baseline_1h": "SUCCESS",
+   "baseline_1d": "SUCCESS",
+   "baseline_3d": "SUCCESS",
+   "cost": {
+    "pipeline": {
+     "requests": 4,
+     "prompt_tokens": 14880,
+     "completion_tokens": 5702,
+     "model_seconds": 20.7,
+     "user_messages": 1,
+     "scenarios": 4
+    },
+    "baseline": {
+     "requests": 3,
+     "prompt_tokens": 4491,
+     "completion_tokens": 2436,
+     "model_seconds": 16.2,
+     "user_messages": 1,
+     "scenarios": 0,
+     "cap": 4,
+     "cap_reached": false
+    }
+   }
+  },
+  {
+   "case_index": 9,
+   "case_id": "v5-en-escrow_arbiter-004",
+   "family": "escrow_arbiter",
+   "language": "en",
+   "info_mode": "complete",
+   "expected_behavior": "converge",
+   "pipeline": "SUCCESS",
+   "pipeline_machine": "RIGHT",
+   "pipeline_end": "all_scenarios_delivered",
+   "pipeline_1m": "SUCCESS",
+   "pipeline_1h": "SUCCESS",
+   "pipeline_1d": "SUCCESS",
+   "pipeline_3d": "SUCCESS",
+   "baseline": "WRONG_DELIVERY",
+   "baseline_machine": "REVIEW",
+   "baseline_end": "cap_reached",
+   "baseline_1m": "WRONG_DELIVERY",
+   "baseline_1h": "WRONG_DELIVERY",
+   "baseline_1d": "WRONG_DELIVERY",
+   "baseline_3d": "WRONG_DELIVERY",
+   "cost": {
+    "pipeline": {
+     "requests": 3,
+     "prompt_tokens": 9273,
+     "completion_tokens": 3358,
+     "model_seconds": 10.7,
+     "user_messages": 1,
+     "scenarios": 3
+    },
+    "baseline": {
+     "requests": 3,
+     "prompt_tokens": 4861,
+     "completion_tokens": 2629,
+     "model_seconds": 15.7,
+     "user_messages": 1,
+     "scenarios": 0,
+     "cap": 3,
+     "cap_reached": true
+    }
+   }
+  },
+  {
+   "case_index": 10,
+   "case_id": "v5-en-swap-001",
+   "family": "swap",
+   "language": "en",
+   "info_mode": "complete",
+   "expected_behavior": "converge",
+   "pipeline": "SUCCESS",
+   "pipeline_machine": "RIGHT",
+   "pipeline_end": "all_scenarios_delivered",
+   "pipeline_1m": "SUCCESS",
+   "pipeline_1h": "SUCCESS",
+   "pipeline_1d": "SUCCESS",
+   "pipeline_3d": "SUCCESS",
+   "baseline": "SUCCESS",
+   "baseline_machine": "RIGHT",
+   "baseline_end": "accepted",
+   "baseline_1m": "SUCCESS",
+   "baseline_1h": "SUCCESS",
+   "baseline_1d": "SUCCESS",
+   "baseline_3d": "SUCCESS",
+   "cost": {
+    "pipeline": {
+     "requests": 3,
+     "prompt_tokens": 10083,
+     "completion_tokens": 4039,
+     "model_seconds": 55.5,
+     "user_messages": 1,
+     "scenarios": 2
+    },
+    "baseline": {
+     "requests": 1,
+     "prompt_tokens": 931,
+     "completion_tokens": 982,
+     "model_seconds": 17.7,
+     "user_messages": 0,
+     "scenarios": 0,
+     "cap": 3,
+     "cap_reached": false
+    }
+   }
+  },
+  {
+   "case_index": 11,
+   "case_id": "v5-vi-swap-002",
+   "family": "swap",
+   "language": "vi",
+   "info_mode": "missing",
+   "expected_behavior": "ask_then_converge",
+   "pipeline": "SUCCESS",
+   "pipeline_machine": "RIGHT",
+   "pipeline_end": "all_scenarios_delivered",
+   "pipeline_1m": "SUCCESS",
+   "pipeline_1h": "SUCCESS",
+   "pipeline_1d": "SUCCESS",
+   "pipeline_3d": "SUCCESS",
+   "baseline": "WRONG_DELIVERY",
+   "baseline_machine": "REVIEW",
+   "baseline_end": "accepted",
+   "baseline_1m": "WRONG_DELIVERY",
+   "baseline_1h": "WRONG_DELIVERY",
+   "baseline_1d": "WRONG_DELIVERY",
+   "baseline_3d": "WRONG_DELIVERY",
+   "cost": {
+    "pipeline": {
+     "requests": 4,
+     "prompt_tokens": 13103,
+     "completion_tokens": 4917,
+     "model_seconds": 71.3,
+     "user_messages": 2,
+     "scenarios": 2
+    },
+    "baseline": {
+     "requests": 2,
+     "prompt_tokens": 1970,
+     "completion_tokens": 1178,
+     "model_seconds": 43.2,
+     "user_messages": 1,
+     "scenarios": 0,
+     "cap": 4,
+     "cap_reached": false
+    }
+   }
+  },
+  {
+   "case_index": 12,
+   "case_id": "v5-vi-swap-003",
+   "family": "swap",
+   "language": "vi",
+   "info_mode": "complete",
+   "expected_behavior": "converge",
+   "pipeline": "SUCCESS",
+   "pipeline_machine": "RIGHT",
+   "pipeline_end": "all_scenarios_delivered",
+   "pipeline_1m": "SUCCESS",
+   "pipeline_1h": "SUCCESS",
+   "pipeline_1d": "SUCCESS",
+   "pipeline_3d": "SUCCESS",
+   "baseline": "WRONG_DELIVERY",
+   "baseline_machine": "REVIEW",
+   "baseline_end": "accepted",
+   "baseline_1m": "WRONG_DELIVERY",
+   "baseline_1h": "WRONG_DELIVERY",
+   "baseline_1d": "WRONG_DELIVERY",
+   "baseline_3d": "WRONG_DELIVERY",
+   "cost": {
+    "pipeline": {
+     "requests": 4,
+     "prompt_tokens": 17044,
+     "completion_tokens": 5510,
+     "model_seconds": 92.6,
+     "user_messages": 1,
+     "scenarios": 2
+    },
+    "baseline": {
+     "requests": 1,
+     "prompt_tokens": 913,
+     "completion_tokens": 990,
+     "model_seconds": 19.4,
+     "user_messages": 0,
+     "scenarios": 0,
+     "cap": 4,
+     "cap_reached": false
+    }
+   }
+  },
+  {
+   "case_index": 13,
+   "case_id": "v5-en-swap-004",
+   "family": "swap",
+   "language": "en",
+   "info_mode": "ambiguous",
+   "expected_behavior": "ask_then_converge",
+   "pipeline": "SUCCESS",
+   "pipeline_machine": "RIGHT",
+   "pipeline_end": "all_scenarios_delivered",
+   "pipeline_1m": "SUCCESS",
+   "pipeline_1h": "SUCCESS",
+   "pipeline_1d": "SUCCESS",
+   "pipeline_3d": "SUCCESS",
+   "baseline": "WRONG_DELIVERY",
+   "baseline_machine": "REVIEW",
+   "baseline_end": "accepted",
+   "baseline_1m": "WRONG_DELIVERY",
+   "baseline_1h": "WRONG_DELIVERY",
+   "baseline_1d": "WRONG_DELIVERY",
+   "baseline_3d": "WRONG_DELIVERY",
+   "cost": {
+    "pipeline": {
+     "requests": 4,
+     "prompt_tokens": 13249,
+     "completion_tokens": 4797,
+     "model_seconds": 89.8,
+     "user_messages": 2,
+     "scenarios": 2
+    },
+    "baseline": {
+     "requests": 2,
+     "prompt_tokens": 1857,
+     "completion_tokens": 964,
+     "model_seconds": 83.0,
+     "user_messages": 1,
+     "scenarios": 0,
+     "cap": 4,
+     "cap_reached": false
+    }
+   }
+  },
+  {
+   "case_index": 14,
+   "case_id": "v5-vi-loan-001",
+   "family": "loan",
+   "language": "vi",
+   "info_mode": "complete",
+   "expected_behavior": "converge",
+   "pipeline": "SUCCESS",
+   "pipeline_machine": "RIGHT",
+   "pipeline_end": "all_scenarios_delivered",
+   "pipeline_1m": "SUCCESS",
+   "pipeline_1h": "SUCCESS",
+   "pipeline_1d": "SUCCESS",
+   "pipeline_3d": "SUCCESS",
+   "baseline": "SUCCESS",
+   "baseline_machine": "RIGHT",
+   "baseline_end": "accepted",
+   "baseline_1m": "SUCCESS",
+   "baseline_1h": "SUCCESS",
+   "baseline_1d": "SUCCESS",
+   "baseline_3d": "SUCCESS",
+   "cost": {
+    "pipeline": {
+     "requests": 9,
+     "prompt_tokens": 30499,
+     "completion_tokens": 11043,
+     "model_seconds": 486.0,
+     "user_messages": 5,
+     "scenarios": 3
+    },
+    "baseline": {
+     "requests": 1,
+     "prompt_tokens": 867,
+     "completion_tokens": 680,
+     "model_seconds": 91.3,
+     "user_messages": 0,
+     "scenarios": 0,
+     "cap": 9,
+     "cap_reached": false
+    }
+   }
+  },
+  {
+   "case_index": 15,
+   "case_id": "v5-en-loan-002",
+   "family": "loan",
+   "language": "en",
+   "info_mode": "missing",
+   "expected_behavior": "ask_then_converge",
+   "pipeline": "NO_DELIVERY",
+   "pipeline_machine": "NONE",
+   "pipeline_end": "scenario_not_delivered:default_repayment",
+   "pipeline_1m": "NO_DELIVERY",
+   "pipeline_1h": "NO_DELIVERY",
+   "pipeline_1d": "NO_DELIVERY",
+   "pipeline_3d": "NO_DELIVERY",
+   "baseline": "WRONG_DELIVERY",
+   "baseline_machine": "REVIEW",
+   "baseline_end": "accepted",
+   "baseline_1m": "WRONG_DELIVERY",
+   "baseline_1h": "WRONG_DELIVERY",
+   "baseline_1d": "WRONG_DELIVERY",
+   "baseline_3d": "WRONG_DELIVERY",
+   "cost": {
+    "pipeline": {
+     "requests": 7,
+     "prompt_tokens": 24259,
+     "completion_tokens": 7654,
+     "model_seconds": 805.2,
+     "user_messages": 3,
+     "scenarios": 2
+    },
+    "baseline": {
+     "requests": 2,
+     "prompt_tokens": 1773,
+     "completion_tokens": 799,
+     "model_seconds": 16.4,
+     "user_messages": 1,
+     "scenarios": 0,
+     "cap": 7,
+     "cap_reached": false
+    }
+   }
+  },
+  {
+   "case_index": 16,
+   "case_id": "v5-vi-loan-003",
+   "family": "loan",
+   "language": "vi",
+   "info_mode": "conflict",
+   "expected_behavior": "flag_conflict_then_converge",
+   "pipeline": "SUCCESS",
+   "pipeline_machine": "RIGHT",
+   "pipeline_end": "all_scenarios_delivered",
+   "pipeline_1m": "SUCCESS",
+   "pipeline_1h": "SUCCESS",
+   "pipeline_1d": "SUCCESS",
+   "pipeline_3d": "SUCCESS",
+   "baseline": "WRONG_DELIVERY",
+   "baseline_machine": "REVIEW",
+   "baseline_end": "accepted",
+   "baseline_1m": "WRONG_DELIVERY",
+   "baseline_1h": "WRONG_DELIVERY",
+   "baseline_1d": "WRONG_DELIVERY",
+   "baseline_3d": "WRONG_DELIVERY",
+   "cost": {
+    "pipeline": {
+     "requests": 3,
+     "prompt_tokens": 8641,
+     "completion_tokens": 3051,
+     "model_seconds": 229.4,
+     "user_messages": 1,
+     "scenarios": 3
+    },
+    "baseline": {
+     "requests": 3,
+     "prompt_tokens": 4026,
+     "completion_tokens": 1501,
+     "model_seconds": 81.5,
+     "user_messages": 2,
+     "scenarios": 0,
+     "cap": 3,
+     "cap_reached": false
+    }
+   }
+  },
+  {
+   "case_index": 17,
+   "case_id": "v5-vi-loan-004",
+   "family": "loan",
+   "language": "vi",
+   "info_mode": "ambiguous",
+   "expected_behavior": "ask_then_converge",
+   "pipeline": "SUCCESS",
+   "pipeline_machine": "RIGHT",
+   "pipeline_end": "all_scenarios_delivered",
+   "pipeline_1m": "SUCCESS",
+   "pipeline_1h": "SUCCESS",
+   "pipeline_1d": "SUCCESS",
+   "pipeline_3d": "SUCCESS",
+   "baseline": "WRONG_DELIVERY",
+   "baseline_machine": "REVIEW",
+   "baseline_end": "accepted",
+   "baseline_1m": "WRONG_DELIVERY",
+   "baseline_1h": "WRONG_DELIVERY",
+   "baseline_1d": "WRONG_DELIVERY",
+   "baseline_3d": "WRONG_DELIVERY",
+   "cost": {
+    "pipeline": {
+     "requests": 8,
+     "prompt_tokens": 28892,
+     "completion_tokens": 9272,
+     "model_seconds": 547.8,
+     "user_messages": 4,
+     "scenarios": 3
+    },
+    "baseline": {
+     "requests": 3,
+     "prompt_tokens": 3359,
+     "completion_tokens": 1491,
+     "model_seconds": 632.2,
+     "user_messages": 1,
+     "scenarios": 0,
+     "cap": 7,
+     "cap_reached": false
+    }
+   }
+  },
+  {
+   "case_index": 18,
+   "case_id": "v5-en-loan-005",
+   "family": "loan",
+   "language": "en",
+   "info_mode": "complete",
+   "expected_behavior": "converge",
+   "pipeline": "SUCCESS",
+   "pipeline_machine": "RIGHT",
+   "pipeline_end": "all_scenarios_delivered",
+   "pipeline_1m": "SUCCESS",
+   "pipeline_1h": "SUCCESS",
+   "pipeline_1d": "SUCCESS",
+   "pipeline_3d": "SUCCESS",
+   "baseline": "WRONG_DELIVERY",
+   "baseline_machine": "REVIEW",
+   "baseline_end": "accepted",
+   "baseline_1m": "WRONG_DELIVERY",
+   "baseline_1h": "WRONG_DELIVERY",
+   "baseline_1d": "WRONG_DELIVERY",
+   "baseline_3d": "WRONG_DELIVERY",
+   "cost": {
+    "pipeline": {
+     "requests": 4,
+     "prompt_tokens": 12087,
+     "completion_tokens": 4833,
+     "model_seconds": 233.1,
+     "user_messages": 2,
+     "scenarios": 3
+    },
+    "baseline": {
+     "requests": 1,
+     "prompt_tokens": 866,
+     "completion_tokens": 766,
+     "model_seconds": 70.8,
+     "user_messages": 0,
+     "scenarios": 0,
+     "cap": 4,
+     "cap_reached": false
+    }
+   }
+  },
+  {
+   "case_index": 19,
+   "case_id": "v5-vi-vesting-001",
+   "family": "vesting",
+   "language": "vi",
+   "info_mode": "complete",
+   "expected_behavior": "converge",
+   "pipeline": "SUCCESS",
+   "pipeline_machine": "RIGHT",
+   "pipeline_end": "all_scenarios_delivered",
+   "pipeline_1m": "SUCCESS",
+   "pipeline_1h": "SUCCESS",
+   "pipeline_1d": "SUCCESS",
+   "pipeline_3d": "SUCCESS",
+   "baseline": "NO_DELIVERY",
+   "baseline_machine": "NONE",
+   "baseline_end": "cap_reached",
+   "baseline_1m": "NO_DELIVERY",
+   "baseline_1h": "NO_DELIVERY",
+   "baseline_1d": "NO_DELIVERY",
+   "baseline_3d": "NO_DELIVERY",
+   "cost": {
+    "pipeline": {
+     "requests": 3,
+     "prompt_tokens": 9364,
+     "completion_tokens": 4033,
+     "model_seconds": 90.9,
+     "user_messages": 1,
+     "scenarios": 2
+    },
+    "baseline": {
+     "requests": 3,
+     "prompt_tokens": 4758,
+     "completion_tokens": 2233,
+     "model_seconds": 271.2,
+     "user_messages": 1,
+     "scenarios": 0,
+     "cap": 3,
+     "cap_reached": true
+    }
+   }
+  },
+  {
+   "case_index": 20,
+   "case_id": "v5-en-vesting-002",
+   "family": "vesting",
+   "language": "en",
+   "info_mode": "missing",
+   "expected_behavior": "ask_then_converge",
+   "pipeline": "NO_DELIVERY",
+   "pipeline_machine": "NONE",
+   "pipeline_end": "scenarios_not_confirmed",
+   "pipeline_1m": "NO_DELIVERY",
+   "pipeline_1h": "NO_DELIVERY",
+   "pipeline_1d": "NO_DELIVERY",
+   "pipeline_3d": "NO_DELIVERY",
+   "baseline": "WRONG_DELIVERY",
+   "baseline_machine": "REVIEW",
+   "baseline_end": "accepted",
+   "baseline_1m": "WRONG_DELIVERY",
+   "baseline_1h": "WRONG_DELIVERY",
+   "baseline_1d": "WRONG_DELIVERY",
+   "baseline_3d": "SUCCESS",
+   "cost": {
+    "pipeline": {
+     "requests": 6,
+     "prompt_tokens": 15889,
+     "completion_tokens": 6208,
+     "model_seconds": 103.2,
+     "user_messages": 4,
+     "scenarios": 0
+    },
+    "baseline": {
+     "requests": 2,
+     "prompt_tokens": 1843,
+     "completion_tokens": 971,
+     "model_seconds": 158.4,
+     "user_messages": 1,
+     "scenarios": 0,
+     "cap": 6,
+     "cap_reached": false
+    }
+   }
+  },
+  {
+   "case_index": 21,
+   "case_id": "v5-vi-vesting-003",
+   "family": "vesting",
+   "language": "vi",
+   "info_mode": "complete",
+   "expected_behavior": "converge",
+   "pipeline": "NO_DELIVERY",
+   "pipeline_machine": "NONE",
+   "pipeline_end": "scenarios_not_confirmed",
+   "pipeline_1m": "NO_DELIVERY",
+   "pipeline_1h": "NO_DELIVERY",
+   "pipeline_1d": "NO_DELIVERY",
+   "pipeline_3d": "NO_DELIVERY",
+   "baseline": "NO_DELIVERY",
+   "baseline_machine": "NONE",
+   "baseline_end": "cap_reached",
+   "baseline_1m": "NO_DELIVERY",
+   "baseline_1h": "NO_DELIVERY",
+   "baseline_1d": "NO_DELIVERY",
+   "baseline_3d": "NO_DELIVERY",
+   "cost": {
+    "pipeline": {
+     "requests": 3,
+     "prompt_tokens": 4759,
+     "completion_tokens": 2663,
+     "model_seconds": 142.3,
+     "user_messages": 3,
+     "scenarios": 0
+    },
+    "baseline": {
+     "requests": 3,
+     "prompt_tokens": 5211,
+     "completion_tokens": 3445,
+     "model_seconds": 398.9,
+     "user_messages": 1,
+     "scenarios": 0,
+     "cap": 3,
+     "cap_reached": true
+    }
+   }
+  },
+  {
+   "case_index": 22,
+   "case_id": "v5-en-vesting-004",
+   "family": "vesting",
+   "language": "en",
+   "info_mode": "conflict",
+   "expected_behavior": "flag_conflict_then_converge",
+   "pipeline": "SUCCESS",
+   "pipeline_machine": "RIGHT",
+   "pipeline_end": "all_scenarios_delivered",
+   "pipeline_1m": "SUCCESS",
+   "pipeline_1h": "SUCCESS",
+   "pipeline_1d": "SUCCESS",
+   "pipeline_3d": "SUCCESS",
+   "baseline": "WRONG_DELIVERY",
+   "baseline_machine": "REVIEW",
+   "baseline_end": "accepted",
+   "baseline_1m": "WRONG_DELIVERY",
+   "baseline_1h": "WRONG_DELIVERY",
+   "baseline_1d": "WRONG_DELIVERY",
+   "baseline_3d": "WRONG_DELIVERY",
+   "cost": {
+    "pipeline": {
+     "requests": 8,
+     "prompt_tokens": 30179,
+     "completion_tokens": 13540,
+     "model_seconds": 436.7,
+     "user_messages": 2,
+     "scenarios": 2
+    },
+    "baseline": {
+     "requests": 2,
+     "prompt_tokens": 1953,
+     "completion_tokens": 929,
+     "model_seconds": 28.1,
+     "user_messages": 1,
+     "scenarios": 0,
+     "cap": 8,
+     "cap_reached": false
+    }
+   }
+  },
+  {
+   "case_index": 23,
+   "case_id": "v5-vi-vesting-005",
+   "family": "vesting",
+   "language": "vi",
+   "info_mode": "missing",
+   "expected_behavior": "ask_then_converge",
+   "pipeline": "WRONG_DELIVERY",
+   "pipeline_machine": "REVIEW",
+   "pipeline_end": "all_scenarios_delivered",
+   "pipeline_1m": "WRONG_DELIVERY",
+   "pipeline_1h": "WRONG_DELIVERY",
+   "pipeline_1d": "WRONG_DELIVERY",
+   "pipeline_3d": "WRONG_DELIVERY",
+   "baseline": "WRONG_DELIVERY",
+   "baseline_machine": "REVIEW",
+   "baseline_end": "cap_reached",
+   "baseline_1m": "WRONG_DELIVERY",
+   "baseline_1h": "WRONG_DELIVERY",
+   "baseline_1d": "WRONG_DELIVERY",
+   "baseline_3d": "WRONG_DELIVERY",
+   "cost": {
+    "pipeline": {
+     "requests": 5,
+     "prompt_tokens": 15648,
+     "completion_tokens": 6493,
+     "model_seconds": 254.1,
+     "user_messages": 3,
+     "scenarios": 2
+    },
+    "baseline": {
+     "requests": 5,
+     "prompt_tokens": 9230,
+     "completion_tokens": 3651,
+     "model_seconds": 102.4,
+     "user_messages": 2,
+     "scenarios": 0,
+     "cap": 5,
+     "cap_reached": true
+    }
+   }
+  },
+  {
+   "case_index": 24,
+   "case_id": "v5-vi-milestone-001",
+   "family": "milestone",
+   "language": "vi",
+   "info_mode": "complete",
+   "expected_behavior": "converge",
+   "pipeline": "NO_DELIVERY",
+   "pipeline_machine": "NONE",
+   "pipeline_end": "scenario_not_delivered:phu_approves_both",
+   "pipeline_1m": "NO_DELIVERY",
+   "pipeline_1h": "NO_DELIVERY",
+   "pipeline_1d": "NO_DELIVERY",
+   "pipeline_3d": "NO_DELIVERY",
+   "baseline": "WRONG_DELIVERY",
+   "baseline_machine": "REVIEW",
+   "baseline_end": "accepted",
+   "baseline_1m": "WRONG_DELIVERY",
+   "baseline_1h": "WRONG_DELIVERY",
+   "baseline_1d": "WRONG_DELIVERY",
+   "baseline_3d": "WRONG_DELIVERY",
+   "cost": {
+    "pipeline": {
+     "requests": 4,
+     "prompt_tokens": 27119,
+     "completion_tokens": 5467,
+     "model_seconds": 94.9,
+     "user_messages": 1,
+     "scenarios": 1
+    },
+    "baseline": {
+     "requests": 4,
+     "prompt_tokens": 11677,
+     "completion_tokens": 8585,
+     "model_seconds": 107.2,
+     "user_messages": 1,
+     "scenarios": 0,
+     "cap": 4,
+     "cap_reached": false
+    }
+   }
+  },
+  {
+   "case_index": 25,
+   "case_id": "v5-en-milestone-002",
+   "family": "milestone",
+   "language": "en",
+   "info_mode": "missing",
+   "expected_behavior": "ask_then_converge",
+   "pipeline": "NO_DELIVERY",
+   "pipeline_machine": "NONE",
+   "pipeline_end": "scenarios_not_confirmed",
+   "pipeline_1m": "NO_DELIVERY",
+   "pipeline_1h": "NO_DELIVERY",
+   "pipeline_1d": "NO_DELIVERY",
+   "pipeline_3d": "NO_DELIVERY",
+   "baseline": "SUCCESS",
+   "baseline_machine": "REVIEW",
+   "baseline_end": "accepted",
+   "baseline_1m": "SUCCESS",
+   "baseline_1h": "SUCCESS",
+   "baseline_1d": "SUCCESS",
+   "baseline_3d": "SUCCESS",
+   "cost": {
+    "pipeline": {
+     "requests": 5,
+     "prompt_tokens": 10596,
+     "completion_tokens": 6876,
+     "model_seconds": 89.9,
+     "user_messages": 5,
+     "scenarios": 0
+    },
+    "baseline": {
+     "requests": 2,
+     "prompt_tokens": 1896,
+     "completion_tokens": 1210,
+     "model_seconds": 49.3,
+     "user_messages": 1,
+     "scenarios": 0,
+     "cap": 5,
+     "cap_reached": false
+    }
+   }
+  },
+  {
+   "case_index": 26,
+   "case_id": "v5-vi-milestone-003",
+   "family": "milestone",
+   "language": "vi",
+   "info_mode": "ambiguous",
+   "expected_behavior": "ask_then_converge",
+   "pipeline": "SUCCESS",
+   "pipeline_machine": "RIGHT",
+   "pipeline_end": "all_scenarios_delivered",
+   "pipeline_1m": "SUCCESS",
+   "pipeline_1h": "SUCCESS",
+   "pipeline_1d": "SUCCESS",
+   "pipeline_3d": "SUCCESS",
+   "baseline": "WRONG_DELIVERY",
+   "baseline_machine": "REVIEW",
+   "baseline_end": "accepted",
+   "baseline_1m": "WRONG_DELIVERY",
+   "baseline_1h": "WRONG_DELIVERY",
+   "baseline_1d": "WRONG_DELIVERY",
+   "baseline_3d": "WRONG_DELIVERY",
+   "cost": {
+    "pipeline": {
+     "requests": 5,
+     "prompt_tokens": 21778,
+     "completion_tokens": 9738,
+     "model_seconds": 223.1,
+     "user_messages": 2,
+     "scenarios": 3
+    },
+    "baseline": {
+     "requests": 2,
+     "prompt_tokens": 2109,
+     "completion_tokens": 1635,
+     "model_seconds": 30.3,
+     "user_messages": 1,
+     "scenarios": 0,
+     "cap": 5,
+     "cap_reached": false
+    }
+   }
+  },
+  {
+   "case_index": 27,
+   "case_id": "v5-en-milestone-004",
+   "family": "milestone",
+   "language": "en",
+   "info_mode": "complete",
+   "expected_behavior": "converge",
+   "pipeline": "NO_DELIVERY",
+   "pipeline_machine": "NONE",
+   "pipeline_end": "scenarios_not_confirmed",
+   "pipeline_1m": "NO_DELIVERY",
+   "pipeline_1h": "NO_DELIVERY",
+   "pipeline_1d": "NO_DELIVERY",
+   "pipeline_3d": "NO_DELIVERY",
+   "baseline": "NO_DELIVERY",
+   "baseline_machine": "NONE",
+   "baseline_end": "cap_reached",
+   "baseline_1m": "NO_DELIVERY",
+   "baseline_1h": "NO_DELIVERY",
+   "baseline_1d": "NO_DELIVERY",
+   "baseline_3d": "NO_DELIVERY",
+   "cost": {
+    "pipeline": {
+     "requests": 4,
+     "prompt_tokens": 9852,
+     "completion_tokens": 6234,
+     "model_seconds": 64.2,
+     "user_messages": 3,
+     "scenarios": 0
+    },
+    "baseline": {
+     "requests": 4,
+     "prompt_tokens": 9121,
+     "completion_tokens": 6283,
+     "model_seconds": 51.0,
+     "user_messages": 0,
+     "scenarios": 0,
+     "cap": 4,
+     "cap_reached": true
+    }
+   }
+  },
+  {
+   "case_index": 28,
+   "case_id": "v5-vi-crowdfunding-001",
+   "family": "crowdfunding",
+   "language": "vi",
+   "info_mode": "complete",
+   "expected_behavior": "converge",
+   "pipeline": "NO_DELIVERY",
+   "pipeline_machine": "NONE",
+   "pipeline_end": "pipeline_stopped_before_scenarios",
+   "pipeline_1m": "NO_DELIVERY",
+   "pipeline_1h": "NO_DELIVERY",
+   "pipeline_1d": "NO_DELIVERY",
+   "pipeline_3d": "NO_DELIVERY",
+   "baseline": "WRONG_DELIVERY",
+   "baseline_machine": "REVIEW",
+   "baseline_end": "accepted",
+   "baseline_1m": "WRONG_DELIVERY",
+   "baseline_1h": "WRONG_DELIVERY",
+   "baseline_1d": "WRONG_DELIVERY",
+   "baseline_3d": "WRONG_DELIVERY",
+   "cost": {
+    "pipeline": {
+     "requests": 6,
+     "prompt_tokens": 49517,
+     "completion_tokens": 13200,
+     "model_seconds": 55.3,
+     "user_messages": 1,
+     "scenarios": 0
+    },
+    "baseline": {
+     "requests": 1,
+     "prompt_tokens": 956,
+     "completion_tokens": 1708,
+     "model_seconds": 4.7,
+     "user_messages": 0,
+     "scenarios": 0,
+     "cap": 6,
+     "cap_reached": false
+    }
+   }
+  },
+  {
+   "case_index": 29,
+   "case_id": "v5-en-crowdfunding-002",
+   "family": "crowdfunding",
+   "language": "en",
+   "info_mode": "missing",
+   "expected_behavior": "ask_then_converge",
+   "pipeline": "SUCCESS",
+   "pipeline_machine": "RIGHT",
+   "pipeline_end": "all_scenarios_delivered",
+   "pipeline_1m": "SUCCESS",
+   "pipeline_1h": "SUCCESS",
+   "pipeline_1d": "SUCCESS",
+   "pipeline_3d": "SUCCESS",
+   "baseline": "WRONG_DELIVERY",
+   "baseline_machine": "REVIEW",
+   "baseline_end": "accepted",
+   "baseline_1m": "WRONG_DELIVERY",
+   "baseline_1h": "WRONG_DELIVERY",
+   "baseline_1d": "WRONG_DELIVERY",
+   "baseline_3d": "WRONG_DELIVERY",
+   "cost": {
+    "pipeline": {
+     "requests": 9,
+     "prompt_tokens": 41909,
+     "completion_tokens": 14968,
+     "model_seconds": 159.6,
+     "user_messages": 2,
+     "scenarios": 3
+    },
+    "baseline": {
+     "requests": 2,
+     "prompt_tokens": 1811,
+     "completion_tokens": 1024,
+     "model_seconds": 25.8,
+     "user_messages": 1,
+     "scenarios": 0,
+     "cap": 9,
+     "cap_reached": false
+    }
+   }
+  },
+  {
+   "case_index": 30,
+   "case_id": "v5-vi-crowdfunding-003",
+   "family": "crowdfunding",
+   "language": "vi",
+   "info_mode": "conflict",
+   "expected_behavior": "flag_conflict_then_converge",
+   "pipeline": "NO_DELIVERY",
+   "pipeline_machine": "NONE",
+   "pipeline_end": "pipeline_stopped",
+   "pipeline_1m": "NO_DELIVERY",
+   "pipeline_1h": "NO_DELIVERY",
+   "pipeline_1d": "NO_DELIVERY",
+   "pipeline_3d": "NO_DELIVERY",
+   "baseline": "WRONG_DELIVERY",
+   "baseline_machine": "REVIEW",
+   "baseline_end": "accepted",
+   "baseline_1m": "WRONG_DELIVERY",
+   "baseline_1h": "WRONG_DELIVERY",
+   "baseline_1d": "WRONG_DELIVERY",
+   "baseline_3d": "WRONG_DELIVERY",
+   "cost": {
+    "pipeline": {
+     "requests": 17,
+     "prompt_tokens": 67345,
+     "completion_tokens": 25497,
+     "model_seconds": 242.2,
+     "user_messages": 4,
+     "scenarios": 0
+    },
+    "baseline": {
+     "requests": 3,
+     "prompt_tokens": 3588,
+     "completion_tokens": 1648,
+     "model_seconds": 22.7,
+     "user_messages": 1,
+     "scenarios": 0,
+     "cap": 17,
+     "cap_reached": false
+    }
+   }
+  },
+  {
+   "case_index": 31,
+   "case_id": "v5-en-crowdfunding-004",
+   "family": "crowdfunding",
+   "language": "en",
+   "info_mode": "complete",
+   "expected_behavior": "converge",
+   "pipeline": "NO_DELIVERY",
+   "pipeline_machine": "NONE",
+   "pipeline_end": "scenarios_not_confirmed",
+   "pipeline_1m": "NO_DELIVERY",
+   "pipeline_1h": "NO_DELIVERY",
+   "pipeline_1d": "NO_DELIVERY",
+   "pipeline_3d": "NO_DELIVERY",
+   "baseline": "WRONG_DELIVERY",
+   "baseline_machine": "REVIEW",
+   "baseline_end": "accepted",
+   "baseline_1m": "WRONG_DELIVERY",
+   "baseline_1h": "WRONG_DELIVERY",
+   "baseline_1d": "WRONG_DELIVERY",
+   "baseline_3d": "WRONG_DELIVERY",
+   "cost": {
+    "pipeline": {
+     "requests": 5,
+     "prompt_tokens": 13253,
+     "completion_tokens": 6339,
+     "model_seconds": 29.3,
+     "user_messages": 3,
+     "scenarios": 0
+    },
+    "baseline": {
+     "requests": 1,
+     "prompt_tokens": 886,
+     "completion_tokens": 1152,
+     "model_seconds": 23.0,
+     "user_messages": 0,
+     "scenarios": 0,
+     "cap": 5,
+     "cap_reached": false
+    }
+   }
+  },
+  {
+   "case_index": 32,
+   "case_id": "v5-vi-third_party-001",
+   "family": "third_party",
+   "language": "vi",
+   "info_mode": "complete",
+   "expected_behavior": "converge",
+   "pipeline": "SUCCESS",
+   "pipeline_machine": "RIGHT",
+   "pipeline_end": "all_scenarios_delivered",
+   "pipeline_1m": "SUCCESS",
+   "pipeline_1h": "SUCCESS",
+   "pipeline_1d": "SUCCESS",
+   "pipeline_3d": "SUCCESS",
+   "baseline": "WRONG_DELIVERY",
+   "baseline_machine": "REVIEW",
+   "baseline_end": "accepted",
+   "baseline_1m": "WRONG_DELIVERY",
+   "baseline_1h": "WRONG_DELIVERY",
+   "baseline_1d": "WRONG_DELIVERY",
+   "baseline_3d": "WRONG_DELIVERY",
+   "cost": {
+    "pipeline": {
+     "requests": 4,
+     "prompt_tokens": 15098,
+     "completion_tokens": 5219,
+     "model_seconds": 30.4,
+     "user_messages": 1,
+     "scenarios": 3
+    },
+    "baseline": {
+     "requests": 1,
+     "prompt_tokens": 895,
+     "completion_tokens": 842,
+     "model_seconds": 6.5,
+     "user_messages": 0,
+     "scenarios": 0,
+     "cap": 4,
+     "cap_reached": false
+    }
+   }
+  },
+  {
+   "case_index": 33,
+   "case_id": "v5-en-third_party-002",
+   "family": "third_party",
+   "language": "en",
+   "info_mode": "missing",
+   "expected_behavior": "ask_then_converge",
+   "pipeline": "NO_DELIVERY",
+   "pipeline_machine": "NONE",
+   "pipeline_end": "scenarios_not_confirmed",
+   "pipeline_1m": "NO_DELIVERY",
+   "pipeline_1h": "NO_DELIVERY",
+   "pipeline_1d": "NO_DELIVERY",
+   "pipeline_3d": "NO_DELIVERY",
+   "baseline": "WRONG_DELIVERY",
+   "baseline_machine": "REVIEW",
+   "baseline_end": "accepted",
+   "baseline_1m": "WRONG_DELIVERY",
+   "baseline_1h": "WRONG_DELIVERY",
+   "baseline_1d": "WRONG_DELIVERY",
+   "baseline_3d": "WRONG_DELIVERY",
+   "cost": {
+    "pipeline": {
+     "requests": 6,
+     "prompt_tokens": 13738,
+     "completion_tokens": 5706,
+     "model_seconds": 42.0,
+     "user_messages": 5,
+     "scenarios": 0
+    },
+    "baseline": {
+     "requests": 2,
+     "prompt_tokens": 1807,
+     "completion_tokens": 1024,
+     "model_seconds": 31.0,
+     "user_messages": 1,
+     "scenarios": 0,
+     "cap": 6,
+     "cap_reached": false
+    }
+   }
+  },
+  {
+   "case_index": 34,
+   "case_id": "v5-vi-third_party-003",
+   "family": "third_party",
+   "language": "vi",
+   "info_mode": "complete",
+   "expected_behavior": "converge",
+   "pipeline": "SUCCESS",
+   "pipeline_machine": "RIGHT",
+   "pipeline_end": "all_scenarios_delivered",
+   "pipeline_1m": "SUCCESS",
+   "pipeline_1h": "SUCCESS",
+   "pipeline_1d": "SUCCESS",
+   "pipeline_3d": "SUCCESS",
+   "baseline": "SUCCESS",
+   "baseline_machine": "RIGHT",
+   "baseline_end": "accepted",
+   "baseline_1m": "SUCCESS",
+   "baseline_1h": "SUCCESS",
+   "baseline_1d": "SUCCESS",
+   "baseline_3d": "SUCCESS",
+   "cost": {
+    "pipeline": {
+     "requests": 3,
+     "prompt_tokens": 9286,
+     "completion_tokens": 3256,
+     "model_seconds": 26.3,
+     "user_messages": 1,
+     "scenarios": 4
+    },
+    "baseline": {
+     "requests": 1,
+     "prompt_tokens": 876,
+     "completion_tokens": 919,
+     "model_seconds": 8.5,
+     "user_messages": 0,
+     "scenarios": 0,
+     "cap": 3,
+     "cap_reached": false
+    }
+   }
+  },
+  {
+   "case_index": 35,
+   "case_id": "v5-en-third_party-004",
+   "family": "third_party",
+   "language": "en",
+   "info_mode": "ambiguous",
+   "expected_behavior": "ask_then_converge",
+   "pipeline": "WRONG_DELIVERY",
+   "pipeline_machine": "REVIEW",
+   "pipeline_end": "all_scenarios_delivered",
+   "pipeline_1m": "WRONG_DELIVERY",
+   "pipeline_1h": "WRONG_DELIVERY",
+   "pipeline_1d": "WRONG_DELIVERY",
+   "pipeline_3d": "WRONG_DELIVERY",
+   "baseline": "WRONG_DELIVERY",
+   "baseline_machine": "REVIEW",
+   "baseline_end": "accepted",
+   "baseline_1m": "WRONG_DELIVERY",
+   "baseline_1h": "WRONG_DELIVERY",
+   "baseline_1d": "WRONG_DELIVERY",
+   "baseline_3d": "WRONG_DELIVERY",
+   "cost": {
+    "pipeline": {
+     "requests": 7,
+     "prompt_tokens": 23382,
+     "completion_tokens": 8810,
+     "model_seconds": 47.0,
+     "user_messages": 3,
+     "scenarios": 3
+    },
+    "baseline": {
+     "requests": 3,
+     "prompt_tokens": 3494,
+     "completion_tokens": 1953,
+     "model_seconds": 27.2,
+     "user_messages": 2,
+     "scenarios": 0,
+     "cap": 7,
+     "cap_reached": false
+    }
+   }
+  },
+  {
+   "case_index": 36,
+   "case_id": "v5-vi-rental_deposit-001",
+   "family": "rental_deposit",
+   "language": "vi",
+   "info_mode": "complete",
+   "expected_behavior": "converge",
+   "pipeline": "SUCCESS",
+   "pipeline_machine": "RIGHT",
+   "pipeline_end": "all_scenarios_delivered",
+   "pipeline_1m": "SUCCESS",
+   "pipeline_1h": "SUCCESS",
+   "pipeline_1d": "SUCCESS",
+   "pipeline_3d": "SUCCESS",
+   "baseline": "NO_DELIVERY",
+   "baseline_machine": "NONE",
+   "baseline_end": "cap_reached",
+   "baseline_1m": "NO_DELIVERY",
+   "baseline_1h": "NO_DELIVERY",
+   "baseline_1d": "NO_DELIVERY",
+   "baseline_3d": "NO_DELIVERY",
+   "cost": {
+    "pipeline": {
+     "requests": 5,
+     "prompt_tokens": 24512,
+     "completion_tokens": 6739,
+     "model_seconds": 34.8,
+     "user_messages": 1,
+     "scenarios": 4
+    },
+    "baseline": {
+     "requests": 5,
+     "prompt_tokens": 13924,
+     "completion_tokens": 5112,
+     "model_seconds": 38.4,
+     "user_messages": 0,
+     "scenarios": 0,
+     "cap": 5,
+     "cap_reached": true
+    }
+   }
+  },
+  {
+   "case_index": 37,
+   "case_id": "v5-en-rental_deposit-002",
+   "family": "rental_deposit",
+   "language": "en",
+   "info_mode": "missing",
+   "expected_behavior": "ask_then_converge",
+   "pipeline": "SUCCESS",
+   "pipeline_machine": "RIGHT",
+   "pipeline_end": "all_scenarios_delivered",
+   "pipeline_1m": "SUCCESS",
+   "pipeline_1h": "SUCCESS",
+   "pipeline_1d": "SUCCESS",
+   "pipeline_3d": "SUCCESS",
+   "baseline": "WRONG_DELIVERY",
+   "baseline_machine": "REVIEW",
+   "baseline_end": "accepted",
+   "baseline_1m": "WRONG_DELIVERY",
+   "baseline_1h": "WRONG_DELIVERY",
+   "baseline_1d": "WRONG_DELIVERY",
+   "baseline_3d": "WRONG_DELIVERY",
+   "cost": {
+    "pipeline": {
+     "requests": 5,
+     "prompt_tokens": 16737,
+     "completion_tokens": 5755,
+     "model_seconds": 41.5,
+     "user_messages": 2,
+     "scenarios": 3
+    },
+    "baseline": {
+     "requests": 2,
+     "prompt_tokens": 1896,
+     "completion_tokens": 1155,
+     "model_seconds": 18.9,
+     "user_messages": 1,
+     "scenarios": 0,
+     "cap": 5,
+     "cap_reached": false
+    }
+   }
+  },
+  {
+   "case_index": 38,
+   "case_id": "v5-vi-rental_deposit-003",
+   "family": "rental_deposit",
+   "language": "vi",
+   "info_mode": "conflict",
+   "expected_behavior": "converge",
+   "pipeline": "SUCCESS",
+   "pipeline_machine": "RIGHT",
+   "pipeline_end": "all_scenarios_delivered",
+   "pipeline_1m": "SUCCESS",
+   "pipeline_1h": "SUCCESS",
+   "pipeline_1d": "SUCCESS",
+   "pipeline_3d": "SUCCESS",
+   "baseline": "WRONG_DELIVERY",
+   "baseline_machine": "REVIEW",
+   "baseline_end": "cap_reached",
+   "baseline_1m": "WRONG_DELIVERY",
+   "baseline_1h": "WRONG_DELIVERY",
+   "baseline_1d": "WRONG_DELIVERY",
+   "baseline_3d": "WRONG_DELIVERY",
+   "cost": {
+    "pipeline": {
+     "requests": 7,
+     "prompt_tokens": 27778,
+     "completion_tokens": 10029,
+     "model_seconds": 77.9,
+     "user_messages": 2,
+     "scenarios": 3
+    },
+    "baseline": {
+     "requests": 7,
+     "prompt_tokens": 16694,
+     "completion_tokens": 5060,
+     "model_seconds": 49.8,
+     "user_messages": 1,
+     "scenarios": 0,
+     "cap": 7,
+     "cap_reached": true
+    }
+   }
+  },
+  {
+   "case_index": 39,
+   "case_id": "v5-en-rental_deposit-004",
+   "family": "rental_deposit",
+   "language": "en",
+   "info_mode": "complete",
+   "expected_behavior": "converge",
+   "pipeline": "SUCCESS",
+   "pipeline_machine": "RIGHT",
+   "pipeline_end": "all_scenarios_delivered",
+   "pipeline_1m": "SUCCESS",
+   "pipeline_1h": "SUCCESS",
+   "pipeline_1d": "SUCCESS",
+   "pipeline_3d": "SUCCESS",
+   "baseline": "WRONG_DELIVERY",
+   "baseline_machine": "REVIEW",
+   "baseline_end": "cap_reached",
+   "baseline_1m": "WRONG_DELIVERY",
+   "baseline_1h": "WRONG_DELIVERY",
+   "baseline_1d": "WRONG_DELIVERY",
+   "baseline_3d": "WRONG_DELIVERY",
+   "cost": {
+    "pipeline": {
+     "requests": 3,
+     "prompt_tokens": 11337,
+     "completion_tokens": 3548,
+     "model_seconds": 28.1,
+     "user_messages": 1,
+     "scenarios": 4
+    },
+    "baseline": {
+     "requests": 3,
+     "prompt_tokens": 5779,
+     "completion_tokens": 3053,
+     "model_seconds": 31.3,
+     "user_messages": 1,
+     "scenarios": 0,
+     "cap": 3,
+     "cap_reached": true
+    }
+   }
+  },
+  {
+   "case_index": 40,
+   "case_id": "v5-vi-cancellation_fee-001",
+   "family": "cancellation_fee",
+   "language": "vi",
+   "info_mode": "complete",
+   "expected_behavior": "converge",
+   "pipeline": "SUCCESS",
+   "pipeline_machine": "RIGHT",
+   "pipeline_end": "all_scenarios_delivered",
+   "pipeline_1m": "SUCCESS",
+   "pipeline_1h": "SUCCESS",
+   "pipeline_1d": "SUCCESS",
+   "pipeline_3d": "SUCCESS",
+   "baseline": "WRONG_DELIVERY",
+   "baseline_machine": "REVIEW",
+   "baseline_end": "accepted",
+   "baseline_1m": "WRONG_DELIVERY",
+   "baseline_1h": "WRONG_DELIVERY",
+   "baseline_1d": "WRONG_DELIVERY",
+   "baseline_3d": "WRONG_DELIVERY",
+   "cost": {
+    "pipeline": {
+     "requests": 4,
+     "prompt_tokens": 16643,
+     "completion_tokens": 5904,
+     "model_seconds": 33.3,
+     "user_messages": 1,
+     "scenarios": 4
+    },
+    "baseline": {
+     "requests": 4,
+     "prompt_tokens": 7214,
+     "completion_tokens": 3173,
+     "model_seconds": 28.5,
+     "user_messages": 0,
+     "scenarios": 0,
+     "cap": 4,
+     "cap_reached": false
+    }
+   }
+  },
+  {
+   "case_index": 41,
+   "case_id": "v5-en-cancellation_fee-002",
+   "family": "cancellation_fee",
+   "language": "en",
+   "info_mode": "missing",
+   "expected_behavior": "ask_then_converge",
+   "pipeline": "SUCCESS",
+   "pipeline_machine": "RIGHT",
+   "pipeline_end": "all_scenarios_delivered",
+   "pipeline_1m": "SUCCESS",
+   "pipeline_1h": "SUCCESS",
+   "pipeline_1d": "SUCCESS",
+   "pipeline_3d": "SUCCESS",
+   "baseline": "WRONG_DELIVERY",
+   "baseline_machine": "REVIEW",
+   "baseline_end": "accepted",
+   "baseline_1m": "WRONG_DELIVERY",
+   "baseline_1h": "WRONG_DELIVERY",
+   "baseline_1d": "WRONG_DELIVERY",
+   "baseline_3d": "WRONG_DELIVERY",
+   "cost": {
+    "pipeline": {
+     "requests": 7,
+     "prompt_tokens": 27033,
+     "completion_tokens": 9291,
+     "model_seconds": 37.8,
+     "user_messages": 2,
+     "scenarios": 4
+    },
+    "baseline": {
+     "requests": 2,
+     "prompt_tokens": 1868,
+     "completion_tokens": 886,
+     "model_seconds": 8.0,
+     "user_messages": 1,
+     "scenarios": 0,
+     "cap": 7,
+     "cap_reached": false
+    }
+   }
+  },
+  {
+   "case_index": 42,
+   "case_id": "v5-vi-cancellation_fee-003",
+   "family": "cancellation_fee",
+   "language": "vi",
+   "info_mode": "ambiguous",
+   "expected_behavior": "ask_then_converge",
+   "pipeline": "SUCCESS",
+   "pipeline_machine": "RIGHT",
+   "pipeline_end": "all_scenarios_delivered",
+   "pipeline_1m": "SUCCESS",
+   "pipeline_1h": "SUCCESS",
+   "pipeline_1d": "SUCCESS",
+   "pipeline_3d": "SUCCESS",
+   "baseline": "WRONG_DELIVERY",
+   "baseline_machine": "REVIEW",
+   "baseline_end": "accepted",
+   "baseline_1m": "WRONG_DELIVERY",
+   "baseline_1h": "WRONG_DELIVERY",
+   "baseline_1d": "WRONG_DELIVERY",
+   "baseline_3d": "WRONG_DELIVERY",
+   "cost": {
+    "pipeline": {
+     "requests": 7,
+     "prompt_tokens": 24246,
+     "completion_tokens": 8551,
+     "model_seconds": 58.1,
+     "user_messages": 3,
+     "scenarios": 4
+    },
+    "baseline": {
+     "requests": 4,
+     "prompt_tokens": 6531,
+     "completion_tokens": 2608,
+     "model_seconds": 49.0,
+     "user_messages": 2,
+     "scenarios": 0,
+     "cap": 7,
+     "cap_reached": false
+    }
+   }
+  },
+  {
+   "case_index": 43,
+   "case_id": "v5-en-cancellation_fee-004",
+   "family": "cancellation_fee",
+   "language": "en",
+   "info_mode": "extra_unsupported",
+   "expected_behavior": "converge_and_decline_extra",
+   "pipeline": "SUCCESS",
+   "pipeline_machine": "RIGHT",
+   "pipeline_end": "all_scenarios_delivered",
+   "pipeline_1m": "SUCCESS",
+   "pipeline_1h": "SUCCESS",
+   "pipeline_1d": "SUCCESS",
+   "pipeline_3d": "SUCCESS",
+   "baseline": "WRONG_DELIVERY",
+   "baseline_machine": "REVIEW",
+   "baseline_end": "accepted",
+   "baseline_1m": "WRONG_DELIVERY",
+   "baseline_1h": "WRONG_DELIVERY",
+   "baseline_1d": "WRONG_DELIVERY",
+   "baseline_3d": "WRONG_DELIVERY",
+   "cost": {
+    "pipeline": {
+     "requests": 12,
+     "prompt_tokens": 49235,
+     "completion_tokens": 16556,
+     "model_seconds": 157.5,
+     "user_messages": 4,
+     "scenarios": 3
+    },
+    "baseline": {
+     "requests": 2,
+     "prompt_tokens": 2583,
+     "completion_tokens": 1627,
+     "model_seconds": 27.7,
+     "user_messages": 1,
+     "scenarios": 0,
+     "cap": 12,
+     "cap_reached": false
+    }
+   }
+  },
+  {
+   "case_index": 44,
+   "case_id": "v5-vi-installment-001",
+   "family": "installment",
+   "language": "vi",
+   "info_mode": "complete",
+   "expected_behavior": "converge",
+   "pipeline": "NO_DELIVERY",
+   "pipeline_machine": "NONE",
+   "pipeline_end": "scenarios_not_confirmed",
+   "pipeline_1m": "NO_DELIVERY",
+   "pipeline_1h": "NO_DELIVERY",
+   "pipeline_1d": "NO_DELIVERY",
+   "pipeline_3d": "NO_DELIVERY",
+   "baseline": "WRONG_DELIVERY",
+   "baseline_machine": "REVIEW",
+   "baseline_end": "cap_reached",
+   "baseline_1m": "WRONG_DELIVERY",
+   "baseline_1h": "WRONG_DELIVERY",
+   "baseline_1d": "WRONG_DELIVERY",
+   "baseline_3d": "WRONG_DELIVERY",
+   "cost": {
+    "pipeline": {
+     "requests": 3,
+     "prompt_tokens": 4425,
+     "completion_tokens": 2284,
+     "model_seconds": 35.0,
+     "user_messages": 3,
+     "scenarios": 0
+    },
+    "baseline": {
+     "requests": 3,
+     "prompt_tokens": 5271,
+     "completion_tokens": 2960,
+     "model_seconds": 50.4,
+     "user_messages": 1,
+     "scenarios": 0,
+     "cap": 3,
+     "cap_reached": true
+    }
+   }
+  },
+  {
+   "case_index": 45,
+   "case_id": "v5-vi-installment-002",
+   "family": "installment",
+   "language": "vi",
+   "info_mode": "missing",
+   "expected_behavior": "ask_then_converge",
+   "pipeline": "NO_DELIVERY",
+   "pipeline_machine": "NONE",
+   "pipeline_end": "scenario_not_delivered:tinh_huong_1",
+   "pipeline_1m": "NO_DELIVERY",
+   "pipeline_1h": "NO_DELIVERY",
+   "pipeline_1d": "NO_DELIVERY",
+   "pipeline_3d": "NO_DELIVERY",
+   "baseline": "WRONG_DELIVERY",
+   "baseline_machine": "REVIEW",
+   "baseline_end": "accepted",
+   "baseline_1m": "WRONG_DELIVERY",
+   "baseline_1h": "WRONG_DELIVERY",
+   "baseline_1d": "WRONG_DELIVERY",
+   "baseline_3d": "WRONG_DELIVERY",
+   "cost": {
+    "pipeline": {
+     "requests": 10,
+     "prompt_tokens": 36298,
+     "completion_tokens": 11013,
+     "model_seconds": 118.1,
+     "user_messages": 4,
+     "scenarios": 1
+    },
+    "baseline": {
+     "requests": 4,
+     "prompt_tokens": 4616,
+     "completion_tokens": 2820,
+     "model_seconds": 39.1,
+     "user_messages": 1,
+     "scenarios": 0,
+     "cap": 10,
+     "cap_reached": false
+    }
+   }
+  },
+  {
+   "case_index": 46,
+   "case_id": "v5-vi-installment-003",
+   "family": "installment",
+   "language": "vi",
+   "info_mode": "conflict",
+   "expected_behavior": "flag_conflict_then_converge",
+   "pipeline": "SUCCESS",
+   "pipeline_machine": "RIGHT",
+   "pipeline_end": "all_scenarios_delivered",
+   "pipeline_1m": "SUCCESS",
+   "pipeline_1h": "SUCCESS",
+   "pipeline_1d": "SUCCESS",
+   "pipeline_3d": "SUCCESS",
+   "baseline": "WRONG_DELIVERY",
+   "baseline_machine": "REVIEW",
+   "baseline_end": "accepted",
+   "baseline_1m": "WRONG_DELIVERY",
+   "baseline_1h": "WRONG_DELIVERY",
+   "baseline_1d": "WRONG_DELIVERY",
+   "baseline_3d": "WRONG_DELIVERY",
+   "cost": {
+    "pipeline": {
+     "requests": 4,
+     "prompt_tokens": 14924,
+     "completion_tokens": 5274,
+     "model_seconds": 44.6,
+     "user_messages": 1,
+     "scenarios": 2
+    },
+    "baseline": {
+     "requests": 2,
+     "prompt_tokens": 2588,
+     "completion_tokens": 1983,
+     "model_seconds": 32.5,
+     "user_messages": 0,
+     "scenarios": 0,
+     "cap": 4,
+     "cap_reached": false
+    }
+   }
+  },
+  {
+   "case_index": 47,
+   "case_id": "v5-vi-installment-004",
+   "family": "installment",
+   "language": "vi",
+   "info_mode": "complete",
+   "expected_behavior": "converge",
+   "pipeline": "SUCCESS",
+   "pipeline_machine": "RIGHT",
+   "pipeline_end": "all_scenarios_delivered",
+   "pipeline_1m": "SUCCESS",
+   "pipeline_1h": "SUCCESS",
+   "pipeline_1d": "SUCCESS",
+   "pipeline_3d": "SUCCESS",
+   "baseline": "WRONG_DELIVERY",
+   "baseline_machine": "REVIEW",
+   "baseline_end": "accepted",
+   "baseline_1m": "WRONG_DELIVERY",
+   "baseline_1h": "WRONG_DELIVERY",
+   "baseline_1d": "WRONG_DELIVERY",
+   "baseline_3d": "WRONG_DELIVERY",
+   "cost": {
+    "pipeline": {
+     "requests": 5,
+     "prompt_tokens": 23114,
+     "completion_tokens": 8651,
+     "model_seconds": 44.9,
+     "user_messages": 1,
+     "scenarios": 3
+    },
+    "baseline": {
+     "requests": 5,
+     "prompt_tokens": 9491,
+     "completion_tokens": 4050,
+     "model_seconds": 49.4,
+     "user_messages": 1,
+     "scenarios": 0,
+     "cap": 5,
+     "cap_reached": false
+    }
+   }
+  },
+  {
+   "case_index": 48,
+   "case_id": "v5-vi-installment-005",
+   "family": "installment",
+   "language": "vi",
+   "info_mode": "ambiguous",
+   "expected_behavior": "ask_then_converge",
+   "pipeline": "SUCCESS",
+   "pipeline_machine": "RIGHT",
+   "pipeline_end": "all_scenarios_delivered",
+   "pipeline_1m": "SUCCESS",
+   "pipeline_1h": "SUCCESS",
+   "pipeline_1d": "SUCCESS",
+   "pipeline_3d": "SUCCESS",
+   "baseline": "WRONG_DELIVERY",
+   "baseline_machine": "REVIEW",
+   "baseline_end": "accepted",
+   "baseline_1m": "WRONG_DELIVERY",
+   "baseline_1h": "WRONG_DELIVERY",
+   "baseline_1d": "WRONG_DELIVERY",
+   "baseline_3d": "WRONG_DELIVERY",
+   "cost": {
+    "pipeline": {
+     "requests": 7,
+     "prompt_tokens": 29952,
+     "completion_tokens": 12199,
+     "model_seconds": 74.8,
+     "user_messages": 3,
+     "scenarios": 2
+    },
+    "baseline": {
+     "requests": 7,
+     "prompt_tokens": 14647,
+     "completion_tokens": 5595,
+     "model_seconds": 63.2,
+     "user_messages": 1,
+     "scenarios": 0,
+     "cap": 7,
+     "cap_reached": false
+    }
+   }
+  },
+  {
+   "case_index": 49,
+   "case_id": "v5-en-installment-006",
+   "family": "installment",
+   "language": "en",
+   "info_mode": "complete",
+   "expected_behavior": "converge",
+   "pipeline": "NO_DELIVERY",
+   "pipeline_machine": "NONE",
+   "pipeline_end": "user_gave_up",
+   "pipeline_1m": "NO_DELIVERY",
+   "pipeline_1h": "NO_DELIVERY",
+   "pipeline_1d": "NO_DELIVERY",
+   "pipeline_3d": "NO_DELIVERY",
+   "baseline": "WRONG_DELIVERY",
+   "baseline_machine": "REVIEW",
+   "baseline_end": "accepted",
+   "baseline_1m": "WRONG_DELIVERY",
+   "baseline_1h": "WRONG_DELIVERY",
+   "baseline_1d": "WRONG_DELIVERY",
+   "baseline_3d": "WRONG_DELIVERY",
+   "cost": {
+    "pipeline": {
+     "requests": 3,
+     "prompt_tokens": 9252,
+     "completion_tokens": 4380,
+     "model_seconds": 35.8,
+     "user_messages": 2,
+     "scenarios": 0
+    },
+    "baseline": {
+     "requests": 2,
+     "prompt_tokens": 2309,
+     "completion_tokens": 1485,
+     "model_seconds": 20.7,
+     "user_messages": 0,
+     "scenarios": 0,
+     "cap": 3,
+     "cap_reached": false
+    }
+   }
+  },
+  {
+   "case_index": 50,
+   "case_id": "v5-en-installment-007",
+   "family": "installment",
+   "language": "en",
+   "info_mode": "missing",
+   "expected_behavior": "ask_then_converge",
+   "pipeline": "SUCCESS",
+   "pipeline_machine": "RIGHT",
+   "pipeline_end": "all_scenarios_delivered",
+   "pipeline_1m": "SUCCESS",
+   "pipeline_1h": "SUCCESS",
+   "pipeline_1d": "SUCCESS",
+   "pipeline_3d": "SUCCESS",
+   "baseline": "WRONG_DELIVERY",
+   "baseline_machine": "REVIEW",
+   "baseline_end": "accepted",
+   "baseline_1m": "WRONG_DELIVERY",
+   "baseline_1h": "WRONG_DELIVERY",
+   "baseline_1d": "WRONG_DELIVERY",
+   "baseline_3d": "WRONG_DELIVERY",
+   "cost": {
+    "pipeline": {
+     "requests": 4,
+     "prompt_tokens": 16341,
+     "completion_tokens": 7503,
+     "model_seconds": 59.5,
+     "user_messages": 2,
+     "scenarios": 2
+    },
+    "baseline": {
+     "requests": 2,
+     "prompt_tokens": 1738,
+     "completion_tokens": 1608,
+     "model_seconds": 33.2,
+     "user_messages": 1,
+     "scenarios": 0,
+     "cap": 4,
+     "cap_reached": false
+    }
+   }
+  },
+  {
+   "case_index": 51,
+   "case_id": "v5-vi-k_of_n-001",
+   "family": "k_of_n",
+   "language": "vi",
+   "info_mode": "complete",
+   "expected_behavior": "converge",
+   "pipeline": "NO_DELIVERY",
+   "pipeline_machine": "NONE",
+   "pipeline_end": "user_out_of_turns",
+   "pipeline_1m": "NO_DELIVERY",
+   "pipeline_1h": "NO_DELIVERY",
+   "pipeline_1d": "NO_DELIVERY",
+   "pipeline_3d": "NO_DELIVERY",
+   "baseline": "WRONG_DELIVERY",
+   "baseline_machine": "REVIEW",
+   "baseline_end": "accepted",
+   "baseline_1m": "WRONG_DELIVERY",
+   "baseline_1h": "WRONG_DELIVERY",
+   "baseline_1d": "WRONG_DELIVERY",
+   "baseline_3d": "WRONG_DELIVERY",
+   "cost": {
+    "pipeline": {
+     "requests": 24,
+     "prompt_tokens": 113007,
+     "completion_tokens": 54315,
+     "model_seconds": 216.3,
+     "user_messages": 6,
+     "scenarios": 0
+    },
+    "baseline": {
+     "requests": 6,
+     "prompt_tokens": 20442,
+     "completion_tokens": 11319,
+     "model_seconds": 85.9,
+     "user_messages": 1,
+     "scenarios": 0,
+     "cap": 24,
+     "cap_reached": false
+    }
+   }
+  },
+  {
+   "case_index": 52,
+   "case_id": "v5-vi-k_of_n-002",
+   "family": "k_of_n",
+   "language": "vi",
+   "info_mode": "missing",
+   "expected_behavior": "ask_then_converge",
+   "pipeline": "NO_DELIVERY",
+   "pipeline_machine": "NONE",
+   "pipeline_end": "user_out_of_turns",
+   "pipeline_1m": "NO_DELIVERY",
+   "pipeline_1h": "NO_DELIVERY",
+   "pipeline_1d": "NO_DELIVERY",
+   "pipeline_3d": "NO_DELIVERY",
+   "baseline": "NO_DELIVERY",
+   "baseline_machine": "NONE",
+   "baseline_end": "gave_up",
+   "baseline_1m": "NO_DELIVERY",
+   "baseline_1h": "NO_DELIVERY",
+   "baseline_1d": "NO_DELIVERY",
+   "baseline_3d": "NO_DELIVERY",
+   "cost": {
+    "pipeline": {
+     "requests": 18,
+     "prompt_tokens": 76094,
+     "completion_tokens": 35654,
+     "model_seconds": 193.5,
+     "user_messages": 6,
+     "scenarios": 0
+    },
+    "baseline": {
+     "requests": 5,
+     "prompt_tokens": 7762,
+     "completion_tokens": 2332,
+     "model_seconds": 37.4,
+     "user_messages": 2,
+     "scenarios": 0,
+     "cap": 18,
+     "cap_reached": false
+    }
+   }
+  },
+  {
+   "case_index": 53,
+   "case_id": "v5-en-k_of_n-003",
+   "family": "k_of_n",
+   "language": "en",
+   "info_mode": "complete",
+   "expected_behavior": "converge",
+   "pipeline": "NO_DELIVERY",
+   "pipeline_machine": "NONE",
+   "pipeline_end": "scenario_not_delivered:all_approve",
+   "pipeline_1m": "NO_DELIVERY",
+   "pipeline_1h": "NO_DELIVERY",
+   "pipeline_1d": "NO_DELIVERY",
+   "pipeline_3d": "NO_DELIVERY",
+   "baseline": "WRONG_DELIVERY",
+   "baseline_machine": "REVIEW",
+   "baseline_end": "accepted",
+   "baseline_1m": "WRONG_DELIVERY",
+   "baseline_1h": "WRONG_DELIVERY",
+   "baseline_1d": "WRONG_DELIVERY",
+   "baseline_3d": "WRONG_DELIVERY",
+   "cost": {
+    "pipeline": {
+     "requests": 4,
+     "prompt_tokens": 35102,
+     "completion_tokens": 9896,
+     "model_seconds": 47.6,
+     "user_messages": 1,
+     "scenarios": 1
+    },
+    "baseline": {
+     "requests": 1,
+     "prompt_tokens": 869,
+     "completion_tokens": 2342,
+     "model_seconds": 12.2,
+     "user_messages": 0,
+     "scenarios": 0,
+     "cap": 4,
+     "cap_reached": false
+    }
+   }
+  },
+  {
+   "case_index": 54,
+   "case_id": "v5-vi-k_of_n-004",
+   "family": "k_of_n",
+   "language": "vi",
+   "info_mode": "conflict",
+   "expected_behavior": "flag_conflict_then_converge",
+   "pipeline": "NO_DELIVERY",
+   "pipeline_machine": "NONE",
+   "pipeline_end": "user_out_of_turns",
+   "pipeline_1m": "NO_DELIVERY",
+   "pipeline_1h": "NO_DELIVERY",
+   "pipeline_1d": "NO_DELIVERY",
+   "pipeline_3d": "NO_DELIVERY",
+   "baseline": "WRONG_DELIVERY",
+   "baseline_machine": "REVIEW",
+   "baseline_end": "accepted",
+   "baseline_1m": "WRONG_DELIVERY",
+   "baseline_1h": "WRONG_DELIVERY",
+   "baseline_1d": "WRONG_DELIVERY",
+   "baseline_3d": "WRONG_DELIVERY",
+   "cost": {
+    "pipeline": {
+     "requests": 23,
+     "prompt_tokens": 103470,
+     "completion_tokens": 50469,
+     "model_seconds": 241.7,
+     "user_messages": 6,
+     "scenarios": 0
+    },
+    "baseline": {
+     "requests": 5,
+     "prompt_tokens": 21919,
+     "completion_tokens": 13222,
+     "model_seconds": 59.7,
+     "user_messages": 2,
+     "scenarios": 0,
+     "cap": 23,
+     "cap_reached": false
+    }
+   }
+  },
+  {
+   "case_index": 55,
+   "case_id": "v5-vi-k_of_n-005",
+   "family": "k_of_n",
+   "language": "vi",
+   "info_mode": "complete",
+   "expected_behavior": "converge",
+   "pipeline": "NO_DELIVERY",
+   "pipeline_machine": "NONE",
+   "pipeline_end": "user_out_of_turns",
+   "pipeline_1m": "NO_DELIVERY",
+   "pipeline_1h": "NO_DELIVERY",
+   "pipeline_1d": "NO_DELIVERY",
+   "pipeline_3d": "NO_DELIVERY",
+   "baseline": "WRONG_DELIVERY",
+   "baseline_machine": "REVIEW",
+   "baseline_end": "accepted",
+   "baseline_1m": "WRONG_DELIVERY",
+   "baseline_1h": "WRONG_DELIVERY",
+   "baseline_1d": "WRONG_DELIVERY",
+   "baseline_3d": "WRONG_DELIVERY",
+   "cost": {
+    "pipeline": {
+     "requests": 18,
+     "prompt_tokens": 82518,
+     "completion_tokens": 41405,
+     "model_seconds": 160.9,
+     "user_messages": 6,
+     "scenarios": 0
+    },
+    "baseline": {
+     "requests": 2,
+     "prompt_tokens": 2139,
+     "completion_tokens": 2556,
+     "model_seconds": 16.1,
+     "user_messages": 1,
+     "scenarios": 0,
+     "cap": 18,
+     "cap_reached": false
+    }
+   }
+  },
+  {
+   "case_index": 56,
+   "case_id": "v5-en-k_of_n-006",
+   "family": "k_of_n",
+   "language": "en",
+   "info_mode": "missing",
+   "expected_behavior": "ask_then_converge",
+   "pipeline": "NO_DELIVERY",
+   "pipeline_machine": "NONE",
+   "pipeline_end": "user_out_of_turns",
+   "pipeline_1m": "NO_DELIVERY",
+   "pipeline_1h": "NO_DELIVERY",
+   "pipeline_1d": "NO_DELIVERY",
+   "pipeline_3d": "NO_DELIVERY",
+   "baseline": "WRONG_DELIVERY",
+   "baseline_machine": "REVIEW",
+   "baseline_end": "accepted",
+   "baseline_1m": "WRONG_DELIVERY",
+   "baseline_1h": "WRONG_DELIVERY",
+   "baseline_1d": "WRONG_DELIVERY",
+   "baseline_3d": "WRONG_DELIVERY",
+   "cost": {
+    "pipeline": {
+     "requests": 16,
+     "prompt_tokens": 65545,
+     "completion_tokens": 36950,
+     "model_seconds": 131.4,
+     "user_messages": 6,
+     "scenarios": 0
+    },
+    "baseline": {
+     "requests": 7,
+     "prompt_tokens": 26627,
+     "completion_tokens": 14243,
+     "model_seconds": 78.7,
+     "user_messages": 2,
+     "scenarios": 0,
+     "cap": 16,
+     "cap_reached": false
+    }
+   }
+  },
+  {
+   "case_index": 57,
+   "case_id": "v5-vi-first_come-001",
+   "family": "first_come",
+   "language": "vi",
+   "info_mode": "complete",
+   "expected_behavior": "converge",
+   "pipeline": "NO_DELIVERY",
+   "pipeline_machine": "NONE",
+   "pipeline_end": "pipeline_stopped",
+   "pipeline_1m": "NO_DELIVERY",
+   "pipeline_1h": "NO_DELIVERY",
+   "pipeline_1d": "NO_DELIVERY",
+   "pipeline_3d": "NO_DELIVERY",
+   "baseline": "WRONG_DELIVERY",
+   "baseline_machine": "REVIEW",
+   "baseline_end": "accepted",
+   "baseline_1m": "WRONG_DELIVERY",
+   "baseline_1h": "WRONG_DELIVERY",
+   "baseline_1d": "WRONG_DELIVERY",
+   "baseline_3d": "WRONG_DELIVERY",
+   "cost": {
+    "pipeline": {
+     "requests": 19,
+     "prompt_tokens": 73053,
+     "completion_tokens": 20425,
+     "model_seconds": 112.1,
+     "user_messages": 5,
+     "scenarios": 0
+    },
+    "baseline": {
+     "requests": 1,
+     "prompt_tokens": 837,
+     "completion_tokens": 815,
+     "model_seconds": 10.8,
+     "user_messages": 0,
+     "scenarios": 0,
+     "cap": 19,
+     "cap_reached": false
+    }
+   }
+  },
+  {
+   "case_index": 58,
+   "case_id": "v5-en-first_come-002",
+   "family": "first_come",
+   "language": "en",
+   "info_mode": "missing",
+   "expected_behavior": "ask_then_converge",
+   "pipeline": "NO_DELIVERY",
+   "pipeline_machine": "NONE",
+   "pipeline_end": "user_gave_up",
+   "pipeline_1m": "NO_DELIVERY",
+   "pipeline_1h": "NO_DELIVERY",
+   "pipeline_1d": "NO_DELIVERY",
+   "pipeline_3d": "NO_DELIVERY",
+   "baseline": "SUCCESS",
+   "baseline_machine": "REVIEW",
+   "baseline_end": "accepted",
+   "baseline_1m": "SUCCESS",
+   "baseline_1h": "SUCCESS",
+   "baseline_1d": "SUCCESS",
+   "baseline_3d": "SUCCESS",
+   "cost": {
+    "pipeline": {
+     "requests": 4,
+     "prompt_tokens": 13338,
+     "completion_tokens": 4571,
+     "model_seconds": 25.0,
+     "user_messages": 2,
+     "scenarios": 0
+    },
+    "baseline": {
+     "requests": 1,
+     "prompt_tokens": 838,
+     "completion_tokens": 495,
+     "model_seconds": 10.6,
+     "user_messages": 0,
+     "scenarios": 0,
+     "cap": 4,
+     "cap_reached": false
+    }
+   }
+  },
+  {
+   "case_index": 59,
+   "case_id": "v5-vi-first_come-003",
+   "family": "first_come",
+   "language": "vi",
+   "info_mode": "missing",
+   "expected_behavior": "ask_then_converge",
+   "pipeline": "NO_DELIVERY",
+   "pipeline_machine": "NONE",
+   "pipeline_end": "pipeline_stopped",
+   "pipeline_1m": "NO_DELIVERY",
+   "pipeline_1h": "NO_DELIVERY",
+   "pipeline_1d": "NO_DELIVERY",
+   "pipeline_3d": "NO_DELIVERY",
+   "baseline": "WRONG_DELIVERY",
+   "baseline_machine": "REVIEW",
+   "baseline_end": "accepted",
+   "baseline_1m": "WRONG_DELIVERY",
+   "baseline_1h": "WRONG_DELIVERY",
+   "baseline_1d": "WRONG_DELIVERY",
+   "baseline_3d": "WRONG_DELIVERY",
+   "cost": {
+    "pipeline": {
+     "requests": 24,
+     "prompt_tokens": 87144,
+     "completion_tokens": 22330,
+     "model_seconds": 161.1,
+     "user_messages": 6,
+     "scenarios": 0
+    },
+    "baseline": {
+     "requests": 2,
+     "prompt_tokens": 1719,
+     "completion_tokens": 980,
+     "model_seconds": 15.3,
+     "user_messages": 1,
+     "scenarios": 0,
+     "cap": 24,
+     "cap_reached": false
+    }
+   }
+  },
+  {
+   "case_index": 60,
+   "case_id": "v5-vi-first_come-004",
+   "family": "first_come",
+   "language": "vi",
+   "info_mode": "extra_unsupported",
+   "expected_behavior": "converge_and_decline_extra",
+   "pipeline": "NO_DELIVERY",
+   "pipeline_machine": "NONE",
+   "pipeline_end": "user_gave_up",
+   "pipeline_1m": "NO_DELIVERY",
+   "pipeline_1h": "NO_DELIVERY",
+   "pipeline_1d": "NO_DELIVERY",
+   "pipeline_3d": "NO_DELIVERY",
+   "baseline": "WRONG_DELIVERY",
+   "baseline_machine": "REVIEW",
+   "baseline_end": "accepted",
+   "baseline_1m": "WRONG_DELIVERY",
+   "baseline_1h": "WRONG_DELIVERY",
+   "baseline_1d": "WRONG_DELIVERY",
+   "baseline_3d": "WRONG_DELIVERY",
+   "cost": {
+    "pipeline": {
+     "requests": 3,
+     "prompt_tokens": 9210,
+     "completion_tokens": 2731,
+     "model_seconds": 25.9,
+     "user_messages": 2,
+     "scenarios": 0
+    },
+    "baseline": {
+     "requests": 3,
+     "prompt_tokens": 4062,
+     "completion_tokens": 2131,
+     "model_seconds": 29.0,
+     "user_messages": 0,
+     "scenarios": 0,
+     "cap": 3,
+     "cap_reached": false
+    }
+   }
+  },
+  {
+   "case_index": 61,
+   "case_id": "v5-en-first_come-005",
+   "family": "first_come",
+   "language": "en",
+   "info_mode": "ambiguous",
+   "expected_behavior": "ask_then_converge",
+   "pipeline": "NO_DELIVERY",
+   "pipeline_machine": "NONE",
+   "pipeline_end": "pipeline_stopped",
+   "pipeline_1m": "NO_DELIVERY",
+   "pipeline_1h": "NO_DELIVERY",
+   "pipeline_1d": "NO_DELIVERY",
+   "pipeline_3d": "NO_DELIVERY",
+   "baseline": "SUCCESS",
+   "baseline_machine": "RIGHT",
+   "baseline_end": "accepted",
+   "baseline_1m": "SUCCESS",
+   "baseline_1h": "SUCCESS",
+   "baseline_1d": "SUCCESS",
+   "baseline_3d": "SUCCESS",
+   "cost": {
+    "pipeline": {
+     "requests": 10,
+     "prompt_tokens": 35049,
+     "completion_tokens": 9189,
+     "model_seconds": 48.5,
+     "user_messages": 2,
+     "scenarios": 0
+    },
+    "baseline": {
+     "requests": 2,
+     "prompt_tokens": 1730,
+     "completion_tokens": 488,
+     "model_seconds": 14.0,
+     "user_messages": 1,
+     "scenarios": 0,
+     "cap": 10,
+     "cap_reached": false
+    }
+   }
+  },
+  {
+   "case_index": 62,
+   "case_id": "v5-vi-zero_coupon_bond-001",
+   "family": "zero_coupon_bond",
+   "language": "vi",
+   "info_mode": "complete",
+   "expected_behavior": "converge",
+   "pipeline": "NO_DELIVERY",
+   "pipeline_machine": "NONE",
+   "pipeline_end": "scenario_not_delivered:tinh_huong_1",
+   "pipeline_1m": "NO_DELIVERY",
+   "pipeline_1h": "NO_DELIVERY",
+   "pipeline_1d": "NO_DELIVERY",
+   "pipeline_3d": "NO_DELIVERY",
+   "baseline": "WRONG_DELIVERY",
+   "baseline_machine": "REVIEW",
+   "baseline_end": "accepted",
+   "baseline_1m": "WRONG_DELIVERY",
+   "baseline_1h": "WRONG_DELIVERY",
+   "baseline_1d": "WRONG_DELIVERY",
+   "baseline_3d": "WRONG_DELIVERY",
+   "cost": {
+    "pipeline": {
+     "requests": 5,
+     "prompt_tokens": 15150,
+     "completion_tokens": 4842,
+     "model_seconds": 29.4,
+     "user_messages": 2,
+     "scenarios": 1
+    },
+    "baseline": {
+     "requests": 1,
+     "prompt_tokens": 905,
+     "completion_tokens": 720,
+     "model_seconds": 7.5,
+     "user_messages": 0,
+     "scenarios": 0,
+     "cap": 5,
+     "cap_reached": false
+    }
+   }
+  },
+  {
+   "case_index": 63,
+   "case_id": "v5-vi-zero_coupon_bond-002",
+   "family": "zero_coupon_bond",
+   "language": "vi",
+   "info_mode": "missing",
+   "expected_behavior": "ask_then_converge",
+   "pipeline": "NO_DELIVERY",
+   "pipeline_machine": "NONE",
+   "pipeline_end": "user_out_of_turns",
+   "pipeline_1m": "NO_DELIVERY",
+   "pipeline_1h": "NO_DELIVERY",
+   "pipeline_1d": "NO_DELIVERY",
+   "pipeline_3d": "NO_DELIVERY",
+   "baseline": "WRONG_DELIVERY",
+   "baseline_machine": "REVIEW",
+   "baseline_end": "accepted",
+   "baseline_1m": "WRONG_DELIVERY",
+   "baseline_1h": "WRONG_DELIVERY",
+   "baseline_1d": "WRONG_DELIVERY",
+   "baseline_3d": "WRONG_DELIVERY",
+   "cost": {
+    "pipeline": {
+     "requests": 13,
+     "prompt_tokens": 44659,
+     "completion_tokens": 16203,
+     "model_seconds": 78.3,
+     "user_messages": 6,
+     "scenarios": 0
+    },
+    "baseline": {
+     "requests": 3,
+     "prompt_tokens": 3608,
+     "completion_tokens": 1303,
+     "model_seconds": 16.5,
+     "user_messages": 1,
+     "scenarios": 0,
+     "cap": 13,
+     "cap_reached": false
+    }
+   }
+  },
+  {
+   "case_index": 64,
+   "case_id": "v5-en-zero_coupon_bond-003",
+   "family": "zero_coupon_bond",
+   "language": "en",
+   "info_mode": "conflict",
+   "expected_behavior": "converge",
+   "pipeline": "NO_DELIVERY",
+   "pipeline_machine": "NONE",
+   "pipeline_end": "user_gave_up",
+   "pipeline_1m": "NO_DELIVERY",
+   "pipeline_1h": "NO_DELIVERY",
+   "pipeline_1d": "NO_DELIVERY",
+   "pipeline_3d": "NO_DELIVERY",
+   "baseline": "SUCCESS",
+   "baseline_machine": "RIGHT",
+   "baseline_end": "accepted",
+   "baseline_1m": "SUCCESS",
+   "baseline_1h": "SUCCESS",
+   "baseline_1d": "SUCCESS",
+   "baseline_3d": "SUCCESS",
+   "cost": {
+    "pipeline": {
+     "requests": 8,
+     "prompt_tokens": 29881,
+     "completion_tokens": 11939,
+     "model_seconds": 34.1,
+     "user_messages": 2,
+     "scenarios": 0
+    },
+    "baseline": {
+     "requests": 3,
+     "prompt_tokens": 4455,
+     "completion_tokens": 2136,
+     "model_seconds": 20.2,
+     "user_messages": 1,
+     "scenarios": 0,
+     "cap": 8,
+     "cap_reached": false
+    }
+   }
+  },
+  {
+   "case_index": 65,
+   "case_id": "v5-vi-zero_coupon_bond-004",
+   "family": "zero_coupon_bond",
+   "language": "vi",
+   "info_mode": "complete",
+   "expected_behavior": "converge",
+   "pipeline": "NO_DELIVERY",
+   "pipeline_machine": "NONE",
+   "pipeline_end": "user_out_of_turns",
+   "pipeline_1m": "NO_DELIVERY",
+   "pipeline_1h": "NO_DELIVERY",
+   "pipeline_1d": "NO_DELIVERY",
+   "pipeline_3d": "NO_DELIVERY",
+   "baseline": "WRONG_DELIVERY",
+   "baseline_machine": "REVIEW",
+   "baseline_end": "accepted",
+   "baseline_1m": "WRONG_DELIVERY",
+   "baseline_1h": "WRONG_DELIVERY",
+   "baseline_1d": "WRONG_DELIVERY",
+   "baseline_3d": "WRONG_DELIVERY",
+   "cost": {
+    "pipeline": {
+     "requests": 9,
+     "prompt_tokens": 30077,
+     "completion_tokens": 11474,
+     "model_seconds": 52.9,
+     "user_messages": 6,
+     "scenarios": 0
+    },
+    "baseline": {
+     "requests": 4,
+     "prompt_tokens": 5862,
+     "completion_tokens": 1989,
+     "model_seconds": 26.3,
+     "user_messages": 2,
+     "scenarios": 0,
+     "cap": 9,
+     "cap_reached": false
+    }
+   }
+  },
+  {
+   "case_index": 66,
+   "case_id": "v5-vi-coupon_bond-001",
+   "family": "coupon_bond",
+   "language": "vi",
+   "info_mode": "complete",
+   "expected_behavior": "converge",
+   "pipeline": "SUCCESS",
+   "pipeline_machine": "RIGHT",
+   "pipeline_end": "all_scenarios_delivered",
+   "pipeline_1m": "SUCCESS",
+   "pipeline_1h": "SUCCESS",
+   "pipeline_1d": "SUCCESS",
+   "pipeline_3d": "SUCCESS",
+   "baseline": "NO_DELIVERY",
+   "baseline_machine": "NONE",
+   "baseline_end": "cap_reached",
+   "baseline_1m": "NO_DELIVERY",
+   "baseline_1h": "NO_DELIVERY",
+   "baseline_1d": "NO_DELIVERY",
+   "baseline_3d": "NO_DELIVERY",
+   "cost": {
+    "pipeline": {
+     "requests": 3,
+     "prompt_tokens": 10736,
+     "completion_tokens": 4617,
+     "model_seconds": 18.7,
+     "user_messages": 1,
+     "scenarios": 2
+    },
+    "baseline": {
+     "requests": 3,
+     "prompt_tokens": 5539,
+     "completion_tokens": 2767,
+     "model_seconds": 14.0,
+     "user_messages": 0,
+     "scenarios": 0,
+     "cap": 3,
+     "cap_reached": true
+    }
+   }
+  },
+  {
+   "case_index": 67,
+   "case_id": "v5-en-coupon_bond-002",
+   "family": "coupon_bond",
+   "language": "en",
+   "info_mode": "missing",
+   "expected_behavior": "ask_then_converge",
+   "pipeline": "NO_DELIVERY",
+   "pipeline_machine": "NONE",
+   "pipeline_end": "pipeline_stopped",
+   "pipeline_1m": "NO_DELIVERY",
+   "pipeline_1h": "NO_DELIVERY",
+   "pipeline_1d": "NO_DELIVERY",
+   "pipeline_3d": "NO_DELIVERY",
+   "baseline": "WRONG_DELIVERY",
+   "baseline_machine": "REVIEW",
+   "baseline_end": "accepted",
+   "baseline_1m": "WRONG_DELIVERY",
+   "baseline_1h": "WRONG_DELIVERY",
+   "baseline_1d": "WRONG_DELIVERY",
+   "baseline_3d": "WRONG_DELIVERY",
+   "cost": {
+    "pipeline": {
+     "requests": 12,
+     "prompt_tokens": 47296,
+     "completion_tokens": 18406,
+     "model_seconds": 57.1,
+     "user_messages": 3,
+     "scenarios": 0
+    },
+    "baseline": {
+     "requests": 6,
+     "prompt_tokens": 12061,
+     "completion_tokens": 4346,
+     "model_seconds": 29.4,
+     "user_messages": 2,
+     "scenarios": 0,
+     "cap": 12,
+     "cap_reached": false
+    }
+   }
+  },
+  {
+   "case_index": 68,
+   "case_id": "v5-vi-coupon_bond-003",
+   "family": "coupon_bond",
+   "language": "vi",
+   "info_mode": "conflict",
+   "expected_behavior": "flag_conflict_then_converge",
+   "pipeline": "NO_DELIVERY",
+   "pipeline_machine": "NONE",
+   "pipeline_end": "user_gave_up",
+   "pipeline_1m": "NO_DELIVERY",
+   "pipeline_1h": "NO_DELIVERY",
+   "pipeline_1d": "NO_DELIVERY",
+   "pipeline_3d": "NO_DELIVERY",
+   "baseline": "WRONG_DELIVERY",
+   "baseline_machine": "REVIEW",
+   "baseline_end": "accepted",
+   "baseline_1m": "WRONG_DELIVERY",
+   "baseline_1h": "WRONG_DELIVERY",
+   "baseline_1d": "WRONG_DELIVERY",
+   "baseline_3d": "WRONG_DELIVERY",
+   "cost": {
+    "pipeline": {
+     "requests": 21,
+     "prompt_tokens": 88301,
+     "completion_tokens": 32679,
+     "model_seconds": 102.1,
+     "user_messages": 5,
+     "scenarios": 0
+    },
+    "baseline": {
+     "requests": 3,
+     "prompt_tokens": 3604,
+     "completion_tokens": 1370,
+     "model_seconds": 13.0,
+     "user_messages": 1,
+     "scenarios": 0,
+     "cap": 21,
+     "cap_reached": false
+    }
+   }
+  },
+  {
+   "case_index": 69,
+   "case_id": "v5-vi-coupon_bond-004",
+   "family": "coupon_bond",
+   "language": "vi",
+   "info_mode": "ambiguous",
+   "expected_behavior": "ask_then_converge",
+   "pipeline": "NO_DELIVERY",
+   "pipeline_machine": "NONE",
+   "pipeline_end": "user_out_of_turns",
+   "pipeline_1m": "NO_DELIVERY",
+   "pipeline_1h": "NO_DELIVERY",
+   "pipeline_1d": "NO_DELIVERY",
+   "pipeline_3d": "NO_DELIVERY",
+   "baseline": "SUCCESS",
+   "baseline_machine": "REVIEW",
+   "baseline_end": "accepted",
+   "baseline_1m": "SUCCESS",
+   "baseline_1h": "SUCCESS",
+   "baseline_1d": "SUCCESS",
+   "baseline_3d": "SUCCESS",
+   "cost": {
+    "pipeline": {
+     "requests": 12,
+     "prompt_tokens": 44606,
+     "completion_tokens": 19311,
+     "model_seconds": 70.0,
+     "user_messages": 6,
+     "scenarios": 0
+    },
+    "baseline": {
+     "requests": 3,
+     "prompt_tokens": 4901,
+     "completion_tokens": 2747,
+     "model_seconds": 23.5,
+     "user_messages": 1,
+     "scenarios": 0,
+     "cap": 12,
+     "cap_reached": false
+    }
+   }
+  },
+  {
+   "case_index": 70,
+   "case_id": "v5-en-coupon_bond-005",
+   "family": "coupon_bond",
+   "language": "en",
+   "info_mode": "complete",
+   "expected_behavior": "converge",
+   "pipeline": "NO_DELIVERY",
+   "pipeline_machine": "NONE",
+   "pipeline_end": "pipeline_stopped",
+   "pipeline_1m": "NO_DELIVERY",
+   "pipeline_1h": "NO_DELIVERY",
+   "pipeline_1d": "NO_DELIVERY",
+   "pipeline_3d": "NO_DELIVERY",
+   "baseline": "WRONG_DELIVERY",
+   "baseline_machine": "REVIEW",
+   "baseline_end": "cap_reached",
+   "baseline_1m": "WRONG_DELIVERY",
+   "baseline_1h": "WRONG_DELIVERY",
+   "baseline_1d": "WRONG_DELIVERY",
+   "baseline_3d": "WRONG_DELIVERY",
+   "cost": {
+    "pipeline": {
+     "requests": 4,
+     "prompt_tokens": 15591,
+     "completion_tokens": 8345,
+     "model_seconds": 22.2,
+     "user_messages": 1,
+     "scenarios": 0
+    },
+    "baseline": {
+     "requests": 4,
+     "prompt_tokens": 8271,
+     "completion_tokens": 3637,
+     "model_seconds": 81.9,
+     "user_messages": 3,
+     "scenarios": 0,
+     "cap": 4,
+     "cap_reached": true
+    }
+   }
+  },
+  {
+   "case_index": 71,
+   "case_id": "v5-vi-split-001",
+   "family": "split",
+   "language": "vi",
+   "info_mode": "complete",
+   "expected_behavior": "converge",
+   "pipeline": "SUCCESS",
+   "pipeline_machine": "RIGHT",
+   "pipeline_end": "all_scenarios_delivered",
+   "pipeline_1m": "SUCCESS",
+   "pipeline_1h": "SUCCESS",
+   "pipeline_1d": "SUCCESS",
+   "pipeline_3d": "SUCCESS",
+   "baseline": "WRONG_DELIVERY",
+   "baseline_machine": "REVIEW",
+   "baseline_end": "cap_reached",
+   "baseline_1m": "WRONG_DELIVERY",
+   "baseline_1h": "WRONG_DELIVERY",
+   "baseline_1d": "WRONG_DELIVERY",
+   "baseline_3d": "WRONG_DELIVERY",
+   "cost": {
+    "pipeline": {
+     "requests": 3,
+     "prompt_tokens": 9653,
+     "completion_tokens": 3754,
+     "model_seconds": 17.8,
+     "user_messages": 1,
+     "scenarios": 3
+    },
+    "baseline": {
+     "requests": 3,
+     "prompt_tokens": 4443,
+     "completion_tokens": 2467,
+     "model_seconds": 18.7,
+     "user_messages": 2,
+     "scenarios": 0,
+     "cap": 3,
+     "cap_reached": true
+    }
+   }
+  },
+  {
+   "case_index": 72,
+   "case_id": "v5-en-split-002",
+   "family": "split",
+   "language": "en",
+   "info_mode": "complete",
+   "expected_behavior": "converge",
+   "pipeline": "SUCCESS",
+   "pipeline_machine": "RIGHT",
+   "pipeline_end": "all_scenarios_delivered",
+   "pipeline_1m": "SUCCESS",
+   "pipeline_1h": "SUCCESS",
+   "pipeline_1d": "SUCCESS",
+   "pipeline_3d": "SUCCESS",
+   "baseline": "WRONG_DELIVERY",
+   "baseline_machine": "REVIEW",
+   "baseline_end": "accepted",
+   "baseline_1m": "WRONG_DELIVERY",
+   "baseline_1h": "WRONG_DELIVERY",
+   "baseline_1d": "WRONG_DELIVERY",
+   "baseline_3d": "WRONG_DELIVERY",
+   "cost": {
+    "pipeline": {
+     "requests": 3,
+     "prompt_tokens": 9415,
+     "completion_tokens": 3867,
+     "model_seconds": 19.2,
+     "user_messages": 1,
+     "scenarios": 3
+    },
+    "baseline": {
+     "requests": 1,
+     "prompt_tokens": 885,
+     "completion_tokens": 898,
+     "model_seconds": 3.2,
+     "user_messages": 0,
+     "scenarios": 0,
+     "cap": 3,
+     "cap_reached": false
+    }
+   }
+  },
+  {
+   "case_index": 73,
+   "case_id": "v5-vi-split-003",
+   "family": "split",
+   "language": "vi",
+   "info_mode": "missing",
+   "expected_behavior": "ask_then_converge",
+   "pipeline": "SUCCESS",
+   "pipeline_machine": "RIGHT",
+   "pipeline_end": "all_scenarios_delivered",
+   "pipeline_1m": "SUCCESS",
+   "pipeline_1h": "SUCCESS",
+   "pipeline_1d": "SUCCESS",
+   "pipeline_3d": "SUCCESS",
+   "baseline": "WRONG_DELIVERY",
+   "baseline_machine": "REVIEW",
+   "baseline_end": "accepted",
+   "baseline_1m": "WRONG_DELIVERY",
+   "baseline_1h": "WRONG_DELIVERY",
+   "baseline_1d": "WRONG_DELIVERY",
+   "baseline_3d": "WRONG_DELIVERY",
+   "cost": {
+    "pipeline": {
+     "requests": 9,
+     "prompt_tokens": 31418,
+     "completion_tokens": 11598,
+     "model_seconds": 45.8,
+     "user_messages": 3,
+     "scenarios": 2
+    },
+    "baseline": {
+     "requests": 2,
+     "prompt_tokens": 1807,
+     "completion_tokens": 888,
+     "model_seconds": 4.8,
+     "user_messages": 1,
+     "scenarios": 0,
+     "cap": 9,
+     "cap_reached": false
+    }
+   }
+  },
+  {
+   "case_index": 74,
+   "case_id": "v5-vi-split-004",
+   "family": "split",
+   "language": "vi",
+   "info_mode": "extra_unsupported",
+   "expected_behavior": "converge_and_decline_extra",
+   "pipeline": "NO_DELIVERY",
+   "pipeline_machine": "NONE",
+   "pipeline_end": "scenarios_not_confirmed",
+   "pipeline_1m": "NO_DELIVERY",
+   "pipeline_1h": "NO_DELIVERY",
+   "pipeline_1d": "NO_DELIVERY",
+   "pipeline_3d": "NO_DELIVERY",
+   "baseline": "WRONG_DELIVERY",
+   "baseline_machine": "REVIEW",
+   "baseline_end": "accepted",
+   "baseline_1m": "WRONG_DELIVERY",
+   "baseline_1h": "WRONG_DELIVERY",
+   "baseline_1d": "WRONG_DELIVERY",
+   "baseline_3d": "WRONG_DELIVERY",
+   "cost": {
+    "pipeline": {
+     "requests": 5,
+     "prompt_tokens": 10442,
+     "completion_tokens": 5042,
+     "model_seconds": 28.2,
+     "user_messages": 5,
+     "scenarios": 0
+    },
+    "baseline": {
+     "requests": 1,
+     "prompt_tokens": 880,
+     "completion_tokens": 646,
+     "model_seconds": 6.2,
+     "user_messages": 0,
+     "scenarios": 0,
+     "cap": 5,
+     "cap_reached": false
+    }
+   }
+  },
+  {
+   "case_index": 75,
+   "case_id": "v5-en-split-005",
+   "family": "split",
+   "language": "en",
+   "info_mode": "conflict",
+   "expected_behavior": "converge",
+   "pipeline": "NO_DELIVERY",
+   "pipeline_machine": "NONE",
+   "pipeline_end": "scenarios_not_confirmed",
+   "pipeline_1m": "NO_DELIVERY",
+   "pipeline_1h": "NO_DELIVERY",
+   "pipeline_1d": "NO_DELIVERY",
+   "pipeline_3d": "NO_DELIVERY",
+   "baseline": "WRONG_DELIVERY",
+   "baseline_machine": "REVIEW",
+   "baseline_end": "accepted",
+   "baseline_1m": "WRONG_DELIVERY",
+   "baseline_1h": "WRONG_DELIVERY",
+   "baseline_1d": "WRONG_DELIVERY",
+   "baseline_3d": "WRONG_DELIVERY",
+   "cost": {
+    "pipeline": {
+     "requests": 7,
+     "prompt_tokens": 21334,
+     "completion_tokens": 11129,
+     "model_seconds": 40.3,
+     "user_messages": 4,
+     "scenarios": 0
+    },
+    "baseline": {
+     "requests": 3,
+     "prompt_tokens": 5657,
+     "completion_tokens": 3809,
+     "model_seconds": 19.7,
+     "user_messages": 2,
+     "scenarios": 0,
+     "cap": 7,
+     "cap_reached": false
+    }
+   }
+  },
+  {
+   "case_index": 76,
+   "case_id": "v5-vi-split-006",
+   "family": "split",
+   "language": "vi",
+   "info_mode": "complete",
+   "expected_behavior": "converge",
+   "pipeline": "NO_DELIVERY",
+   "pipeline_machine": "NONE",
+   "pipeline_end": "scenarios_not_confirmed",
+   "pipeline_1m": "NO_DELIVERY",
+   "pipeline_1h": "NO_DELIVERY",
+   "pipeline_1d": "NO_DELIVERY",
+   "pipeline_3d": "NO_DELIVERY",
+   "baseline": "WRONG_DELIVERY",
+   "baseline_machine": "REVIEW",
+   "baseline_end": "cap_reached",
+   "baseline_1m": "WRONG_DELIVERY",
+   "baseline_1h": "WRONG_DELIVERY",
+   "baseline_1d": "WRONG_DELIVERY",
+   "baseline_3d": "WRONG_DELIVERY",
+   "cost": {
+    "pipeline": {
+     "requests": 3,
+     "prompt_tokens": 4548,
+     "completion_tokens": 2576,
+     "model_seconds": 18.7,
+     "user_messages": 3,
+     "scenarios": 0
+    },
+    "baseline": {
+     "requests": 3,
+     "prompt_tokens": 4657,
+     "completion_tokens": 2547,
+     "model_seconds": 14.9,
+     "user_messages": 1,
+     "scenarios": 0,
+     "cap": 3,
+     "cap_reached": true
+    }
+   }
+  },
+  {
+   "case_index": 77,
+   "case_id": "v5-vi-collateral_loan-001",
+   "family": "collateral_loan",
+   "language": "vi",
+   "info_mode": "complete",
+   "expected_behavior": "converge",
+   "pipeline": "NO_DELIVERY",
+   "pipeline_machine": "NONE",
+   "pipeline_end": "user_out_of_turns",
+   "pipeline_1m": "NO_DELIVERY",
+   "pipeline_1h": "NO_DELIVERY",
+   "pipeline_1d": "NO_DELIVERY",
+   "pipeline_3d": "NO_DELIVERY",
+   "baseline": "WRONG_DELIVERY",
+   "baseline_machine": "REVIEW",
+   "baseline_end": "accepted",
+   "baseline_1m": "WRONG_DELIVERY",
+   "baseline_1h": "WRONG_DELIVERY",
+   "baseline_1d": "WRONG_DELIVERY",
+   "baseline_3d": "WRONG_DELIVERY",
+   "cost": {
+    "pipeline": {
+     "requests": 10,
+     "prompt_tokens": 39984,
+     "completion_tokens": 22782,
+     "model_seconds": 82.0,
+     "user_messages": 6,
+     "scenarios": 0
+    },
+    "baseline": {
+     "requests": 2,
+     "prompt_tokens": 3200,
+     "completion_tokens": 2994,
+     "model_seconds": 10.0,
+     "user_messages": 1,
+     "scenarios": 0,
+     "cap": 10,
+     "cap_reached": false
+    }
+   }
+  },
+  {
+   "case_index": 78,
+   "case_id": "v5-en-collateral_loan-002",
+   "family": "collateral_loan",
+   "language": "en",
+   "info_mode": "missing",
+   "expected_behavior": "ask_then_converge",
+   "pipeline": "NO_DELIVERY",
+   "pipeline_machine": "NONE",
+   "pipeline_end": "scenario_not_delivered:successful_repayment",
+   "pipeline_1m": "NO_DELIVERY",
+   "pipeline_1h": "NO_DELIVERY",
+   "pipeline_1d": "NO_DELIVERY",
+   "pipeline_3d": "NO_DELIVERY",
+   "baseline": "WRONG_DELIVERY",
+   "baseline_machine": "REVIEW",
+   "baseline_end": "accepted",
+   "baseline_1m": "WRONG_DELIVERY",
+   "baseline_1h": "WRONG_DELIVERY",
+   "baseline_1d": "WRONG_DELIVERY",
+   "baseline_3d": "WRONG_DELIVERY",
+   "cost": {
+    "pipeline": {
+     "requests": 9,
+     "prompt_tokens": 52982,
+     "completion_tokens": 15604,
+     "model_seconds": 51.4,
+     "user_messages": 3,
+     "scenarios": 1
+    },
+    "baseline": {
+     "requests": 3,
+     "prompt_tokens": 4068,
+     "completion_tokens": 2000,
+     "model_seconds": 12.2,
+     "user_messages": 1,
+     "scenarios": 0,
+     "cap": 9,
+     "cap_reached": false
+    }
+   }
+  },
+  {
+   "case_index": 79,
+   "case_id": "v5-vi-collateral_loan-003",
+   "family": "collateral_loan",
+   "language": "vi",
+   "info_mode": "missing",
+   "expected_behavior": "ask_then_converge",
+   "pipeline": "NO_DELIVERY",
+   "pipeline_machine": "NONE",
+   "pipeline_end": "user_out_of_turns",
+   "pipeline_1m": "NO_DELIVERY",
+   "pipeline_1h": "NO_DELIVERY",
+   "pipeline_1d": "NO_DELIVERY",
+   "pipeline_3d": "NO_DELIVERY",
+   "baseline": "WRONG_DELIVERY",
+   "baseline_machine": "REVIEW",
+   "baseline_end": "accepted",
+   "baseline_1m": "WRONG_DELIVERY",
+   "baseline_1h": "WRONG_DELIVERY",
+   "baseline_1d": "WRONG_DELIVERY",
+   "baseline_3d": "WRONG_DELIVERY",
+   "cost": {
+    "pipeline": {
+     "requests": 12,
+     "prompt_tokens": 43990,
+     "completion_tokens": 22699,
+     "model_seconds": 83.6,
+     "user_messages": 6,
+     "scenarios": 0
+    },
+    "baseline": {
+     "requests": 3,
+     "prompt_tokens": 4217,
+     "completion_tokens": 2486,
+     "model_seconds": 9.4,
+     "user_messages": 1,
+     "scenarios": 0,
+     "cap": 12,
+     "cap_reached": false
+    }
+   }
+  },
+  {
+   "case_index": 80,
+   "case_id": "v5-vi-collateral_loan-004",
+   "family": "collateral_loan",
+   "language": "vi",
+   "info_mode": "complete",
+   "expected_behavior": "converge",
+   "pipeline": "SUCCESS",
+   "pipeline_machine": "RIGHT",
+   "pipeline_end": "all_scenarios_delivered",
+   "pipeline_1m": "SUCCESS",
+   "pipeline_1h": "SUCCESS",
+   "pipeline_1d": "SUCCESS",
+   "pipeline_3d": "SUCCESS",
+   "baseline": "WRONG_DELIVERY",
+   "baseline_machine": "REVIEW",
+   "baseline_end": "cap_reached",
+   "baseline_1m": "WRONG_DELIVERY",
+   "baseline_1h": "WRONG_DELIVERY",
+   "baseline_1d": "WRONG_DELIVERY",
+   "baseline_3d": "WRONG_DELIVERY",
+   "cost": {
+    "pipeline": {
+     "requests": 4,
+     "prompt_tokens": 14242,
+     "completion_tokens": 5879,
+     "model_seconds": 23.0,
+     "user_messages": 2,
+     "scenarios": 3
+    },
+    "baseline": {
+     "requests": 4,
+     "prompt_tokens": 8357,
+     "completion_tokens": 4449,
+     "model_seconds": 24.5,
+     "user_messages": 1,
+     "scenarios": 0,
+     "cap": 4,
+     "cap_reached": true
+    }
+   }
+  },
+  {
+   "case_index": 81,
+   "case_id": "v5-en-collateral_loan-005",
+   "family": "collateral_loan",
+   "language": "en",
+   "info_mode": "complete",
+   "expected_behavior": "converge",
+   "pipeline": "NO_DELIVERY",
+   "pipeline_machine": "NONE",
+   "pipeline_end": "scenario_not_delivered:successful_repayment",
+   "pipeline_1m": "NO_DELIVERY",
+   "pipeline_1h": "NO_DELIVERY",
+   "pipeline_1d": "NO_DELIVERY",
+   "pipeline_3d": "NO_DELIVERY",
+   "baseline": "WRONG_DELIVERY",
+   "baseline_machine": "REVIEW",
+   "baseline_end": "accepted",
+   "baseline_1m": "WRONG_DELIVERY",
+   "baseline_1h": "WRONG_DELIVERY",
+   "baseline_1d": "WRONG_DELIVERY",
+   "baseline_3d": "WRONG_DELIVERY",
+   "cost": {
+    "pipeline": {
+     "requests": 8,
+     "prompt_tokens": 38185,
+     "completion_tokens": 17596,
+     "model_seconds": 61.6,
+     "user_messages": 5,
+     "scenarios": 1
+    },
+    "baseline": {
+     "requests": 1,
+     "prompt_tokens": 967,
+     "completion_tokens": 1422,
+     "model_seconds": 4.5,
+     "user_messages": 0,
+     "scenarios": 0,
+     "cap": 8,
+     "cap_reached": false
+    }
+   }
+  },
+  {
+   "case_index": 82,
+   "case_id": "v5-vi-deduction-001",
+   "family": "deduction",
+   "language": "vi",
+   "info_mode": "complete",
+   "expected_behavior": "converge",
+   "pipeline": "NO_DELIVERY",
+   "pipeline_machine": "NONE",
+   "pipeline_end": "user_gave_up",
+   "pipeline_1m": "NO_DELIVERY",
+   "pipeline_1h": "NO_DELIVERY",
+   "pipeline_1d": "NO_DELIVERY",
+   "pipeline_3d": "NO_DELIVERY",
+   "baseline": "NO_DELIVERY",
+   "baseline_machine": "NONE",
+   "baseline_end": "cap_reached",
+   "baseline_1m": "NO_DELIVERY",
+   "baseline_1h": "NO_DELIVERY",
+   "baseline_1d": "NO_DELIVERY",
+   "baseline_3d": "NO_DELIVERY",
+   "cost": {
+    "pipeline": {
+     "requests": 4,
+     "prompt_tokens": 13773,
+     "completion_tokens": 6869,
+     "model_seconds": 23.1,
+     "user_messages": 2,
+     "scenarios": 0
+    },
+    "baseline": {
+     "requests": 4,
+     "prompt_tokens": 7333,
+     "completion_tokens": 3752,
+     "model_seconds": 16.3,
+     "user_messages": 0,
+     "scenarios": 0,
+     "cap": 4,
+     "cap_reached": true
+    }
+   }
+  },
+  {
+   "case_index": 83,
+   "case_id": "v5-en-deduction-002",
+   "family": "deduction",
+   "language": "en",
+   "info_mode": "missing",
+   "expected_behavior": "ask_then_converge",
+   "pipeline": "NO_DELIVERY",
+   "pipeline_machine": "NONE",
+   "pipeline_end": "user_out_of_turns",
+   "pipeline_1m": "NO_DELIVERY",
+   "pipeline_1h": "NO_DELIVERY",
+   "pipeline_1d": "NO_DELIVERY",
+   "pipeline_3d": "NO_DELIVERY",
+   "baseline": "WRONG_DELIVERY",
+   "baseline_machine": "REVIEW",
+   "baseline_end": "accepted",
+   "baseline_1m": "WRONG_DELIVERY",
+   "baseline_1h": "WRONG_DELIVERY",
+   "baseline_1d": "WRONG_DELIVERY",
+   "baseline_3d": "WRONG_DELIVERY",
+   "cost": {
+    "pipeline": {
+     "requests": 10,
+     "prompt_tokens": 33625,
+     "completion_tokens": 14674,
+     "model_seconds": 54.5,
+     "user_messages": 6,
+     "scenarios": 0
+    },
+    "baseline": {
+     "requests": 5,
+     "prompt_tokens": 8903,
+     "completion_tokens": 3451,
+     "model_seconds": 36.2,
+     "user_messages": 2,
+     "scenarios": 0,
+     "cap": 10,
+     "cap_reached": false
+    }
+   }
+  },
+  {
+   "case_index": 84,
+   "case_id": "v5-vi-deduction-003",
+   "family": "deduction",
+   "language": "vi",
+   "info_mode": "ambiguous",
+   "expected_behavior": "ask_then_converge",
+   "pipeline": "NO_DELIVERY",
+   "pipeline_machine": "NONE",
+   "pipeline_end": "pipeline_stopped_before_scenarios",
+   "pipeline_1m": "NO_DELIVERY",
+   "pipeline_1h": "NO_DELIVERY",
+   "pipeline_1d": "NO_DELIVERY",
+   "pipeline_3d": "NO_DELIVERY",
+   "baseline": "NO_DELIVERY",
+   "baseline_machine": "NONE",
+   "baseline_end": "cap_reached",
+   "baseline_1m": "NO_DELIVERY",
+   "baseline_1h": "NO_DELIVERY",
+   "baseline_1d": "NO_DELIVERY",
+   "baseline_3d": "NO_DELIVERY",
+   "cost": {
+    "pipeline": {
+     "requests": 14,
+     "prompt_tokens": 56637,
+     "completion_tokens": 16306,
+     "model_seconds": 62.9,
+     "user_messages": 4,
+     "scenarios": 0
+    },
+    "baseline": {
+     "requests": 14,
+     "prompt_tokens": 45282,
+     "completion_tokens": 9584,
+     "model_seconds": 114.9,
+     "user_messages": 1,
+     "scenarios": 0,
+     "cap": 14,
+     "cap_reached": true
+    }
+   }
+  },
+  {
+   "case_index": 85,
+   "case_id": "v5-vi-deduction-004",
+   "family": "deduction",
+   "language": "vi",
+   "info_mode": "complete",
+   "expected_behavior": "converge",
+   "pipeline": "NO_DELIVERY",
+   "pipeline_machine": "NONE",
+   "pipeline_end": "user_gave_up",
+   "pipeline_1m": "NO_DELIVERY",
+   "pipeline_1h": "NO_DELIVERY",
+   "pipeline_1d": "NO_DELIVERY",
+   "pipeline_3d": "NO_DELIVERY",
+   "baseline": "WRONG_DELIVERY",
+   "baseline_machine": "REVIEW",
+   "baseline_end": "accepted",
+   "baseline_1m": "WRONG_DELIVERY",
+   "baseline_1h": "WRONG_DELIVERY",
+   "baseline_1d": "WRONG_DELIVERY",
+   "baseline_3d": "WRONG_DELIVERY",
+   "cost": {
+    "pipeline": {
+     "requests": 9,
+     "prompt_tokens": 34588,
+     "completion_tokens": 13550,
+     "model_seconds": 57.2,
+     "user_messages": 3,
+     "scenarios": 0
+    },
+    "baseline": {
+     "requests": 2,
+     "prompt_tokens": 2834,
+     "completion_tokens": 2078,
+     "model_seconds": 14.7,
+     "user_messages": 1,
+     "scenarios": 0,
+     "cap": 9,
+     "cap_reached": false
+    }
+   }
+  },
+  {
+   "case_index": 86,
+   "case_id": "v5-en-deduction-005",
+   "family": "deduction",
+   "language": "en",
+   "info_mode": "extra_unsupported",
+   "expected_behavior": "converge_and_decline_extra",
+   "pipeline": "NO_DELIVERY",
+   "pipeline_machine": "NONE",
+   "pipeline_end": "pipeline_stopped",
+   "pipeline_1m": "NO_DELIVERY",
+   "pipeline_1h": "NO_DELIVERY",
+   "pipeline_1d": "NO_DELIVERY",
+   "pipeline_3d": "NO_DELIVERY",
+   "baseline": "WRONG_DELIVERY",
+   "baseline_machine": "REVIEW",
+   "baseline_end": "accepted",
+   "baseline_1m": "WRONG_DELIVERY",
+   "baseline_1h": "WRONG_DELIVERY",
+   "baseline_1d": "WRONG_DELIVERY",
+   "baseline_3d": "WRONG_DELIVERY",
+   "cost": {
+    "pipeline": {
+     "requests": 4,
+     "prompt_tokens": 13673,
+     "completion_tokens": 6357,
+     "model_seconds": 27.1,
+     "user_messages": 2,
+     "scenarios": 0
+    },
+    "baseline": {
+     "requests": 3,
+     "prompt_tokens": 3639,
+     "completion_tokens": 1680,
+     "model_seconds": 19.6,
+     "user_messages": 1,
+     "scenarios": 0,
+     "cap": 4,
+     "cap_reached": false
+    }
+   }
+  },
+  {
+   "case_index": 87,
+   "case_id": "v5-vi-matching-001",
+   "family": "matching",
+   "language": "vi",
+   "info_mode": "complete",
+   "expected_behavior": "converge",
+   "pipeline": "SUCCESS",
+   "pipeline_machine": "RIGHT",
+   "pipeline_end": "all_scenarios_delivered",
+   "pipeline_1m": "SUCCESS",
+   "pipeline_1h": "SUCCESS",
+   "pipeline_1d": "SUCCESS",
+   "pipeline_3d": "SUCCESS",
+   "baseline": "WRONG_DELIVERY",
+   "baseline_machine": "REVIEW",
+   "baseline_end": "accepted",
+   "baseline_1m": "WRONG_DELIVERY",
+   "baseline_1h": "WRONG_DELIVERY",
+   "baseline_1d": "WRONG_DELIVERY",
+   "baseline_3d": "WRONG_DELIVERY",
+   "cost": {
+    "pipeline": {
+     "requests": 6,
+     "prompt_tokens": 27669,
+     "completion_tokens": 10989,
+     "model_seconds": 47.3,
+     "user_messages": 2,
+     "scenarios": 3
+    },
+    "baseline": {
+     "requests": 1,
+     "prompt_tokens": 928,
+     "completion_tokens": 1271,
+     "model_seconds": 6.6,
+     "user_messages": 0,
+     "scenarios": 0,
+     "cap": 6,
+     "cap_reached": false
+    }
+   }
+  },
+  {
+   "case_index": 88,
+   "case_id": "v5-vi-matching-002",
+   "family": "matching",
+   "language": "vi",
+   "info_mode": "missing",
+   "expected_behavior": "ask_then_converge",
+   "pipeline": "SUCCESS",
+   "pipeline_machine": "RIGHT",
+   "pipeline_end": "all_scenarios_delivered",
+   "pipeline_1m": "SUCCESS",
+   "pipeline_1h": "SUCCESS",
+   "pipeline_1d": "SUCCESS",
+   "pipeline_3d": "SUCCESS",
+   "baseline": "WRONG_DELIVERY",
+   "baseline_machine": "REVIEW",
+   "baseline_end": "cap_reached",
+   "baseline_1m": "WRONG_DELIVERY",
+   "baseline_1h": "WRONG_DELIVERY",
+   "baseline_1d": "WRONG_DELIVERY",
+   "baseline_3d": "WRONG_DELIVERY",
+   "cost": {
+    "pipeline": {
+     "requests": 8,
+     "prompt_tokens": 27766,
+     "completion_tokens": 7632,
+     "model_seconds": 52.8,
+     "user_messages": 3,
+     "scenarios": 3
+    },
+    "baseline": {
+     "requests": 8,
+     "prompt_tokens": 28091,
+     "completion_tokens": 7544,
+     "model_seconds": 62.3,
+     "user_messages": 6,
+     "scenarios": 0,
+     "cap": 8,
+     "cap_reached": true
+    }
+   }
+  },
+  {
+   "case_index": 89,
+   "case_id": "v5-en-matching-003",
+   "family": "matching",
+   "language": "en",
+   "info_mode": "complete",
+   "expected_behavior": "converge",
+   "pipeline": "SUCCESS",
+   "pipeline_machine": "RIGHT",
+   "pipeline_end": "all_scenarios_delivered",
+   "pipeline_1m": "SUCCESS",
+   "pipeline_1h": "SUCCESS",
+   "pipeline_1d": "SUCCESS",
+   "pipeline_3d": "SUCCESS",
+   "baseline": "WRONG_DELIVERY",
+   "baseline_machine": "REVIEW",
+   "baseline_end": "accepted",
+   "baseline_1m": "WRONG_DELIVERY",
+   "baseline_1h": "WRONG_DELIVERY",
+   "baseline_1d": "WRONG_DELIVERY",
+   "baseline_3d": "WRONG_DELIVERY",
+   "cost": {
+    "pipeline": {
+     "requests": 6,
+     "prompt_tokens": 25724,
+     "completion_tokens": 12407,
+     "model_seconds": 31.6,
+     "user_messages": 2,
+     "scenarios": 2
+    },
+    "baseline": {
+     "requests": 3,
+     "prompt_tokens": 5585,
+     "completion_tokens": 3251,
+     "model_seconds": 22.0,
+     "user_messages": 0,
+     "scenarios": 0,
+     "cap": 6,
+     "cap_reached": false
+    }
+   }
+  },
+  {
+   "case_index": 90,
+   "case_id": "v5-vi-matching-004",
+   "family": "matching",
+   "language": "vi",
+   "info_mode": "missing",
+   "expected_behavior": "ask_then_converge",
+   "pipeline": "SUCCESS",
+   "pipeline_machine": "RIGHT",
+   "pipeline_end": "all_scenarios_delivered",
+   "pipeline_1m": "SUCCESS",
+   "pipeline_1h": "SUCCESS",
+   "pipeline_1d": "SUCCESS",
+   "pipeline_3d": "SUCCESS",
+   "baseline": "WRONG_DELIVERY",
+   "baseline_machine": "REVIEW",
+   "baseline_end": "accepted",
+   "baseline_1m": "WRONG_DELIVERY",
+   "baseline_1h": "WRONG_DELIVERY",
+   "baseline_1d": "WRONG_DELIVERY",
+   "baseline_3d": "WRONG_DELIVERY",
+   "cost": {
+    "pipeline": {
+     "requests": 8,
+     "prompt_tokens": 28532,
+     "completion_tokens": 9612,
+     "model_seconds": 26.8,
+     "user_messages": 3,
+     "scenarios": 2
+    },
+    "baseline": {
+     "requests": 2,
+     "prompt_tokens": 2477,
+     "completion_tokens": 1612,
+     "model_seconds": 15.3,
+     "user_messages": 1,
+     "scenarios": 0,
+     "cap": 8,
+     "cap_reached": false
+    }
+   }
+  },
+  {
+   "case_index": 91,
+   "case_id": "v5-vi-infeasible-001",
+   "family": "infeasible",
+   "language": "vi",
+   "info_mode": "infeasible",
+   "expected_behavior": "reject_unsupported",
+   "pipeline": "SUCCESS",
+   "pipeline_machine": "NONE",
+   "pipeline_end": "pipeline_stopped",
+   "pipeline_1m": "SUCCESS",
+   "pipeline_1h": "SUCCESS",
+   "pipeline_1d": "SUCCESS",
+   "pipeline_3d": "SUCCESS",
+   "baseline": "SUCCESS",
+   "baseline_machine": "NONE",
+   "baseline_end": "cap_reached",
+   "baseline_1m": "SUCCESS",
+   "baseline_1h": "SUCCESS",
+   "baseline_1d": "SUCCESS",
+   "baseline_3d": "SUCCESS",
+   "cost": {
+    "pipeline": {
+     "requests": 2,
+     "prompt_tokens": 5825,
+     "completion_tokens": 526,
+     "model_seconds": 3.3,
+     "user_messages": 1,
+     "scenarios": 0
+    },
+    "baseline": {
+     "requests": 2,
+     "prompt_tokens": 1790,
+     "completion_tokens": 276,
+     "model_seconds": 10.8,
+     "user_messages": 2,
+     "scenarios": 0,
+     "cap": 2,
+     "cap_reached": true
+    }
+   }
+  },
+  {
+   "case_index": 92,
+   "case_id": "v5-vi-infeasible-002",
+   "family": "infeasible",
+   "language": "vi",
+   "info_mode": "infeasible",
+   "expected_behavior": "reject_unsupported",
+   "pipeline": "NO_DELIVERY",
+   "pipeline_machine": "NONE",
+   "pipeline_end": "pipeline_stopped",
+   "pipeline_1m": "NO_DELIVERY",
+   "pipeline_1h": "NO_DELIVERY",
+   "pipeline_1d": "NO_DELIVERY",
+   "pipeline_3d": "NO_DELIVERY",
+   "baseline": "SUCCESS",
+   "baseline_machine": "NONE",
+   "baseline_end": "cap_reached",
+   "baseline_1m": "SUCCESS",
+   "baseline_1h": "SUCCESS",
+   "baseline_1d": "SUCCESS",
+   "baseline_3d": "SUCCESS",
+   "cost": {
+    "pipeline": {
+     "requests": 1,
+     "prompt_tokens": 2993,
+     "completion_tokens": 833,
+     "model_seconds": 2.7,
+     "user_messages": 0,
+     "scenarios": 0
+    },
+    "baseline": {
+     "requests": 1,
+     "prompt_tokens": 905,
+     "completion_tokens": 136,
+     "model_seconds": 4.2,
+     "user_messages": 1,
+     "scenarios": 0,
+     "cap": 1,
+     "cap_reached": true
+    }
+   }
+  },
+  {
+   "case_index": 93,
+   "case_id": "v5-en-infeasible-003",
+   "family": "infeasible",
+   "language": "en",
+   "info_mode": "infeasible",
+   "expected_behavior": "reject_unsupported",
+   "pipeline": "SUCCESS",
+   "pipeline_machine": "NONE",
+   "pipeline_end": "user_gave_up",
+   "pipeline_1m": "SUCCESS",
+   "pipeline_1h": "SUCCESS",
+   "pipeline_1d": "SUCCESS",
+   "pipeline_3d": "SUCCESS",
+   "baseline": "SUCCESS",
+   "baseline_machine": "NONE",
+   "baseline_end": "cap_reached",
+   "baseline_1m": "SUCCESS",
+   "baseline_1h": "SUCCESS",
+   "baseline_1d": "SUCCESS",
+   "baseline_3d": "SUCCESS",
+   "cost": {
+    "pipeline": {
+     "requests": 3,
+     "prompt_tokens": 8880,
+     "completion_tokens": 675,
+     "model_seconds": 4.5,
+     "user_messages": 2,
+     "scenarios": 0
+    },
+    "baseline": {
+     "requests": 3,
+     "prompt_tokens": 2929,
+     "completion_tokens": 376,
+     "model_seconds": 18.2,
+     "user_messages": 3,
+     "scenarios": 0,
+     "cap": 3,
+     "cap_reached": true
+    }
+   }
+  },
+  {
+   "case_index": 94,
+   "case_id": "v5-vi-infeasible-004",
+   "family": "infeasible",
+   "language": "vi",
+   "info_mode": "infeasible",
+   "expected_behavior": "reject_unsupported",
+   "pipeline": "SUCCESS",
+   "pipeline_machine": "NONE",
+   "pipeline_end": "pipeline_stopped",
+   "pipeline_1m": "SUCCESS",
+   "pipeline_1h": "SUCCESS",
+   "pipeline_1d": "SUCCESS",
+   "pipeline_3d": "SUCCESS",
+   "baseline": "SUCCESS",
+   "baseline_machine": "NONE",
+   "baseline_end": "cap_reached",
+   "baseline_1m": "SUCCESS",
+   "baseline_1h": "SUCCESS",
+   "baseline_1d": "SUCCESS",
+   "baseline_3d": "SUCCESS",
+   "cost": {
+    "pipeline": {
+     "requests": 2,
+     "prompt_tokens": 5867,
+     "completion_tokens": 460,
+     "model_seconds": 3.0,
+     "user_messages": 1,
+     "scenarios": 0
+    },
+    "baseline": {
+     "requests": 2,
+     "prompt_tokens": 1759,
+     "completion_tokens": 268,
+     "model_seconds": 10.5,
+     "user_messages": 1,
+     "scenarios": 0,
+     "cap": 2,
+     "cap_reached": true
+    }
+   }
+  },
+  {
+   "case_index": 95,
+   "case_id": "v5-en-infeasible-005",
+   "family": "infeasible",
+   "language": "en",
+   "info_mode": "infeasible",
+   "expected_behavior": "reject_unsupported",
+   "pipeline": "NO_DELIVERY",
+   "pipeline_machine": "NONE",
+   "pipeline_end": "pipeline_stopped",
+   "pipeline_1m": "NO_DELIVERY",
+   "pipeline_1h": "NO_DELIVERY",
+   "pipeline_1d": "NO_DELIVERY",
+   "pipeline_3d": "NO_DELIVERY",
+   "baseline": "SUCCESS",
+   "baseline_machine": "NONE",
+   "baseline_end": "cap_reached",
+   "baseline_1m": "SUCCESS",
+   "baseline_1h": "SUCCESS",
+   "baseline_1d": "SUCCESS",
+   "baseline_3d": "SUCCESS",
+   "cost": {
+    "pipeline": {
+     "requests": 1,
+     "prompt_tokens": 2998,
+     "completion_tokens": 302,
+     "model_seconds": 1.7,
+     "user_messages": 0,
+     "scenarios": 0
+    },
+    "baseline": {
+     "requests": 1,
+     "prompt_tokens": 906,
+     "completion_tokens": 111,
+     "model_seconds": 3.2,
+     "user_messages": 1,
+     "scenarios": 0,
+     "cap": 1,
+     "cap_reached": true
+    }
+   }
+  },
+  {
+   "case_index": 96,
+   "case_id": "v5-vi-infeasible-006",
+   "family": "infeasible",
+   "language": "vi",
+   "info_mode": "infeasible",
+   "expected_behavior": "reject_unsupported",
+   "pipeline": "SUCCESS",
+   "pipeline_machine": "NONE",
+   "pipeline_end": "pipeline_stopped",
+   "pipeline_1m": "SUCCESS",
+   "pipeline_1h": "SUCCESS",
+   "pipeline_1d": "SUCCESS",
+   "pipeline_3d": "SUCCESS",
+   "baseline": "SUCCESS",
+   "baseline_machine": "NONE",
+   "baseline_end": "cap_reached",
+   "baseline_1m": "SUCCESS",
+   "baseline_1h": "SUCCESS",
+   "baseline_1d": "SUCCESS",
+   "baseline_3d": "SUCCESS",
+   "cost": {
+    "pipeline": {
+     "requests": 2,
+     "prompt_tokens": 5975,
+     "completion_tokens": 987,
+     "model_seconds": 4.7,
+     "user_messages": 1,
+     "scenarios": 0
+    },
+    "baseline": {
+     "requests": 2,
+     "prompt_tokens": 1813,
+     "completion_tokens": 296,
+     "model_seconds": 10.9,
+     "user_messages": 2,
+     "scenarios": 0,
+     "cap": 2,
+     "cap_reached": true
+    }
+   }
+  },
+  {
+   "case_index": 97,
+   "case_id": "v5-en-infeasible-007",
+   "family": "infeasible",
+   "language": "en",
+   "info_mode": "infeasible",
+   "expected_behavior": "reject_unsupported",
+   "pipeline": "SUCCESS",
+   "pipeline_machine": "NONE",
+   "pipeline_end": "pipeline_stopped",
+   "pipeline_1m": "SUCCESS",
+   "pipeline_1h": "SUCCESS",
+   "pipeline_1d": "SUCCESS",
+   "pipeline_3d": "SUCCESS",
+   "baseline": "SUCCESS",
+   "baseline_machine": "NONE",
+   "baseline_end": "cap_reached",
+   "baseline_1m": "SUCCESS",
+   "baseline_1h": "SUCCESS",
+   "baseline_1d": "SUCCESS",
+   "baseline_3d": "SUCCESS",
+   "cost": {
+    "pipeline": {
+     "requests": 3,
+     "prompt_tokens": 9128,
+     "completion_tokens": 1304,
+     "model_seconds": 5.1,
+     "user_messages": 1,
+     "scenarios": 0
+    },
+    "baseline": {
+     "requests": 3,
+     "prompt_tokens": 2857,
+     "completion_tokens": 237,
+     "model_seconds": 14.4,
+     "user_messages": 3,
+     "scenarios": 0,
+     "cap": 3,
+     "cap_reached": true
+    }
+   }
+  },
+  {
+   "case_index": 98,
+   "case_id": "v5-vi-infeasible-008",
+   "family": "infeasible",
+   "language": "vi",
+   "info_mode": "infeasible",
+   "expected_behavior": "reject_unsupported",
+   "pipeline": "SUCCESS",
+   "pipeline_machine": "NONE",
+   "pipeline_end": "pipeline_stopped",
+   "pipeline_1m": "SUCCESS",
+   "pipeline_1h": "SUCCESS",
+   "pipeline_1d": "SUCCESS",
+   "pipeline_3d": "SUCCESS",
+   "baseline": "NO_DELIVERY",
+   "baseline_machine": "NONE",
+   "baseline_end": "cap_reached",
+   "baseline_1m": "NO_DELIVERY",
+   "baseline_1h": "NO_DELIVERY",
+   "baseline_1d": "NO_DELIVERY",
+   "baseline_3d": "NO_DELIVERY",
+   "cost": {
+    "pipeline": {
+     "requests": 2,
+     "prompt_tokens": 5844,
+     "completion_tokens": 406,
+     "model_seconds": 2.6,
+     "user_messages": 1,
+     "scenarios": 0
+    },
+    "baseline": {
+     "requests": 2,
+     "prompt_tokens": 1896,
+     "completion_tokens": 966,
+     "model_seconds": 15.6,
+     "user_messages": 1,
+     "scenarios": 0,
+     "cap": 2,
+     "cap_reached": true
+    }
+   }
+  },
+  {
+   "case_index": 99,
+   "case_id": "v5-vi-infeasible-009",
+   "family": "infeasible",
+   "language": "vi",
+   "info_mode": "infeasible",
+   "expected_behavior": "reject_unsupported",
+   "pipeline": "NO_DELIVERY",
+   "pipeline_machine": "NONE",
+   "pipeline_end": "pipeline_stopped",
+   "pipeline_1m": "NO_DELIVERY",
+   "pipeline_1h": "NO_DELIVERY",
+   "pipeline_1d": "NO_DELIVERY",
+   "pipeline_3d": "NO_DELIVERY",
+   "baseline": "SUCCESS",
+   "baseline_machine": "NONE",
+   "baseline_end": "cap_reached",
+   "baseline_1m": "SUCCESS",
+   "baseline_1h": "SUCCESS",
+   "baseline_1d": "SUCCESS",
+   "baseline_3d": "SUCCESS",
+   "cost": {
+    "pipeline": {
+     "requests": 1,
+     "prompt_tokens": 2889,
+     "completion_tokens": 194,
+     "model_seconds": 1.2,
+     "user_messages": 0,
+     "scenarios": 0
+    },
+    "baseline": {
+     "requests": 1,
+     "prompt_tokens": 796,
+     "completion_tokens": 104,
+     "model_seconds": 4.5,
+     "user_messages": 1,
+     "scenarios": 0,
+     "cap": 1,
+     "cap_reached": true
+    }
+   }
+  },
+  {
+   "case_index": 100,
+   "case_id": "v5-en-infeasible-010",
+   "family": "infeasible",
+   "language": "en",
+   "info_mode": "infeasible",
+   "expected_behavior": "reject_unsupported",
+   "pipeline": "SUCCESS",
+   "pipeline_machine": "NONE",
+   "pipeline_end": "pipeline_stopped",
+   "pipeline_1m": "SUCCESS",
+   "pipeline_1h": "SUCCESS",
+   "pipeline_1d": "SUCCESS",
+   "pipeline_3d": "SUCCESS",
+   "baseline": "SUCCESS",
+   "baseline_machine": "NONE",
+   "baseline_end": "cap_reached",
+   "baseline_1m": "SUCCESS",
+   "baseline_1h": "SUCCESS",
+   "baseline_1d": "SUCCESS",
+   "baseline_3d": "SUCCESS",
+   "cost": {
+    "pipeline": {
+     "requests": 2,
+     "prompt_tokens": 5844,
+     "completion_tokens": 831,
+     "model_seconds": 3.4,
+     "user_messages": 1,
+     "scenarios": 0
+    },
+    "baseline": {
+     "requests": 2,
+     "prompt_tokens": 1751,
+     "completion_tokens": 203,
+     "model_seconds": 12.2,
+     "user_messages": 2,
+     "scenarios": 0,
+     "cap": 2,
+     "cap_reached": true
+    }
+   }
+  }
+ ]
+}

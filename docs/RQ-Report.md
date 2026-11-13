@@ -24,6 +24,8 @@ Bốn câu hỏi lấy từ paper (mục 7.1):
 | RQ2 | **Có** (theo quy tắc chốt trước) | Trên 2 259 biến thể của 99 case, cổng đầy đủ giảm chấp nhận sai từ 100% xuống 19% và vẫn chấp nhận 94,4% hợp đồng đúng; từ chối nhầm 0,8%. Đạt cả ở tập giữ lại. Khoảng 19% lỗi, chủ yếu là dời hạn, vẫn lọt qua. |
 | RQ3 | **Có, kèm điều kiện** | Trên 71 case đánh giá (cùng model, cùng chi phí request), Pipeline thành công 53,5% so với 15,5% của một LLM đơn thuần (+38 điểm, CI 95% [25; 51], McNemar p ≈ 5·10⁻⁷), và giao ra hợp đồng sai 4% so với 76%. Phần lớn khoảng cách đến từ việc tính mốc giờ bằng code: cả 54 hợp đồng sai của LLM đơn thuần đều sai mốc giờ. Pipeline không giao ra gì ở 42% case. |
 | RQ4 | **Đã đo** | Pipeline tốn 2,3× request, 8,6× token vào, 2,3× thời gian model và nhiều công người dùng hơn (117 kịch bản), nhưng rẻ hơn tính trên mỗi case thành công (8,3 so với 12,3 request). |
+| RQ3 (E7) | **Có** | Trên 100 case viết tay mới (dataset v5), cùng quy ước và cùng người dùng mô phỏng độc lập cho hai nhánh: Pipeline thành công 49% so với 18% (+31 điểm, CI 95% [19; 43], McNemar p ≈ 5,5·10⁻⁶). Pipeline giao hợp đồng sai 2%, Baseline 72% (71/72 hợp đồng sai có lỗi hạn). Pipeline không giao ở 49% case. Mục 5A. |
+| RQ4 (E7) | **Đã đo** | Pipeline tốn 2,4× request, 5,1× token vào, 2,0× thời gian model, 2,7× tin nhắn người dùng. Tính trên mỗi case thành công thì vẫn rẻ hơn một chút (14,0 so với 15,9 request). Mục 5A. |
 
 ## 1. Bối cảnh chung
 
@@ -350,6 +352,180 @@ Cùng 71 case, đếm theo một luật chung (không tính lỗi quota, lỗi m
 - **Tỷ lệ không quyết định cao:** Pipeline không giao ra ở 42% case. Phần lớn là lúc bước hiểu yêu cầu
   dừng, chứ không phải lúc cổng chặn.
 
+## 5A. E7: chạy lại RQ3 và RQ4 với quy ước chung và dataset viết tay (2026-11-13)
+
+### Thí nghiệm
+
+E7 làm lại E6 sau bản rà lỗi E6 (`docs/E6-Failure-Review.md`), với ba thay đổi lớn:
+
+- **Quy ước chung cho hai nhánh** (`docs/E7-Conventions.md` bản 3): gắn tên bên, giờ, số, chấm, kịch
+  bản, người dùng mô phỏng.
+- **Người dùng mô phỏng độc lập:** SimUser-v3 là một sub-agent Claude Haiku 5.5 mới cho mỗi lượt. Nó chỉ
+  đọc tệp đầu vào của lượt đó, và bộ kiểm tra câu trả lời áp dụng cùng luật cho cả hai nhánh.
+- **Dataset v5:** 100 case mới viết tay (60 tiếng Việt, 40 tiếng Anh, 20 họ hợp đồng), đóng băng ở tag
+  `E7-Dataset-v5`. Không case nào sinh từ template.
+
+Giữ nguyên so với E6:
+
+- Cả hai nhánh dùng `gemini-3.5-flash-lite`.
+- Trần request của Baseline bằng số request Pipeline đã dùng ở cùng case. Số request của Pipeline gồm cả
+  các lần đổi ví dụ thành kịch bản.
+- Giao thức đóng băng ở tag `E7-Freeze` (`docs/E7-Protocol.md`).
+- Các lần sửa hạ tầng trong lúc chạy được ghi trong `docs/E7-Deviations.md` (D1–D6, I1–I3). Không lần
+  nào đổi điều mà một nhánh hay người dùng mô phỏng nhìn thấy.
+
+Cách chấm:
+
+1. **Chấm máy:** `e7_score` chạy các kịch bản của dataset trên bộ tham chiếu Haskell và so mọi hạn với
+   dung sai 1 phút.
+2. **Phân xử mù:** 103 gói chấm được giao cho 8 sub-agent phân xử mới
+   (`docs/E7-Adjudication-Brief.md`, ghi trước khi chấm). Gói gồm các hợp đồng máy báo lệch và các case
+   cần biết nhánh có nói rõ phần không làm được hay không.
+3. **Tổng hợp:** `research/experiments/e7_analysis.py`, được commit trước khi mở kết quả.
+
+### Kết quả RQ3 (100 case, đủ cặp)
+
+| Chỉ số | Pipeline | Baseline | Chênh lệch |
+| --- | --- | --- | --- |
+| **Thành công** | **49%** | **18%** | **+31 điểm**, CI 95% [19; 43], McNemar p ≈ 5,5·10⁻⁶ |
+| Giao hợp đồng sai | 2% | 72% | −70 điểm, p ≈ 1,7·10⁻²¹ |
+| Không giao | 49% | 10% | |
+| Chỉ một nhánh thành công | 39 case | 8 case | |
+
+**Kết luận theo quy tắc chốt trước: Pipeline mạnh hơn.** Kết quả cùng chiều và gần cỡ với E6 (53,5% so
+với 15,5% trên 71 case), nhưng lần này trên dataset viết tay, với người dùng mô phỏng độc lập cho cả hai
+nhánh.
+
+**Độ nhạy thời gian:** số case thành công gần như không đổi khi nới dung sai.
+
+| Dung sai | Pipeline | Baseline |
+| --- | --- | --- |
+| 1 phút | 49 | 18 |
+| 1 giờ | 49 | 18 |
+| 1 ngày | 49 | 18 |
+| 3 ngày | 49 | 19 |
+
+Lỗi giờ của Baseline không phải do bộ chấm quá khắt khe. Trong các hạn sai, 93 hạn lệch hơn 1 ngày theo
+kiểu không đều, 20 hạn lệch khoảng 1 năm, và chỉ 4 hạn lệch đúng 7 giờ, tức lỗi múi giờ. Không có lỗi hệ
+thống kiểu dùng giây thay mili giây.
+
+**Theo hành vi mong đợi** (Pipeline / Baseline thành công):
+
+| `expected_behavior` | n | Pipeline | Baseline |
+| --- | --- | --- | --- |
+| `converge` | 44 | 22 | 5 |
+| `ask_then_converge` | 35 | 16 | 4 |
+| `flag_conflict_then_converge` | 6 | 3 | 0 |
+| `converge_and_decline_extra` | 5 | 1 | 0 |
+| `reject_unsupported` | 10 | 7 | 9 |
+
+**Theo ngôn ngữ:**
+
+- tiếng Việt: Pipeline 30/60, Baseline 9/60;
+- tiếng Anh: Pipeline 19/40, Baseline 9/40.
+
+**Theo họ hợp đồng:**
+
+- Pipeline thành công trọn ở 6 họ: escrow_arbiter, swap, rental_deposit, cancellation_fee, matching (đều
+  4/4) và loan (4/5).
+- Pipeline 0 ở 4 họ: k_of_n (0/6), first_come (0/5), zero_coupon_bond (0/4), deduction (0/5). Baseline
+  cũng gần như 0 ở các họ này, chỉ có first_come 2/5 và zero_coupon_bond 1/4.
+
+### Phải đọc kết quả này thế nào
+
+**Baseline thua chủ yếu vì giao hợp đồng sai giờ.** Nó giao 81 hợp đồng:
+
+- 6 hợp đồng máy chấm đúng ngay;
+- 75 hợp đồng máy báo lệch; người phân xử chấm 3 trong số đó là đúng, 72 là sai.
+
+71 trong 72 hợp đồng sai có lỗi hạn, thường là sai năm, sai tháng hoặc sai giờ khi đổi sang POSIX ms. Vì
+vậy, phần lớn chênh lệch đến từ việc Pipeline tính mốc giờ bằng code, như E6 đã thấy.
+
+**Pipeline giao ít nhưng gần như luôn đúng.**
+
+- Giao 44 hợp đồng: máy chấm đúng 41, báo lệch 3; người phân xử chấm 1 trong 3 là đúng. Chỉ 2 hợp
+  đồng sai (case 23 và 35).
+- Pipeline không giao ở 49 case:
+
+| Lý do Pipeline không giao | Case |
+| --- | --- |
+| người dùng hết 6 tin nhắn | 11 |
+| không chốt được kịch bản | 10 |
+| dừng ở bước hiểu yêu cầu hoặc khi gặp phần không làm được | 10 |
+| bộ sinh hợp đồng không thỏa được kịch bản (`generation_stalled`) | 9 |
+| người dùng bỏ cuộc | 7 |
+| dừng trước khi chạy kịch bản | 2 |
+
+**Điểm yếu đã ghi nhận của Pipeline** (giữ nguyên bản đóng băng, chỉ báo cáo):
+
+- **Đọc lại kịch bản (O1, O2):** 10 case không chốt được kịch bản. Đa số vì bản đọc lại viết "có người bấm
+  xác nhận" thay vì nêu đúng người bấm và đúng hành động. Case 27 thì vì bản đọc lại bỏ mất các bước quá
+  hạn.
+- **Phần không làm được nhận ra mà không báo người dùng:** ở `reject_unsupported`, Pipeline thành công
+  7/10, Baseline 9/10. Ba case thua (92, 95, 99) là lúc Pipeline dừng ngay ở bước intent (`unsupported_intent`),
+  dùng 1 request, và không nói gì với người dùng. Người phân xử vì thế chấm "chưa nói rõ phần không làm
+  được".
+- **Bỏ phần thừa:** ở `converge_and_decline_extra`, Pipeline chỉ thành công 1/5 (Baseline 0/5).
+
+**Đồng thuận giữa máy và người phân xử:**
+
+- Trong 78 hợp đồng máy báo lệch, người phân xử chấm 4 là đúng: Pipeline case 4, Baseline case 25, 58,
+  69. Lý do của từng verdict có trong `docs/E7-Adjudication.json`.
+- 74 hợp đồng còn lại bị chấm sai, đúng như máy báo.
+
+### Kết quả RQ4
+
+| Chỉ số (tổng trên 100 case) | Pipeline | Baseline | Tỷ lệ |
+| --- | --- | --- | --- |
+| Request được tính | 684 | 287 | 2,4× |
+| Token vào | 2,62 triệu | 0,51 triệu | 5,1× |
+| Token ra | 1,01 triệu | 0,24 triệu | 4,1× |
+| Thời gian model | 8 500 s | 4 200 s | 2,0× |
+| Tin nhắn của người dùng | 267 | 100 | 2,7× |
+| Kịch bản người dùng xác nhận | 134 | 0 | |
+| **Request cho mỗi case thành công** | **14,0** | **15,9** | 0,88× |
+| Chạm trần request | | 28 case | |
+
+- **Trung vị mỗi case:**
+  - request: Pipeline 5, Baseline 2,5;
+  - token vào: Pipeline 16 891, Baseline 2 893;
+  - thời gian model: Pipeline 47 s, Baseline 20 s;
+  - tin nhắn người dùng: Pipeline 2, Baseline 1.
+- **Chi phí trên mỗi case thành công:** Pipeline vẫn rẻ hơn một chút (14,0 so với 15,9 request). Khoảng
+  cách hẹp hơn E6 (8,3 so với 12,3), vì Pipeline nay tốn thêm các vòng tóm tắt intent, xin ví dụ và đọc lại
+  kịch bản.
+- **Tổng chi phí:** Pipeline đắt hơn rõ rệt, nhất là token: mỗi request mang prompt dài.
+- **Công của người dùng:** Pipeline cần gấp 2,7 lần tin nhắn, cộng 134 kịch bản phải xác nhận. Với người
+  thật, đây là chi phí lớn nhất.
+
+### Người dùng mô phỏng
+
+| | Pipeline | Baseline |
+| --- | --- | --- |
+| Câu trả lời được ghi | 394 | 172 |
+| Câu bị bộ kiểm tra từ chối | 15 | 0 |
+| Câu dự phòng ("tôi không biết thêm") | 2 | 0 |
+| Phản đối một kết quả được cho xem | 116 | 48 |
+| Lượt sub-agent không hợp lệ | 1 (I2: kiểm tra chạy khi lượt chưa xong; chính lượt đó được ghi sau) | 0 |
+
+- **Câu bị từ chối:** hầu hết là các số không có trong yêu cầu. Chúng xuất hiện khi Pipeline xin ví dụ có
+  số tiền, mốc giờ.
+- **Lệch giữa hai nhánh:** người dùng chỉ phản đối được những gì nó được cho xem. Pipeline cho xem tóm tắt
+  intent và kịch bản; Baseline chỉ cho xem lời giải thích. Phần lớn hợp đồng sai giờ của Baseline vì thế
+  được chấp nhận, do người dùng mô phỏng không đọc được JSON hay POSIX ms.
+
+### Hạn chế
+
+1. **Claude đóng nhiều vai:** Claude viết dataset v5, sửa pipeline, vận hành bộ chạy và viết bản hướng dẫn
+   phân xử. Bù lại: chấm máy là nguồn chính, và người phân xử là sub-agent mới, chấm mù nhánh.
+   - Văn phong của gói chấm vẫn có thể lộ nhánh: Pipeline có tóm tắt intent và đọc lại kịch bản.
+2. **Mỗi case một mẫu, một model nhỏ, free tier.**
+3. **Lệch giao thức:** các lệch D1–D6 và I1–I3 đều là hạ tầng. Riêng D5 đổi một case từ "không giao" sang
+   "giao": case 17, có lỗi 5xx khi sinh hợp đồng.
+4. **Baseline không có công cụ đổi giờ.** Kết quả vì vậy đo "LLM đơn thuần", chưa đo "LLM có công cụ".
+   Việc tách đóng góp của việc tính giờ tất định khỏi đóng góp của các cổng vẫn là việc nên làm tiếp
+   (mục 7, điểm 1).
+
 ## 6. Mối đe dọa tính hợp lệ chung
 
 1. **Dữ liệu tổng hợp từ một bộ sinh.** Hợp đồng tham chiếu, kịch bản và prompt có chung giả định, ví dụ
@@ -390,5 +566,7 @@ Cùng 71 case, đếm theo một luật chung (không tính lỗi quota, lỗi m
 | E4 (RQ1) | docs/E4-Formalization-Comparison.md | `runs/eval/T-*`, `S-*`, `G-*` | tag `a2-test-freeze` (`faacc61`) |
 | E5 (RQ2) | docs/E5-Evidence-Gates.md, E5-Adjudication-Rubric.md, E5-Adjudication.json | `runs/e5/E5-Round1-*`, `E5-Round2-*`, `E5-Freeze-Holdout-*` | tag `E5-Round1` (`275365a`), `E5-Freeze` (`b55c7ca`) |
 | E6 (RQ3, RQ4) | docs/E6-Protocol.md, E6-Adjudication.json, E6-Score.json | `runs/E6-Pipeline`, `runs/E6-Baseline`, `runs/E6-Adjudication` | tag `E6-Freeze-30` (`bb26cc5`); `research/experiments/baseline_llm.py`, `e6_score.py`, `tools/e6/` |
+
+| E7 (RQ3, RQ4) | docs/E7-Protocol.md, E7-Conventions.md, E7-Deviations.md, E7-Adjudication-Brief.md, E7-Adjudication.json, E7-Score.json | `runs/E7-Eval-Pipeline`, `runs/E7-Eval-Baseline`, `runs/E7-Eval-Score` | tag `E7-Freeze` (`175d748`), `E7-Dataset-v5`; `research/experiments/e7_score.py`, `e7_analysis.py`, `tools/e7/` |
 
 `runs/` không có trong git. Tag chưa được push lên GitHub.
