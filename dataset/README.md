@@ -19,6 +19,13 @@ python -m dataset.all_cases --check   # every source still matches its frozen ha
 | `v4` | `v4/cases.jsonl` | 100 | E7 dry runs (v3 prompts) | no |
 | `v5` | `v5/cases.jsonl` | 100 | RQ3, RQ4 (E7) | yes |
 
+RQ2 (E5) uses no written cases: its 2 259 candidates are deterministic edits of the v2 reference
+contracts (cases 1–56 dev, 58–100 test). They are in `rq2_variants.jsonl`, one line per candidate: case,
+operator, site, truth label with its reason, the decision of each gate (Structure, Lint, SMT,
+Alignment, Scenario, Oracle) and the contract itself. `python -m dataset.rq2_variants --check`
+rebuilds every contract from `cases.jsonl` and checks the label counts (dev 948 wrong / 344 right, test
+686 / 281); `--export` rewrites the file from the local `runs/e5` records.
+
 The source files stay in place: their frozen SHA-256 values are the evidence that no case changed after
 it was frozen, and the runners and scorers read them. The builders under `v3/`, `v4/` and `v5/` are kept
 because `v5/build.py` reuses the v3 builders and v4 party names. What each experiment did with each

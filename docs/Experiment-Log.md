@@ -134,8 +134,10 @@ Tag đóng băng:
     dời mọi mốc 3 giờ.
 
   Nhãn đúng hay sai không lấy theo tên toán tử, mà theo so sánh hành vi có giới hạn với hợp đồng tham chiếu
-  (`gate_labels.py`), rồi kiểm lại bằng bộ thực thi Haskell. Tổng 2 259 biến thể: 1 634 sai, 625 đúng.
-  Ngoài ra có các hợp đồng thật do model sinh ra trong E3, nhãn do phân xử tay.
+  (`gate_labels.py`), rồi kiểm lại bằng bộ thực thi Haskell. Tổng 2 259 ứng viên: dev (case 1–56) 1 292,
+  test (case 58–100) 967; 1 634 sai, 625 đúng. Phần đúng gồm chính 99 hợp đồng tham chiếu cùng các biến
+  thể giữ nguyên nghĩa. Toàn bộ ứng viên, kèm hợp đồng, nhãn và quyết định của từng cổng, nằm trong
+  `dataset/rq2_variants.jsonl`. Ngoài ra có các hợp đồng thật do model sinh ra trong E3, nhãn do phân xử tay.
 - **Các bậc:** Structure (đối chứng) → Lint → SMT → Alignment → Scenario → Oracle (đầy đủ).
 - **Thước đo:**
   - chấp nhận sai = biến thể sai được chấp nhận / tổng biến thể sai;
@@ -232,3 +234,7 @@ Toàn bộ case dùng trong báo cáo được gom vào một file: `dataset/all
 | v3 | `dataset/v3/cases.jsonl` | 100 | E6 (không dùng trong báo cáo) |
 | v4 | `dataset/v4/cases.jsonl` | 100 (dùng lại prompt v3) | chạy thử bộ chạy E7 |
 | v5 | `dataset/v5/cases.jsonl` | 100 | E7 (RQ3, RQ4) |
+| biến thể RQ2 | `dataset/rq2_variants.jsonl` | 2 259 ứng viên sinh từ v2 | E5 (RQ2) |
+
+Các biến thể RQ2 không phải case viết sẵn, nên nằm ở file riêng. Lệnh
+`python -m dataset.rq2_variants --check` sinh lại mọi hợp đồng từ `dataset/cases.jsonl` và so với file.
