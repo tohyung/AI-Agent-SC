@@ -1,7 +1,7 @@
-"""E5 scoring: false acceptance, coverage and per-gate effect (docs/E5-Evidence-Gates.md, 6-7).
+"""E5 scoring: false acceptance, coverage and per-gate effect (docs/archive/E5-Evidence-Gates.md, 6-7).
 
     python -m research.experiments.gate_score runs/e5/E5-Round2-Variants [--final-only]
-        [--labels docs/E5-Adjudication.json] [--output FILE]
+        [--labels docs/evidence/E5-Adjudication.json] [--output FILE]
 Reads E5-Round1 records too: their rungs B0-B4 map to Structure, Lint, SMT, Scenario, Oracle,
 and Alignment (not run in Round 1) takes the SMT decision.
 """
@@ -144,7 +144,7 @@ def main() -> int:
     parser.add_argument("directory", type=Path)
     parser.add_argument("--final-only", action="store_true",
                         help="only the last model contract of each case (R-final)")
-    parser.add_argument("--labels", type=Path, help="adjudicated verdicts (docs/E5-Adjudication.json)")
+    parser.add_argument("--labels", type=Path, help="adjudicated verdicts (docs/evidence/E5-Adjudication.json)")
     parser.add_argument("--output", type=Path)
     args = parser.parse_args()
     labels = (json.loads(args.labels.read_text(encoding="utf-8"))["verdicts"]

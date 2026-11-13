@@ -1,4 +1,4 @@
-"""Dataset v5 cases, part D (written by hand, 2026-11-12, docs/E7-Dataset-v5-Design.md).
+"""Dataset v5 cases, part D (written by hand, 2026-11-12, docs/archive/E7-Dataset-v5-Design.md).
 
 The last split case, collateral_loan, deduction, matching and the ten infeasible requests.
 """

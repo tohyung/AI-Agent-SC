@@ -4,7 +4,7 @@
   python -m research.experiments.e6_score score --out runs/E6-Adjudication --verdicts <file>
 
 `packets` hides which arm made each contract behind a random code; the code-to-arm key goes to a
-separate file that the adjudicator opens only after every verdict is written (docs/E6-Protocol.md).
+separate file that the adjudicator opens only after every verdict is written (docs/archive/E6-Protocol.md).
 A verdict per code is {"contract": "RIGHT" | "WRONG" | "UNDETERMINED" | null, "told_unsupported":
 bool, "reason": str}; `contract` is null when the arm delivered no contract.
 """

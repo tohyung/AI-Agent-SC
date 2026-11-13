@@ -1,4 +1,4 @@
-"""Dataset v5 cases, part B (written by hand, 2026-11-12, docs/E7-Dataset-v5-Design.md).
+"""Dataset v5 cases, part B (written by hand, 2026-11-12, docs/archive/E7-Dataset-v5-Design.md).
 
 milestone (last two), crowdfunding, third_party, rental_deposit, cancellation_fee, installment.
 """

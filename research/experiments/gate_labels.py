@@ -2,7 +2,7 @@
 
 Independent of the gates under test: it runs the Python interpreter in
 `dataset/marlowe_sim.py`, not the pinned Haskell reference executor. See
-docs/E5-Evidence-Gates.md, section 4.
+docs/archive/E5-Evidence-Gates.md, section 4.
 """
 
 from __future__ import annotations

@@ -5,7 +5,7 @@ chatbot would check it: structure validation, then the ledger transaction-size a
 check is forwarded to the model automatically, as a user pasting the error back. When the model asks a
 question, declines, or writes a contract that passes the checks, the run stops and waits for the
 simulated user (`--message-file`, `--accept`, `--give-up`). The simulated user answers only from the
-case's fact sheet and from what the model said; it never runs scenarios (docs/E6-Plan.md, decision 7).
+case's fact sheet and from what the model said; it never runs scenarios (docs/archive/E6-Plan.md, decision 7).
 
 Each case has its own request cap, equal to the requests the pipeline arm used on that case. A request
 is any model call that got a response, error responses included; quota errors (429) and calls

@@ -1,6 +1,6 @@
 """Build dataset v4 from dataset v3 under the E7 conventions: python -m dataset.v4.build [--write]
 
-v4 keeps every v3 prompt, spec and fact sheet, and adds what docs/E7-Conventions.md requires:
+v4 keeps every v3 prompt, spec and fact sheet, and adds what docs/archive/E7-Conventions.md requires:
 
 - Q-DỮ LIỆU 1: `spec.parties` gives each role a display name and a role token. The display name is
   the phrase the prompt or the fact sheet attaches to the token ("Công ty Sao Mai, role SaoMai");

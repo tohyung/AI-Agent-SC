@@ -529,7 +529,7 @@ def run_session(
                                    for item in transcript) else None)
             if restate is not None:
                 # E7: the draft could not be repaired; ask the user to restate once instead of
-                # stopping (docs/E6-Failure-Review.md, AFF-1).
+                # stopping (docs/archive/E6-Failure-Review.md, AFF-1).
                 return _snapshot(pipeline, run, history, status="WAITING_USER",
                                  stop_reason="no_user_input", iterations=iteration,
                                  model=model, questions=[restate])

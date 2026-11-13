@@ -1,6 +1,6 @@
 # Dataset v3 (E6)
 
-Frozen 2026-11-10, before any pipeline or baseline run on it. Design: `docs/E6-Dataset-Design.md`.
+Frozen 2026-11-10, before any pipeline or baseline run on it. Design: `docs/archive/E6-Dataset-Design.md`.
 
 SHA-256 of `cases.jsonl`:
 `cdc0ea456f2e103d86bb195522b6510755e65fdd5c9f9e1e2342cf68ad6e46cc`
@@ -58,4 +58,4 @@ SHA-256 of `cases.jsonl`:
   report must say so.
 - Machine labels against `reference_contract` are only valid where the fact sheet fixes every fact.
   E5 showed that labels against hidden facts flip when a simulated user invents facts. Adjudicate
-  model contracts against the facts the simulated user confirmed (`docs/E5-Adjudication-Rubric.md`).
+  model contracts against the facts the simulated user confirmed (`docs/archive/E5-Adjudication-Rubric.md`).

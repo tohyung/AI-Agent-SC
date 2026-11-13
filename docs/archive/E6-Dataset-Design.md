@@ -1,7 +1,7 @@
 # E6 — Thiết kế dataset v3 (bản để duyệt)
 
 Trạng thái: **bản nháp chờ người phụ trách duyệt** (2026-11-10). Chưa viết case nào ngoài các mẫu ở
-mục 8. Kế hoạch chung: `docs/E6-Plan.md`.
+mục 8. Kế hoạch chung: `docs/archive/E6-Plan.md`.
 
 ## 1. Mục tiêu và nguyên tắc
 

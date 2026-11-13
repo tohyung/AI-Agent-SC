@@ -1,6 +1,6 @@
 """Dataset v3: reference contracts and scenarios built from per-case specs.
 
-A case author writes a structured `spec` (docs/E6-Dataset-Design.md, section 6); nothing here
+A case author writes a structured `spec` (docs/archive/E6-Dataset-Design.md, section 6); nothing here
 is written as Marlowe JSON by hand. Every builder returns (contract, scenarios). Each scenario's
 expected payouts are computed from the spec, not by running the contract, so `validate.py` can
 catch a builder that encodes the spec wrongly.

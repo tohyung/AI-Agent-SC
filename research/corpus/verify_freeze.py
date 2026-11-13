@@ -25,7 +25,7 @@ SOURCE_COMMIT = "a6ea94587783d45ffc68406dd856a636a59874ed"
 UPSTREAM_COMMIT = "7b5b1e900ec53a8eb18747992bec73470704dfcb"
 DRIVER_VERSION = "0.1.0"
 # Paths as they were at SOURCE_COMMIT; the hashes and the aggregate are over these. The
-# 2026-11-09 renaming moved the files without changing their bytes (docs/JOURNAL.md).
+# 2026-11-09 renaming moved the files without changing their bytes (docs/archive/JOURNAL.md).
 ARTIFACT_PATHS = tuple(sorted((
     "research/stage2a/corpus/development.jsonl",
     "research/stage2a/corpus/validation.jsonl",

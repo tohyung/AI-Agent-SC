@@ -1,4 +1,4 @@
-"""E7 driver: both arms with the sim-user subagent as the user (docs/E7-Conventions.md).
+"""E7 driver: both arms with the sim-user subagent as the user (docs/archive/E7-Conventions.md).
 
   python tools/e7/auto.py pipe N              drive the pipeline arm of case N
   python tools/e7/auto.py base N              drive the baseline arm (after the pipeline arm ended)

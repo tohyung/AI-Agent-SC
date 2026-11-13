@@ -47,7 +47,7 @@ def _payment_totals(items: list[dict[str, Any]]) -> list[tuple[str, str, int]] |
 
     Two contracts that pay a party the same total are behaviourally equal here even when one
     pays in two parts, or refunds an account owner explicitly instead of through Close
-    (E5-Round2, docs/E5-Evidence-Gates.md). Payment timing within one trace is not compared.
+    (E5-Round2, docs/archive/E5-Evidence-Gates.md). Payment timing within one trace is not compared.
     """
     totals: dict[tuple[str, str], int] = {}
     for item in items:

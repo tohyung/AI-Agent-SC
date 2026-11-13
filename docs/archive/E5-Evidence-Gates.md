@@ -3,7 +3,7 @@
 Trạng thái: **giao thức chốt 2026-11-09, trước khi đo.** Mọi thay đổi sau ngày này được ghi ở
 mục "Lệch giao thức", kèm lý do.
 
-**Tên gọi (đổi 2026-11-10).** Theo quy ước `<Phần>-<Thành phần>` của repo (docs/JOURNAL.md
+**Tên gọi (đổi 2026-11-10).** Theo quy ước `<Phần>-<Thành phần>` của repo (docs/archive/JOURNAL.md
 mục 9), các bậc nay mang tên cổng cuối cùng chúng thêm vào, theo thứ tự chạy trong pipeline:
 
 | Tên mới (đầy đủ) | Tên ở E5-Round1 | Thêm cổng | Bước pipeline chứa cổng |
@@ -269,8 +269,8 @@ với định nghĩa. Ở cả bốn case, hạn của hợp đồng khớp đú
 3 `swap_timeout`). Cả 51 đều sửa một khoản trả từ tài khoản của một bên về chính bên đó. Khi hợp đồng
 đóng, Marlowe tự trả số dư về chủ tài khoản, nên hành vi không đổi. Cả 51 nhãn đều đúng.
 
-**Phân xử 75 hợp đồng E3** theo tiêu chí ghi trước (`docs/E5-Adjudication-Rubric.md`). Một người phân
-xử, theo quyết định của người phụ trách; kết quả và lý do từng hợp đồng ở `docs/E5-Adjudication.json`.
+**Phân xử 75 hợp đồng E3** theo tiêu chí ghi trước (`docs/archive/E5-Adjudication-Rubric.md`). Một người phân
+xử, theo quyết định của người phụ trách; kết quả và lý do từng hợp đồng ở `docs/evidence/E5-Adjudication.json`.
 Căn cứ là yêu cầu người dùng mô phỏng đã xác nhận, không phải dữ kiện ẩn.
 
 | Nhãn máy → phân xử | Số hợp đồng |
@@ -373,7 +373,7 @@ Code của Round 2 được đóng băng bằng tag `E5-Freeze` để chạy ph�
 
 Chạy một lần với code ở tag `E5-Freeze` (`b55c7ca`). Dữ liệu ở `runs/e5/E5-Freeze-Holdout-Variants`
 và `E5-Freeze-Holdout-E3`. 45 hợp đồng E3 của case 58–100 được phân xử **trước khi** xem nhãn máy hay
-quyết định của các cổng; kết quả nằm trong `docs/E5-Adjudication.json`, có ghi chú `holdout_note`.
+quyết định của các cổng; kết quả nằm trong `docs/evidence/E5-Adjudication.json`, có ghi chú `holdout_note`.
 
 **Variants:**
 

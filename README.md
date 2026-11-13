@@ -27,13 +27,13 @@ research/              all runtime code, one package per phase
   induction/           property observation store (SQLite)
   ledger/              marlowe-cli transaction-size adapter
   experiments/         evaluation arms, scorer, replay, roleplay runner, batch tooling
-dataset/               frozen 100-case benchmark and its offline validator
+dataset/               frozen datasets; all_cases.jsonl gathers every case in one file
 tests/                 all tests, mirroring research/ plus dataset/
 tools/marlowe_smt/     pinned Haskell SMT analyzer and reference executor
-docs/JOURNAL.md        research journal, including the 2026-11-09 renaming map
-docs/E4-Formalization-Comparison.md
-                       experiment E4: AFF vs DCF design, protocol and results
-docs/papers/           papers and slides
+docs/Experiment-Log.md every experiment E1-E7 in one place: purpose, data, method, results, sources
+docs/RQ-Report.md      results by research question
+docs/evidence/         frozen scores and adjudication files that the scorers read
+docs/archive/          original protocols, designs, deviation logs and the research journal
 runs/                  local run data, not in git
 ```
 
@@ -88,7 +88,7 @@ python -m research.experiments.formalization_score runs/eval/<arm-dir>
 python -m research.experiments.formalization_replay --output runs/replay/<file>.json
 ```
 
-The protocol, metrics and the dev/test split are in [docs/E4-Formalization-Comparison.md](docs/E4-Formalization-Comparison.md).
+The protocol, metrics and the dev/test split are in [docs/archive/E4-Formalization-Comparison.md](docs/archive/E4-Formalization-Comparison.md).
 Finished run folders are bundled 20 cases per file with
 `python -m research.experiments.run_bundles bundle runs/<batch>`; `extract`
 restores the original files.

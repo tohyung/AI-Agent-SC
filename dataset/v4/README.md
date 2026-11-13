@@ -1,6 +1,6 @@
 # Dataset v4 (E7)
 
-Bản dựng lại từ v3 theo `docs/E7-Conventions.md`, bằng `python -m dataset.v4.build --write`
+Bản dựng lại từ v3 theo `docs/archive/E7-Conventions.md`, bằng `python -m dataset.v4.build --write`
 (2026-11-12).
 
 SHA-256 của `cases.jsonl`:
@@ -22,7 +22,7 @@ Prompt, `spec` (trừ `parties`), phiếu dữ kiện, hợp đồng tham chiế
 Prompt của v4 là prompt của v3. Các prompt này:
 
 - đã dùng để sửa pipeline (E6, case 1–29);
-- đã được đọc toàn bộ, gồm cả `spec` và `checks`, trong lần rà soát lỗi E6 (`docs/E6-Failure-Review.md`);
+- đã được đọc toàn bộ, gồm cả `spec` và `checks`, trong lần rà soát lỗi E6 (`docs/archive/E6-Failure-Review.md`);
 - là nguồn của các quy ước E7.
 
 Vì vậy chạy E7 trên v4 chỉ cho kết quả **dev**, kể cả phần `split = eval`. Phần `eval` chỉ dùng để

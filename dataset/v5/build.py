@@ -1,6 +1,6 @@
 """Build and check dataset v5: python -m dataset.v5.build [--write] [--partial]
 
-The checks are the style (V-*) and accuracy (C-*) standards of docs/E7-Dataset-v5-Design.md, plus
+The checks are the style (V-*) and accuracy (C-*) standards of docs/archive/E7-Dataset-v5-Design.md, plus
 v3's structural checks (valid reference, scenarios on the simulator, coverage minimums).
 --partial skips the whole-dataset distribution checks, for checking the parts while writing.
 """

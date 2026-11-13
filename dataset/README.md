@@ -1,5 +1,31 @@
 # Dataset
 
+## One file for every case
+
+`all_cases.jsonl` gathers all 424 cases of the project in one file. Each line is one case exactly as
+its source file has it (`case`), plus `dataset`, `index`, `source`, `source_sha256`, `used_for` and
+`in_report`. Build or check it with:
+
+```text
+python -m dataset.all_cases           # rebuild
+python -m dataset.all_cases --check   # every source still matches its frozen hash, and the file is current
+```
+
+| `dataset` | Source file | Cases | Used for | In the results report |
+| --- | --- | --- | --- | --- |
+| `v2` | `cases.jsonl` | 100 | RQ1 (E4), RQ2 (E5); also E2, E3 | yes |
+| `supplement` | `supplement/conflicts_author_v1.jsonl` | 24 | RQ1 (E4), conflict cases | yes |
+| `v3` | `v3/cases.jsonl` | 100 | E6 | no |
+| `v4` | `v4/cases.jsonl` | 100 | E7 dry runs (v3 prompts) | no |
+| `v5` | `v5/cases.jsonl` | 100 | RQ3, RQ4 (E7) | yes |
+
+The source files stay in place: their frozen SHA-256 values are the evidence that no case changed after
+it was frozen, and the runners and scorers read them. The builders under `v3/`, `v4/` and `v5/` are kept
+because `v5/build.py` reuses the v3 builders and v4 party names. What each experiment did with each
+dataset is in `docs/Experiment-Log.md`.
+
+## Dataset v2
+
 `cases.jsonl` is the frozen benchmark: 100 template-generated prompts with
 Core V1 reference contracts and scenario checks (dataset v2, seed 1234).
 

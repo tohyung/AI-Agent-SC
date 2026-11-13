@@ -935,7 +935,7 @@ chúng đúng cấu trúc và chỉ sai nghĩa.
 
 #### Kết quả tập test (chạy một lần, 2026-11-08)
 
-Tag `a2-test-freeze` ở `faacc61`, môi trường ở `docs/E4-test-freeze-environment.txt`.
+Tag `a2-test-freeze` ở `faacc61`, môi trường ở `docs/evidence/E4-test-freeze-environment.txt`.
 `gemini-3.5-flash-lite` bản miễn phí. 43 case (58–100): 23 `complete`, 15 `missing`, 3
 `infeasible`, 2 `ambiguous`. Bốn nhánh xen kẽ từng case: `runs/eval/T-BASE-test`, `T-A2-test`,
 `T-BASE-test-stated`, `T-A2-test-stated`. Mọi record ghi `code_head` `faacc61`. Không lần nào phải

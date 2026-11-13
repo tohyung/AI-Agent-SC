@@ -1,4 +1,4 @@
-"""What the E6 simulated user may see, and nothing more (docs/E6-Protocol.md, section 3).
+"""What the E6 simulated user may see, and nothing more (docs/archive/E6-Protocol.md, section 3).
 
   python tools/e6/show.py case N   prompt and fact sheet of dataset v3 case N
   python tools/e6/show.py pipe N   pipeline arm: state, questions, intent under review, ids

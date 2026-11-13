@@ -8,7 +8,7 @@ v5 là **100 case mới**, viết tay. Đây là tập đánh giá sạch của 
 - 19 họ hợp đồng và 10 case bất khả, cùng số case mỗi họ và mỗi ngôn ngữ;
 - 60 case tiếng Việt, 40 case tiếng Anh;
 - loại thông tin: 40 đủ, 25 thiếu, 10 mơ hồ, 10 mâu thuẫn, 5 có phần không làm được, 10 bất khả;
-- cùng các mức phủ tối thiểu về cấu trúc Marlowe và hiện tượng ngôn ngữ (`docs/E6-Dataset-Design.md`,
+- cùng các mức phủ tối thiểu về cấu trúc Marlowe và hiện tượng ngôn ngữ (`docs/archive/E6-Dataset-Design.md`,
   mục 4).
 
 **Người viết:** Claude, theo yêu cầu của người dùng (2026-11-12). Claude cũng là người sửa pipeline,

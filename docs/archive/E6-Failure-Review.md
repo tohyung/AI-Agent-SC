@@ -60,7 +60,7 @@ thử trên đúng loại khó.
   thập phân), và sau 3 lần sửa thì case dừng hẳn mà không hỏi người dùng.
 - **Đề xuất:**
   - sửa luật ở builder để các lỗi đó không còn là lỗi (AFF-2, AFF-3, AFF-4; đã làm theo
-    `docs/E7-Conventions.md`);
+    `docs/archive/E7-Conventions.md`);
   - lỗi nào còn lại mà người dùng trả lời được thì đổi thành câu hỏi thay vì dừng (chưa làm).
 
 ### AFF-2. Luật tên các bên (8 case trực tiếp, nhiều case gián tiếp)
@@ -276,7 +276,7 @@ giảm sai sót của người viết.
 ## 7. Thứ tự làm đề xuất
 
 1. **Chốt quy ước** ở mục 2 (AFF-2), 3 (S-1) và 5, trước khi sửa code. Đã chốt ở
-   `docs/E7-Conventions.md` (bản 1).
+   `docs/archive/E7-Conventions.md` (bản 1).
 2. **AFF-1** (sửa lỗi thay vì dừng hẳn), **AFF-2** (tên), **AFF-3** (giờ cho danh sách), **AFF-4** (số):
    chi phí thấp, ảnh hưởng tới khoảng 15 case.
 3. **AFF-7** và **AFF-8** (kênh "không làm được", chất lượng câu hỏi).

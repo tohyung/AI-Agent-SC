@@ -1,4 +1,4 @@
-"""Dataset v5 cases, part A (written by hand, 2026-11-12, docs/E7-Dataset-v5-Design.md).
+"""Dataset v5 cases, part A (written by hand, 2026-11-12, docs/archive/E7-Dataset-v5-Design.md).
 
 escrow, escrow_arbiter, swap, loan, vesting and the first two milestone cases.
 `register` is the writing style (V-3): chat, bullets, terse or document.

@@ -307,7 +307,7 @@ Thí nghiệm và tài liệu:
 | Online tuning Batch 01 | E2 Online Tuning | 6/20 case tới cổng kích thước ledger trong 48 request |
 | Roleplay batch 20 và batch 80 | E3 Roleplay | 19/20 và 34/37 case tới cổng kích thước ledger |
 | A2 (so sánh BASE với A2) | E4 Formalization Comparison (DCF với AFF) | giữ AFF; tập test, quyết định đúng trên core hợp lệ: 0,465 → 0,860 (prompt gốc), 0,581 → 0,814 (có nêu giờ và policy) |
-| `docs/A2.md`, `docs/HISTORY.md`, `docs/a2-test-freeze-environment.txt` | `docs/E4-Formalization-Comparison.md`, `docs/JOURNAL.md`, `docs/E4-test-freeze-environment.txt` | |
+| `docs/A2.md`, `docs/HISTORY.md`, `docs/a2-test-freeze-environment.txt` | `docs/archive/E4-Formalization-Comparison.md`, `docs/archive/JOURNAL.md`, `docs/evidence/E4-test-freeze-environment.txt` | |
 
 ### Những gì cố ý giữ nguyên
 

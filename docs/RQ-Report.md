@@ -1,11 +1,15 @@
 # Báo cáo các câu hỏi nghiên cứu (RQ1–RQ4)
 
-Tư liệu để viết bài báo. Ghi ngày 2026-11-10, dựa trên E2–E5 (docs/JOURNAL.md,
-docs/E4-Formalization-Comparison.md, docs/E5-Evidence-Gates.md). Mọi con số dưới đây đều có trong
+> **Đọc trước:** kết quả dùng cho báo cáo là E4 (RQ1), E5 (RQ2) và E7 (RQ3, RQ4, mục 5A). E7 thay cho E6;
+> các mục 4 và 5 về E6 chỉ còn để lưu hồ sơ. Toàn bộ thí nghiệm E1–E7 được tóm trong
+> `docs/Experiment-Log.md`.
+
+Tư liệu để viết bài báo. Ghi ngày 2026-11-10, dựa trên E2–E5 (docs/archive/JOURNAL.md,
+docs/archive/E4-Formalization-Comparison.md, docs/archive/E5-Evidence-Gates.md). Mọi con số dưới đây đều có trong
 tài liệu hoặc dữ liệu nêu ở mục 8. Chỗ nào chưa đo thì ghi là chưa đo.
 
-RQ3 và RQ4 được trả lời bằng E6 (2026-11-12): mục 4 và 5, giao thức `docs/E6-Protocol.md`, phán quyết
-`docs/E6-Adjudication.json`, bảng điểm `docs/E6-Score.json`.
+RQ3 và RQ4 được trả lời bằng E6 (2026-11-12): mục 4 và 5, giao thức `docs/archive/E6-Protocol.md`, phán quyết
+`docs/evidence/E6-Adjudication.json`, bảng điểm `docs/evidence/E6-Score.json`.
 
 Bốn câu hỏi lấy từ paper (mục 7.1):
 
@@ -86,7 +90,7 @@ So sánh dùng McNemar chính xác. Nghĩa của intent được so với hợp 
   mâu thuẫn ở 12 case không có mâu thuẫn. Nhưng AFF chấp nhận sai 3 case có mâu thuẫn, DCF chấp nhận
   sai 1.
 - **Bằng chứng từ E5:** so hợp đồng cuối của E3 với yêu cầu mà người dùng mô phỏng đã xác nhận,
-  47/54 hợp đồng ĐÚNG ở dev và 34/36 ở test (`docs/E5-Adjudication.json`). Đây là bằng chứng về cả chuỗi
+  47/54 hợp đồng ĐÚNG ở dev và 34/36 ở test (`docs/evidence/E5-Adjudication.json`). Đây là bằng chứng về cả chuỗi
   intent → hợp đồng, không riêng bước intent.
 
 ### Điểm mạnh
@@ -126,7 +130,7 @@ phép so nghĩa; câu hỏi làm rõ cụ thể hơn.
 
 ### Thí nghiệm
 
-**E5** (docs/E5-Evidence-Gates.md). Giao thức chốt 2026-11-09, trước khi đo.
+**E5** (docs/archive/E5-Evidence-Gates.md). Giao thức chốt 2026-11-09, trước khi đo.
 
 **Ứng viên:**
 
@@ -235,7 +239,7 @@ Scenario → Oracle (đầy đủ).
 
 ### Thí nghiệm (E6)
 
-Chi tiết: `docs/E6-Protocol.md` (giao thức, 16 mục lệch giao thức), `docs/E6-Dataset-Design.md`.
+Chi tiết: `docs/archive/E6-Protocol.md` (giao thức, 16 mục lệch giao thức), `docs/archive/E6-Dataset-Design.md`.
 
 - **Dataset v3:** 100 case do Claude viết tay để làm khó hệ thống, 19 họ hợp đồng không cần oracle,
   60 tiếng Việt, 40 tiếng Anh, có phiếu dữ kiện cho phần prompt bỏ ngỏ. Đóng băng trước khi chạy.
@@ -356,9 +360,9 @@ Cùng 71 case, đếm theo một luật chung (không tính lỗi quota, lỗi m
 
 ### Thí nghiệm
 
-E7 làm lại E6 sau bản rà lỗi E6 (`docs/E6-Failure-Review.md`), với ba thay đổi lớn:
+E7 làm lại E6 sau bản rà lỗi E6 (`docs/archive/E6-Failure-Review.md`), với ba thay đổi lớn:
 
-- **Quy ước chung cho hai nhánh** (`docs/E7-Conventions.md` bản 3): gắn tên bên, giờ, số, chấm, kịch
+- **Quy ước chung cho hai nhánh** (`docs/archive/E7-Conventions.md` bản 3): gắn tên bên, giờ, số, chấm, kịch
   bản, người dùng mô phỏng.
 - **Người dùng mô phỏng độc lập:** SimUser-v3 là một sub-agent Claude Haiku 5.5 mới cho mỗi lượt. Nó chỉ
   đọc tệp đầu vào của lượt đó, và bộ kiểm tra câu trả lời áp dụng cùng luật cho cả hai nhánh.
@@ -370,8 +374,8 @@ Giữ nguyên so với E6:
 - Cả hai nhánh dùng `gemini-3.5-flash-lite`.
 - Trần request của Baseline bằng số request Pipeline đã dùng ở cùng case. Số request của Pipeline gồm cả
   các lần đổi ví dụ thành kịch bản.
-- Giao thức đóng băng ở tag `E7-Freeze` (`docs/E7-Protocol.md`).
-- Các lần sửa hạ tầng trong lúc chạy được ghi trong `docs/E7-Deviations.md` (D1–D6, I1–I3). Không lần
+- Giao thức đóng băng ở tag `E7-Freeze` (`docs/archive/E7-Protocol.md`).
+- Các lần sửa hạ tầng trong lúc chạy được ghi trong `docs/archive/E7-Deviations.md` (D1–D6, I1–I3). Không lần
   nào đổi điều mà một nhánh hay người dùng mô phỏng nhìn thấy.
 
 Cách chấm:
@@ -379,7 +383,7 @@ Cách chấm:
 1. **Chấm máy:** `e7_score` chạy các kịch bản của dataset trên bộ tham chiếu Haskell và so mọi hạn với
    dung sai 1 phút.
 2. **Phân xử mù:** 103 gói chấm được giao cho 8 sub-agent phân xử mới
-   (`docs/E7-Adjudication-Brief.md`, ghi trước khi chấm). Gói gồm các hợp đồng máy báo lệch và các case
+   (`docs/archive/E7-Adjudication-Brief.md`, ghi trước khi chấm). Gói gồm các hợp đồng máy báo lệch và các case
    cần biết nhánh có nói rõ phần không làm được hay không.
 3. **Tổng hợp:** `research/experiments/e7_analysis.py`, được commit trước khi mở kết quả.
 
@@ -470,7 +474,7 @@ vậy, phần lớn chênh lệch đến từ việc Pipeline tính mốc giờ 
 **Đồng thuận giữa máy và người phân xử:**
 
 - Trong 78 hợp đồng máy báo lệch, người phân xử chấm 4 là đúng: Pipeline case 4, Baseline case 25, 58,
-  69. Lý do của từng verdict có trong `docs/E7-Adjudication.json`.
+  69. Lý do của từng verdict có trong `docs/evidence/E7-Adjudication.json`.
 - 74 hợp đồng còn lại bị chấm sai, đúng như máy báo.
 
 ### Kết quả RQ4
@@ -561,12 +565,11 @@ vậy, phần lớn chênh lệch đến từ việc Pipeline tính mốc giờ 
 
 | Phần | Tài liệu | Dữ liệu | Code |
 | --- | --- | --- | --- |
-| E2, E3 dev | docs/JOURNAL.md mục 6 | `runs/online-tuning-batch01`, `runs/roleplay-main-batch20`, `runs/roleplay-main-batch80` | `research/experiments/online_tuning.py`, `roleplay_case.py` |
-| E3 test | docs/JOURNAL.md mục 6 (commit `4469740`) | `runs/E3-Roleplay-Holdout` | `roleplay_case.py` (commit `70ad70f`) |
-| E4 (RQ1) | docs/E4-Formalization-Comparison.md | `runs/eval/T-*`, `S-*`, `G-*` | tag `a2-test-freeze` (`faacc61`) |
-| E5 (RQ2) | docs/E5-Evidence-Gates.md, E5-Adjudication-Rubric.md, E5-Adjudication.json | `runs/e5/E5-Round1-*`, `E5-Round2-*`, `E5-Freeze-Holdout-*` | tag `E5-Round1` (`275365a`), `E5-Freeze` (`b55c7ca`) |
-| E6 (RQ3, RQ4) | docs/E6-Protocol.md, E6-Adjudication.json, E6-Score.json | `runs/E6-Pipeline`, `runs/E6-Baseline`, `runs/E6-Adjudication` | tag `E6-Freeze-30` (`bb26cc5`); `research/experiments/baseline_llm.py`, `e6_score.py`, `tools/e6/` |
+| E2, E3 dev | docs/archive/JOURNAL.md mục 6 | `runs/online-tuning-batch01`, `runs/roleplay-main-batch20`, `runs/roleplay-main-batch80` | `research/experiments/online_tuning.py`, `roleplay_case.py` |
+| E3 test | docs/archive/JOURNAL.md mục 6 (commit `4469740`) | `runs/E3-Roleplay-Holdout` | `roleplay_case.py` (commit `70ad70f`) |
+| E4 (RQ1) | docs/archive/E4-Formalization-Comparison.md | `runs/eval/T-*`, `S-*`, `G-*` | tag `a2-test-freeze` (`faacc61`) |
+| E5 (RQ2) | docs/archive/E5-Evidence-Gates.md, E5-Adjudication-Rubric.md; docs/evidence/E5-Adjudication.json | `runs/e5/E5-Round1-*`, `E5-Round2-*`, `E5-Freeze-Holdout-*` | tag `E5-Round1` (`275365a`), `E5-Freeze` (`b55c7ca`) |
+| E6 (RQ3, RQ4) | docs/archive/E6-Protocol.md; docs/evidence/E6-Adjudication.json, E6-Score.json | `runs/E6-Pipeline`, `runs/E6-Baseline`, `runs/E6-Adjudication` | tag `E6-Freeze-30` (`bb26cc5`); `research/experiments/baseline_llm.py`, `e6_score.py`, `tools/e6/` |
+| E7 (RQ3, RQ4) | docs/archive/E7-Protocol.md, E7-Conventions.md, E7-Deviations.md, E7-Adjudication-Brief.md; docs/evidence/E7-Adjudication.json, E7-Score.json | `runs/E7-Eval-Pipeline`, `runs/E7-Eval-Baseline`, `runs/E7-Eval-Score` | tag `E7-Freeze` (`175d748`), `E7-Dataset-v5`; `research/experiments/e7_score.py`, `e7_analysis.py`, `tools/e7/` |
 
-| E7 (RQ3, RQ4) | docs/E7-Protocol.md, E7-Conventions.md, E7-Deviations.md, E7-Adjudication-Brief.md, E7-Adjudication.json, E7-Score.json | `runs/E7-Eval-Pipeline`, `runs/E7-Eval-Baseline`, `runs/E7-Eval-Score` | tag `E7-Freeze` (`175d748`), `E7-Dataset-v5`; `research/experiments/e7_score.py`, `e7_analysis.py`, `tools/e7/` |
-
-`runs/` không có trong git. Tag chưa được push lên GitHub.
+`runs/` không có trong git. Các tag đóng băng đã được push lên GitHub.

@@ -6,14 +6,14 @@ sửa. Nó trả lời hai câu hỏi:
 1. Dung sai thời gian khi chấm có thiên vị Pipeline không?
 2. Baseline có thật sự hoạt động như một chatbot không, và vai người dùng mô phỏng đã đủ thực tế chưa?
 
-Tài liệu đi kèm `docs/E6-Failure-Review.md`.
+Tài liệu đi kèm `docs/archive/E6-Failure-Review.md`.
 
 ## 1. Dung sai thời gian
 
 ### Thực tế đã áp dụng trong E6
 
 - **Không có dung sai ±3 ngày.** Cả hai nhánh được chấm cùng một luật: mốc giờ lệch **tối đa 1 phút**
-  (`docs/E5-Adjudication-Rubric.md`, mục 15). Con số ±3 ngày xuất hiện ở E5 với nghĩa khác: đó là một
+  (`docs/archive/E5-Adjudication-Rubric.md`, mục 15). Con số ±3 ngày xuất hiện ở E5 với nghĩa khác: đó là một
   *kiểu lỗi được cấy vào* hợp đồng (dời hạn 3 ngày) để thử cổng, không phải dung sai khi chấm.
 - **Pipeline không có hợp đồng nào sai giờ,** vì builder tính mốc giờ bằng code. Nới dung sai không
   làm Pipeline được thêm case nào.
@@ -266,7 +266,7 @@ Kết quả và nhận xét:
 ## 4. Kế hoạch triển khai (sau khi được duyệt)
 
 1. **Chốt các quy ước:** tên (Failure-Review, AFF-2 và S-1), thời gian (mục 1), chấm (Failure-Review,
-   mục 5). Đã chốt ở `docs/E7-Conventions.md` (bản 1).
+   mục 5). Đã chốt ở `docs/archive/E7-Conventions.md` (bản 1).
 2. **Dataset v4:**
    - phiếu dữ kiện viết thành "trí nhớ người dùng": đủ để trả lời mọi câu hỏi hợp lý, có mục cho giờ,
      múi giờ, năm, hoàn tiền khi hết hạn, và ví dụ tình huống;

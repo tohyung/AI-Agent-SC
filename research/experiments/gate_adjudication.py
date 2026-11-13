@@ -1,7 +1,7 @@
 """E5: print each E3 contract next to the requirement history that produced it, for adjudication.
 
     python -m research.experiments.gate_adjudication --cases 1-56 > review.txt
-Rubric: docs/E5-Adjudication-Rubric.md.
+Rubric: docs/archive/E5-Adjudication-Rubric.md.
 """
 
 from __future__ import annotations

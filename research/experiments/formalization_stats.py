@@ -1,4 +1,4 @@
-"""Paired statistics for two scored Formalization arms (docs/E4-Formalization-Comparison.md, Part II).
+"""Paired statistics for two scored Formalization arms (docs/archive/E4-Formalization-Comparison.md, Part II).
 
 Both arms run the same cases, so every comparison is paired by case:
 - binary metrics (M1, M2, M4): each arm's rate with a Wilson 95% interval, the

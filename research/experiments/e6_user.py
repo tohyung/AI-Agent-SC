@@ -1,4 +1,4 @@
-"""E6 automatic simulated user: the same fixed replies for both arms (docs/E6-Protocol.md, section 3).
+"""E6 automatic simulated user: the same fixed replies for both arms (docs/archive/E6-Protocol.md, section 3).
 
 The arm asks (any question, any number of questions in one turn):
   1st time: the whole fact sheet of the case, or a fixed "no more details" line when it is empty;

@@ -4,7 +4,7 @@ Builds every reference contract and scenario from the specs in authoring_a/b, th
 structure, scenario outcomes on the Python simulator against the spec-derived expectations,
 unique and non-duplicate prompts (also against v2), banned storytelling phrases, policy ids,
 role names present in the prompt or fact sheet, and the coverage minimums of
-docs/E6-Dataset-Design.md. With --write, writes dataset/v3/cases.jsonl and prints its SHA-256.
+docs/archive/E6-Dataset-Design.md. With --write, writes dataset/v3/cases.jsonl and prints its SHA-256.
 """
 
 from __future__ import annotations

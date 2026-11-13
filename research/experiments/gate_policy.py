@@ -4,7 +4,7 @@ Gates: Analysis-Structure, Analysis-Lint, Analysis-SMT, Synthesis-Alignment, Syn
 Exploration-Oracle (short names below). Each gate returns PASS, REJECT, ABSTAIN or N/A (does not
 apply, e.g. Alignment for Variants, which have no accepted intent). The rung named after a gate
 combines every gate up to and including it: any REJECT wins, then any ABSTAIN, otherwise ACCEPT.
-See docs/E5-Evidence-Gates.md, section 5.
+See docs/archive/E5-Evidence-Gates.md, section 5.
 """
 
 from __future__ import annotations
@@ -29,7 +29,7 @@ PASS, REJECT, ABSTAIN, NOT_APPLICABLE = "PASS", "REJECT", "ABSTAIN", "N/A"
 ACCEPT = "ACCEPT"
 GATES = ("Structure", "Lint", "SMT", "Alignment", "Scenario", "Oracle")
 RUNGS = GATES  # a rung is named after the last gate it adds
-# E5-Round1 names (docs/E5-Evidence-Gates.md): rungs B0-B4 and lower-case gate keys.
+# E5-Round1 names (docs/archive/E5-Evidence-Gates.md): rungs B0-B4 and lower-case gate keys.
 ROUND1_RUNGS = {"B0": "Structure", "B1": "Lint", "B2": "SMT", "B3": "Scenario", "B4": "Oracle"}
 ROUND1_GATES = {"structural": "Structure", "lint": "Lint", "smt": "SMT",
                 "scenarios": "Scenario", "exploration": "Oracle"}

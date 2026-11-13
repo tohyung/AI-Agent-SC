@@ -1,6 +1,6 @@
 # Dataset v5 (E7, tập đánh giá)
 
-100 case mới, viết tay (2026-11-12) theo `docs/E7-Dataset-v5-Design.md`. Đây là **tập đánh giá
+100 case mới, viết tay (2026-11-12) theo `docs/archive/E7-Dataset-v5-Design.md`. Đây là **tập đánh giá
 sạch của E7**: pipeline và Baseline chưa từng chạy trên nó. v4 (prompt v3) là tập dev.
 
 SHA-256 của `cases.jsonl`:

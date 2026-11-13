@@ -44,7 +44,7 @@ lại ví dụ với đúng câu trả lời cũ của người dùng, không h�
 2. **Viết không dấu khi prompt có dấu** (một lần ở case 50). Bộ kiểm tra chưa có luật này cho tiếng
    Việt.
 3. **Yêu cầu bất khả không kết thúc `UNSUPPORTED`** (case 92). Khi người dùng nói vẫn cần phần không làm
-   được, Pipeline hỏi lại đúng câu cũ. Đây là mục AFF-7 của `docs/E6-Failure-Review.md`, chưa làm.
+   được, Pipeline hỏi lại đúng câu cũ. Đây là mục AFF-7 của `docs/archive/E6-Failure-Review.md`, chưa làm.
 4. **Nhãn người dùng tự đặt** ("use 'Me' for my side") vẫn bị coi là đại từ và hỏi lại tên.
 5. **Chi phí vận hành:** mỗi case cần 4–6 lượt sub-agent, và mỗi lượt phải dán lại toàn bộ hội thoại. Chạy
    100 case đánh giá theo cách này rất tốn ngữ cảnh của phiên chính. Nên chạy theo lô, mỗi lô một

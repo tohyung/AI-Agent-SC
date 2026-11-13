@@ -3,7 +3,7 @@
 The meaning of a resolved draft is a Marlowe Core V1 contract, ⟦D⟧ = `denote(D)`.
 The builder (`fact_builder`) computes a ShadowSemanticCore from the same draft
 by a different route: it folds values to numbers and tracks balances itself.
-The builder theorems in docs/E4-Formalization-Comparison.md (Part III) are stated against ⟦D⟧, so tests
+The builder theorems in docs/archive/E4-Formalization-Comparison.md (Part III) are stated against ⟦D⟧, so tests
 can check them two ways: offline with the small interpreter here, and against
 the pinned Haskell reference semantics and SMT analyzer.
 

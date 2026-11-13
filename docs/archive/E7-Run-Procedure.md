@@ -1,6 +1,6 @@
 # E7: cách chạy (2026-11-12)
 
-Quy ước: `docs/E7-Conventions.md`. Dataset:
+Quy ước: `docs/archive/E7-Conventions.md`. Dataset:
 
 - `dataset/v4`: dev (prompt v3). Mặc định của bộ chạy; ghi vào `runs/E7-Pipeline`, `runs/E7-Baseline`.
 - `dataset/v5`: tập đánh giá (100 case mới, đóng băng ở tag `E7-Dataset-v5`). Chạy bằng

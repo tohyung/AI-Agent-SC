@@ -2,7 +2,7 @@
 
 Each case: prompt as a real user would type it to the system, a structured spec the builders
 turn into the reference contract, a fact sheet that answers what the prompt leaves out, and the
-known weakness it targets (docs/E6-Dataset-Design.md, section 5).
+known weakness it targets (docs/archive/E6-Dataset-Design.md, section 5).
 """
 
 VN = "+07:00"

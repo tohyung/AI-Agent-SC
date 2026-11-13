@@ -1,4 +1,4 @@
-"""Builder theorems T1–T7 (docs/E4-Formalization-Comparison.md, Part III), checked on seeded random drafts.
+"""Builder theorems T1–T7 (docs/archive/E4-Formalization-Comparison.md, Part III), checked on seeded random drafts.
 
 Each property runs over a fixed range of seeds, so a failure names the draft
 that breaks it (`random_draft(seed)`). These tests need no model, network or

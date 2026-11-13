@@ -1,4 +1,4 @@
-"""Dataset v5 cases, part C (written by hand, 2026-11-12, docs/E7-Dataset-v5-Design.md).
+"""Dataset v5 cases, part C (written by hand, 2026-11-12, docs/archive/E7-Dataset-v5-Design.md).
 
 k_of_n, first_come, zero_coupon_bond, coupon_bond and the first five split cases.
 """

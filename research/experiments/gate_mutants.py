@@ -1,7 +1,7 @@
 """E5 candidate variants: deterministic edits of a reference Core V1 contract.
 
 An operator only proposes an edit; whether the result is wrong is decided by the label
-oracle (`gate_labels`), never by the operator's name (docs/E5-Evidence-Gates.md, section 3).
+oracle (`gate_labels`), never by the operator's name (docs/archive/E5-Evidence-Gates.md, section 3).
 """
 
 from __future__ import annotations

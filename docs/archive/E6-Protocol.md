@@ -3,7 +3,7 @@
 Trạng thái: **chốt ngày 2026-11-11, trước mọi lần chạy trên dataset v3.** Ba điểm mở (người dùng mô
 phỏng, trần lượt, quy tắc quyết định) do người phụ trách chọn cùng ngày. Mọi thay đổi sau thời điểm
 này ghi vào mục "Lệch giao thức". Các quyết định nền và lý do nằm ở
-`docs/E6-Plan.md`; dataset nằm ở `dataset/v3/` (SHA-256 `cdc0ea45…e46cc`).
+`docs/archive/E6-Plan.md`; dataset nằm ở `dataset/v3/` (SHA-256 `cdc0ea45…e46cc`).
 
 ## 1. Câu hỏi
 
@@ -88,7 +88,7 @@ Quy tắc chung cho cả hai nhánh:
 - Nhánh Baseline: hợp đồng qua kiểm tra gần nhất, lúc người dùng chấp nhận, bỏ cuộc hoặc lúc chạm
   trần request.
 
-**Phân xử:** theo `docs/E5-Adjudication-Rubric.md`, đối chiếu với yêu cầu người dùng mô phỏng đã xác
+**Phân xử:** theo `docs/archive/E5-Adjudication-Rubric.md`, đối chiếu với yêu cầu người dùng mô phỏng đã xác
 nhận (prompt, phiếu dữ kiện và các câu trả lời trong lượt chạy đó). Có hai thay đổi so với E5:
 
 - **Phân xử mù nhánh:** hợp đồng của hai nhánh được trộn, mỗi hợp đồng mang một mã ngẫu nhiên. Bảng

@@ -4,7 +4,7 @@ Người phân xử là một sub-agent mới. Nó chỉ đọc các gói chấm
 cùng bản hướng dẫn này, và không đọc gì khác trong repo. Mỗi sub-agent nhận một nhóm gói. Mọi nhóm dùng
 chung một bản hướng dẫn.
 
-## Căn cứ (Q-CHẤM, `docs/E7-Conventions.md` bản 3)
+## Căn cứ (Q-CHẤM, `docs/archive/E7-Conventions.md` bản 3)
 
 - **Điều người dùng muốn và biết:** `prompt` và `fact_sheet` của gói. Đó là căn cứ đúng sai.
 - **Hội thoại (`conversation`):** cho biết người dùng đã nói gì và đã được hỏi gì. Một dữ kiện mà prompt

@@ -1,7 +1,7 @@
 # E7: quy ước chung (bản 3, 2026-11-12)
 
 Văn bản này chốt các quy ước cho vòng thí nghiệm sau E6 (gọi là E7). Nó dựa trên
-`docs/E6-Failure-Review.md` và `docs/E6-Rerun-Proposal.md`.
+`docs/archive/E6-Failure-Review.md` và `docs/archive/E6-Rerun-Proposal.md`.
 
 **Phạm vi:** áp dụng **như nhau cho cả hai nhánh** (Pipeline và Baseline), và cho mọi thành phần: AFF và
 builder, phần gắn tên của cổng Scenario, dataset, người dùng mô phỏng và việc chấm điểm.
@@ -243,7 +243,7 @@ giữ nguyên 11/71.
 - Bản 1 (2026-11-12): chốt lần đầu, theo yêu cầu "chốt quy ước trước" sau khi rà soát E6.
 - Bản 2 (2026-11-12): Q-TÊN 2 giữ tên riêng làm token, chỉ suy ra token cho tên vai. Lý do: khớp với
   token mà các nhánh đang tạo; việc so khớp vẫn qua `fold` nên không đổi kết quả chấm.
-- Bản 3 (2026-11-12, sau chạy thử dev, `docs/E7-Dev-Trial.md`):
+- Bản 3 (2026-11-12, sau chạy thử dev, `docs/archive/E7-Dev-Trial.md`):
   - Q-TÊN 2: tên vai giữ nguyên như người dùng viết, không suy token ASCII nữa, vì core v4 đòi tên
     người nhận có trong trích dẫn; tên trong ngoặc và tên sau danh xưng được tách ra.
   - Q-NGƯỜI DÙNG 4: tin nhắn chỉ có ý đồng ý được tính là chấp nhận.
