@@ -191,3 +191,11 @@ Ghi theo `docs/E7-Protocol.md`, mục 6. Mỗi mục: thời điểm, thay đổ
   chỉ dùng cho bảng độ nhạy.
 - **Giao hàng của Pipeline:** tính theo `final.json` (`delivered`). Case không giao thì coi như không có
   hợp đồng, dù lần chạy cuối có chứa hợp đồng nào.
+
+### I1 (tiếp, 2026-11-13)
+
+- **Quota:** key 1 và 2 hết quota trong ngày lúc 00:52 UTC, ở case 85 của nhánh Pipeline.
+- **Cách xử lý:** từ case 85, nhánh Pipeline dùng chung key 3 với nhánh Baseline, thay vì chờ quota đặt
+  lại lúc 08:00 UTC. Hai luồng vẫn chạy từng lần gọi một, nên không vượt giới hạn mỗi phút.
+- **Không đổi:** cùng model, cùng luật đếm; không có gì khác với điều hai nhánh hay người dùng mô phỏng
+  nhìn thấy.
