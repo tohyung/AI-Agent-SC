@@ -53,6 +53,36 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def _is_valid_text(text: str) -> bool:
+    """False when the text holds lone surrogates (bytes that were not valid UTF-8)."""
+    try:
+        text.encode("utf-8")
+    except UnicodeEncodeError:
+        return False
+    return True
+
+
+def _enable_line_editing() -> None:
+    """Use GNU readline when it exists so Backspace erases a whole multi-byte character.
+
+    Without it the Linux terminal may erase one byte of a Vietnamese letter (an input
+    method retypes letters with Backspace), leaving invalid UTF-8 in the line."""
+    try:
+        import readline  # noqa: F401
+    except ImportError:
+        pass
+
+
+def safe_input(prompt_text: str = "") -> str:
+    """input() that asks again instead of passing a line with broken bytes on."""
+    while True:
+        line = input(prompt_text)
+        if _is_valid_text(line):
+            return line
+        print("Dòng vừa nhập có ký tự bị hỏng (thường do bộ gõ tiếng Việt xoá dở một chữ). "
+              "Hãy nhập lại hoặc dán câu đã soạn sẵn.", file=sys.stderr)
+
+
 def _write_json(path: Path, payload: dict) -> None:
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n",
                     encoding="utf-8")
@@ -65,12 +95,18 @@ def main() -> int:
                 stream.reconfigure(encoding="utf-8", errors="replace")
     args = build_parser().parse_args()
     prompt = args.prompt
+    if prompt and not _is_valid_text(prompt):
+        print("--prompt có ký tự không phải UTF-8 hợp lệ; hãy kiểm tra bảng mã của terminal.",
+              file=sys.stderr)
+        return 2
     interactive = args.interactive or not prompt
+    if interactive:
+        _enable_line_editing()
     try:
         if not prompt:
-            prompt = input("Mô tả hợp đồng:\n> ").strip()
+            prompt = safe_input("Mô tả hợp đồng:\n> ").strip()
         while not prompt:
-            prompt = input("Prompt đang rỗng, nhập lại:\n> ").strip()
+            prompt = safe_input("Prompt đang rỗng, nhập lại:\n> ").strip()
     except KeyboardInterrupt:
         prompt = prompt or ""
         payload = {"status": "BLOCKED", "stop_reason": "interrupted",
@@ -99,7 +135,7 @@ def main() -> int:
             return 2
         try:
             payload = run_session(prompt, model, options=options,
-                                  ask=input if interactive else None,
+                                  ask=safe_input if interactive else None,
                                   emit=print if interactive or args.trace_only else None)
             exit_code = 0 if payload["status"] == "LEDGER_SIZE_CHECKED" else 2
         except KeyboardInterrupt:

@@ -3,6 +3,8 @@
 import subprocess
 import sys
 
+import pytest
+
 from research.formalization.intent_spec import CORE_SCHEMA_VERSION_V4
 
 
@@ -43,3 +45,21 @@ def test_main_calls_only_assurance_session(monkeypatch, capsys):
     assert cli.main() == 2
     assert calls == [("Alice pays Bob", 8, CORE_SCHEMA_VERSION_V4, None, None)]
     assert '"stop_reason": "explicit_acceptance_required"' in capsys.readouterr().out
+
+
+def test_safe_input_asks_again_on_broken_bytes(monkeypatch, capsys):
+    from research.orchestration import cli
+
+    # "t\udcc3i": an input method erased one byte of "ô" and left the lead byte behind.
+    lines = iter(["t\udcc3i là Hưng", "tôi là Hưng"])
+    monkeypatch.setattr("builtins.input", lambda _prompt="": next(lines))
+    assert cli.safe_input("> ") == "tôi là Hưng"
+    assert "nhập lại" in capsys.readouterr().err
+
+
+def test_main_rejects_broken_prompt_argument(monkeypatch):
+    from research.orchestration import cli
+
+    monkeypatch.setattr(sys, "argv", ["main.py", "--prompt", "t\udcc3i", "--no-run-log"])
+    monkeypatch.setattr(cli, "run_session", lambda *a, **k: pytest.fail("must not run"))
+    assert cli.main() == 2
