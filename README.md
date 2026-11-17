@@ -44,8 +44,11 @@ python -m pip install -r requirements.txt
 python main.py
 ```
 
-The CLI reads the model endpoint and key from `.env` at the repository root
-(see `.env.example`). Run without `--prompt` for an interactive session, or
+The CLI uses Gemini by default (`GEMINI_API_KEY`, `GEMINI_MODEL` in `.env` at the
+repository root, set up as in the E7 runs); `--provider default` uses the `LLM_*`
+endpoint instead (see `.env.example`). It shows the intent under review as a
+plain-language summary and ends with a short result; the full record goes to the
+run log, and `--json` prints it instead. Run without `--prompt` for an interactive session, or
 pass `--prompt "..." --interactive`. Noninteractive runs stop when
 clarification or explicit intent approval is needed. Formalization uses core v4 by
 default; `--core-schema-version v3|v2` only reproduces older runs.
@@ -56,8 +59,11 @@ an approved intent. Each run writes `runs/<timestamp>.jsonl` (requirement
 history, step executions, artifacts, sanitized call metadata; no keys or raw
 chain-of-thought); `--run-log-dir` and `--no-run-log` control it.
 
-`--expectation PATH` supplies an independent behavior scenario; the CLI asks
-for confirmation before using it for reference comparison and exploration.
+After the intent is accepted, the CLI asks for 2 to 4 test situations in plain
+words, turns them into scenarios (code computes every time and amount), reads
+them back for confirmation, and runs every scenario on the generated contract
+before the ledger check; an empty answer skips this step. `--expectation PATH`
+is the expert variant: one scenario written as JSON, confirmed before use.
 The pinned SMT and reference binaries are required for their gates; an
 unavailable driver is never turned into a pass or a business question. The
 ledger adapter needs every `MARLOWE_LEDGER_*` setting, a synchronized node and

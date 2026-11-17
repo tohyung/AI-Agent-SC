@@ -77,8 +77,36 @@ def test_interactive_acceptance_uses_model_contract_without_claiming_ledger(monk
     assert result["steps"]["semantic_comparison"]["run_status"] == "INCONCLUSIVE"
     assert result["status"] == "CANDIDATE_ONLY"
     assert result["steps"]["ledger_validation"]["run_status"] != "SUCCEEDED"
-    assert "Đang chạy: intent_extraction" in progress
-    assert "Đang chạy: compile" in progress
+    assert "  … đọc và phân tích yêu cầu" in progress
+    assert "  … sinh hợp đồng Marlowe" in progress
+    assert not any("Đang chạy:" in line for line in progress)
+
+
+def test_interactive_review_shows_a_plain_summary_and_takes_a_correction():
+    from research.formalization.fact_extractor import EXAMPLE_DRAFT, EXAMPLE_REQUEST
+
+    prompts, progress = [], []
+    answers = iter(["", ""])  # empty reply to the review: stop, waiting for the user
+
+    def ask(question):
+        prompts.append(question)
+        return next(answers)
+
+    result = run_session(EXAMPLE_REQUEST, StaticModel(EXAMPLE_DRAFT),
+                         options=SessionOptions(interactive=True), ask=ask,
+                         emit=progress.append)
+    assert result["stop_reason"] == "explicit_acceptance_required"
+    shown = "\n".join(progress)
+    assert "Tôi hiểu hợp đồng như sau:" in shown and "Lan nạp 60 ADA" in shown
+    assert "schema_version" not in shown and "claim_refs" not in shown and " @ " not in shown
+    assert len(prompts) == 1 and "dong y" in prompts[0]
+
+
+def test_consent_is_exact_agreement():
+    from research.orchestration.cli_runner import is_consent
+
+    assert is_consent("dong y") and is_consent("  Đồng   ý ") and is_consent("DONG Y")
+    assert not is_consent("đồng ý nhưng sửa hạn") and not is_consent("")
 
 
 def test_default_session_uses_aff_and_core_v4():

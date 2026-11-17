@@ -244,6 +244,72 @@ def restate_question(diagnostics: list[str], history: list[dict[str, Any]]) -> s
 
 UNSUPPORTED_PREFIXES = ("This part cannot be represented yet:", "Phần này chưa biểu diễn được:")
 
+# What a real CLI user sees while a step runs; steps not listed run silently.
+STEP_LABELS = {
+    "intent_extraction": "đọc và phân tích yêu cầu",
+    "compile": "sinh hợp đồng Marlowe",
+    "smt_verification": "kiểm tra hợp đồng bằng SMT",
+    "semantic_comparison": "chạy thử hợp đồng trên bản tham chiếu",
+    "exploration": "thử các cách chạy khác của hợp đồng",
+    "ledger_validation": "đo kích thước giao dịch trên testnet",
+}
+CONSENT_WORDS = {"dong y", "đồng ý"}
+
+
+def is_consent(reply: str) -> bool:
+    """Exact agreement only ('dong y' / 'đồng ý'); anything else is a correction."""
+    return " ".join(reply.lower().split()) in CONSENT_WORDS
+
+
+MAX_EXAMPLE_ROUNDS = 2  # as in E7: at most two conversions of the user's examples
+
+
+def scenario_gate(core: dict[str, Any], intent_spec: dict[str, Any], model: Any,
+                  ask: Callable[[str], str], reporter: Callable[[str], None]
+                  ) -> tuple[list[dict[str, Any]] | None, str | None]:
+    """The user's test situations, asked and read back in words (E7, Q-KỊCH BẢN 2-3).
+
+    The user describes situations in plain language; the model maps them onto the intent's
+    parties and deadlines, code computes every time and amount, and the scenarios are read back
+    for the user to confirm. Returns (expectations, None) when confirmed, ([], None) when the
+    user skips the step, and (None, stop_reason) when no scenario was confirmed."""
+    from research.adapters.model_transport import ModelTransportError
+    from research.synthesis.example_scenarios import (
+        _token_table, build_prompt, describe, examples_request, to_compact, to_expectation,
+    )
+
+    reporter("")
+    reporter(examples_request(core))
+    examples = ask("(để trống để bỏ qua bước kiểm tra bằng tình huống)\n> ").strip()
+    rounds = 0
+    while examples:
+        if rounds >= MAX_EXAMPLE_ROUNDS:
+            return None, "scenarios_not_confirmed"
+        rounds += 1
+        reporter("  … chuyển các tình huống thành kịch bản kiểm thử")
+        try:
+            reply = model.generate(*build_prompt(core, examples))
+        except ModelTransportError:
+            return None, "llm_error"
+        scenarios, problems = to_compact(core, reply, _token_table(intent_spec))
+        if not scenarios:
+            reporter("Tôi chưa chuyển được các tình huống đó thành kịch bản"
+                     + (f" ({'; '.join(problems[:3])})" if problems else "") + ".")
+            if rounds >= MAX_EXAMPLE_ROUNDS:
+                return None, "scenarios_not_confirmed"
+            examples = ask("Hãy mô tả lại các tình huống (để trống để bỏ qua):\n> ").strip()
+            continue
+        reporter("")
+        reporter(describe(core, scenarios))
+        answer = ask("Gõ 'dong y' nếu đúng; nếu sai, viết chỗ cần sửa "
+                     "(để trống để bỏ qua bước này):\n> ").strip()
+        if is_consent(answer):
+            return [to_expectation(compact) for compact in scenarios.values()], None
+        if not answer:
+            return [], None
+        examples = examples + "\n" + answer
+    return [], None
+
 
 def _quoted(text: str) -> str:
     from research.formalization.party_names import strip_marks
@@ -364,6 +430,11 @@ def _reference_counterexample_feedback(report: dict[str, Any]) -> list[str]:
     return feedback
 
 
+def _contract_id(run: Any) -> str | None:
+    compiled = run.steps.get("compile")
+    return compiled.output_artifacts[0] if compiled and compiled.output_artifacts else None
+
+
 def _base_snapshot(
     pipeline: Any,
     run: Any,
@@ -474,16 +545,27 @@ def run_session(
                        for item, message in zip(transcript, later_messages))):
             raise ValueError("roleplay revisions require labeled source answers")
 
+    scenario_state: dict[str, int] = {}
+
     def _snapshot(*args: Any, **kwargs: Any) -> dict[str, Any]:
         result = _base_snapshot(*args, **kwargs)
+        if scenario_state and not options.roleplay:
+            result["scenario_check"] = dict(scenario_state)
         if options.roleplay:
             result["simulation_only"] = True
             result["simulation_transcript"] = deepcopy(transcript)
         return result
     seen: dict[str, int] = {}
     reporter = emit or (lambda _message: None)
+    # A real user reads plain words; roleplay keeps the research labels its logs filter on.
+    plain = not options.roleplay
 
     def step_start(step: str) -> None:
+        if plain:
+            label = STEP_LABELS.get(step)
+            if label:
+                reporter(f"  … {label}")
+            return
         reporter(f"Đang chạy: {step}")
 
     last_pipeline = last_run = None
@@ -501,7 +583,8 @@ def run_session(
 
             wiring.property_dataset = PropertyDataset(Path(options.property_dataset_path))
         pipeline = build_research_pipeline(model=model, wiring=wiring)
-        reporter(f"Lượt {iteration}: Formalization đang trích xuất intent")
+        reporter(f"Lượt {iteration}: đang đọc yêu cầu của bạn" if plain else
+                 f"Lượt {iteration}: Formalization đang trích xuất intent")
         run = pipeline.run(
             history,
             stop_after="intent_acceptance",
@@ -651,27 +734,30 @@ def run_session(
                 stop_reason="roleplay_candidate_review_required",
                 iterations=iteration, model=model,
             )
-        reporter("Ratification: kiểm tra từng claim trong candidate trước khi xác nhận")
-        reporter("Diễn giải intent được đề nghị:")
-        reporter(json.dumps(payload["intent_spec"], ensure_ascii=False, indent=2))
-        for claim in core["claims"]:
-            if claim.get("status") not in {"superseded", "unresolved"}:
-                reporter(f"  {claim['kind']}={claim['value']} @ {claim['scope_id']}")
+        if plain:
+            # The summary is computed from the core by code, never by a model, so the user
+            # reads exactly what the contract will be generated from (E7, Q-NHÁNH 3).
+            from research.formalization.intent_summary import summarize
+
+            reporter("")
+            reporter(summarize(core))
+        else:
+            reporter("Ratification: kiểm tra từng claim trong candidate trước khi xác nhận")
+            reporter("Diễn giải intent được đề nghị:")
+            reporter(json.dumps(payload["intent_spec"], ensure_ascii=False, indent=2))
+            for claim in core["claims"]:
+                if claim.get("status") not in {"superseded", "unresolved"}:
+                    reporter(f"  {claim['kind']}={claim['value']} @ {claim['scope_id']}")
         if options.roleplay:
             reviewer_id = "synthetic-roleplay"
             acceptance_options = {"simulation_transcript": transcript,
                                   "allow_simulated_intent": True}
             reporter("Ratification: chấp nhận giả lập đã được review, không cấp user authority")
         else:
-            consent = (
-                ask("Xác nhận đúng toàn bộ diễn giải trên? Gõ 'dong y' để tiếp tục: ")
-                .strip()
-                .lower()
-            )
-            if consent != "dong y":
-                correction = ask(
-                    "Nếu có dữ kiện nghiệp vụ sai, hãy nêu phần cần sửa (để trống để dừng): "
-                ).strip()
+            reply = ask("Gõ 'dong y' nếu đúng; nếu sai, viết chỗ cần sửa "
+                        "(để trống để dừng):\n> ").strip()
+            if not is_consent(reply):
+                correction = reply
                 if not correction:
                     return _snapshot(
                         pipeline,
@@ -705,7 +791,26 @@ def run_session(
                 approved_spec=payload["intent_spec"],
             )
             acceptance_options = {"intent_decision": decision}
-        reporter("Ratification/3: xác nhận intent và sinh Marlowe candidate")
+        # Scenario gate: by default the user describes test situations in words; a JSON file
+        # (--expectation) is the expert variant. Scenarios need the pinned reference to run.
+        scenarios: list[dict[str, Any]] = []
+        if options.roleplay:
+            if options.simulated_expectation is not None:
+                scenarios = [options.simulated_expectation]
+        elif options.expectation is not None:
+            scenarios = [options.expectation]
+        elif options.reference_binary:
+            gathered, stop = scenario_gate(core, payload["intent_spec"], model, ask, reporter)
+            if gathered is None:
+                return _snapshot(pipeline, run, history,
+                                 status="BLOCKED" if stop == "llm_error" else "WAITING_USER",
+                                 stop_reason=stop or "scenarios_not_confirmed",
+                                 iterations=iteration, model=model)
+            scenarios = gathered
+        else:
+            reporter("(Không có binary tham chiếu nên bỏ qua bước kiểm tra bằng tình huống.)")
+        reporter("Đã ghi nhận xác nhận; đang sinh hợp đồng Marlowe" if plain else
+                 "Ratification/3: xác nhận intent và sinh Marlowe candidate")
         run = pipeline.run(
             history,
             resume=run,
@@ -784,7 +889,9 @@ def run_session(
                     model=model,
                 )
             seen_contracts.add(fingerprint)
-            reporter(f"AST chưa đạt gate; sinh lại candidate (lượt {generation + 1})")
+            reporter(f"  Hợp đồng chưa qua kiểm tra; đang sinh lại (lần {generation + 1})"
+                     if plain else
+                     f"AST chưa đạt gate; sinh lại candidate (lượt {generation + 1})")
             run = pipeline.run(
                 history,
                 resume=run,
@@ -807,149 +914,127 @@ def run_session(
                 iterations=iteration,
                 model=model,
             )
-        external: list[ArtifactEnvelope] = []
-        reference = PinnedMarloweReference(
-            binary=options.reference_binary, hard_timeout_seconds=15
-        )
-        pipeline.ports["semantic_comparison"] = SemanticComparisonPort(
-            reference,
-            LocalExpectationPolicy(reviewer_id),
-            require_intent_alignment=True,
-        )
-        scenario = (options.simulated_expectation if options.roleplay
-                    else options.expectation)
-        if scenario is not None:
-            reporter("Kịch bản hành vi mô phỏng:" if options.roleplay
-                     else "Kịch bản hành vi do người dùng cung cấp:")
-            reporter(json.dumps(scenario, ensure_ascii=False, indent=2))
-            confirmed = (
-                ask("Xác nhận kịch bản này độc lập và đúng? Gõ 'dong y': ")
-                .strip()
-                .lower()
+        # Every scenario runs on the same contract; when one makes the contract regenerate,
+        # all scenarios run again on the new one (at most 3 restarts, as in E7).
+        queue: list[dict[str, Any] | None] = list(scenarios) or [None]
+        position = restarts = 0
+        while True:
+            scenario = queue[position]
+            contract_before = _contract_id(run)
+            if scenario is not None:
+                scenario_state.update(total=len(queue), current=position + 1,
+                                      passed=position)
+            if plain and scenario is not None and len(queue) > 1:
+                reporter(f"Kiểm tra tình huống {position + 1}/{len(queue)}")
+            external: list[ArtifactEnvelope] = []
+            reference = PinnedMarloweReference(
+                binary=options.reference_binary, hard_timeout_seconds=15
             )
-            if confirmed != "dong y":
-                return _snapshot(
-                    pipeline,
-                    run,
-                    history,
-                    status="WAITING_USER",
-                    stop_reason="expectation_review_required",
-                    iterations=iteration,
-                    model=model,
-                )
-            accepted = _artifact(pipeline, run, "intent_acceptance", "accepted-intent")
-            if accepted is None:
-                raise RuntimeError("accepted intent artifact missing")
-            expectation = reviewed_expectation(
-                accepted, scenario, reviewer_id
-            )
-            external.append(expectation)
-            transactions = tuple(expectation.payload["request"]["transactions"])
-            domain = DeclaredActionDomain(
-                "Exploration-LocalUserActions-v1", transactions
-            )
-            pipeline.ports["exploration"] = ExplorationPort(
-                domain,
+            pipeline.ports["semantic_comparison"] = SemanticComparisonPort(
                 reference,
-                expectation.payload["request"]["state"],
-                ExplorationBounds(max_depth=max(2, len(transactions)), max_traces=8),
+                LocalExpectationPolicy(reviewer_id),
+                require_intent_alignment=True,
             )
-            pipeline.ports["oracle_evaluation"] = OraclePort(
-                [NoWarningsOracle()], wiring.property_dataset)
-        if options.ledger_config is not None:
-            pipeline.ports["ledger_validation"] = MarloweCliSizeAnalysisPort(
-                options.ledger_config
-            )
-        reporter(
-            "Synthesis-5: đối chiếu intent/reference, khám phá và kiểm tra bằng chứng"
-        )
-        run = pipeline.run(
-            history,
-            resume=run,
-            stop_after="deployment",
-            external_artifacts=external,
-            invalidate_from="semantic_comparison" if external else None,
-            on_step_start=step_start,
-        )
-        last_run = run
-        while (run.steps.get("semantic_comparison") is not None
-               and run.steps["semantic_comparison"].semantic_status == "VIOLATED"
-               and generation < options.max_iterations):
-            comparison_report = _artifact(
-                pipeline, run, "semantic_comparison", "reference-comparison")
-            feedback = list(run.steps["semantic_comparison"].diagnostics)
-            if comparison_report is not None:
-                feedback.extend(_reference_counterexample_feedback(comparison_report.payload))
-                alignment = comparison_report.payload.get("intent_alignment")
-                if isinstance(alignment, dict):
-                    violated = [item for item in alignment.get("checks", [])
-                                if item.get("status") == "VIOLATED"]
-                    feedback.extend(
-                        "intent alignment: " + json.dumps(item, ensure_ascii=False,
-                                                           sort_keys=True)
-                        for item in violated
+            # A JSON scenario (roleplay, or the expert --expectation file) is shown and confirmed
+            # here; scenarios from the scenario gate were already read back in words.
+            if scenario is not None and (options.roleplay or options.expectation is not None):
+                reporter("Kịch bản hành vi mô phỏng:" if options.roleplay
+                         else "Kịch bản hành vi do người dùng cung cấp:")
+                reporter(json.dumps(scenario, ensure_ascii=False, indent=2))
+                confirmed = (
+                    ask("Xác nhận kịch bản này độc lập và đúng? Gõ 'dong y': ")
+                    .strip()
+                    .lower()
+                )
+                if confirmed != "dong y":
+                    return _snapshot(
+                        pipeline,
+                        run,
+                        history,
+                        status="WAITING_USER",
+                        stop_reason="expectation_review_required",
+                        iterations=iteration,
+                        model=model,
                     )
-                    claim_by_id = {item["claim_id"]: item for item in core["claims"]}
-                    if any(item.get("reason") == "ast_value_mismatch"
-                           and claim_by_id.get(item.get("source_id"), {}).get("kind") == "asset"
-                           and claim_by_id[item["source_id"]].get("value") == "ADA"
-                           for item in violated):
-                        feedback.append(
-                            'Native ADA Token is {"currency_symbol":"","token_name":""}; '
-                            'token_name="ADA" is a different asset. Preserve the accepted ADA intent.')
-                    if any(item.get("reason") == "ast_path_missing"
-                           and claim_by_id.get(item.get("source_id"), {}).get("kind", "")
-                           .endswith("deadline_ms") for item in violated):
-                        feedback.append(
-                            "Mapping paths start at the contract root: root When timeout is "
-                            "$.timeout; a When inside the first Case continuation is "
-                            "$.when[0].then.timeout. Point each deadline claim to its "
-                            "actual existing timeout field.")
-            fingerprint = json.dumps(feedback, ensure_ascii=False, sort_keys=True)
-            if fingerprint in seen_contracts:
-                return _snapshot(
-                    pipeline, run, history, status="BLOCKED",
-                    stop_reason="generation_stalled", iterations=iteration, model=model)
-            seen_contracts.add(fingerprint)
-            reporter(f"Intent/reference chưa khớp; sinh lại AST (lượt {generation + 1})")
+            if scenario is not None:
+                accepted = _artifact(pipeline, run, "intent_acceptance", "accepted-intent")
+                if accepted is None:
+                    raise RuntimeError("accepted intent artifact missing")
+                expectation = reviewed_expectation(
+                    accepted, scenario, reviewer_id
+                )
+                external.append(expectation)
+                transactions = tuple(expectation.payload["request"]["transactions"])
+                domain = DeclaredActionDomain(
+                    "Exploration-LocalUserActions-v1", transactions
+                )
+                pipeline.ports["exploration"] = ExplorationPort(
+                    domain,
+                    reference,
+                    expectation.payload["request"]["state"],
+                    ExplorationBounds(max_depth=max(2, len(transactions)), max_traces=8),
+                )
+                pipeline.ports["oracle_evaluation"] = OraclePort(
+                    [NoWarningsOracle()], wiring.property_dataset)
+            if options.ledger_config is not None:
+                pipeline.ports["ledger_validation"] = MarloweCliSizeAnalysisPort(
+                    options.ledger_config
+                )
+            if not plain:
+                reporter("Synthesis-5: đối chiếu intent/reference, khám phá và kiểm tra bằng chứng")
+            elif position == 0 and restarts == 0:
+                reporter("Hợp đồng đã qua kiểm tra cấu trúc; đang chạy các bước kiểm tra còn lại")
             run = pipeline.run(
-                history, resume=run, stop_after="smt_verification",
-                invalidate_from="compile",
-                options={"generation_feedback": feedback,
-                         "allow_simulated_intent": options.roleplay},
+                history,
+                resume=run,
+                stop_after="deployment",
+                external_artifacts=external,
+                invalidate_from="semantic_comparison" if external else None,
                 on_step_start=step_start,
             )
-            generation += 1
             last_run = run
-            while (run.steps["compile"].run_status != StepRunStatus.SUCCEEDED
-                   or run.steps["smt_verification"].run_status != StepRunStatus.SUCCEEDED):
-                compile_step = run.steps["compile"]
-                smt_step = run.steps["smt_verification"]
-                if compile_step.semantic_status == "MODEL_ERROR":
-                    return _snapshot(
-                        pipeline, run, history, status="BLOCKED",
-                        stop_reason="llm_error", iterations=iteration, model=model)
-                if smt_step.run_status in {StepRunStatus.UNAVAILABLE,
-                                            StepRunStatus.INCONCLUSIVE}:
-                    return _snapshot(
-                        pipeline, run, history, status="BLOCKED",
-                        stop_reason="smt_unavailable_or_inconclusive",
-                        iterations=iteration, model=model)
-                if generation >= options.max_iterations:
-                    return _snapshot(
-                        pipeline, run, history, status="BLOCKED",
-                        stop_reason="max_generation_attempts",
-                        iterations=iteration, model=model)
-                failed = (smt_step if smt_step.run_status == StepRunStatus.FAILED
-                          else compile_step)
-                feedback = list(failed.diagnostics)
+            while (run.steps.get("semantic_comparison") is not None
+                   and run.steps["semantic_comparison"].semantic_status == "VIOLATED"
+                   and generation < options.max_iterations):
+                comparison_report = _artifact(
+                    pipeline, run, "semantic_comparison", "reference-comparison")
+                feedback = list(run.steps["semantic_comparison"].diagnostics)
+                if comparison_report is not None:
+                    feedback.extend(_reference_counterexample_feedback(comparison_report.payload))
+                    alignment = comparison_report.payload.get("intent_alignment")
+                    if isinstance(alignment, dict):
+                        violated = [item for item in alignment.get("checks", [])
+                                    if item.get("status") == "VIOLATED"]
+                        feedback.extend(
+                            "intent alignment: " + json.dumps(item, ensure_ascii=False,
+                                                               sort_keys=True)
+                            for item in violated
+                        )
+                        claim_by_id = {item["claim_id"]: item for item in core["claims"]}
+                        if any(item.get("reason") == "ast_value_mismatch"
+                               and claim_by_id.get(item.get("source_id"), {}).get("kind") == "asset"
+                               and claim_by_id[item["source_id"]].get("value") == "ADA"
+                               for item in violated):
+                            feedback.append(
+                                'Native ADA Token is {"currency_symbol":"","token_name":""}; '
+                                'token_name="ADA" is a different asset. Preserve the accepted ADA intent.')
+                        if any(item.get("reason") == "ast_path_missing"
+                               and claim_by_id.get(item.get("source_id"), {}).get("kind", "")
+                               .endswith("deadline_ms") for item in violated):
+                            feedback.append(
+                                "Mapping paths start at the contract root: root When timeout is "
+                                "$.timeout; a When inside the first Case continuation is "
+                                "$.when[0].then.timeout. Point each deadline claim to its "
+                                "actual existing timeout field.")
                 fingerprint = json.dumps(feedback, ensure_ascii=False, sort_keys=True)
                 if fingerprint in seen_contracts:
                     return _snapshot(
                         pipeline, run, history, status="BLOCKED",
                         stop_reason="generation_stalled", iterations=iteration, model=model)
                 seen_contracts.add(fingerprint)
-                reporter(f"AST chưa đạt gate; sinh lại candidate (lượt {generation + 1})")
+                reporter(f"  Hợp đồng chạy chưa đúng kịch bản; đang sinh lại (lần {generation + 1})"
+                         if plain else
+                         f"Intent/reference chưa khớp; sinh lại AST (lượt {generation + 1})")
                 run = pipeline.run(
                     history, resume=run, stop_after="smt_verification",
                     invalidate_from="compile",
@@ -959,38 +1044,89 @@ def run_session(
                 )
                 generation += 1
                 last_run = run
-            run = pipeline.run(
-                history, resume=run, stop_after="deployment",
-                on_step_start=step_start,
+                while (run.steps["compile"].run_status != StepRunStatus.SUCCEEDED
+                       or run.steps["smt_verification"].run_status != StepRunStatus.SUCCEEDED):
+                    compile_step = run.steps["compile"]
+                    smt_step = run.steps["smt_verification"]
+                    if compile_step.semantic_status == "MODEL_ERROR":
+                        return _snapshot(
+                            pipeline, run, history, status="BLOCKED",
+                            stop_reason="llm_error", iterations=iteration, model=model)
+                    if smt_step.run_status in {StepRunStatus.UNAVAILABLE,
+                                                StepRunStatus.INCONCLUSIVE}:
+                        return _snapshot(
+                            pipeline, run, history, status="BLOCKED",
+                            stop_reason="smt_unavailable_or_inconclusive",
+                            iterations=iteration, model=model)
+                    if generation >= options.max_iterations:
+                        return _snapshot(
+                            pipeline, run, history, status="BLOCKED",
+                            stop_reason="max_generation_attempts",
+                            iterations=iteration, model=model)
+                    failed = (smt_step if smt_step.run_status == StepRunStatus.FAILED
+                              else compile_step)
+                    feedback = list(failed.diagnostics)
+                    fingerprint = json.dumps(feedback, ensure_ascii=False, sort_keys=True)
+                    if fingerprint in seen_contracts:
+                        return _snapshot(
+                            pipeline, run, history, status="BLOCKED",
+                            stop_reason="generation_stalled", iterations=iteration, model=model)
+                    seen_contracts.add(fingerprint)
+                    reporter(f"  Hợp đồng chưa qua kiểm tra; đang sinh lại (lần {generation + 1})"
+                             if plain else
+                             f"AST chưa đạt gate; sinh lại candidate (lượt {generation + 1})")
+                    run = pipeline.run(
+                        history, resume=run, stop_after="smt_verification",
+                        invalidate_from="compile",
+                        options={"generation_feedback": feedback,
+                                 "allow_simulated_intent": options.roleplay},
+                        on_step_start=step_start,
+                    )
+                    generation += 1
+                    last_run = run
+                run = pipeline.run(
+                    history, resume=run, stop_after="deployment",
+                    on_step_start=step_start,
+                )
+                last_run = run
+            ledger = run.steps.get("ledger_validation")
+            checked = (
+                ledger is not None
+                and ledger.run_status == StepRunStatus.SUCCEEDED
+                and ledger.semantic_status == "REACHED_LEDGER_PASS"
             )
-            last_run = run
-        ledger = run.steps.get("ledger_validation")
-        checked = (
-            ledger is not None
-            and ledger.run_status == StepRunStatus.SUCCEEDED
-            and ledger.semantic_status == "REACHED_LEDGER_PASS"
-        )
-        comparison = run.steps.get("semantic_comparison")
-        if comparison is not None and comparison.semantic_status == "VIOLATED":
-            return _snapshot(
-                pipeline,
-                run,
-                history,
-                status="BLOCKED",
-                stop_reason="reference_mismatch",
-                iterations=iteration,
-                model=model,
-            )
-        if ledger is not None and ledger.semantic_status == "REACHED_LEDGER_FAIL":
-            return _snapshot(
-                pipeline,
-                run,
-                history,
-                status="BLOCKED",
-                stop_reason="ledger_size_failed",
-                iterations=iteration,
-                model=model,
-            )
+            comparison = run.steps.get("semantic_comparison")
+            if comparison is not None and comparison.semantic_status == "VIOLATED":
+                return _snapshot(
+                    pipeline,
+                    run,
+                    history,
+                    status="BLOCKED",
+                    stop_reason="reference_mismatch",
+                    iterations=iteration,
+                    model=model,
+                )
+            if ledger is not None and ledger.semantic_status == "REACHED_LEDGER_FAIL":
+                return _snapshot(
+                    pipeline,
+                    run,
+                    history,
+                    status="BLOCKED",
+                    stop_reason="ledger_size_failed",
+                    iterations=iteration,
+                    model=model,
+                )
+            if (_contract_id(run) != contract_before and position > 0 and restarts < 3):
+                restarts += 1
+                position = 0
+                reporter("  Hợp đồng đã được sinh lại; chạy lại mọi tình huống trên hợp đồng mới"
+                         if plain else "Contract regenerated; rerunning every scenario")
+                continue
+            position += 1
+            if scenario is not None:
+                scenario_state["passed"] = position
+            if position >= len(queue):
+                break
         return _snapshot(
             pipeline,
             run,

@@ -271,6 +271,51 @@ def examples_request(core: dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
+ADA_TOKEN = {"currency_symbol": "", "token_name": ""}
+
+
+def to_expectation(compact: dict[str, Any]) -> dict[str, Any]:
+    """One reviewed-expectation payload from a compact scenario; the same output as
+    `tools/e6/expect.py build`, which the E6/E7 runs used (kept there unchanged)."""
+    def ms(text: str) -> int:
+        return int(datetime.fromisoformat(text).timestamp() * 1000)
+
+    def amount(value: Any, token: list | None) -> tuple[dict[str, str], int]:
+        if token:
+            return {"currency_symbol": token[0], "token_name": token[1]}, int(token[2])
+        return dict(ADA_TOKEN), round(float(value) * 1_000_000)
+
+    transactions = []
+    for instant, inputs in compact["tx"]:
+        # An empty transaction is a timeout: it happens at the deadline itself.
+        moment = ms(instant) - (1 if inputs else 0)
+        items = []
+        for item in inputs:
+            if item[0] == "deposit":
+                token, value = amount(item[3], item[4] if len(item) > 4 else None)
+                items.append({"type": "Deposit", "party": {"role_token": item[1]},
+                              "account": {"role_token": item[2]}, "token": token,
+                              "amount": value})
+            elif item[0] == "choice":
+                items.append({"type": "Choice", "choice_owner": {"role_token": item[1]},
+                              "chosen": int(item[2])})
+            elif item[0] == "notify":
+                items.append({"type": "Notify"})
+            else:
+                raise ValueError(f"unknown input {item[0]}")
+        transactions.append({"interval": {"from": moment, "to": moment}, "inputs": items})
+    payments = []
+    for row in compact.get("pay", []):
+        token, value = amount(row[2], row[3] if len(row) > 3 else None)
+        payments.append({"source_account": {"role_token": row[0]},
+                         "payee": {"party": {"role_token": row[1]}}, "token": token,
+                         "amount": value})
+    return {"request": {"state": {"accounts": [], "choices": [], "boundValues": [], "minTime": 0},
+                        "transactions": transactions},
+            "expected_status": "Success", "expected_final_contract": compact.get("end", "close"),
+            "expected_warnings": [], "expected_payments": payments}
+
+
 def _token_table(intent_spec: dict[str, Any]) -> dict[str, list[str]]:
     table: dict[str, list[str]] = {}
     for claim in intent_spec.get("claims", []):
